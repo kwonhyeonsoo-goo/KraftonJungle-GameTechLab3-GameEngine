@@ -30,6 +30,7 @@ private:
 	void PrepareViewport(FLevelEditorViewportClient* VC, FViewport* VP, ID3D11DeviceContext* Ctx);
 	void BuildFrame(FLevelEditorViewportClient* VC, const FMinimalViewInfo& POV, FViewport* VP, UWorld* World);
 	void CollectCommands(FLevelEditorViewportClient* VC, UWorld* World, FRenderer& Renderer, FCollectOutput& Output);
+	void RenderScopeLensCapture(FLevelEditorViewportClient* VC, FViewport* VP, const FMinimalViewInfo& POV, UWorld* World, FRenderer& Renderer, ID3D11DeviceContext* Ctx);
 
 	void RenderPreviewViewport(IEditorPreviewViewportClient* PreviewVC, FRenderer& Renderer);
 

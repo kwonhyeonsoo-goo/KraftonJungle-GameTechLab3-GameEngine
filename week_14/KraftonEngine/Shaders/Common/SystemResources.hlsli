@@ -15,5 +15,6 @@ Texture2D<float4> DoFBackgroundTexture  : register(t27); // Depth of Field backg
 Texture2D<float4> DoFForegroundTexture  : register(t28); // Depth of Field foreground blur + mask
 Texture2D<float4> DoFBokehTexture       : register(t29); // Depth of Field highlight bokeh scatter
 Texture2D<float4> BloomTexture          : register(t30); // Bloom ping-pong blur texture
+Texture2D<float4> ScopeLensTexture      : register(t31); // Secondary narrow-FOV scope color
 
 #endif // SYSTEM_RESOURCES_HLSL

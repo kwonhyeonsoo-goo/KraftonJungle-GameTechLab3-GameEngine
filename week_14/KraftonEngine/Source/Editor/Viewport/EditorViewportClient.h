@@ -7,6 +7,7 @@
 #include "Editor/Viewport/ViewportCameraTransform.h"
 
 #include "Slate/SWindow.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include <string>
 #include "Core/Types/RayTypes.h"
 #include "Core/Types/CollisionTypes.h"
@@ -154,4 +155,5 @@ private:
 	FVector LastAppliedCameraLocation;
 	bool bLastAppliedCameraLocationInitialized = false;
 	const float SmoothLocationSpeed = 10.0f;
+	TArray<FEditorActorTransformState> PendingActorTransformUndoStates;
 };

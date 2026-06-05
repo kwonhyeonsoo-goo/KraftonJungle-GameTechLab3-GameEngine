@@ -196,6 +196,26 @@ public:
 	UFUNCTION(Pure, Category="Camera|PostProcess")
 	float GetDoFBokehIntensity() const { return DoFBokehIntensity; }
 
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void SetScopeLens(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather = 0.08f, float EdgeBlurRadius = 1.25f, float Intensity = 1.0f, float LookSensitivityScale = 0.275f, float BlendTime = 0.08f);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void ClearScopeLens();
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void SetScopeLensProfile(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather = 0.08f, float EdgeBlurRadius = 1.25f, float Intensity = 1.0f, float LookSensitivityScale = 0.275f, float BlendTime = 0.08f);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void SetScopeZoomEnabled(bool bEnabled);
+
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	bool IsScopeLensEnabled() const;
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	bool IsScopeZoomEnabled() const;
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetScopeLookSensitivityScale() const;
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	const FCameraScopeLensState& GetScopeLensState() const;
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	const FCameraScopeLensState& GetScopeLensProfile() const;
+
 	// ─── Camera Blend ──────────────────────────────────────────────
 	bool GetCameraView(FMinimalViewInfo& OutPOV) const;
 
@@ -221,6 +241,7 @@ private:
 	// ModifierList 를 priority 순으로 순회하며 ModifyCamera 호출 — UpdateCamera 가 base+blend
 	// POV 산출 후 1회 호출.
 	void ApplyCameraModifiers(float DeltaTime, FMinimalViewInfo& InOutPOV);
+	void UpdateScopeZoomBlend(float DeltaTime);
 
 private:
 	TSet<UCameraComponent*> RegisteredCameras;
@@ -272,6 +293,11 @@ private:
 	float DoFBokehRadiusThreshold = 2.5f;
 	float DoFBokehLumaThreshold = 0.45f;
 	float DoFBokehIntensity = 0.65f;
+
+	FCameraScopeLensState ScopeLensState;
+	FCameraScopeLensState ScopeLensProfile;
+	bool bScopeZoomDesired = false;
+	float ScopeZoomBlendAlpha = 0.0f;
 
 	// POV cache — UpdateCamera 가 채우고, 외부는 GetCameraCachePOV 로 read.
 	// ActiveCamera 가 한 번도 없었으면 bCameraCacheValid=false → caller 가 fallback 처리.

@@ -15,6 +15,8 @@
 #include "Core/TickFunction.h"
 #include "Render/Scene/FScene.h"
 
+#include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Materials/MaterialManager.h"
 #include "Mesh/MeshManager.h"
 #include "Particle/ParticleSystem.h"
@@ -2128,9 +2130,35 @@ void FParticleEditorWidget::RenderDocument(float DeltaTime)
 		return;
 	}
 
+	UParticleSystem* System = GetEditedSystem();
+	const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(System);
+	const int32 CurrentImGuiFrame = ImGui::GetFrameCount();
+
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 	{
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
+
+		if (EditorEngine)
+		{
+			ImGuiIO& IO = ImGui::GetIO();
+			if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Z))
+			{
+				if (IO.KeyShift)
+				{
+					EditorEngine->GetUndoSystem().Redo();
+				}
+				else
+				{
+					EditorEngine->GetUndoSystem().Undo();
+				}
+				UndoRedoAppliedFrame = CurrentImGuiFrame;
+			}
+			else if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Y))
+			{
+				EditorEngine->GetUndoSystem().Redo();
+				UndoRedoAppliedFrame = CurrentImGuiFrame;
+			}
+		}
 	}
 
 	RenderToolbar();
@@ -2169,6 +2197,11 @@ void FParticleEditorWidget::RenderDocument(float DeltaTime)
 	ImGui::SameLine(0.0f, 0.0f);
 	RenderCurveEditor(ImVec2(RightWidth, BottomHeight));
 	ImGui::EndGroup();
+
+	if (System && UndoRedoAppliedFrame != CurrentImGuiFrame)
+	{
+		RecordSerializedObjectEdit(System, UndoBeforeSnapshot, "Edit Particle System");
+	}
 }
 
 FString FParticleEditorWidget::GetDocumentTitle() const
@@ -2204,6 +2237,36 @@ void FParticleEditorWidget::RenderToolbar()
 	if (ImGui::Button("Restart Sim"))
 	{
 		RestartPreview();
+	}
+
+	ImGui::SameLine();
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+	{
+		ImGui::BeginDisabled();
+	}
+	if (ImGui::Button("Undo"))
+	{
+		EditorEngine->GetUndoSystem().Undo();
+		UndoRedoAppliedFrame = ImGui::GetFrameCount();
+	}
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+	{
+		ImGui::EndDisabled();
+	}
+
+	ImGui::SameLine();
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+	{
+		ImGui::BeginDisabled();
+	}
+	if (ImGui::Button("Redo"))
+	{
+		EditorEngine->GetUndoSystem().Redo();
+		UndoRedoAppliedFrame = ImGui::GetFrameCount();
+	}
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+	{
+		ImGui::EndDisabled();
 	}
 
 	ImGui::SameLine();
@@ -4159,6 +4222,20 @@ void FParticleEditorWidget::NotifyParticleAssetChanged(bool bResetSimulation)
 {
 	MarkDirty();
 	RebuildPreview(bResetSimulation);
+}
+
+void FParticleEditorWidget::OnSerializedObjectEditRestored(UObject* Object)
+{
+	if (Object != GetEditedSystem())
+	{
+		return;
+	}
+
+	if (UParticleSystem* System = GetEditedSystem())
+	{
+		System->BuildEmitters();
+	}
+	RebuildPreview(true);
 }
 
 void FParticleEditorWidget::ApplyCurrentLODToPreview()

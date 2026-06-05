@@ -7,6 +7,7 @@
 #include "Core/Types/RayTypes.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "GameFramework/World.h"
 #include "Math/MathUtils.h"
 #include "Mesh/MeshManager.h"
@@ -1172,6 +1173,7 @@ void FPhysicsAssetEditorWidget::Close()
     bEditorSimulationRestartRequested = false;
     bConstraintGraphLayoutDirty = true;
     ConstraintGraphTopologyHash = 0;
+    CachedPhysicsAssetUndoSnapshot.clear();
     FAssetEditorWidget::Close();
 }
 
@@ -1215,6 +1217,7 @@ void FPhysicsAssetEditorWidget::Open(UObject* Object)
     bValidationRan = false;
     ClearDirty();
     RequestFocus();
+    RefreshPhysicsAssetSerializedUndoSnapshot(GetEditedPhysicsAsset());
 }
 
 void FPhysicsAssetEditorWidget::Render(float DeltaTime)
@@ -1281,8 +1284,12 @@ void FPhysicsAssetEditorWidget::RenderEmbeddedToolbar(UPhysicsAsset* PhysicsAsse
         return;
     }
 
+    const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(PhysicsAsset);
+    HandleUndoRedoShortcuts();
+
     ClampSelection(PhysicsAsset);
     RenderToolbar(PhysicsAsset);
+    FinishPhysicsAssetSerializedEdit(PhysicsAsset, UndoBeforeSnapshot, "Edit Physics Asset");
 }
 
 void FPhysicsAssetEditorWidget::RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
@@ -1293,8 +1300,12 @@ void FPhysicsAssetEditorWidget::RenderEmbeddedTreeAndGraph(UPhysicsAsset* Physic
         return;
     }
 
+    const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(PhysicsAsset);
+    HandleUndoRedoShortcuts();
+
     ClampSelection(PhysicsAsset);
     RenderTreeAndGraphPanel(PhysicsAsset);
+    FinishPhysicsAssetSerializedEdit(PhysicsAsset, UndoBeforeSnapshot, "Edit Physics Asset");
 }
 
 void FPhysicsAssetEditorWidget::RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
@@ -1305,8 +1316,12 @@ void FPhysicsAssetEditorWidget::RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsse
         return;
     }
 
+    const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(PhysicsAsset);
+    HandleUndoRedoShortcuts();
+
     ClampSelection(PhysicsAsset);
     RenderDetailsAndValidationPanel(PhysicsAsset);
+    FinishPhysicsAssetSerializedEdit(PhysicsAsset, UndoBeforeSnapshot, "Edit Physics Asset");
 }
 
 bool FPhysicsAssetEditorWidget::SaveEditedPhysicsAsset()
@@ -1431,6 +1446,12 @@ bool FPhysicsAssetEditorWidget::ExportPhysicsAssetDebugJson(UPhysicsAsset* Physi
 
 void FPhysicsAssetEditorWidget::NotifyViewportGizmoModified()
 {
+    UPhysicsAsset* PhysicsAsset = GetEditedPhysicsAsset();
+    if (PhysicsAsset && !CachedPhysicsAssetUndoSnapshot.empty())
+    {
+        RecordSerializedObjectEdit(PhysicsAsset, CachedPhysicsAssetUndoSnapshot, "Edit Physics Asset Gizmo");
+        RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
+    }
     MarkPhysicsAssetDirty();
 }
 
@@ -1499,6 +1520,8 @@ bool FPhysicsAssetEditorWidget::DeleteSelectedPhysicsAssetElement(UPhysicsAsset*
         return false;
     }
 
+    const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(PhysicsAsset);
+
     if (IsValidConstraintIndex(PhysicsAsset, SelectedConstraintIndex))
     {
         if (!PhysicsAsset->RemoveConstraintSetupByIndex(SelectedConstraintIndex))
@@ -1510,6 +1533,8 @@ bool FPhysicsAssetEditorWidget::DeleteSelectedPhysicsAssetElement(UPhysicsAsset*
         SelectedBodyIndex = -1;
         SelectedShapeIndex = -1;
         MarkPhysicsAssetDirty();
+        RecordSerializedObjectEdit(PhysicsAsset, UndoBeforeSnapshot, "Delete Physics Asset Constraint");
+        RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
         return true;
     }
 
@@ -1524,6 +1549,8 @@ bool FPhysicsAssetEditorWidget::DeleteSelectedPhysicsAssetElement(UPhysicsAsset*
         SelectedShapeIndex = -1;
         SelectedConstraintIndex = -1;
         MarkPhysicsAssetDirty();
+        RecordSerializedObjectEdit(PhysicsAsset, UndoBeforeSnapshot, "Delete Physics Asset Body");
+        RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
         return true;
     }
 
@@ -1547,6 +1574,9 @@ void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
         return;
     }
 
+    const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(PhysicsAsset);
+    HandleUndoRedoShortcuts();
+
     ClampSelection(PhysicsAsset);
     RenderToolbar(PhysicsAsset);
     ImGui::Separator();
@@ -1564,6 +1594,8 @@ void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
     ImGui::BeginChild("##PhysicsAssetRight", ImVec2(RightWidth, 0.0f), true);
     RenderDetailsAndValidationPanel(PhysicsAsset);
     ImGui::EndChild();
+
+    FinishPhysicsAssetSerializedEdit(PhysicsAsset, UndoBeforeSnapshot, "Edit Physics Asset");
 }
 
 FString FPhysicsAssetEditorWidget::GetDocumentTitle() const
@@ -1672,6 +1704,36 @@ void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
     // }
 
     RenderSimulationControls(PhysicsAsset);
+    ImGui::SameLine();
+    if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+    {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Undo", ImVec2(72.0f, 0.0f)))
+    {
+        EditorEngine->GetUndoSystem().Undo();
+        UndoRedoAppliedFrame = ImGui::GetFrameCount();
+        RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
+    }
+    if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+    {
+        ImGui::EndDisabled();
+    }
+    ImGui::SameLine();
+    if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+    {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Redo", ImVec2(72.0f, 0.0f)))
+    {
+        EditorEngine->GetUndoSystem().Redo();
+        UndoRedoAppliedFrame = ImGui::GetFrameCount();
+        RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
+    }
+    if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+    {
+        ImGui::EndDisabled();
+    }
     ImGui::SameLine();
     RenderRegenerateBodiesControls(PhysicsAsset);
     ImGui::SameLine();
@@ -4187,6 +4249,79 @@ void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()
     ValidationIssues.clear();
     ValidationMeshPath.clear();
     RequestEditorSimulationRestart();
+}
+
+void FPhysicsAssetEditorWidget::FinishPhysicsAssetSerializedEdit(
+    UPhysicsAsset* PhysicsAsset,
+    const TArray<uint8>& BeforeSnapshot,
+    const FString& Label)
+{
+    if (!PhysicsAsset)
+    {
+        return;
+    }
+
+    if (UndoRedoAppliedFrame != ImGui::GetFrameCount())
+    {
+        RecordSerializedObjectEdit(PhysicsAsset, BeforeSnapshot, Label);
+    }
+    RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RefreshPhysicsAssetSerializedUndoSnapshot(UPhysicsAsset* PhysicsAsset)
+{
+    CachedPhysicsAssetUndoSnapshot = CaptureSerializedObjectSnapshot(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::HandleUndoRedoShortcuts()
+{
+    if (!EditorEngine || UndoRedoAppliedFrame == ImGui::GetFrameCount())
+    {
+        return;
+    }
+    if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+    {
+        return;
+    }
+
+    ImGuiIO& IO = ImGui::GetIO();
+    if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Z))
+    {
+        if (IO.KeyShift)
+        {
+            EditorEngine->GetUndoSystem().Redo();
+        }
+        else
+        {
+            EditorEngine->GetUndoSystem().Undo();
+        }
+        UndoRedoAppliedFrame = ImGui::GetFrameCount();
+        RefreshPhysicsAssetSerializedUndoSnapshot(GetEditedPhysicsAsset());
+    }
+    else if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Y))
+    {
+        EditorEngine->GetUndoSystem().Redo();
+        UndoRedoAppliedFrame = ImGui::GetFrameCount();
+        RefreshPhysicsAssetSerializedUndoSnapshot(GetEditedPhysicsAsset());
+    }
+}
+
+void FPhysicsAssetEditorWidget::OnSerializedObjectEditRestored(UObject* Object)
+{
+    UPhysicsAsset* PhysicsAsset = Cast<UPhysicsAsset>(Object);
+    if (!PhysicsAsset || !IsEditingObject(PhysicsAsset))
+    {
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+    bConstraintGraphLayoutDirty = true;
+    ConstraintGraphTopologyHash = 0;
+    bValidationRan = false;
+    ValidationIssues.clear();
+    ValidationMeshPath.clear();
+    RequestEditorSimulationRestart();
+    RefreshPhysicsAssetSerializedUndoSnapshot(PhysicsAsset);
 }
 
 void FPhysicsAssetEditorWidget::ClampSelection(UPhysicsAsset* PhysicsAsset)

@@ -51,6 +51,8 @@ struct FFrameContext
 	ID3D11ShaderResourceView* SceneColorCopySRV     = nullptr;
 	ID3D11Texture2D* SceneColorCopyTexture          = nullptr;
 	ID3D11Texture2D* ViewportRenderTexture          = nullptr;
+	ID3D11RenderTargetView*   ScopeLensRTV          = nullptr;
+	ID3D11ShaderResourceView* ScopeLensSRV          = nullptr;
 
 	// CopyResource 소스/대상
 	ID3D11Texture2D*          DepthTexture         = nullptr;  // 원본 (CopyResource 소스)
@@ -97,6 +99,7 @@ struct FFrameContext
 	FCameraFadeState CameraFade;
 	FCameraVignetteState CameraVignette;
 	FCameraLetterboxState CameraLetterbox;
+	FCameraScopeLensState CameraScopeLens;
 
 	// Derived helpers
 	bool IsFixedOrtho() const
@@ -131,6 +134,8 @@ struct FFrameContext
 		SceneColorCopySRV       = nullptr;
 		SceneColorCopyTexture   = nullptr;
 		ViewportRenderTexture   = nullptr;
+		ScopeLensRTV            = nullptr;
+		ScopeLensSRV            = nullptr;
 		DepthTexture            = nullptr;
 		DepthCopyTexture        = nullptr;
 		DepthCopySRV            = nullptr;

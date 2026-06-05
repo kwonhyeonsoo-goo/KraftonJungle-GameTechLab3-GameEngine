@@ -6,6 +6,7 @@
 #include "GameFramework/Camera/CameraTypes.h"
 
 struct FMinimalViewInfo;
+class UStaticMeshComponent;
 
 struct FCameraState
 {
@@ -29,6 +30,11 @@ public:
 
 	void BeginPlay() override;
 	void EndPlay() override;
+	void CreateRenderState() override;
+	void UpdateWorldMatrix() const override;
+	void PreGetEditableProperties() override;
+	UStaticMeshComponent* EnsureEditorVisualizationMesh();
+	virtual const char* GetEditorVisualizationMaterialPath() const;
 
 
 	UFUNCTION(Callable, Category="Camera")

@@ -26,10 +26,21 @@ Week14 now exposes:
   `UI`, including `GetElementValue`, `SetElementValue`, `SetElementClass`,
   `HasElementClass`, `GetElementAttribute`, `SetElementAttribute`,
   `SetElementStyle`, `FocusElement`, `BlurElement`, and `ClickElement`.
+- Week12-style UI shortcut wrappers on `UUserWidget` and global `UI`:
+  `SetImage`, `SetProgress`, `SetZOrder`, `SetTint`, `SetTextColor`,
+  `SetBackgroundColor`, `SetAlpha`, `SetRounding`, `SetFontScale`,
+  `SetElementTransform` / `SetTransform`, and `RemoveElement`.
+- RmlUi transition/class animation wrappers on `UUserWidget` and global `UI`:
+  `SetTransition`, `SetTransitionAll`, `ClearTransition`, `AnimateAlpha`,
+  `AnimateTextColor`, `AnimateBackgroundColor`, `AnimateTransform`, and
+  `AnimateClass`.
 - `Input.ConsumeTextInput()` returning completed UTF-8 text, backed by a Win32
   `WM_CHAR` / `WM_UNICHAR` text queue.
 - RmlUi keyboard and completed text forwarding through `ProcessKeyDown`,
   `ProcessKeyUp`, and `ProcessTextInput`.
+- RmlUi same-frame mouse/keyboard/text consume feedback routed through
+  `UUIManager` and `UGameViewportClient` before the filtered game input snapshot
+  is exposed to player/Lua input.
 - `Scene.Open(pathOrName)`, `Scene.Load(pathOrName)`,
   `Scene.TransitionTo(pathOrName)`, `Scene.Reload()`,
   `Scene.IsOpenPending()`, `Scene.GetCurrentPath()`, and
@@ -49,6 +60,8 @@ Week14 now exposes:
 - `Engine.Json`, `Engine.Save`, `Engine.Random`, `Engine.Asset`,
   `Engine.Scene`, `Engine.Application`, and `Engine.Debug` aliases for scripts
   that prefer a reference-style namespaced API.
+- Autocomplete starter definitions in `Docs/Lua/Week14EngineAPI.def.lua` for
+  the current Input/UI/Scene/Audio/ActorSequence surface.
 
 `Save` paths are intentionally restricted to the project `Saves/` directory.
 Absolute paths and `..` traversal are rejected.
@@ -77,8 +90,9 @@ Inspected reference files:
 - `World` can spawn actors/pawns, spawn from prefab, find actors by name/class/
   tag, query time, and line trace.
 - `UI` can create widgets, set text/value, show/hide/enable elements, manipulate
-  classes/attributes/styles/focus, register simple action events, and poll
-  action events.
+  classes/attributes/styles/focus, use game-jam shortcut wrappers, trigger
+  simple RmlUi transitions, register simple action events, and poll action
+  events.
 - `Audio` can load/play sounds, play BGM, play looped audio, set master/BGM/SFX
   volume, play quick SFX, play 3D SFX, and control one-shot handles.
 - `Json`, `Save`, and `Random` now cover the most common prototype persistence
@@ -103,10 +117,12 @@ Inspected reference files:
 - `Input` exposes completed text input consumption. Full IME composition window
   positioning is still not implemented.
 - Lua gameplay input mirrors the `UGameViewportClient` filtered game snapshot,
-  but Week12's richer same-frame RmlUi event-consumption feedback into an
-  `InputRouter`/`GameInputBridge` has not been ported.
+  including RmlUi same-frame mouse/keyboard/text consume feedback. Remaining
+  work is possessed/ejected PIE smoke testing.
 - `UI` has keyboard and completed text forwarding plus Week12-style element
-  value/class/attribute/style/focus helpers.
+  value/class/attribute/style/focus helpers, shortcut wrappers, transition
+  wrappers, and same-frame consume feedback. The remaining UI gap is visual
+  layout/preview tooling plus manual animation/input visual QA.
 - `Audio` now has handles, group volume split, listener state, `PlaySFX3D`,
   stop/query-by-handle, and opt-in SFX playback policy for max-concurrent,
   cooldown, priority, and stop-oldest behavior.
@@ -163,6 +179,186 @@ Remaining pair:
 
 - Batch 4 text input if menus include actual text fields.
 
+### Batch 24A - UI Convenience Wrappers Applied
+
+Added these to both `UUserWidget` and global `UI`:
+
+- `SetImage(elementId, path)`
+- `SetProgress(elementId, value)`
+- `SetZOrder(elementId, zOrder)`
+- `SetTint(elementId, r, g, b, a?)`
+- `SetTextColor(elementId, r, g, b, a?)`
+- `SetBackgroundColor(elementId, r, g, b, a?)`
+- `SetAlpha(elementId, alpha)`
+- `SetRounding(elementId, pixels)`
+- `SetFontScale(elementId, emScale)`
+- `SetElementTransform(elementId, x, y, width, height)`
+- `SetTransform(elementId, x, y, width, height)`
+- `RemoveElement(elementId)`
+
+Implementation note:
+
+- These are thin wrappers over Week14's existing value/attribute/style methods.
+  They do not introduce a new UI runtime or layout asset model.
+
+Remaining UI backlog:
+
+- Runtime UI render bridge. `RuntimeUILayoutAsset` model/export is now patched
+  in Batch 26B, and viewport-mount preview exists in Batch 26C.
+- Limited existing-id RML/RCSS reconcile back into `RuntimeUILayoutAsset` is
+  patched in Batch 27D. Full structural import remains later.
+- Runtime UI designer tooling: hierarchy/details, select/move/delete,
+  dirty-state, undo, drag editing, and layout authoring now exists at first-pass
+  level. Remaining work is richer controls and true in-tab Rml visual preview.
+- PIE possessed/ejected smoke test for same-frame RmlUi consume feedback.
+- Manual visual QA for the new UI/Input example.
+
+Week12 rescan note:
+
+- Treat the Runtime UI work as two batches. First port the layout asset model
+  and preview-only RML document bridge so `.rml` files can be opened and action
+  events inspected. Then, only if the UI owner needs it, port the heavier
+  hierarchy/details/drag/export designer tooling.
+- Do not bulk-copy Week12's `EditorRuntimeUIPreviewWidget` in one patch; it is a
+  large authoring surface and should be split for reviewability.
+
+Batch 26A applied:
+
+- Content Browser opens `.rml` and `.rcss` into a singleton Runtime UI Preview
+  document tab.
+- The tab reloads the file, shows source, and extracts `data-action`/`action`
+  plus element `id` values for quick Lua/UI wiring inspection.
+- `Debug|x64` MSBuild passed after this editor-facing preview foundation.
+
+Batch 26B applied:
+
+- `RuntimeUILayoutAsset` now exists as a lightweight package-backed layout
+  model with RML/RCSS export.
+- Content Browser can create `Runtime UI Layout`; creation writes the `.uasset`
+  and generated sibling `.rml/.rcss`, then opens the layout editor.
+- Double-clicking the layout `.uasset` opens the layout editor.
+- `Debug|x64` MSBuild passed after this layout/export bridge.
+
+Batch 26C applied:
+
+- Runtime UI Preview can now mount the opened `.rml` into the real viewport
+  using a preview `UUserWidget` and the existing `UUIManager`/RmlUi renderer.
+- The mounted preview enables mouse/keyboard/text capture and game-input
+  blocking, so UI input routing can be checked against the real runtime path.
+- The preview tab displays recent runtime `data-action`/`action` events from
+  the mounted widget.
+- `Debug|x64` MSBuild passed after this viewport-mount viewer. Remaining
+  warnings were the existing PhysX/Vehicle PDB `LNK4099` warnings.
+
+Batch 27A applied:
+
+- Added a Runtime UI Layout editor tab with hierarchy, details, add/delete,
+  numeric layout editing, color/style fields, and a simple 2D box preview.
+- Save persists the package and exports generated `.rml/.rcss`.
+- Open Generated RML saves/exports and then opens the generated document in the
+  existing Runtime UI Preview tab.
+- `Debug|x64` MSBuild passed after this minimal designer surface.
+
+Batch 27B applied:
+
+- The Runtime UI Layout editor canvas supports click-select and drag-to-move
+  for non-root widgets.
+- Drag movement updates parent-relative positions, marks the layout dirty, and
+  reuses the save/export path.
+- `Debug|x64` MSBuild passed after drag editing with 0 errors and 0 warnings.
+
+Batch 27C applied:
+
+- Runtime UI Layout editor now has local asset snapshot undo/redo using
+  `FMemoryArchive`, matching the existing Material/AnimGraph/LuaBlueprint
+  editor pattern.
+- Toolbar buttons and shortcuts are available for undo/redo/save. Drag movement
+  commits a single undo step on mouse release instead of one snapshot per frame.
+- `git diff --check` and `Debug|x64` MSBuild passed for the Runtime UI Layout
+  editor changes with 0 errors and 0 warnings.
+
+Batch 27D applied:
+
+- Runtime UI Layout editor now has `Import RML`.
+- It reads generated `.rml/.rcss` files and reconciles existing layout nodes by
+  `id`/sanitized CSS id.
+- Imported fields are intentionally limited to low-risk authoring data: text,
+  image source/fit, display name, class, action, canvas size, position/size,
+  opacity, colors, borders, padding, border radius, and font size.
+- `git diff --check` and `Debug|x64` MSBuild passed after the import patch.
+  The build had 0 errors and 2 existing PhysX PDB `LNK4099` warnings.
+
+Still not done:
+
+- The editor tab still does not render RmlUi offscreen/in-tab. Batch 26C uses
+  the real game viewport as the Runtime UI viewer.
+- Full structural import is still missing. Batch 27D does not create/delete
+  nodes or rebuild hierarchy from arbitrary hand-authored RML.
+- Advanced designer parity is still missing: real Rml visual preview, richer
+  style controls, dirty-state tab title refresh, and stronger manual smoke.
+
+### Batch 24B - UI Transition Animation Wrappers Applied
+
+Added these to both `UUserWidget` and global `UI`:
+
+- `SetTransition(elementId, propertyName, duration, timing?, delay?)`
+- `SetTransitionAll(elementId, duration, timing?, delay?)`
+- `ClearTransition(elementId)`
+- `AnimateAlpha(elementId, alpha, duration, timing?, delay?)`
+- `AnimateTextColor(elementId, r, g, b, duration, a?, timing?, delay?)`
+- `AnimateBackgroundColor(elementId, r, g, b, duration, a?, timing?, delay?)`
+- `AnimateTransform(elementId, x, y, width, height, duration, timing?, delay?)`
+- `AnimateClass(elementId, className, enabled, duration, timing?, delay?)`
+
+Implementation note:
+
+- These wrappers rely on RmlUi's built-in `transition` property support. They
+  are intended for simple HUD/menu motion, fades, color pulses, and class-based
+  state changes.
+- This is not a full timeline/keyframe UI animation editor. Runtime UI
+  layout/preview/editor work remains separate.
+
+### Batch 24C - RmlUi Same-Frame Consume Routing Applied
+
+Applied in the Week14 input architecture:
+
+- `UUIManager::BeginInputFrame()` clears stale per-frame UI consume state.
+- `UUIManager::PumpViewportInput(...)` lets `UGameViewportClient` pump RmlUi
+  before the player/Lua game input snapshot is built.
+- RmlUi mouse, keyboard, and text return values populate
+  `FUIInputCaptureState` consume flags.
+- `UGameViewportClient` clears consumed mouse/keyboard events from the game
+  snapshot and releases raw mouse capture for UI-consumed mouse frames.
+- Render-pass UI input processing is skipped if the pre-game pump already ran,
+  preventing duplicate click callbacks.
+
+Remaining caveat:
+
+- `Debug|x64` MSBuild succeeded after the same-frame consume patch.
+- `Game|x64` MSBuild succeeded after Batch 25A Lua definition/example polish.
+- `Scripts/PackageGame.ps1 -RootDir . -Configuration Game -DryRun` succeeded
+  after Batch 25A and wrote no files. Possessed/ejected PIE smoke is still
+  deferred for speed.
+
+### Batch 25A - Lua Definitions And Smoke Examples Applied
+
+Added:
+
+- `Docs/Lua/Week14EngineAPI.def.lua` now covers the new UI shortcut,
+  transition, action-event, visibility, and `CameraManager` helpers.
+- `KraftonEngine/Content/UI/Examples/GameJamInputSmoke.rml`.
+- `KraftonEngine/Content/Script/Examples/GameJamInputUISmoke.lua`.
+- `KraftonEngine/Content/Script/Examples/ActorSequenceSmoke.lua`.
+- `KraftonEngine/Content/Script/Examples/CameraScopeSmoke.lua`.
+
+Remaining caveat:
+
+- The repo does not include a standalone `lua.exe`/`luac.exe`, so syntax and
+  runtime behavior still need PIE execution. These examples are intentionally
+  non-authoritative smoke scripts, not tests that run during build.
+- `Game|x64` build and package dry-run passed after adding the examples;
+  launch smoke remains deferred.
+
 ### Batch 11 - Input Text And RmlUi Keyboard Forwarding Applied
 
 Added:
@@ -172,6 +368,8 @@ Added:
 - RmlUi `ProcessKeyDown`, `ProcessKeyUp`, and `ProcessTextInput` forwarding.
 - UI capture rules that prevent gameplay scripts from consuming text when a UI
   widget owns text input.
+- Same-frame RmlUi mouse/keyboard/text consume feedback now clears consumed
+  game input through `UGameViewportClient`.
 
 Remaining caveat:
 
@@ -399,6 +597,12 @@ menu:AddToViewport()
 menu:SetValue("nameInput", "Player")
 menu:SetClass("startButton", "highlight", true)
 UI.SetStyle("healthBar", "width", "75%")
+UI.SetProgress("healthBar", 75)
+UI.SetAlpha("damageFlash", 0.35)
+UI.SetTextColor("scoreText", 1.0, 0.92, 0.35)
+UI.SetElementTransform("toast", 32, 48, 360, 96)
+UI.AnimateAlpha("damageFlash", 0.0, 0.25, "ease-out")
+UI.AnimateTransform("toast", 32, 72, 360, 96, 0.18, "ease-out")
 UI.Focus("nameInput", true)
 
 local typed = Input.ConsumeTextInput()

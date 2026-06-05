@@ -168,6 +168,7 @@ void UEngine::TickFrameStart(float DeltaTime)
 	FDirectoryWatcher::Get().ProcessChanges();
 	FNotificationManager::Get().Tick(DeltaTime);
 	InputSystem::Get().Tick();
+	UUIManager::Get().BeginInputFrame();
 }
 
 void UEngine::TickFrameBody(float DeltaTime)

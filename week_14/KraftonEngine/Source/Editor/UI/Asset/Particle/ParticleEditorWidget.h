@@ -82,6 +82,7 @@ private:
 	void RestartPreview();
 	void NotifyParticleAssetChanged(bool bResetSimulation = true);
 	void ApplyCurrentLODToPreview();
+	void OnSerializedObjectEditRestored(UObject* Object) override;
 
 	UParticleEmitter* GetSelectedEmitter() const;
 	UParticleLODLevel* GetSelectedLOD() const;
@@ -114,4 +115,5 @@ private:
 	bool  bPendingClose      = false;
 	bool  bShowBounds        = false;
 	bool  bShowOriginAxis    = true;
+	int32 UndoRedoAppliedFrame = -1;
 };

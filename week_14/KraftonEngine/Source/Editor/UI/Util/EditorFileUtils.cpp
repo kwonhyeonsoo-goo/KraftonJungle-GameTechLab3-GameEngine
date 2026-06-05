@@ -39,7 +39,7 @@ namespace
 		return Specs;
 	}
 
-	FString RunFileDialog(const FEditorFileDialogOptions& InOptions, bool bOpenDialog)
+	FString RunFileDialog(const FEditorFileDialogOptions& InOptions, bool bOpenDialog, bool bPickFolders = false)
 	{
 		HRESULT InitHr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		const bool bShouldUninitialize = SUCCEEDED(InitHr);
@@ -84,6 +84,10 @@ namespace
 		DWORD Flags = 0;
 		Dialog->GetOptions(&Flags);
 		Flags |= FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR;
+		if (bPickFolders)
+		{
+			Flags |= FOS_PICKFOLDERS;
+		}
 		if (InOptions.bPathMustExist)
 		{
 			Flags |= FOS_PATHMUSTEXIST;
@@ -162,5 +166,17 @@ namespace FEditorFileUtils
 	FString SaveFileDialog(const FEditorFileDialogOptions& InOptions)
 	{
 		return RunFileDialog(InOptions, false);
+	}
+
+	FString OpenFolderDialog(const FEditorFileDialogOptions& InOptions)
+	{
+		FEditorFileDialogOptions FolderOptions = InOptions;
+		FolderOptions.Filter = nullptr;
+		FolderOptions.DefaultExtension = nullptr;
+		FolderOptions.DefaultFileName = nullptr;
+		FolderOptions.bFileMustExist = false;
+		FolderOptions.bPathMustExist = true;
+		FolderOptions.bPromptOverwrite = false;
+		return RunFileDialog(FolderOptions, true, true);
 	}
 }

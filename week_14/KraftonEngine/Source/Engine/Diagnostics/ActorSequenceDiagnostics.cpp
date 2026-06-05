@@ -61,6 +61,23 @@ namespace
 		return Actor ? Actor->GetComponentByClass<UActorSequenceComponent>() : nullptr;
 	}
 
+	AActor* FindActorWithSequence(UWorld* World)
+	{
+		if (!World)
+		{
+			return nullptr;
+		}
+
+		for (AActor* Actor : World->GetActors())
+		{
+			if (FindSequenceComponent(Actor))
+			{
+				return Actor;
+			}
+		}
+		return nullptr;
+	}
+
 	USceneComponent* FindComponentByGuid(AActor* Actor, const FString& ComponentGuid)
 	{
 		if (!Actor || ComponentGuid.empty())
@@ -241,6 +258,134 @@ namespace
 			"Actor Sequence stop should restore the cached base location value.");
 	}
 
+	void ValidateGuidFallbackAfterComponentRename(
+		FActorSequenceSelfTestContext& Context,
+		AActor* Actor,
+		const FString& TargetComponentGuid)
+	{
+		UActorSequenceComponent* SequenceComponent = FindSequenceComponent(Actor);
+		USceneComponent* TargetComponent = FindComponentByGuid(Actor, TargetComponentGuid);
+		Context.Check(SequenceComponent != nullptr, "Rename hostile test should find an ActorSequenceComponent.");
+		Context.Check(TargetComponent != nullptr, "Rename hostile test should find the original target component by guid.");
+		if (!SequenceComponent || !TargetComponent)
+		{
+			return;
+		}
+
+		const FString RenamedComponentName = "SequencedRoot_RenamedForGuidFallback";
+		TargetComponent->SetFName(FName(RenamedComponentName));
+		ValidatePlaybackAndRestore(
+			Context,
+			Actor,
+			TargetComponentGuid,
+			"Renamed component should still resolve through the persistent guid fallback.");
+
+		SequenceComponent->CommitSequenceEditsForSerialization();
+		UActorSequence* Sequence = SequenceComponent->GetSequence();
+		Context.Check(Sequence != nullptr, "Rename hostile test should keep the sequence object.");
+		if (!Sequence || Sequence->GetBindings().empty())
+		{
+			return;
+		}
+
+		const FSequenceObjectBinding& Binding = Sequence->GetBindings().front().Binding;
+		Context.Check(
+			Binding.TargetComponentGuid == TargetComponentGuid,
+			"Rename hostile test should preserve the component persistent guid after cache refresh.");
+		Context.Check(
+			Binding.TargetObjectName == RenamedComponentName,
+			"Rename hostile test should refresh the binding display name after component rename.");
+	}
+
+	void ValidateDuplicateKeepsLocalBinding(
+		FActorSequenceSelfTestContext& Context,
+		AActor* SourceActor,
+		const FString& TargetComponentGuid)
+	{
+		Context.Check(SourceActor != nullptr, "Duplicate hostile test should have a source actor.");
+		if (!SourceActor)
+		{
+			return;
+		}
+
+		UWorld* World = SourceActor->GetWorld();
+		Context.Check(World != nullptr, "Duplicate hostile test should duplicate into a valid world.");
+		if (!World)
+		{
+			return;
+		}
+
+		AActor* DuplicatedActor = Cast<AActor>(SourceActor->Duplicate(World));
+		Context.Check(DuplicatedActor != nullptr, "Actor Sequence source actor should duplicate successfully.");
+		Context.Check(DuplicatedActor != SourceActor, "Actor Sequence duplicate should be a different actor instance.");
+		if (!DuplicatedActor)
+		{
+			return;
+		}
+
+		USceneComponent* SourceTarget = FindComponentByGuid(SourceActor, TargetComponentGuid);
+		USceneComponent* DuplicateTarget = FindComponentByGuid(DuplicatedActor, TargetComponentGuid);
+		Context.Check(DuplicateTarget != nullptr, "Actor Sequence duplicate should keep a local target component with the same persistent guid.");
+		Context.Check(DuplicateTarget != SourceTarget, "Actor Sequence duplicate should resolve to the duplicate component, not the source component.");
+		Context.Check(
+			DuplicateTarget == nullptr || DuplicateTarget->GetOwner() == DuplicatedActor,
+			"Actor Sequence duplicate target component should be owned by the duplicated actor.");
+
+		if (DuplicatedActor && ValidateSequenceShape(
+			Context,
+			DuplicatedActor,
+			TargetComponentGuid,
+			"Actor duplicate should keep an ActorSequenceComponent."))
+		{
+			ValidatePlaybackAndRestore(
+				Context,
+				DuplicatedActor,
+				TargetComponentGuid,
+				"Actor duplicate should preserve the target scene component.");
+		}
+	}
+
+	void ValidateMissingTargetIsNonFatal(
+		FActorSequenceSelfTestContext& Context,
+		AActor* SourceActor,
+		const FString& TargetComponentGuid)
+	{
+		if (!SourceActor || !SourceActor->GetWorld())
+		{
+			Context.Check(false, "Missing-target hostile test should have a duplicable source actor.");
+			return;
+		}
+
+		AActor* HostileActor = Cast<AActor>(SourceActor->Duplicate(SourceActor->GetWorld()));
+		Context.Check(HostileActor != nullptr, "Missing-target hostile test should duplicate the source actor.");
+		if (!HostileActor)
+		{
+			return;
+		}
+
+		UActorSequenceComponent* SequenceComponent = FindSequenceComponent(HostileActor);
+		USceneComponent* TargetComponent = FindComponentByGuid(HostileActor, TargetComponentGuid);
+		Context.Check(SequenceComponent != nullptr, "Missing-target hostile test should keep the ActorSequenceComponent.");
+		Context.Check(TargetComponent != nullptr, "Missing-target hostile test should start with a removable target component.");
+		if (!SequenceComponent || !TargetComponent)
+		{
+			return;
+		}
+
+		HostileActor->RemoveComponent(TargetComponent);
+		Context.Check(
+			FindComponentByGuid(HostileActor, TargetComponentGuid) == nullptr,
+			"Missing-target hostile test should remove the sequenced target component.");
+
+		SequenceComponent->Play();
+		if (UActorSequencePlayer* Player = SequenceComponent->GetSequencePlayer())
+		{
+			Player->SetCurrentTime(1.0f);
+		}
+		SequenceComponent->Stop();
+		Context.Check(true, "Missing-target hostile test should play/stop without crashing when the target is absent.");
+	}
+
 	void DeleteSelfTestPrefab()
 	{
 		const std::filesystem::path PrefabPath =
@@ -326,6 +471,31 @@ FActorSequenceRoundTripSelfTestResult FActorSequenceDiagnostics::RunRoundTripSel
 		}
 	}
 
+	FWorldContext SourceContext;
+	SourceContext.WorldType = EWorldType::Game;
+	SourceContext.World = SourceWorld;
+	SourceContext.ContextName = "Actor Sequence Diagnostics Source";
+	SourceContext.ContextHandle = FName("ActorSequenceDiagnosticsSource");
+	const FString SceneSnapshot = FSceneSaveManager::SaveToString(SourceContext);
+	Context.Check(!SceneSnapshot.empty(), "Actor Sequence scene snapshot should serialize to a non-empty string.");
+	if (!SceneSnapshot.empty())
+	{
+		FWorldContext SceneRoundTripContext;
+		FPerspectiveCameraData CameraData;
+		const EWorldType LoadWorldType = EWorldType::Game;
+		FSceneSaveManager::LoadFromString(SceneSnapshot, SceneRoundTripContext, CameraData, &LoadWorldType);
+		Context.Check(SceneRoundTripContext.World != nullptr, "Actor Sequence full scene snapshot should load a world.");
+		if (SceneRoundTripContext.World)
+		{
+			AActor* SceneActor = FindActorWithSequence(SceneRoundTripContext.World);
+			Context.Check(SceneActor != nullptr, "Actor Sequence full scene round-trip should keep an ActorSequenceComponent.");
+			if (SceneActor && ValidateSequenceShape(Context, SceneActor, RootGuid, "Scene round-trip should keep an ActorSequenceComponent."))
+			{
+				ValidatePlaybackAndRestore(Context, SceneActor, RootGuid, "Scene round-trip should preserve the target scene component.");
+			}
+		}
+	}
+
 	DeleteSelfTestPrefab();
 	const bool bSavedPrefab = FPrefabManager::SaveActorPrefab(SourceActor, SelfTestPrefabPath);
 	Context.Check(bSavedPrefab, "Actor Sequence prefab should save inside the diagnostics folder.");
@@ -345,9 +515,13 @@ FActorSequenceRoundTripSelfTestResult FActorSequenceDiagnostics::RunRoundTripSel
 	}
 	DeleteSelfTestPrefab();
 
+	ValidateDuplicateKeepsLocalBinding(Context, SourceActor, RootGuid);
+	ValidateGuidFallbackAfterComponentRename(Context, SourceActor, RootGuid);
+	ValidateMissingTargetIsNonFatal(Context, SourceActor, RootGuid);
+
 	if (Context.Result.bPassed && Context.Result.Message.empty())
 	{
-		Context.Result.Message = "Actor Sequence JSON and prefab round-trip self-test passed.";
+		Context.Result.Message = "Actor Sequence JSON, full scene, prefab, rename, duplicate, and missing-target self-test passed.";
 	}
 	return Context.Result;
 }

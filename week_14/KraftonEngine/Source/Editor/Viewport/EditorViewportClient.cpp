@@ -290,7 +290,16 @@ void FEditorViewportClient::TickEditorShortcuts()
 	// 키보드 소유권과 UpdateInputOwner 의 WantTextInput 해제로 게이팅 일원화됨.
 	if (SelectionManager && InputSystem::Get().GetKeyDown(VK_DELETE))
 	{
-		SelectionManager->DeleteSelectedActors();
+		const TArray<AActor*> SelectedActors = SelectionManager->GetSelectedActors();
+		if (!SelectedActors.empty())
+		{
+			TArray<FEditorSerializedActorState> DeletedStates =
+				EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors);
+			if (SelectionManager->DeleteSelectedActors() > 0)
+			{
+				EditorEngine->GetUndoSystem().RecordActorDeletion(DeletedStates, "Delete Actors");
+			}
+		}
 		return;
 	}
 
@@ -336,6 +345,9 @@ void FEditorViewportClient::TickEditorShortcuts()
 			{
 				EditorEngine->GetGizmo()->UpdateGizmoTransform();
 			}
+			EditorEngine->GetUndoSystem().RecordActorCreation(
+				EditorEngine->GetUndoSystem().CaptureActorStates(NewSelection),
+				"Duplicate Actors");
 		}
 	}
 }
@@ -689,6 +701,20 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 		else
 		{
 			Gizmo->DragEnd();
+			if (!PendingActorTransformUndoStates.empty())
+			{
+				if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+				{
+					const TArray<AActor*> SelectedActors = SelectionManager
+						? SelectionManager->GetSelectedActors()
+						: TArray<AActor*>();
+					EditorEngine->GetUndoSystem().RecordActorTransforms(
+						PendingActorTransformUndoStates,
+						EditorEngine->GetUndoSystem().CaptureActorTransforms(SelectedActors),
+						"Transform Actors");
+				}
+				PendingActorTransformUndoStates.clear();
+			}
 		}
 	}
 	else if (Input.GetKeyUp(VK_LBUTTON))
@@ -696,6 +722,7 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 		// 드래그 threshold 미달로 DragEnd가 호출되지 않는 경우 처리
 		Gizmo->SetPressedOnHandle(false);
 		bIsMarqueeSelecting = false;
+		PendingActorTransformUndoStates.clear();
 	}
 }
 
@@ -712,6 +739,13 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 	//먼저 Ray와 기즈모의 충돌을 감지하고 
 	if (FRayUtils::RaycastComponent(Gizmo, Ray, HitResult))
 	{
+		if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
+		{
+			const TArray<AActor*> SelectedActors = SelectionManager
+				? SelectionManager->GetSelectedActors()
+				: TArray<AActor*>();
+			PendingActorTransformUndoStates = EditorEngine->GetUndoSystem().CaptureActorTransforms(SelectedActors);
+		}
 		Gizmo->SetPressedOnHandle(true);
 	}
 	else

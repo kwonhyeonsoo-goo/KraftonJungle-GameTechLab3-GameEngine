@@ -64,6 +64,9 @@
     <Filter Include="Source\Editor\Subsystem">
       <UniqueIdentifier>{6389b5b6-14f6-237a-9b3e-284fd2a8c8d5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Undo">
+      <UniqueIdentifier>{ec52fa75-f93d-4c50-8cbb-7060a8eb39fd}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\UI">
       <UniqueIdentifier>{d23c3ab5-7e26-ff59-be61-b2a81e9921c0}</UniqueIdentifier>
     </Filter>
@@ -72,6 +75,9 @@
     </Filter>
     <Filter Include="Source\Editor\UI\Asset\Animation">
       <UniqueIdentifier>{6f6ec3f7-5356-0f05-e9a8-97b2d4dceab7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\UI\Asset\ActorSequence">
+      <UniqueIdentifier>{668d3b10-4d72-4f73-bc9d-a7c0e5e71001}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\UI\Asset\CameraShake">
       <UniqueIdentifier>{e92a4d79-885d-3fed-53fc-d67b7fb36d18}</UniqueIdentifier>
@@ -93,6 +99,9 @@
     </Filter>
     <Filter Include="Source\Editor\UI\Asset\Physics">
       <UniqueIdentifier>{a9510143-b9c8-a4a8-aa42-31438e50f6bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\UI\Asset\RuntimeUI">
+      <UniqueIdentifier>{0b56d826-4f56-4dd3-8df2-f14fb3e00c9f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\UI\ContentBrowser">
       <UniqueIdentifier>{09a2ea7f-e891-b580-bef0-471bcd9b5d4b}</UniqueIdentifier>
@@ -866,6 +875,9 @@
     <ClCompile Include="Source\Editor\EditorRenderPipeline.cpp">
       <Filter>Source\Editor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Undo\EditorUndoSystem.cpp">
+      <Filter>Source\Editor\Undo</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
       <Filter>Source\Editor\Selection</Filter>
     </ClCompile>
@@ -920,6 +932,9 @@
     <ClCompile Include="Source\Editor\UI\Asset\CameraShake\CameraShakeEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\CameraShake</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\ActorSequence\ActorSequenceEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\ActorSequence</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Curve</Filter>
     </ClCompile>
@@ -940,6 +955,9 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Physics\PhysicsAssetEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\RuntimeUI\RuntimeUILayoutEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\RuntimeUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\ContentBrowser\ContentBrowser.cpp">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
@@ -1230,6 +1248,15 @@
       <Filter>Source\Engine\Component\Input</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\CameraEditorMeshDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\GameViewportInputDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\RuntimeUILayoutDiagnostics.cpp">
       <Filter>Source\Engine\Diagnostics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp">
@@ -2069,6 +2096,12 @@
     <ClCompile Include="Source\Engine\Texture\stb_image_impl.cpp">
       <Filter>Source\Engine\Texture</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutManager.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\UI\UIManager.cpp">
       <Filter>Source\Engine\UI</Filter>
     </ClCompile>
@@ -2152,6 +2185,9 @@
     <ClInclude Include="Source\Editor\EditorRenderPipeline.h">
       <Filter>Source\Editor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Undo\EditorUndoSystem.h">
+      <Filter>Source\Editor\Undo</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\PIE\PIETypes.h">
       <Filter>Source\Editor\PIE</Filter>
     </ClInclude>
@@ -2224,6 +2260,9 @@
     <ClInclude Include="Source\Editor\UI\Asset\CameraShake\CameraShakeEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\CameraShake</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\ActorSequence\ActorSequenceEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\ActorSequence</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Curve</Filter>
     </ClInclude>
@@ -2244,6 +2283,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Physics\PhysicsAssetEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\RuntimeUI\RuntimeUILayoutEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\RuntimeUI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\ContentBrowser\ContentBrowser.h">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
@@ -2956,6 +2998,15 @@
     <ClInclude Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.h">
       <Filter>Source\Engine\Diagnostics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\CameraEditorMeshDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\GameViewportInputDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\RuntimeUILayoutDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\MeshBinary.h">
       <Filter>Source\Engine\Mesh</Filter>
     </ClInclude>
@@ -3660,6 +3711,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Texture\Texture2D.h">
       <Filter>Source\Engine\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutManager.h">
+      <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\UI\UIManager.h">
       <Filter>Source\Engine\UI</Filter>

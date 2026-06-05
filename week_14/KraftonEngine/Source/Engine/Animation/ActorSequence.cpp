@@ -15,6 +15,16 @@
 
 namespace
 {
+	float ResolveSequenceStartTime(const UActorSequence* Sequence)
+	{
+		return IsValid(Sequence) ? Sequence->GetStartTime() : 0.0f;
+	}
+
+	float ResolveSequenceEndTime(const UActorSequence* Sequence)
+	{
+		return IsValid(Sequence) ? Sequence->GetEndTime() : 0.0f;
+	}
+
 	FString MakeActorSequenceId(const char* Prefix)
 	{
 		static uint32 Counter = 1;
@@ -237,12 +247,26 @@ namespace
 
 void UActorSequence::SetDuration(float InDuration)
 {
-	Duration = std::max(0.0f, InDuration);
+	Duration = std::max(0.001f, InDuration);
+}
+
+void UActorSequence::SetStartTime(float InStartTime)
+{
+	const float EndTime = GetEndTime();
+	StartTime = std::max(0.0f, InStartTime);
+	Duration = std::max(0.001f, EndTime - StartTime);
+}
+
+void UActorSequence::SetPlaybackRange(float InStartTime, float InEndTime)
+{
+	StartTime = std::max(0.0f, InStartTime);
+	Duration = std::max(0.001f, InEndTime - StartTime);
 }
 
 void UActorSequence::Clear()
 {
 	Bindings.clear();
+	StartTime = 0.0f;
 	Duration = 1.0f;
 }
 
@@ -311,13 +335,14 @@ bool UActorSequence::AddFloatTrack(
 	Section.Channels.push_back(Channel);
 	Track.Sections.push_back(Section);
 	Binding->Tracks.push_back(Track);
-	Duration = std::max(Duration, Section.StartTime + Section.Duration);
+	Duration = std::max(Duration, Section.StartTime + Section.Duration - StartTime);
 	return true;
 }
 
 FString UActorSequence::ExportToJsonString() const
 {
 	json::JSON Root = json::Object();
+	Root["StartTime"] = static_cast<double>(StartTime);
 	Root["Duration"] = static_cast<double>(Duration);
 
 	json::JSON BindingsJson = json::Array();
@@ -360,6 +385,7 @@ bool UActorSequence::ImportFromJsonString(const FString& JsonText)
 	}
 
 	json::JSON Root = json::JSON::Load(JsonText);
+	StartTime = Root.hasKey("StartTime") ? static_cast<float>(Root["StartTime"].ToFloat()) : 0.0f;
 	Duration = Root.hasKey("Duration") ? static_cast<float>(Root["Duration"].ToFloat()) : 1.0f;
 
 	if (Root.hasKey("Bindings"))
@@ -556,7 +582,7 @@ EActorSequenceTrackType UActorSequence::TrackTypeForProperty(const FProperty& Pr
 
 void UActorSequence::ClampDurationFromSections()
 {
-	float MaxEndTime = Duration;
+	float MaxEndTime = StartTime + Duration;
 	for (const FActorSequenceBinding& Binding : Bindings)
 	{
 		for (const FActorSequenceTrack& Track : Binding.Tracks)
@@ -567,7 +593,8 @@ void UActorSequence::ClampDurationFromSections()
 			}
 		}
 	}
-	Duration = std::max(0.0f, MaxEndTime);
+	StartTime = std::max(0.0f, StartTime);
+	Duration = std::max(0.001f, MaxEndTime - StartTime);
 }
 
 void UActorSequencePlayer::Initialize(UActorSequence* InSequence, AActor* InOwnerActor)
@@ -575,7 +602,7 @@ void UActorSequencePlayer::Initialize(UActorSequence* InSequence, AActor* InOwne
 	Sequence = InSequence;
 	OwnerActor.Reset(InOwnerActor);
 	ResolvedChannels.clear();
-	CurrentTime = 0.0f;
+	CurrentTime = ResolveSequenceStartTime(Sequence);
 	bPlaying = false;
 	bPaused = false;
 }
@@ -595,7 +622,16 @@ void UActorSequencePlayer::Play(bool bResetTime)
 
 	if (bResetTime)
 	{
-		CurrentTime = 0.0f;
+		CurrentTime = ResolveSequenceStartTime(Sequence);
+	}
+	else
+	{
+		const float StartTime = ResolveSequenceStartTime(Sequence);
+		const float EndTime = ResolveSequenceEndTime(Sequence);
+		if (CurrentTime < StartTime || CurrentTime >= EndTime)
+		{
+			CurrentTime = StartTime;
+		}
 	}
 
 	RebuildResolvedChannels();
@@ -621,7 +657,7 @@ void UActorSequencePlayer::Stop(bool bRestoreBaseValues)
 
 	bPlaying = false;
 	bPaused = false;
-	CurrentTime = 0.0f;
+	CurrentTime = ResolveSequenceStartTime(Sequence);
 	ResolvedChannels.clear();
 }
 
@@ -633,20 +669,26 @@ void UActorSequencePlayer::Tick(float DeltaTime)
 	}
 
 	CurrentTime += DeltaTime;
+	const float SequenceStart = Sequence->GetStartTime();
 	const float SequenceDuration = Sequence->GetDuration();
-	if (SequenceDuration > 0.0001f && CurrentTime > SequenceDuration)
+	const float SequenceEnd = Sequence->GetEndTime();
+	if (CurrentTime < SequenceStart)
+	{
+		CurrentTime = SequenceStart;
+	}
+	if (SequenceDuration > 0.0001f && CurrentTime > SequenceEnd)
 	{
 		if (bLooping)
 		{
-			CurrentTime = std::fmod(CurrentTime, SequenceDuration);
-			if (CurrentTime < 0.0f)
+			CurrentTime = SequenceStart + std::fmod(CurrentTime - SequenceStart, SequenceDuration);
+			if (CurrentTime < SequenceStart)
 			{
 				CurrentTime += SequenceDuration;
 			}
 		}
 		else
 		{
-			CurrentTime = SequenceDuration;
+			CurrentTime = SequenceEnd;
 			ApplyAtCurrentTime();
 			bPlaying = false;
 			bPaused = bPauseAtEnd;
@@ -663,7 +705,11 @@ void UActorSequencePlayer::Tick(float DeltaTime)
 
 void UActorSequencePlayer::SetCurrentTime(float InTime)
 {
-	CurrentTime = std::max(0.0f, InTime);
+	const float SequenceStart = ResolveSequenceStartTime(Sequence);
+	const float SequenceEnd = ResolveSequenceEndTime(Sequence);
+	CurrentTime = SequenceEnd > SequenceStart
+		? std::clamp(InTime, SequenceStart, SequenceEnd)
+		: SequenceStart;
 	if (ResolvedChannels.empty())
 	{
 		RebuildResolvedChannels();
