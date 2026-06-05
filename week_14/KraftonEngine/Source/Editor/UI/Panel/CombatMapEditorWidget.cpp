@@ -367,14 +367,6 @@ void FCombatMapEditorWidget::RenderToolbar()
     {
         bPendingOpenAutoLinkPopup = true;
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Draw Debug Once"))
-    {
-        DrawAllDebugOnce();
-    }
-    ImGui::SameLine();
-    ImGui::Checkbox("Selected Debug Only", &bShowOnlySelectedNodeDebug);
-
     AActor* SelectedActor = GetSelectedActor();
     const FString SelectedActorName = ActorNameForUI(SelectedActor);
     ImGui::Text("Selected Actor: %s", SelectedActorName.c_str());
@@ -669,7 +661,7 @@ void FCombatMapEditorWidget::RenderGraphEditor()
 	}
     ImGui::SameLine();
     ImGui::Checkbox("Apply Graph To Scene", &bGraphApplyToScene);
-    ImGui::TextDisabled("Top-down graph uses fixed 1/15 scale and always flips scene X/Y for Z-up left-handed view. Scene Z is fixed to 0.");
+    ImGui::TextDisabled("Top-down graph uses fixed 1/15 scale. Scene X/Y map directly to graph X/Y for top-down view. Scene Z is fixed to 0.");
 
     if (!GraphEditorContext)
     {
@@ -707,8 +699,8 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         const FString NodeIdText = Node->GetNodeId().empty() ? FString("<empty NodeId>") : Node->GetNodeId();
 
         ed::BeginNode(ToGraphNodeId(NodeGraphId));
-        ed::BeginPin(ToGraphPinId(OutputPinId), ed::PinKind::Output);
-        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "out");
+        ed::BeginPin(ToGraphPinId(InputPinId), ed::PinKind::Input);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "in");
         ed::EndPin();
         ImGui::SameLine();
         ImGui::BeginGroup();
@@ -728,8 +720,8 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         ImGui::TextDisabled("S %d | L %d", Node->GetSlotCount(), Node->GetLinkCount());
         ImGui::EndGroup();
         ImGui::SameLine();
-        ed::BeginPin(ToGraphPinId(InputPinId), ed::PinKind::Input);
-        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "in");
+        ed::BeginPin(ToGraphPinId(OutputPinId), ed::PinKind::Output);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "out");
         ed::EndPin();
         ed::EndNode();
 
@@ -918,7 +910,6 @@ void FCombatMapEditorWidget::RenderGraphEditor()
 void FCombatMapEditorWidget::RenderAgentPanel()
 {
     ImGui::SeparatorText("Simulation");
-    RenderPIEControls();
 
     ImGui::Text("Agents: %d", static_cast<int32>(CachedAgents.size()));
     if (!FindOrUseManager())
@@ -1014,49 +1005,6 @@ void FCombatMapEditorWidget::RenderValidationPopup()
     }
 }
 
-void FCombatMapEditorWidget::RenderPIEControls()
-{
-    const bool bPlaying = EditorEngine && EditorEngine->IsPlayingInEditor();
-
-    if (bPlaying)
-    {
-        ImGui::BeginDisabled();
-    }
-    if (ImGui::Button("Start PIE Simulation"))
-    {
-        if (EditorEngine)
-        {
-            FRequestPlaySessionParams Params;
-            Params.PlayMode = EPIEPlayMode::PlayInViewport;
-            EditorEngine->RequestPlaySession(Params);
-        }
-    }
-    if (bPlaying)
-    {
-        ImGui::EndDisabled();
-    }
-
-    ImGui::SameLine();
-
-    if (!bPlaying)
-    {
-        ImGui::BeginDisabled();
-    }
-    if (ImGui::Button("Stop PIE"))
-    {
-        if (EditorEngine)
-        {
-            EditorEngine->RequestEndPlayMap();
-        }
-    }
-    if (!bPlaying)
-    {
-        ImGui::EndDisabled();
-    }
-
-    ImGui::TextDisabled("PIE State: %s", bPlaying ? "Running" : "Stopped");
-}
-
 void FCombatMapEditorWidget::InitializeGraphEditor()
 {
     if (GraphEditorContext)
@@ -1088,13 +1036,13 @@ void FCombatMapEditorWidget::ResetGraphLayoutFromScene()
 ImVec2 FCombatMapEditorWidget::WorldToGraph(const FVector& Position) const
 {
     const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
-    return ImVec2(-Position.X / SafeUnitsPerGraphUnit, -Position.Y / SafeUnitsPerGraphUnit);
+    return ImVec2(Position.X / SafeUnitsPerGraphUnit, Position.Y / SafeUnitsPerGraphUnit);
 }
 
 FVector FCombatMapEditorWidget::GraphToWorld(const ImVec2& Position) const
 {
     const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
-    return FVector(-Position.x * SafeUnitsPerGraphUnit, -Position.y * SafeUnitsPerGraphUnit, 0.0f);
+    return FVector(Position.x * SafeUnitsPerGraphUnit, Position.y * SafeUnitsPerGraphUnit, 0.0f);
 }
 
 void FCombatMapEditorWidget::EnsureGraphNodePositionFromScene(UCombatCoverNodeComponent* Node, int32 /*NodeIndex*/)
@@ -1326,30 +1274,6 @@ TComponent* FCombatMapEditorWidget::AddComponentToSelectedActor()
 
     Refresh();
     return Component;
-}
-
-void FCombatMapEditorWidget::DrawAllDebugOnce()
-{
-    Refresh();
-    if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
-    {
-        Manager->DrawAllDebugVisuals(!bShowOnlySelectedNodeDebug);
-        return;
-    }
-
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        return;
-    }
-
-    for (UCombatCoverNodeComponent* Node : CachedNodes)
-    {
-		if (IsValidCombatNode(Node) && (!bShowOnlySelectedNodeDebug || Node == SelectedNode))
-        {
-            Node->DrawDebugVisuals(World->GetScene(), Node == SelectedNode);
-        }
-    }
 }
 
 void FCombatMapEditorWidget::SelectNode(UCombatCoverNodeComponent* Node)

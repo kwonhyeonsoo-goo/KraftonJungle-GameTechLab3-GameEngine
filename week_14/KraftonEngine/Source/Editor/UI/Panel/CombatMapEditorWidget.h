@@ -42,10 +42,8 @@ private:
     void RenderAgentPanel();
     void RenderAutoLinkPopup();
     void RenderValidationPopup();
-    void RenderPIEControls();
     template<typename TComponent>
     TComponent* AddComponentToSelectedActor();
-    void DrawAllDebugOnce();
     void SelectNode(UCombatCoverNodeComponent* Node);
 
     void InitializeGraphEditor();
@@ -73,7 +71,6 @@ private:
     float AutoLinkMaxDistance = 1500.0f;
     int32 AutoLinkMaxLinksPerNode = 2;
     bool bAutoLinkDirectedByX = true;
-    bool bShowOnlySelectedNodeDebug = false;
     TArray<FString> LastValidationMessages;
 
     ax::NodeEditor::EditorContext* GraphEditorContext = nullptr;
