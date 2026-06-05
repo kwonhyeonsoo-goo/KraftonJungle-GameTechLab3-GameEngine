@@ -334,10 +334,30 @@ void FEditorConsoleWidget::Shutdown()
     HistoryPos = -1;
 
     Commands.clear();
+    CompletionSourceEntries.clear();
+    ResetCompletionState();
+}
+
+void FEditorConsoleWidget::ResetCompletionState()
+{
     CompletionCandidates.clear();
     CompletionSelectionIndex    = -1;
     bCompletionNavigationActive = false;
     CompletionNavigationValue.clear();
+    LastCompletionInput.clear();
+    CompletionDisplayPrefix.clear();
+    bCompletionCacheValid = false;
+}
+
+void FEditorConsoleWidget::InvalidateCompletionCache()
+{
+    CompletionCandidates.clear();
+    CompletionSelectionIndex    = -1;
+    bCompletionNavigationActive = false;
+    CompletionNavigationValue.clear();
+    LastCompletionInput.clear();
+    CompletionDisplayPrefix.clear();
+    bCompletionCacheValid = false;
 }
 
 void FEditorConsoleWidget::Clear()
@@ -441,7 +461,7 @@ void FEditorConsoleWidget::RenderCompletionCandidates()
 	DrawList->AddRectFilled(PanelMin, PanelMax, IM_COL32(18, 22, 28, 210), 4.0f);
 	DrawList->AddRect(PanelMin, PanelMax, IM_COL32(80, 92, 110, 170), 4.0f);
 
-	const FString Prefix = TrimLeft(ToLower(InputBuf));
+	const FString& Prefix = CompletionDisplayPrefix;
 	const ImU32 PrefixColor = IM_COL32(120, 132, 150, 255);
 	const ImU32 SuffixColor = IM_COL32(210, 225, 245, 255);
 	float Y = PanelMin.y + PanelPaddingY;
@@ -449,8 +469,7 @@ void FEditorConsoleWidget::RenderCompletionCandidates()
 	for (int32 CandidateIndex = 0; CandidateIndex < static_cast<int32>(CompletionCandidates.size()); ++CandidateIndex)
 	{
 		const FCompletionCandidate& Candidate = CompletionCandidates[CandidateIndex];
-		const FString LowerDisplayText = ToLower(Candidate.DisplayText);
-		const size_t PrefixLength = (Prefix.size() <= LowerDisplayText.size() && StartsWith(LowerDisplayText, Prefix)) ? Prefix.size() : 0;
+		const size_t PrefixLength = (Prefix.size() <= Candidate.LowerDisplayText.size() && StartsWith(Candidate.LowerDisplayText, Prefix)) ? Prefix.size() : 0;
 		const FString PrefixText = Candidate.DisplayText.substr(0, PrefixLength);
 		const FString SuffixText = Candidate.DisplayText.substr(PrefixLength);
 		const ImVec2 TextPos(PanelMin.x + PanelPaddingX, Y);
@@ -493,18 +512,12 @@ void FEditorConsoleWidget::RenderInputLine(const char* Label, float Width, bool 
 	if (ImGui::InputText(Label, InputBuf, sizeof(InputBuf), Flags, &TextEditCallback, this)) {
 		ExecCommand(InputBuf);
 		strcpy_s(InputBuf, "");
-		CompletionCandidates.clear();
-		CompletionSelectionIndex = -1;
-		bCompletionNavigationActive = false;
-		CompletionNavigationValue.clear();
+		ResetCompletionState();
 		bReclaimFocus = true;
 	}
 	else
 	{
-		if (!(bCompletionNavigationActive && CompletionNavigationValue == InputBuf && !CompletionCandidates.empty()))
-		{
-			UpdateCompletionCandidates();
-		}
+		UpdateCompletionCandidates();
 		RenderCompletionCandidates();
 	}
 
@@ -527,12 +540,36 @@ const char* FEditorConsoleWidget::GetLatestLogMessage() const
 
 void FEditorConsoleWidget::RegisterCommand(const FString& Name, CommandFn Fn, const FString& Category, const FString& Usage, const FString& Description)
 {
-	Commands[ToLower(Name)] = { Fn, Category, Usage, Description };
+	const FString LowerName = ToLower(Name);
+	Commands[LowerName] = { Fn, Category, Usage, Description };
+
+	CompletionSourceEntries.erase(
+		std::remove_if(CompletionSourceEntries.begin(), CompletionSourceEntries.end(),
+			[&LowerName](const FCompletionSourceEntry& Entry)
+			{
+				return Entry.CommandName == LowerName;
+			}),
+		CompletionSourceEntries.end());
+
+	for (const FString& Variant : BuildUsageVariants(LowerName, Usage))
+	{
+		CompletionSourceEntries.push_back({ LowerName, Variant, ToLower(Variant) });
+	}
+	InvalidateCompletionCache();
 }
 
 void FEditorConsoleWidget::UpdateCompletionCandidates()
 {
-	CompletionCandidates = GetCompletionCandidates(InputBuf);
+	if (bCompletionNavigationActive && CompletionNavigationValue == InputBuf && !CompletionCandidates.empty())
+	{
+		if (CompletionSelectionIndex >= static_cast<int32>(CompletionCandidates.size()))
+		{
+			CompletionSelectionIndex = 0;
+		}
+		return;
+	}
+
+	EnsureCompletionCandidatesForInput(InputBuf);
 	if (!bCompletionNavigationActive || CompletionNavigationValue != InputBuf)
 	{
 		CompletionSelectionIndex = -1;
@@ -545,24 +582,33 @@ void FEditorConsoleWidget::UpdateCompletionCandidates()
 	}
 }
 
-TArray<FEditorConsoleWidget::FCompletionCandidate> FEditorConsoleWidget::GetCompletionCandidates(const FString& Input) const
+const TArray<FEditorConsoleWidget::FCompletionCandidate>& FEditorConsoleWidget::EnsureCompletionCandidatesForInput(const FString& Input)
 {
-	FString LowerInput = TrimLeft(ToLower(Input));
+	if (bCompletionCacheValid && LastCompletionInput == Input)
+	{
+		return CompletionCandidates;
+	}
+
+	LastCompletionInput = Input;
+	CompletionDisplayPrefix = TrimLeft(ToLower(Input));
+	CompletionCandidates = GetCompletionCandidatesForPrefix(CompletionDisplayPrefix);
+	bCompletionCacheValid = true;
+	return CompletionCandidates;
+}
+
+TArray<FEditorConsoleWidget::FCompletionCandidate> FEditorConsoleWidget::GetCompletionCandidatesForPrefix(const FString& LowerInput) const
+{
 	if (LowerInput.empty())
 	{
 		return {};
 	}
 
 	TArray<FCompletionCandidate> Candidates;
-	for (const auto& Pair : Commands)
+	for (const FCompletionSourceEntry& Entry : CompletionSourceEntries)
 	{
-		const FString& Name = Pair.first;
-		for (const FString& Variant : BuildUsageVariants(Name, Pair.second.Usage))
+		if (StartsWith(Entry.LowerDisplayText, LowerInput))
 		{
-			if (StartsWith(ToLower(Variant), LowerInput))
-			{
-				Candidates.push_back({ Name, Variant });
-			}
+			Candidates.push_back({ Entry.CommandName, Entry.DisplayText, Entry.LowerDisplayText });
 		}
 	}
 
@@ -1630,6 +1676,7 @@ void FEditorConsoleWidget::ApplyCompletionCandidate(ImGuiInputTextCallbackData* 
 	CompletionSelectionIndex = CandidateIndex;
 	bCompletionNavigationActive = true;
 	CompletionNavigationValue = Data->Buf;
+	CompletionDisplayPrefix = TrimLeft(ToLower(Data->Buf));
 }
 
 // History & Tab-Completion Callback____________________________________________________________
@@ -1645,13 +1692,9 @@ int32 FEditorConsoleWidget::TextEditCallback(ImGuiInputTextCallbackData* Data)
 	}
 
 	if (Data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
-		if (!Console->CompletionCandidates.empty() || !Console->GetCompletionCandidates(Data->Buf).empty())
+		const TArray<FCompletionCandidate>& Candidates = Console->EnsureCompletionCandidatesForInput(Data->Buf);
+		if (!Candidates.empty())
 		{
-			if (Console->CompletionCandidates.empty())
-			{
-				Console->CompletionCandidates = Console->GetCompletionCandidates(Data->Buf);
-			}
-
 			if (Data->EventKey == ImGuiKey_DownArrow)
 			{
 				Console->CompletionSelectionIndex = Console->CompletionSelectionIndex < 0
@@ -1692,17 +1735,13 @@ int32 FEditorConsoleWidget::TextEditCallback(ImGuiInputTextCallbackData* Data)
 	}
 
 	if (Data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
-		const TArray<FCompletionCandidate> Candidates = Console->GetCompletionCandidates(Data->Buf);
+		const TArray<FCompletionCandidate>& Candidates = Console->EnsureCompletionCandidatesForInput(Data->Buf);
 		if (Candidates.empty())
 		{
 			return 0;
 		}
 
-		FString LowerInput = ToLower(Data->Buf);
-		while (!LowerInput.empty() && std::isspace(static_cast<unsigned char>(LowerInput.front())))
-		{
-			LowerInput.erase(LowerInput.begin());
-		}
+		const FString& LowerInput = Console->CompletionDisplayPrefix;
 
 		if (Candidates.size() == 1)
 		{
