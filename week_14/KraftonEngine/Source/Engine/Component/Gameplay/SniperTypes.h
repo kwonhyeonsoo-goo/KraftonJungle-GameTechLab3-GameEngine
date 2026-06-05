@@ -86,6 +86,7 @@ struct FAmmoBallisticData
 
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
 	float InitialSpeed = 900.0f;
+	float MuzzleVelocityVariance = 0.0f;
 	float GravityScale = 1.0f;
 	float DragCoefficient = 0.0f;
 	float Damage = 100.0f;

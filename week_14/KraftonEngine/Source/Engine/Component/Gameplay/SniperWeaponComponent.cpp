@@ -4,6 +4,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 
+#include <cstdlib>
 #include <cmath>
 
 namespace
@@ -13,6 +14,12 @@ namespace
 	constexpr float SniperZeroingSimulationStepSeconds = 1.0f / 240.0f;
 	constexpr int32 SniperZeroingSimulationMaxSteps = 2400;
 	constexpr int32 SniperZeroingBinarySearchSteps = 16;
+
+	float RandomSignedUnit()
+	{
+		const float Alpha = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+		return (Alpha * 2.0f) - 1.0f;
+	}
 
 	FVector RotateAroundAxis(const FVector& Vector, const FVector& Axis, float AngleRadians)
 	{
@@ -158,7 +165,11 @@ bool USniperWeaponComponent::RequestFire(
 	FBallisticBullet Bullet;
 	Bullet.Position = MuzzlePosition;
 	Bullet.PreviousPosition = MuzzlePosition;
-	Bullet.Velocity = ZeroedShotDirection * AmmoData->InitialSpeed;
+	const float VelocityVarianceAlpha = AmmoData->MuzzleVelocityVariance > 0.0f
+		? RandomSignedUnit() * AmmoData->MuzzleVelocityVariance
+		: 0.0f;
+	const float FinalInitialSpeed = AmmoData->InitialSpeed * (1.0f + VelocityVarianceAlpha);
+	Bullet.Velocity = ZeroedShotDirection * FinalInitialSpeed;
 	Bullet.Damage = AmmoData->Damage;
 	Bullet.Radius = AmmoData->BulletRadius;
 	Bullet.LifeTime = AmmoData->LifeTime;
@@ -294,6 +305,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	FAmmoBallisticData NormalAmmo;
 	NormalAmmo.AmmoType = ESniperAmmoType::Normal;
 	NormalAmmo.InitialSpeed = 900.0f;
+	NormalAmmo.MuzzleVelocityVariance = 0.01f;
 	NormalAmmo.GravityScale = 1.0f;
 	NormalAmmo.DragCoefficient = 0.015f;
 	NormalAmmo.Damage = 100.0f;
@@ -309,6 +321,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	FAmmoBallisticData AntiMaterialAmmo;
 	AntiMaterialAmmo.AmmoType = ESniperAmmoType::AntiMaterial;
 	AntiMaterialAmmo.InitialSpeed = 1200.0f;
+	AntiMaterialAmmo.MuzzleVelocityVariance = 0.005f;
 	AntiMaterialAmmo.GravityScale = 0.9f;
 	AntiMaterialAmmo.DragCoefficient = 0.0075f;
 	AntiMaterialAmmo.Damage = 300.0f;
