@@ -28,6 +28,9 @@
 #include "CameraShake/CameraShakeManager.h"
 #include "Component/ActorComponent.h"
 #include "Component/ActorSequenceComponent.h"
+#include "Component/Gameplay/BallisticBulletManagerComponent.h"
+#include "Component/Gameplay/SniperWeaponComponent.h"
+#include "Component/Gameplay/SniperTypes.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/ShapeComponent.h"
@@ -84,6 +87,7 @@
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Character.h"
 #include "GameFramework/Pawn/Pawn.h"
+#include "GameFramework/Pawn/SniperPawn.h"
 #include "GameFramework/Pawn/WheeledVehiclePawn.h"
 #include "Input/InputKeyCodes.h"
 #include "Input/InputSystem.h"
@@ -4563,6 +4567,74 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &ULuaScriptComponent::SetScriptFile
     );
 
+    Lua.new_usertype<USniperWeaponComponent>(
+        "SniperWeaponComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetCurrentAmmoType",
+        &USniperWeaponComponent::GetCurrentAmmoType,
+        "SetCurrentAmmoType",
+        &USniperWeaponComponent::SetCurrentAmmoType,
+        "CanFire",
+        &USniperWeaponComponent::CanFire,
+        "RequestFire",
+        &USniperWeaponComponent::RequestFire,
+        "GetFireCooldownRemaining",
+        &USniperWeaponComponent::GetFireCooldownRemaining,
+        "GetBulletManagerComponent",
+        &USniperWeaponComponent::GetBulletManagerComponent
+    );
+
+    Lua.new_usertype<UBallisticBulletManagerComponent>(
+        "BallisticBulletManagerComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetAliveBulletCount",
+        &UBallisticBulletManagerComponent::GetAliveBulletCount,
+        "GetWeaponComponent",
+        &UBallisticBulletManagerComponent::GetWeaponComponent
+    );
+
+    Lua.new_usertype<FSniperHitInfo>(
+        "SniperHitInfo",
+        "HitActor",
+        sol::property(
+            [](const FSniperHitInfo& HitInfo) -> AActor*
+            {
+                return IsValid(HitInfo.HitActor) ? HitInfo.HitActor : nullptr;
+            }
+        ),
+        "Shooter",
+        sol::property(
+            [](const FSniperHitInfo& HitInfo) -> AActor*
+            {
+                return IsValid(HitInfo.Shooter) ? HitInfo.Shooter : nullptr;
+            }
+        ),
+        "HitLocation",
+        &FSniperHitInfo::HitLocation,
+        "HitNormal",
+        &FSniperHitInfo::HitNormal,
+        "ShotDirection",
+        &FSniperHitInfo::ShotDirection,
+        "Damage",
+        &FSniperHitInfo::Damage,
+        "AmmoType",
+        &FSniperHitInfo::AmmoType,
+        "bIsScopedShot",
+        &FSniperHitInfo::bIsScopedShot,
+        "bIsHeadshot",
+        &FSniperHitInfo::bIsHeadshot,
+        "bIsArmorPiercing",
+        &FSniperHitInfo::bIsArmorPiercing,
+        "HitBoneName",
+        &FSniperHitInfo::HitBoneName
+    );
+
+    sol::table SniperAmmoType = Lua.create_named_table("SniperAmmoType");
+    SniperAmmoType["Normal"] = ESniperAmmoType::Normal;
+    SniperAmmoType["AntiMaterial"] = ESniperAmmoType::AntiMaterial;
+
     sol::table Reflection = Lua.create_named_table("Reflection");
     Reflection.set_function(
         "Call",
@@ -6521,6 +6593,18 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             return Actor.GetComponentByClass<ULuaScriptComponent>();
         },
 
+        "GetSniperWeaponComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USniperWeaponComponent>();
+        },
+
+        "GetBallisticBulletManagerComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<UBallisticBulletManagerComponent>();
+        },
+
         "GetActorSequenceComponent",
         [](AActor& Actor)
         {
@@ -6694,6 +6778,20 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &APawn::GetAutoPossessPlayer,
         "GetInputComponent",
         &APawn::GetInputComponent
+    );
+
+    Lua.new_usertype<ASniperPawn>(
+        "SniperPawn",
+        sol::base_classes,
+        sol::bases<APawn, AActor, UObject>(),
+        "GetSniperRoot",
+        &ASniperPawn::GetSniperRoot,
+        "GetCamera",
+        &ASniperPawn::GetCamera,
+        "GetSniperWeaponComponent",
+        &ASniperPawn::GetSniperWeaponComponent,
+        "GetBallisticBulletManagerComponent",
+        &ASniperPawn::GetBallisticBulletManagerComponent
     );
 
     Lua.new_usertype<AWheeledVehiclePawn>(
