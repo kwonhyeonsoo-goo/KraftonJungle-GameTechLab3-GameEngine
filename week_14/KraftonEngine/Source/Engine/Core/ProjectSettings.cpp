@@ -34,6 +34,14 @@ namespace PSKey
 	constexpr const char* GameSection = "Game";
 	constexpr const char* StartLevelName = "StartLevelName";
 	constexpr const char* GameModeClassName = "GameModeClassName";
+	constexpr const char* DefaultPawnPrefabPath = "DefaultPawnPrefabPath";
+
+	constexpr const char* BuildSection = "Build";
+	constexpr const char* PackageVersionName = "PackageVersionName";
+	constexpr const char* bValidateStartupScene = "bValidateStartupScene";
+	constexpr const char* bValidateDefaultPawnPrefab = "bValidateDefaultPawnPrefab";
+	constexpr const char* bLaunchSmokeTest = "bLaunchSmokeTest";
+	constexpr const char* LaunchSmokeTimeoutSeconds = "LaunchSmokeTimeoutSeconds";
 }
 
 void FProjectSettings::SaveToFile(const FString& Path) const
@@ -70,7 +78,16 @@ void FProjectSettings::SaveToFile(const FString& Path) const
 	JSON GameObj = Object();
 	GameObj[PSKey::StartLevelName] = Game.StartLevelName;
 	GameObj[PSKey::GameModeClassName] = Game.GameModeClassName;
+	GameObj[PSKey::DefaultPawnPrefabPath] = Game.DefaultPawnPrefabPath;
 	Root[PSKey::GameSection] = GameObj;
+
+	JSON BuildObj = Object();
+	BuildObj[PSKey::PackageVersionName] = Build.PackageVersionName;
+	BuildObj[PSKey::bValidateStartupScene] = Build.bValidateStartupScene;
+	BuildObj[PSKey::bValidateDefaultPawnPrefab] = Build.bValidateDefaultPawnPrefab;
+	BuildObj[PSKey::bLaunchSmokeTest] = Build.bLaunchSmokeTest;
+	BuildObj[PSKey::LaunchSmokeTimeoutSeconds] = Build.LaunchSmokeTimeoutSeconds;
+	Root[PSKey::BuildSection] = BuildObj;
 
 	std::filesystem::path FilePath(FPaths::ToWide(Path));
 	if (FilePath.has_parent_path())
@@ -148,6 +165,26 @@ void FProjectSettings::LoadFromFile(const FString& Path)
 			Game.StartLevelName = G[PSKey::StartLevelName].ToString();
 		if (G.hasKey(PSKey::GameModeClassName))
 			Game.GameModeClassName = G[PSKey::GameModeClassName].ToString();
+		if (G.hasKey(PSKey::DefaultPawnPrefabPath))
+			Game.DefaultPawnPrefabPath = G[PSKey::DefaultPawnPrefabPath].ToString();
+	}
+
+	if (Root.hasKey(PSKey::BuildSection))
+	{
+		JSON B = Root[PSKey::BuildSection];
+		if (B.hasKey(PSKey::PackageVersionName))
+			Build.PackageVersionName = B[PSKey::PackageVersionName].ToString();
+		if (B.hasKey(PSKey::bValidateStartupScene))
+			Build.bValidateStartupScene = B[PSKey::bValidateStartupScene].ToBool();
+		if (B.hasKey(PSKey::bValidateDefaultPawnPrefab))
+			Build.bValidateDefaultPawnPrefab = B[PSKey::bValidateDefaultPawnPrefab].ToBool();
+		if (B.hasKey(PSKey::bLaunchSmokeTest))
+			Build.bLaunchSmokeTest = B[PSKey::bLaunchSmokeTest].ToBool();
+		if (B.hasKey(PSKey::LaunchSmokeTimeoutSeconds))
+		{
+			int v = B[PSKey::LaunchSmokeTimeoutSeconds].ToInt();
+			Build.LaunchSmokeTimeoutSeconds = (std::max)(1, (std::min)(v, 60));
+		}
 	}
 
 	if (Root.hasKey(PSKey::Shadow))

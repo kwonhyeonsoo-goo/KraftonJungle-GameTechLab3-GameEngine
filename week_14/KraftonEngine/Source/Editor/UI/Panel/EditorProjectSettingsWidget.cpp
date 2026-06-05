@@ -1,12 +1,220 @@
 #include "Editor/UI/Panel/EditorProjectSettingsWidget.h"
 #include "Core/ProjectSettings.h"
+#include "Core/Logging/Notification.h"
+#include "Platform/Paths.h"
 #include "Serialization/SceneSaveManager.h"
 #include "GameFramework/GameMode/GameModeBase.h"
 #include "Object/Reflection/UClass.h"
 #include "ImGui/imgui.h"
 
+#include <Shellapi.h>
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <filesystem>
+#include <string>
+
+namespace
+{
+	std::filesystem::path GetProjectRootPath()
+	{
+		return std::filesystem::path(FPaths::RootDir()).lexically_normal();
+	}
+
+	bool IsPathInsideProject(const std::filesystem::path& Path)
+	{
+		const std::filesystem::path ProjectRoot = GetProjectRootPath();
+		const std::filesystem::path RelPath = Path.lexically_normal().lexically_relative(ProjectRoot);
+		if (RelPath.empty())
+		{
+			return true;
+		}
+
+		if (RelPath.is_absolute())
+		{
+			return false;
+		}
+
+		for (const std::filesystem::path& Part : RelPath)
+		{
+			if (Part == L"..")
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool ResolvePrefabPathForValidation(const FString& Path, std::filesystem::path& OutPath)
+	{
+		if (Path.empty())
+		{
+			return false;
+		}
+
+		std::filesystem::path Candidate(FPaths::ToWide(Path));
+		if (Candidate.extension().empty())
+		{
+			Candidate += L".prefab";
+		}
+
+		if (!Candidate.is_absolute())
+		{
+			if (Candidate.parent_path().empty())
+			{
+				Candidate = std::filesystem::path(FPaths::AssetDir()) / L"Prefab" / Candidate;
+			}
+			else
+			{
+				Candidate = GetProjectRootPath() / Candidate;
+			}
+		}
+
+		Candidate = Candidate.lexically_normal();
+		if (!IsPathInsideProject(Candidate))
+		{
+			return false;
+		}
+
+		OutPath = Candidate;
+		return true;
+	}
+
+	bool SceneExistsByName(const FString& SceneName)
+	{
+		for (const FString& SceneFile : FSceneSaveManager::GetSceneFileList())
+		{
+			if (SceneFile == SceneName)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool ValidatePackagingSettings(const FProjectSettings& PS, FString& OutMessage)
+	{
+		const std::filesystem::path ProjectRoot = GetProjectRootPath();
+		const std::filesystem::path GameBuildScript = ProjectRoot / L"GameBuild.bat";
+		const std::filesystem::path PackageReleaseScript = ProjectRoot / L"PackageRelease.bat";
+
+		if (!std::filesystem::exists(GameBuildScript))
+		{
+			OutMessage = "Packaging validation failed: GameBuild.bat was not found.";
+			return false;
+		}
+
+		if (!std::filesystem::exists(PackageReleaseScript))
+		{
+			OutMessage = "Packaging validation failed: PackageRelease.bat was not found.";
+			return false;
+		}
+
+		if (PS.Build.bValidateStartupScene)
+		{
+			if (PS.Game.StartLevelName.empty())
+			{
+				OutMessage = "Packaging validation failed: Start Level is empty.";
+				return false;
+			}
+
+			if (!SceneExistsByName(PS.Game.StartLevelName))
+			{
+				OutMessage = "Packaging validation failed: Start Level scene was not found in Content/Scene.";
+				return false;
+			}
+		}
+
+		if (PS.Build.bValidateDefaultPawnPrefab && !PS.Game.DefaultPawnPrefabPath.empty())
+		{
+			std::filesystem::path PrefabPath;
+			if (!ResolvePrefabPathForValidation(PS.Game.DefaultPawnPrefabPath, PrefabPath))
+			{
+				OutMessage = "Packaging validation failed: Default Pawn Prefab path is outside the project.";
+				return false;
+			}
+
+			if (!std::filesystem::exists(PrefabPath))
+			{
+				OutMessage = "Packaging validation failed: Default Pawn Prefab was not found.";
+				return false;
+			}
+		}
+
+		OutMessage = "Packaging validation succeeded.";
+		return true;
+	}
+
+	bool LaunchProjectBatch(const wchar_t* ScriptName, const FString& Args, FString& OutMessage)
+	{
+		const std::filesystem::path ProjectRoot = GetProjectRootPath();
+		const std::filesystem::path ScriptPath = ProjectRoot / ScriptName;
+		if (!std::filesystem::exists(ScriptPath))
+		{
+			OutMessage = "Batch script was not found.";
+			return false;
+		}
+
+		const std::wstring WideArgs = FPaths::ToWide(Args);
+		HINSTANCE Result = ShellExecuteW(
+			nullptr,
+			L"open",
+			ScriptPath.c_str(),
+			WideArgs.empty() ? nullptr : WideArgs.c_str(),
+			ProjectRoot.c_str(),
+			SW_SHOWNORMAL);
+
+		if (reinterpret_cast<intptr_t>(Result) <= 32)
+		{
+			OutMessage = "Failed to launch batch script.";
+			return false;
+		}
+
+		OutMessage = "Batch script launched.";
+		return true;
+	}
+
+	void AppendBatchArg(FString& Args, const FString& Arg)
+	{
+		if (Arg.empty())
+		{
+			return;
+		}
+
+		if (!Args.empty())
+		{
+			Args += " ";
+		}
+		Args += Arg;
+	}
+
+	FString BuildPackageReleaseArgs(const FProjectSettings& PS, bool bDryRun)
+	{
+		FString Args;
+		AppendBatchArg(Args, PS.Build.PackageVersionName);
+		if (bDryRun)
+		{
+			AppendBatchArg(Args, "--dry-run");
+		}
+		if (PS.Build.bLaunchSmokeTest)
+		{
+			AppendBatchArg(Args, "--launch-smoke");
+			AppendBatchArg(Args, "--launch-smoke-timeout");
+			AppendBatchArg(Args, std::to_string((std::max)(1, (std::min)(PS.Build.LaunchSmokeTimeoutSeconds, 60))));
+		}
+		return Args;
+	}
+
+	void NotifyPackagingResult(bool bSuccess, const FString& Message)
+	{
+		FNotificationManager::Get().AddNotification(
+			Message,
+			bSuccess ? ENotificationType::Success : ENotificationType::Error,
+			bSuccess ? 3.0f : 5.0f);
+	}
+}
 
 void EditorProjectSettingsWidget::Render()
 {
@@ -88,7 +296,98 @@ void EditorProjectSettingsWidget::Render()
 			}
 			ImGui::EndCombo();
 		}
+
+		char DefaultPawnPrefabPath[512] = {};
+		strncpy_s(DefaultPawnPrefabPath, PS.Game.DefaultPawnPrefabPath.c_str(), _TRUNCATE);
+		if (ImGui::InputText("Default Pawn Prefab", DefaultPawnPrefabPath, sizeof(DefaultPawnPrefabPath)))
+		{
+			PS.Game.DefaultPawnPrefabPath = DefaultPawnPrefabPath;
+		}
 		ImGui::TextDisabled("Requires scene reload to take effect.");
+	}
+
+	if (ImGui::CollapsingHeader("Packaging", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		char PackageVersionName[128] = {};
+		strncpy_s(PackageVersionName, PS.Build.PackageVersionName.c_str(), _TRUNCATE);
+		if (ImGui::InputText("Version Name", PackageVersionName, sizeof(PackageVersionName)))
+		{
+			PS.Build.PackageVersionName = PackageVersionName;
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Passed to PackageRelease.bat. Empty uses the script's timestamp prompt.");
+		}
+
+		ImGui::Checkbox("Validate Startup Scene", &PS.Build.bValidateStartupScene);
+		ImGui::Checkbox("Validate Default Pawn Prefab", &PS.Build.bValidateDefaultPawnPrefab);
+		ImGui::Checkbox("Launch Smoke Test", &PS.Build.bLaunchSmokeTest);
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("After packaging, launch the packaged executable briefly and fail if it exits with an error.");
+		}
+		int LaunchSmokeTimeoutSeconds = PS.Build.LaunchSmokeTimeoutSeconds;
+		if (ImGui::InputInt("Launch Smoke Timeout", &LaunchSmokeTimeoutSeconds))
+		{
+			PS.Build.LaunchSmokeTimeoutSeconds = (std::max)(1, (std::min)(LaunchSmokeTimeoutSeconds, 60));
+		}
+
+		FString ValidationMessage;
+		if (ImGui::Button("Validate Package"))
+		{
+			const bool bValid = ValidatePackagingSettings(PS, ValidationMessage);
+			NotifyPackagingResult(bValid, ValidationMessage);
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Run Game Build"))
+		{
+			const bool bValid = ValidatePackagingSettings(PS, ValidationMessage);
+			if (!bValid)
+			{
+				NotifyPackagingResult(false, ValidationMessage);
+			}
+			else
+			{
+				FString LaunchMessage;
+				const bool bLaunched = LaunchProjectBatch(L"GameBuild.bat", "", LaunchMessage);
+				NotifyPackagingResult(bLaunched, bLaunched ? "GameBuild.bat launched." : LaunchMessage);
+			}
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Run Package Release"))
+		{
+			const bool bValid = ValidatePackagingSettings(PS, ValidationMessage);
+			if (!bValid)
+			{
+				NotifyPackagingResult(false, ValidationMessage);
+			}
+			else
+			{
+				FString LaunchMessage;
+				const bool bLaunched = LaunchProjectBatch(L"PackageRelease.bat", BuildPackageReleaseArgs(PS, false), LaunchMessage);
+				NotifyPackagingResult(bLaunched, bLaunched ? "PackageRelease.bat launched." : LaunchMessage);
+			}
+		}
+
+		if (ImGui::Button("Dry Run Package"))
+		{
+			const bool bValid = ValidatePackagingSettings(PS, ValidationMessage);
+			if (!bValid)
+			{
+				NotifyPackagingResult(false, ValidationMessage);
+			}
+			else
+			{
+				FString LaunchMessage;
+				const bool bLaunched = LaunchProjectBatch(L"PackageRelease.bat", BuildPackageReleaseArgs(PS, true), LaunchMessage);
+				NotifyPackagingResult(bLaunched, bLaunched ? "Package dry run launched." : LaunchMessage);
+			}
+		}
+
+		ImGui::TextDisabled("Runs existing project-root build/package scripts.");
+		ImGui::TextDisabled("Outputs: GameBuild/ and ReleaseBuild/.");
 	}
 
     if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen))

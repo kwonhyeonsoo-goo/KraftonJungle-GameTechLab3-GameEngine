@@ -178,6 +178,7 @@ void FEditorRenderPipeline::RenderViewport(FLevelEditorViewportClient* VC, FRend
 
 	PrepareViewport(VC, VP, Ctx);
 	BuildFrame(VC, POV, VP, World);
+	RenderScopeLensCapture(VC, VP, POV, World, Renderer, Ctx);
 
 	FCollectOutput Output;
 	CollectCommands(VC, World, Renderer, Output);
@@ -302,6 +303,20 @@ void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMi
 		Opts.DoFBokehIntensity = CamManager->GetDoFBokehIntensity();
 		Frame.SetRenderOptions(Opts);
 	}
+	Frame.CameraScopeLens.bEnabled = CamManager ? CamManager->IsScopeLensEnabled() : false;
+	if (Frame.CameraScopeLens.bEnabled)
+	{
+		Frame.CameraScopeLens = CamManager->GetScopeLensState();
+		FViewportRenderOptions Opts = Frame.RenderOptions;
+		Opts.ShowFlags.bScopeLens = true;
+		Opts.ScopeLensRadius = Frame.CameraScopeLens.Radius;
+		Opts.ScopeLensFeather = Frame.CameraScopeLens.Feather;
+		Opts.ScopeLensOuterBlurRadius = Frame.CameraScopeLens.OuterBlurRadius;
+		Opts.ScopeLensEdgeBlurRadius = Frame.CameraScopeLens.EdgeBlurRadius;
+		Opts.ScopeLensZoomFOV = Frame.CameraScopeLens.ZoomFOV;
+		Opts.ScopeLensIntensity = Frame.CameraScopeLens.Intensity;
+		Frame.SetRenderOptions(Opts);
+	}
 	Frame.OcclusionCulling = &GetOcclusionForViewport(VC);
 	Frame.LODContext = World->PrepareLODContext();
 
@@ -362,6 +377,46 @@ void FEditorRenderPipeline::CollectCommands(FLevelEditorViewportClient* VC, UWor
 		SCOPE_STAT_CAT("BuildCommands", "3_Collect");
 		Builder.BuildCommands(Frame, &Scene, Output);
 	}
+}
+
+void FEditorRenderPipeline::RenderScopeLensCapture(FLevelEditorViewportClient* VC, FViewport* VP, const FMinimalViewInfo& POV, UWorld* World, FRenderer& Renderer, ID3D11DeviceContext* Ctx)
+{
+	if (!VC || !VP || !World || !Ctx || !Frame.CameraScopeLens.bEnabled || !Frame.RenderOptions.ShowFlags.bScopeLens || !Frame.ScopeLensRTV)
+	{
+		return;
+	}
+
+	const FFrameContext MainFrame = Frame;
+	FFrameContext ScopeFrame = MainFrame;
+	ScopeFrame.CameraScopeLens.bEnabled = false;
+	ScopeFrame.CameraFade.bEnabled = false;
+	ScopeFrame.CameraVignette.bEnabled = false;
+	ScopeFrame.CameraLetterbox.bEnabled = false;
+	ScopeFrame.ViewportRTV = MainFrame.ScopeLensRTV;
+	ScopeFrame.SceneColorCopySRV = nullptr;
+	ScopeFrame.SceneColorCopyTexture = nullptr;
+	ScopeFrame.ViewportRenderTexture = nullptr;
+	ScopeFrame.ScopeLensSRV = nullptr;
+	ScopeFrame.RenderOptions.ShowFlags.bDoF = false;
+	ScopeFrame.RenderOptions.ShowFlags.bFXAA = false;
+	ScopeFrame.RenderOptions.ShowFlags.bBloom = false;
+	ScopeFrame.RenderOptions.ShowFlags.bGammaCorrection = false;
+	ScopeFrame.RenderOptions.ShowFlags.bScopeLens = false;
+
+	FMinimalViewInfo ScopePOV = POV;
+	ScopePOV.FOV = MainFrame.CameraScopeLens.ZoomFOV;
+	ApplyLetterboxAspect(ScopePOV, ScopeFrame.CameraLetterbox, ScopeFrame.ViewportWidth, ScopeFrame.ViewportHeight);
+	ScopeFrame.SetCameraInfo(ScopePOV);
+
+	VP->BeginScopeLensRender(Ctx);
+
+	Frame = ScopeFrame;
+	FCollectOutput ScopeOutput;
+	CollectCommands(VC, World, Renderer, ScopeOutput);
+	Renderer.Render(Frame, World, World->GetScene());
+
+	Frame = MainFrame;
+	VP->BeginRender(Ctx);
 }
 
 void FEditorRenderPipeline::RenderPreviewViewport(IEditorPreviewViewportClient* VC, FRenderer& Renderer)

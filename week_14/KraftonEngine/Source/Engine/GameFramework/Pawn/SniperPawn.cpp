@@ -1,0 +1,461 @@
+﻿#include "GameFramework/Pawn/SniperPawn.h"
+
+#include "Component/Camera/CameraComponent.h"
+#include "Component/Gameplay/BallisticBulletManagerComponent.h"
+#include "Component/Gameplay/SniperWeaponComponent.h"
+#include "Component/Input/InputComponent.h"
+#include "Component/SceneComponent.h"
+#include "Math/MathUtils.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+
+namespace
+{
+	constexpr float SniperSwayPitchFrequency = 1.85f;
+	constexpr float SniperSwayYawFrequency = 1.43f;
+	constexpr float SniperHoldBreathMultiplier = 0.35f;
+
+	float ClampSniperPitch(float Value, float MinPitch, float MaxPitch)
+	{
+		if (MinPitch > MaxPitch)
+		{
+			std::swap(MinPitch, MaxPitch);
+		}
+
+		return std::clamp(Value, MinPitch, MaxPitch);
+	}
+
+	float ExponentialInterpTo(float Current, float Target, float DeltaTime, float Speed)
+	{
+		if (DeltaTime <= 0.0f || Speed <= 0.0f)
+		{
+			return Current;
+		}
+
+		const float Alpha = 1.0f - std::exp(-Speed * DeltaTime);
+		return Current + (Target - Current) * Alpha;
+	}
+
+	float ComputeScopeAlpha(const FScopeState& ScopeState)
+	{
+		const float ScopeRange = ScopeState.NormalFOV - ScopeState.ScopedFOV;
+		if (std::abs(ScopeRange) <= FMath::Epsilon)
+		{
+			return 0.0f;
+		}
+
+		return FMath::Clamp((ScopeState.NormalFOV - ScopeState.CurrentFOV) / ScopeRange, 0.0f, 1.0f);
+	}
+
+	float RandomRange(float MinValue, float MaxValue)
+	{
+		const float Alpha = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+		return MinValue + (MaxValue - MinValue) * Alpha;
+	}
+}
+
+ASniperPawn::ASniperPawn()
+{
+	bNeedsTick = true;
+	bUseControllerRotationPitch = true;
+	bUseControllerRotationYaw = true;
+	bUseControllerRotationRoll = false;
+}
+
+void ASniperPawn::BeginPlay()
+{
+	CacheComponentReferences();
+	InitDefaultComponents();
+	CacheComponentReferences();
+	SyncSniperRuntimeState();
+
+	APawn::BeginPlay();
+}
+
+void ASniperPawn::PostDuplicate()
+{
+	APawn::PostDuplicate();
+	CacheComponentReferences();
+}
+
+void ASniperPawn::SetupInputComponent()
+{
+	APawn::SetupInputComponent();
+
+	if (!InputComponent)
+	{
+		return;
+	}
+
+	InputComponent->AddMouseAxisMapping("SniperTurn", EInputAxisSourceType::MouseX, 1.0f);
+	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
+	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
+	InputComponent->AddActionMapping("SniperScope", "RightMouseButton");
+	InputComponent->AddActionMapping("SniperHoldBreath", "LeftShift");
+	InputComponent->AddActionMapping("SniperSwitchAmmoNormal", "1");
+	InputComponent->AddActionMapping("SniperSwitchAmmoAntiMaterial", "2");
+
+	InputComponent->BindAxis("SniperTurn", [this](float Value)
+	{
+		HandleTurnInput(Value);
+	});
+
+	InputComponent->BindAxis("SniperLookUp", [this](float Value)
+	{
+		HandleLookUpInput(Value);
+	});
+
+	InputComponent->BindAction("SniperScope", EInputEvent::Pressed, [this]()
+	{
+		HandleScopePressed();
+	});
+
+	InputComponent->BindAction("SniperFire", EInputEvent::Pressed, [this]()
+	{
+		HandleFirePressed();
+	});
+
+	InputComponent->BindAction("SniperHoldBreath", EInputEvent::Pressed, [this]()
+	{
+		HandleHoldBreathPressed();
+	});
+
+	InputComponent->BindAction("SniperHoldBreath", EInputEvent::Released, [this]()
+	{
+		HandleHoldBreathReleased();
+	});
+
+	InputComponent->BindAction("SniperSwitchAmmoNormal", EInputEvent::Pressed, [this]()
+	{
+		HandleSwitchAmmoNormalPressed();
+	});
+
+	InputComponent->BindAction("SniperSwitchAmmoAntiMaterial", EInputEvent::Pressed, [this]()
+	{
+		HandleSwitchAmmoAntiMaterialPressed();
+	});
+
+	InputComponent->BindAction("SniperScope", EInputEvent::Released, [this]()
+	{
+		HandleScopeReleased();
+	});
+}
+
+void ASniperPawn::Tick(float DeltaTime)
+{
+	APawn::Tick(DeltaTime);
+
+	UpdateScopeState(DeltaTime);
+	UpdateHoldBreathState(DeltaTime);
+	UpdateAimSwayState(DeltaTime);
+	UpdateRecoilState(DeltaTime);
+	ApplySniperControlRotation();
+
+	InputState.MouseDeltaX = 0.0f;
+	InputState.MouseDeltaY = 0.0f;
+}
+
+void ASniperPawn::InitDefaultComponents()
+{
+	if (!GetRootComponent())
+	{
+		SniperRoot = AddComponent<USceneComponent>();
+		SetRootComponent(SniperRoot.Get());
+	}
+	else
+	{
+		SniperRoot = GetRootComponent();
+	}
+
+	if (!Camera)
+	{
+		Camera = AddComponent<UCameraComponent>();
+		if (Camera)
+		{
+			Camera->AttachToComponent(GetRootComponent());
+		}
+	}
+
+	if (!WeaponComponent)
+	{
+		WeaponComponent = AddComponent<USniperWeaponComponent>();
+	}
+
+	if (!BulletManagerComponent)
+	{
+		BulletManagerComponent = AddComponent<UBallisticBulletManagerComponent>();
+	}
+}
+
+void ASniperPawn::CacheComponentReferences()
+{
+	SniperRoot = GetRootComponent();
+	Camera = GetComponentByClass<UCameraComponent>();
+	WeaponComponent = GetComponentByClass<USniperWeaponComponent>();
+	BulletManagerComponent = GetComponentByClass<UBallisticBulletManagerComponent>();
+}
+
+void ASniperPawn::SyncSniperRuntimeState()
+{
+	InputState = FSniperInputState{};
+	ScopeState.bIsScoped = false;
+	ScopeState.TargetFOV = ScopeState.NormalFOV;
+	ScopeState.CurrentFOV = ScopeState.NormalFOV;
+	ScopeState.CurrentSensitivity = ScopeState.NormalSensitivity;
+	AimSwayState = FAimSwayState{};
+	RecoilState = FRecoilState{};
+
+	if (Camera)
+	{
+		Camera->SetFOV(ScopeState.CurrentFOV);
+	}
+
+	FRotator Control = GetControlRotation();
+	Control.Pitch = ClampSniperPitch(Control.Pitch, MinCameraPitch, MaxCameraPitch);
+	Control.Roll = 0.0f;
+	SetControlRotation(Control);
+	ApplySniperControlRotation();
+}
+
+void ASniperPawn::UpdateScopeState(float DeltaTime)
+{
+	ScopeState.bIsScoped = InputState.bScopeHeld;
+	ScopeState.TargetFOV = ScopeState.bIsScoped ? ScopeState.ScopedFOV : ScopeState.NormalFOV;
+	ScopeState.CurrentFOV = ExponentialInterpTo(
+		ScopeState.CurrentFOV,
+		ScopeState.TargetFOV,
+		DeltaTime,
+		ScopeState.ScopeBlendSpeed);
+
+	const float ScopeAlpha = ComputeScopeAlpha(ScopeState);
+
+	ScopeState.CurrentSensitivity = FMath::Lerp(
+		ScopeState.NormalSensitivity,
+		ScopeState.ScopedSensitivity,
+		ScopeAlpha);
+
+	if (Camera)
+	{
+		Camera->SetFOV(ScopeState.CurrentFOV);
+	}
+}
+
+void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
+{
+	const bool bCanHoldBreath =
+		InputState.bHoldBreathHeld &&
+		ScopeState.bIsScoped &&
+		AimSwayState.HoldBreathGauge > 0.0f;
+
+	if (bCanHoldBreath)
+	{
+		AimSwayState.HoldBreathGauge = FMath::Clamp(
+			AimSwayState.HoldBreathGauge - AimSwayState.HoldBreathConsumeSpeed * DeltaTime,
+			0.0f,
+			AimSwayState.MaxHoldBreathGauge);
+	}
+	else
+	{
+		AimSwayState.HoldBreathGauge = FMath::Clamp(
+			AimSwayState.HoldBreathGauge + AimSwayState.HoldBreathRecoverSpeed * DeltaTime,
+			0.0f,
+			AimSwayState.MaxHoldBreathGauge);
+	}
+
+	AimSwayState.BreathMultiplier = bCanHoldBreath ? SniperHoldBreathMultiplier : 1.0f;
+}
+
+void ASniperPawn::UpdateAimSwayState(float DeltaTime)
+{
+	AimSwayState.Time += DeltaTime;
+
+	const float ScopeAlpha = ComputeScopeAlpha(ScopeState);
+	const float BaseAmplitude = FMath::Lerp(
+		AimSwayState.BaseSwayAmount * FMath::RadToDeg,
+		AimSwayState.ScopedSwayAmount * FMath::RadToDeg,
+		ScopeAlpha);
+	const float SwayAmplitude = BaseAmplitude * AimSwayState.BreathMultiplier;
+
+	AimSwayState.CurrentSwayPitch = std::sin(AimSwayState.Time * SniperSwayPitchFrequency) * SwayAmplitude;
+	AimSwayState.CurrentSwayYaw = std::cos(AimSwayState.Time * SniperSwayYawFrequency) * SwayAmplitude * 0.85f;
+}
+
+void ASniperPawn::UpdateRecoilState(float DeltaTime)
+{
+	RecoilState.CurrentRecoilPitch = ExponentialInterpTo(
+		RecoilState.CurrentRecoilPitch,
+		0.0f,
+		DeltaTime,
+		RecoilState.RecoilRecoverSpeed);
+	RecoilState.CurrentRecoilYaw = ExponentialInterpTo(
+		RecoilState.CurrentRecoilYaw,
+		0.0f,
+		DeltaTime,
+		RecoilState.RecoilRecoverSpeed);
+}
+
+void ASniperPawn::ApplySniperControlRotation()
+{
+	USceneComponent* Root = GetRootComponent();
+	if (!Root)
+	{
+		return;
+	}
+
+	FRotator AppliedRotation = Root->GetRelativeRotation();
+	const FRotator EffectiveRotation = BuildEffectiveAimRotation();
+
+	if (bUseControllerRotationYaw)
+	{
+		AppliedRotation.Yaw = EffectiveRotation.Yaw;
+	}
+	if (bUseControllerRotationPitch)
+	{
+		AppliedRotation.Pitch = EffectiveRotation.Pitch;
+	}
+	if (bUseControllerRotationRoll)
+	{
+		AppliedRotation.Roll = EffectiveRotation.Roll;
+	}
+
+	Root->SetRelativeRotation(AppliedRotation);
+}
+
+FRotator ASniperPawn::BuildEffectiveAimRotation() const
+{
+	FRotator EffectiveRotation = GetControlRotation();
+	EffectiveRotation.Pitch += AimSwayState.CurrentSwayPitch + RecoilState.CurrentRecoilPitch;
+	EffectiveRotation.Yaw += AimSwayState.CurrentSwayYaw + RecoilState.CurrentRecoilYaw;
+	EffectiveRotation.Pitch = ClampSniperPitch(EffectiveRotation.Pitch, MinCameraPitch, MaxCameraPitch);
+	EffectiveRotation.Roll = 0.0f;
+	return EffectiveRotation;
+}
+
+void ASniperPawn::HandleTurnInput(float Value)
+{
+	InputState.MouseDeltaX = Value;
+	if (std::abs(Value) <= 0.0001f)
+	{
+		return;
+	}
+
+	FRotator Control = GetControlRotation();
+	Control.Yaw += Value * MouseSensitivity * ScopeState.CurrentSensitivity;
+	SetControlRotation(Control);
+	ApplySniperControlRotation();
+}
+
+void ASniperPawn::HandleLookUpInput(float Value)
+{
+	InputState.MouseDeltaY = Value;
+	if (std::abs(Value) <= 0.0001f)
+	{
+		return;
+	}
+
+	const float Direction = bInvertMouseY ? -1.0f : 1.0f;
+	FRotator Control = GetControlRotation();
+	Control.Pitch += Value * MouseSensitivity * ScopeState.CurrentSensitivity * Direction;
+	Control.Pitch = ClampSniperPitch(Control.Pitch, MinCameraPitch, MaxCameraPitch);
+	SetControlRotation(Control);
+	ApplySniperControlRotation();
+}
+
+void ASniperPawn::HandleScopePressed()
+{
+	InputState.bScopeHeld = true;
+}
+
+void ASniperPawn::HandleScopeReleased()
+{
+	InputState.bScopeHeld = false;
+}
+
+void ASniperPawn::HandleHoldBreathPressed()
+{
+	InputState.bHoldBreathHeld = true;
+}
+
+void ASniperPawn::HandleHoldBreathReleased()
+{
+	InputState.bHoldBreathHeld = false;
+}
+
+void ASniperPawn::HandleSwitchAmmoNormalPressed()
+{
+	InputState.bSwitchAmmoPressed = true;
+	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
+	{
+		SniperWeapon->SetCurrentAmmoType(ESniperAmmoType::Normal);
+	}
+	InputState.bSwitchAmmoPressed = false;
+}
+
+void ASniperPawn::HandleSwitchAmmoAntiMaterialPressed()
+{
+	InputState.bSwitchAmmoPressed = true;
+	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
+	{
+		SniperWeapon->SetCurrentAmmoType(ESniperAmmoType::AntiMaterial);
+	}
+	InputState.bSwitchAmmoPressed = false;
+}
+
+void ASniperPawn::HandleFirePressed()
+{
+	InputState.bFirePressed = true;
+	FireCurrentRound();
+}
+
+void ASniperPawn::ApplyFireRecoil()
+{
+	USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+	if (!SniperWeapon)
+	{
+		return;
+	}
+
+	const FAmmoBallisticData* AmmoData = SniperWeapon->GetCurrentAmmoData();
+	if (!AmmoData)
+	{
+		return;
+	}
+
+	RecoilState.LastShotRecoilPitch = AmmoData->RecoilPitch;
+	RecoilState.LastShotRecoilYaw = RandomRange(-AmmoData->RecoilYawRandomRange, AmmoData->RecoilYawRandomRange);
+	RecoilState.CurrentRecoilPitch += RecoilState.LastShotRecoilPitch;
+	RecoilState.CurrentRecoilYaw += RecoilState.LastShotRecoilYaw;
+}
+
+bool ASniperPawn::FireCurrentRound()
+{
+	USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+	UCameraComponent* SniperCamera = Camera.Get();
+	if (!SniperWeapon || !SniperCamera)
+	{
+		return false;
+	}
+
+	const FVector ShotDirection = BuildEffectiveAimRotation().GetForwardVector().Normalized();
+	if (ShotDirection.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const FVector MuzzlePosition = SniperCamera->GetWorldLocation() + ShotDirection * 10.0f;
+	const bool bFired = SniperWeapon->RequestFire(
+		MuzzlePosition,
+		ShotDirection,
+		InputState.bScopeHeld,
+		this);
+
+	if (bFired)
+	{
+		ApplyFireRecoil();
+	}
+
+	InputState.bFirePressed = false;
+	return bFired;
+}

@@ -1,5 +1,6 @@
 #include "LuaScriptComponent.h"
 
+#include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
@@ -37,6 +38,7 @@ void ULuaScriptComponent::ClearLuaRuntime()
 	LuaOnEndOverlap = sol::nil;
 	LuaOnHit = sol::nil;
 	LuaOnEndHit = sol::nil;
+	LuaOnSniperHit = sol::nil;
 	Env = sol::environment();
 	bHasCalledLuaEndPlay = false;
 	bPendingLuaEndPlay = false;
@@ -47,6 +49,7 @@ void ULuaScriptComponent::ReleaseLuaRuntimeForShutdown()
 {
 	FLuaScriptManager::UnregisterComponent(this);
 	ClearCollisionBindings();
+	ClearSniperBindings();
 	if (LuaCallDepth > 0)
 	{
 		bPendingLuaCleanup = true;
@@ -102,11 +105,13 @@ void ULuaScriptComponent::InitializeLua()
 	LuaOnEndOverlap = Env["OnEndOverlap"];
 	LuaOnHit = Env["OnHit"];
 	LuaOnEndHit = Env["OnEndHit"];
+	LuaOnSniperHit = Env["OnSniperHit"];
 }
 
 void ULuaScriptComponent::ReloadScript()
 {
 	ClearCollisionBindings();
+	ClearSniperBindings();
 	InitializeLua();
 
 	if (LuaBeginPlay)
@@ -122,6 +127,7 @@ void ULuaScriptComponent::ReloadScript()
 	}
 
 	BindOwnerCollisionEvents();
+	BindOwnerSniperEvents();
 }
 
 void ULuaScriptComponent::BeginPlay()
@@ -145,6 +151,7 @@ void ULuaScriptComponent::BeginPlay()
 	}
 
 	BindOwnerCollisionEvents();
+	BindOwnerSniperEvents();
 }
 
 void ULuaScriptComponent::EndPlay()
@@ -158,6 +165,7 @@ void ULuaScriptComponent::EndPlay()
 	UActorComponent::EndPlay();
 	FLuaScriptManager::UnregisterComponent(this);
 	ClearCollisionBindings();
+	ClearSniperBindings();
 	if (LuaCallDepth > 0)
 	{
 		bPendingLuaEndPlay = true;
@@ -245,6 +253,31 @@ void ULuaScriptComponent::BindOwnerCollisionEvents()
 	}
 }
 
+void ULuaScriptComponent::BindOwnerSniperEvents()
+{
+	ClearSniperBindings();
+
+	if (!LuaOnSniperHit)
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	USniperWeaponComponent* WeaponComponent = OwnerActor->GetComponentByClass<USniperWeaponComponent>();
+	if (!WeaponComponent)
+	{
+		return;
+	}
+
+	BoundSniperWeaponComponent = WeaponComponent;
+	SniperHitHandle = WeaponComponent->OnSniperHit.AddWeakUObject(this, &ULuaScriptComponent::HandleSniperHit);
+}
+
 void ULuaScriptComponent::ClearCollisionBindings()
 {
 	for (int32 Index = 0; Index < static_cast<int32>(BoundOverlapComponents.size()); ++Index)
@@ -292,6 +325,18 @@ void ULuaScriptComponent::ClearCollisionBindings()
 	BoundHitComponents.clear();
 	HitHandles.clear();
 	EndHitHandles.clear();
+}
+
+void ULuaScriptComponent::ClearSniperBindings()
+{
+	USniperWeaponComponent* WeaponComponent = BoundSniperWeaponComponent.Get();
+	if (WeaponComponent && SniperHitHandle.IsValid())
+	{
+		WeaponComponent->OnSniperHit.Remove(SniperHitHandle);
+	}
+
+	BoundSniperWeaponComponent = nullptr;
+	SniperHitHandle = FDelegateHandle();
 }
 
 void ULuaScriptComponent::HandleBeginOverlap(
@@ -395,6 +440,29 @@ void ULuaScriptComponent::HandleEndHit(
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua OnEndHit error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
+		}
+	}
+}
+
+void ULuaScriptComponent::HandleSniperHit(const FSniperHitInfo& HitInfo)
+{
+	if (!IsValid(this) || bPendingLuaCleanup || !Env.valid() || !LuaOnSniperHit)
+	{
+		return;
+	}
+
+	FSniperHitInfo SafeHitInfo = HitInfo;
+	SafeHitInfo.HitActor = IsValid(SafeHitInfo.HitActor) ? SafeHitInfo.HitActor : nullptr;
+	SafeHitInfo.Shooter = IsValid(SafeHitInfo.Shooter) ? SafeHitInfo.Shooter : nullptr;
+
+	{
+		FLuaCallScope Scope(this);
+		sol::protected_function_result Result = LuaOnSniperHit(SafeHitInfo);
+		if (!Result.valid())
+		{
+			sol::error Err = Result;
+			UE_LOG("Lua OnSniperHit error in %s: %s", ScriptFile.c_str(), Err.what());
 			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}

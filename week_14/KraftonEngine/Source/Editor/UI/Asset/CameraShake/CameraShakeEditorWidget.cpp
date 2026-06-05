@@ -4,6 +4,7 @@
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
 #include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "FloatCurve/FloatCurveManager.h"
@@ -352,11 +353,9 @@ void FCameraShakeEditorWidget::Open(UObject* Object)
 		return;
 	}
 
-	EditedObject = Object;
-	bOpen = true;
+	FAssetEditorWidget::Open(Object);
 	bPreviewPlaying = false;
 	PreviewTime = 0.0f;
-	ClearDirty();
 }
 
 void FCameraShakeEditorWidget::Render(float DeltaTime)
@@ -367,6 +366,7 @@ void FCameraShakeEditorWidget::Render(float DeltaTime)
 	}
 
 	UCameraShakeAsset* ShakeAsset = static_cast<UCameraShakeAsset*>(EditedObject);
+	const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(ShakeAsset);
 	const float PreviewDuration = (std::max)(ShakeAsset->Duration, 0.001f);
 	if (bPreviewPlaying)
 	{
@@ -418,8 +418,54 @@ void FCameraShakeEditorWidget::Render(float DeltaTime)
 		}
 	}
 	ImGui::SameLine();
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+	{
+		ImGui::BeginDisabled();
+	}
+	if (ImGui::Button("Undo"))
+	{
+		EditorEngine->GetUndoSystem().Undo();
+	}
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+	{
+		ImGui::EndDisabled();
+	}
+	ImGui::SameLine();
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+	{
+		ImGui::BeginDisabled();
+	}
+	if (ImGui::Button("Redo"))
+	{
+		EditorEngine->GetUndoSystem().Redo();
+	}
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+	{
+		ImGui::EndDisabled();
+	}
+	ImGui::SameLine();
 	ImGui::TextDisabled("%s", ShakeAsset->GetSourcePath().empty() ? "Unsaved asset" : ShakeAsset->GetSourcePath().c_str());
 	ImGui::Separator();
+
+	if (EditorEngine && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+	{
+		ImGuiIO& IO = ImGui::GetIO();
+		if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Z))
+		{
+			if (IO.KeyShift)
+			{
+				EditorEngine->GetUndoSystem().Redo();
+			}
+			else
+			{
+				EditorEngine->GetUndoSystem().Undo();
+			}
+		}
+		else if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Y))
+		{
+			EditorEngine->GetUndoSystem().Redo();
+		}
+	}
 
 	bool bChanged = false;
 
@@ -509,7 +555,7 @@ void FCameraShakeEditorWidget::Render(float DeltaTime)
 
 	if (bChanged)
 	{
-		MarkDirty();
+		RecordSerializedObjectEdit(ShakeAsset, UndoBeforeSnapshot, "Edit Camera Shake");
 	}
 
 	ImGui::End();

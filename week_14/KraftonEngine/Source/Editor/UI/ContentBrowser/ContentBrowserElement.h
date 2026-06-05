@@ -63,6 +63,16 @@ public:
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 };
 
+class PrefabElement final : public ContentBrowserElement
+{
+public:
+	const char* GetDragItemType() override { return "PrefabContentItem"; }
+
+protected:
+	const char* GetTypeLabel() const override { return "Prefab"; }
+	uint32 GetAccentColor() const override { return IM_COL32(95, 180, 230, 255); }
+};
+
 class ObjectElement final : public ContentBrowserElement
 {
 public:
@@ -179,6 +189,27 @@ class PNGElement final : public ContentBrowserElement
 {
 public:
 	virtual const char* GetDragItemType() override { return "PNGElement"; }
+};
+
+class RuntimeUIElement final : public ContentBrowserElement
+{
+public:
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+
+protected:
+	const char* GetTypeLabel() const override { return "Runtime UI"; }
+	uint32 GetAccentColor() const override { return IM_COL32(86, 205, 190, 255); }
+};
+
+class RuntimeUILayoutElement final : public ContentBrowserElement
+{
+public:
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+	const char* GetDragItemType() override { return "RuntimeUILayoutContentItem"; }
+
+protected:
+	const char* GetTypeLabel() const override { return "Runtime UI Layout"; }
+	uint32 GetAccentColor() const override { return IM_COL32(64, 190, 210, 255); }
 };
 
 #include "Editor/UI/Panel/EditorMaterialInspector.h"

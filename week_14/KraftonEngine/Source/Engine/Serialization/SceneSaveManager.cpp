@@ -86,6 +86,7 @@ namespace SceneKeys
 	static constexpr const char* ContextHandle = "ContextHandle";
 	static constexpr const char* WorldSettings = "WorldSettings";
 	static constexpr const char* GameMode = "GameMode";  // legacy / WorldSettings 내부 키
+	static constexpr const char* DefaultPawnPrefabPath = "DefaultPawnPrefabPath";
 	static constexpr const char* Gravity = "Gravity";
 	static constexpr const char* Actors = "Actors";
 	static constexpr const char* RootComponent = "RootComponent";
@@ -285,6 +286,25 @@ void FSceneSaveManager::SaveSceneAsJSON(const string& InSceneName, FWorldContext
 	}
 }
 
+FString FSceneSaveManager::SaveToString(FWorldContext& WorldContext, const FMinimalViewInfo* PerspectivePOV)
+{
+	using namespace json;
+	FScopedGarbageCollectionBlocker GCBlocker;
+
+	if (!IsSceneSerializableObject(WorldContext.World))
+	{
+		return "";
+	}
+
+	FSceneSaveContext SaveContext;
+	CollectWorldObjectIds(WorldContext.World, SaveContext);
+
+	JSON Root = SerializeWorld(WorldContext.World, WorldContext, PerspectivePOV, SaveContext);
+	Root[SceneKeys::Version] = 2;
+	Root[SceneKeys::Name] = "UndoSnapshot";
+	return Root.dump();
+}
+
 void FSceneSaveManager::CollectWorldObjectIds(UWorld* World, FSceneSaveContext& Context)
 {
 	if (!IsSceneSerializableObject(World))
@@ -361,6 +381,7 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 		const FWorldSettings& WS = World->GetWorldSettings();
 		JSON WSObj = json::Object();
 		WSObj[SceneKeys::GameMode] = WS.GameModeClassName;
+		WSObj[SceneKeys::DefaultPawnPrefabPath] = WS.DefaultPawnPrefabPath;
 		WriteVec3(WSObj, SceneKeys::Gravity, WS.Gravity);
 		w[SceneKeys::WorldSettings] = WSObj;
 	}
@@ -374,9 +395,14 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 	w[SceneKeys::Actors] = Actors;
 
 	// ---- Perspective camera ----
-	JSON cam = SerializeCamera(PerspectivePOV);
-	if (cam.size() > 0) {
-		w["PerspectiveCamera"] = cam;
+	// Scene files may persist the editor camera, but transaction-style scene
+	// snapshots pass nullptr so transient viewport movement stays out of undo.
+	if (PerspectivePOV)
+	{
+		JSON cam = SerializeCamera(PerspectivePOV);
+		if (cam.size() > 0) {
+			w["PerspectiveCamera"] = cam;
+		}
 	}
 
 	return w;
@@ -423,6 +449,102 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor, FSceneSaveContext& C
 	a[SceneKeys::NonSceneComponents] = NonScene;
 
 	return a;
+}
+
+json::JSON FSceneSaveManager::SerializeActorForPrefab(AActor* Actor)
+{
+	using namespace json;
+	JSON a = json::Object();
+	if (!IsSceneSerializableObject(Actor))
+	{
+		return a;
+	}
+
+	FSceneSaveContext SaveContext;
+	CollectActorObjectIds(Actor, SaveContext);
+	return SerializeActor(Actor, SaveContext);
+}
+
+AActor* FSceneSaveManager::SpawnActorFromSerializedActor(UWorld* World, json::JSON& ActorJSON, bool bPreserveActorName)
+{
+	if (!IsSceneSerializableObject(World))
+	{
+		return nullptr;
+	}
+
+	const string ActorClass = ActorJSON[SceneKeys::ClassName].ToString();
+	if (ActorClass.empty())
+	{
+		return nullptr;
+	}
+
+	UObject* ActorObj = FObjectFactory::Get().Create(ActorClass, World);
+	if (!ActorObj || !ActorObj->IsA<AActor>())
+	{
+		if (ActorObj)
+		{
+			UObjectManager::Get().DestroyObject(ActorObj);
+		}
+		return nullptr;
+	}
+
+	AActor* Actor = static_cast<AActor*>(ActorObj);
+	FSceneLoadContext LoadContextState;
+	LoadContextState.RegisterLoadedObject(ActorJSON, Actor);
+
+	if (bPreserveActorName && ActorJSON.hasKey(SceneKeys::Name))
+	{
+		Actor->SetFName(FName(ActorJSON[SceneKeys::Name].ToString()));
+	}
+
+	if (ActorJSON.hasKey(SceneKeys::RootComponent))
+	{
+		json::JSON& RootJSON = ActorJSON[SceneKeys::RootComponent];
+		USceneComponent* Root = DeserializeSceneComponentTree(RootJSON, Actor, LoadContextState);
+		if (Root)
+		{
+			Actor->SetRootComponent(Root);
+		}
+	}
+
+	if (ActorJSON.hasKey(SceneKeys::Properties))
+	{
+		LoadContextState.QueueProperties(Actor, ActorJSON[SceneKeys::Properties]);
+	}
+
+	if (ActorJSON.hasKey(SceneKeys::NonSceneComponents))
+	{
+		for (auto& CompJSON : ActorJSON[SceneKeys::NonSceneComponents].ArrayRange())
+		{
+			string CompClass = CompJSON[SceneKeys::ClassName].ToString();
+			UObject* CompObj = FObjectFactory::Get().Create(CompClass, Actor);
+			if (!CompObj || !CompObj->IsA<UActorComponent>())
+			{
+				if (CompObj)
+				{
+					UObjectManager::Get().DestroyObject(CompObj);
+				}
+				continue;
+			}
+
+			UActorComponent* Comp = static_cast<UActorComponent*>(CompObj);
+			LoadContextState.RegisterLoadedObject(CompJSON, Comp);
+			Actor->RegisterComponent(Comp);
+
+			if (CompJSON.hasKey(SceneKeys::Properties))
+			{
+				json::JSON& PropsJSON = CompJSON[SceneKeys::Properties];
+				LoadContextState.QueueProperties(Comp, PropsJSON);
+			}
+			DeserializeComponentEditorMetadata(Comp, CompJSON);
+		}
+	}
+
+	ApplyQueuedProperties(LoadContextState);
+	RebuildSerializedActorState(Actor);
+
+	World->AddActor(Actor);
+	return Actor;
 }
 
 json::JSON FSceneSaveManager::SerializeSceneComponentTree(USceneComponent* Comp, FSceneSaveContext& Context)
@@ -484,29 +606,58 @@ void FSceneSaveManager::DeserializeCamera(json::JSON& CameraJSON, FPerspectiveCa
 	using namespace json;
 	if (CameraJSON.JSONType() == JSON::Class::Null) return;
 
-	if (CameraJSON.hasKey("Location")) OutCam.Location = ReadVec3(CameraJSON["Location"]);
-	if (CameraJSON.hasKey("Rotation")) OutCam.Rotation = ReadVec3(CameraJSON["Rotation"]);
+	bool bHasCameraData = false;
+	if (CameraJSON.hasKey("Location")) { OutCam.Location = ReadVec3(CameraJSON["Location"]); bHasCameraData = true; }
+	if (CameraJSON.hasKey("Rotation")) { OutCam.Rotation = ReadVec3(CameraJSON["Rotation"]); bHasCameraData = true; }
 	if (CameraJSON.hasKey("FOV")) {
 		auto& Val = CameraJSON["FOV"];
 		float fov = static_cast<float>(Val.JSONType() == JSON::Class::Array ? Val[0].ToFloat() : Val.ToFloat());
 		// 엔진 내부는 라디안 — π(~3.14)를 넘으면 degree로 간주하고 변환
 		if (fov > 3.14159265f) fov *= (3.14159265f / 180.0f);
 		OutCam.FOV = fov;
+		bHasCameraData = true;
 	}
 	if (CameraJSON.hasKey("NearClip")) {
 		auto& Val = CameraJSON["NearClip"];
 		OutCam.NearClip = static_cast<float>(Val.JSONType() == JSON::Class::Array ? Val[0].ToFloat() : Val.ToFloat());
+		bHasCameraData = true;
 	}
 	if (CameraJSON.hasKey("FarClip")) {
 		auto& Val = CameraJSON["FarClip"];
 		OutCam.FarClip = static_cast<float>(Val.JSONType() == JSON::Class::Array ? Val[0].ToFloat() : Val.ToFloat());
+		bHasCameraData = true;
 	}
-	OutCam.bValid = true;
+	OutCam.bValid = bHasCameraData;
 }
 
 // ============================================================
 // Load
 // ============================================================
+
+void FSceneSaveManager::LoadFromString(const FString& Snapshot, FWorldContext& OutWorldContext, FPerspectiveCameraData& OutCam, const EWorldType* OverrideWorldType)
+{
+	if (Snapshot.empty())
+	{
+		return;
+	}
+
+	std::filesystem::path TempPath = std::filesystem::temp_directory_path()
+		/ (L"KraftonEngine_UndoRedo_" + FPaths::ToWide(GetCurrentTimeStamp()) + L".Scene");
+
+	{
+		std::ofstream TempFile(TempPath, std::ios::out | std::ios::trunc);
+		if (!TempFile.is_open())
+		{
+			return;
+		}
+		TempFile << Snapshot;
+	}
+
+	LoadSceneFromJSON(FPaths::ToUtf8(TempPath.wstring()), OutWorldContext, OutCam, OverrideWorldType);
+
+	std::error_code Ec;
+	std::filesystem::remove(TempPath, Ec);
+}
 
 void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext& OutWorldContext, FPerspectiveCameraData& OutCam, const EWorldType* OverrideWorldType)
 {
@@ -558,6 +709,10 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 		if (WSObj.hasKey(SceneKeys::GameMode))
 		{
 			WorldSettings.GameModeClassName = WSObj[SceneKeys::GameMode].ToString();
+		}
+		if (WSObj.hasKey(SceneKeys::DefaultPawnPrefabPath))
+		{
+			WorldSettings.DefaultPawnPrefabPath = WSObj[SceneKeys::DefaultPawnPrefabPath].ToString();
 		}
 		if (WSObj.hasKey(SceneKeys::Gravity) &&
 			WSObj[SceneKeys::Gravity].JSONType() == JSON::Class::Array)
@@ -632,13 +787,7 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 		}
 	}
 
-	for (FPendingPropertyLoad& Pending : LoadContextState.PendingProperties)
-	{
-		if (IsSceneSerializableObject(Pending.Object) && Pending.Properties)
-		{
-			DeserializeProperties(Pending.Object, *Pending.Properties, LoadContextState);
-		}
-	}
+	ApplyQueuedProperties(LoadContextState);
 
 	// Components are registered while the object graph is being created so object-id
 	// references can be resolved. Some render resources, however, depend on properties
@@ -646,36 +795,7 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 	// all reflected properties/PostLoad fixups are complete.
 	for (AActor* Actor : World->GetActors())
 	{
-		if (!IsValid(Actor))
-		{
-			continue;
-		}
-
-		for (UActorComponent* Component : Actor->GetComponents())
-		{
-			if (!IsValid(Component))
-			{
-				continue;
-			}
-
-			Component->DestroyRenderState();
-			if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
-			{
-				SceneComponent->MarkTransformDirty();
-			}
-			Component->CreateRenderState();
-		}
-	}
-
-	for (AActor* Actor : World->GetActors())
-	{
-		if (!IsSceneSerializableObject(Actor))
-		{
-			continue;
-		}
-
-		World->RemoveActorToOctree(Actor);
-		World->InsertActorToOctree(Actor);
+		RebuildSerializedActorState(Actor);
 	}
 
 	OutWorldContext.WorldType = WorldType;
@@ -786,6 +906,64 @@ void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSO
 
 	FSceneJsonLoadArchive PostLoadArchive(PropsJSON, Context);
 	Obj->PostLoadFromArchive(PostLoadArchive);
+}
+
+void FSceneSaveManager::ApplyQueuedProperties(FSceneLoadContext& Context)
+{
+	for (FPendingPropertyLoad& Pending : Context.PendingProperties)
+	{
+		if (IsSceneSerializableObject(Pending.Object) && Pending.Properties)
+		{
+			DeserializeProperties(Pending.Object, *Pending.Properties, Context);
+		}
+	}
+
+	Context.PendingProperties.clear();
+}
+
+void FSceneSaveManager::RebuildSerializedActorState(AActor* Actor)
+{
+	if (!IsSceneSerializableObject(Actor))
+	{
+		return;
+	}
+
+	for (UActorComponent* Component : Actor->GetComponents())
+	{
+		if (!IsValid(Component))
+		{
+			continue;
+		}
+
+		Component->DestroyRenderState();
+		if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
+		{
+			SceneComponent->MarkTransformDirty();
+		}
+		Component->CreateRenderState();
+	}
+
+	UWorld* World = Actor->GetWorld();
+	if (!IsSceneSerializableObject(World))
+	{
+		return;
+	}
+
+	bool bActorInWorld = false;
+	for (AActor* WorldActor : World->GetActors())
+	{
+		if (WorldActor == Actor)
+		{
+			bActorInWorld = true;
+			break;
+		}
+	}
+
+	if (bActorInWorld)
+	{
+		World->RemoveActorToOctree(Actor);
+		World->InsertActorToOctree(Actor);
+	}
 }
 
 // ============================================================

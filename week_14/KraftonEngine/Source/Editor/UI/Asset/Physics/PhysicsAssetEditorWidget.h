@@ -162,6 +162,10 @@ private:
     void AddConstraintToSelectedParentBody(UPhysicsAsset* PhysicsAsset);
     void RunValidation(UPhysicsAsset* PhysicsAsset);
     void MarkPhysicsAssetDirty();
+    void FinishPhysicsAssetSerializedEdit(UPhysicsAsset* PhysicsAsset, const TArray<uint8>& BeforeSnapshot, const FString& Label);
+    void RefreshPhysicsAssetSerializedUndoSnapshot(UPhysicsAsset* PhysicsAsset);
+    void HandleUndoRedoShortcuts();
+    void OnSerializedObjectEditRestored(UObject* Object) override;
     bool StartEditorSimulation(UPhysicsAsset* PhysicsAsset, UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent);
     bool BeginEditorRagdollGrab(UPhysicsAsset* PhysicsAsset, UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, const FRay& MouseRay);
     void TickEditorRagdollGrab(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, const FRay* MouseRay, bool bMouseLeftPressed, bool bMouseLeftHeld, bool bMouseLeftReleased);
@@ -220,6 +224,8 @@ private:
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
     FString LastDebugExportMessage;
+    TArray<uint8> CachedPhysicsAssetUndoSnapshot;
+    int32 UndoRedoAppliedFrame = -1;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
     FString ValidationMeshPath;

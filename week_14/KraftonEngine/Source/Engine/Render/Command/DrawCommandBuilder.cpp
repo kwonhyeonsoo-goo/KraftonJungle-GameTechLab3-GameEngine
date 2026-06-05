@@ -46,6 +46,7 @@ void FDrawCommandBuilder::Create(ID3D11Device* InDevice, ID3D11DeviceContext* In
 	CameraFadeCB.Create(InDevice, sizeof(FCameraFadeConstants), "CameraFadeCB");
 	CameraVignetteCB.Create(InDevice, sizeof(FCameraVignetteConstants), "CameraVignetteCB");
 	CameraLetterboxCB.Create(InDevice, sizeof(FCameraLetterboxConstants), "CameraLetterboxCB");
+	ScopeLensCB.Create(InDevice, sizeof(FScopeLensConstants), "ScopeLensCB");
 	MeshScalarOverlayCB.Create(InDevice, sizeof(FMeshScalarOverlayConstants), "MeshScalarOverlayCB");
 	MeshScalarOverlayWireCB.Create(InDevice, sizeof(FMeshScalarOverlayConstants), "MeshScalarOverlayWireCB");
 }
@@ -77,6 +78,7 @@ void FDrawCommandBuilder::Release()
 	CameraFadeCB.Release();
 	CameraVignetteCB.Release();
 	CameraLetterboxCB.Release();
+	ScopeLensCB.Release();
 	MeshScalarOverlayCB.Release();
 	MeshScalarOverlayWireCB.Release();
 }
@@ -1121,6 +1123,27 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			Cmd.InitFullscreenTriangle(VignetteShader, ERenderPass::PostProcess, PPRS);
 			Cmd.Bindings.PerShaderCB[0] = &CameraVignetteCB;
 			Cmd.BuildSortKey(6);
+		}
+	}
+
+	if (!bPureDebugView && Frame.RenderOptions.ShowFlags.bScopeLens && Frame.CameraScopeLens.bEnabled && Frame.ScopeLensSRV)
+	{
+		FShader* ScopeShader = FShaderManager::Get().GetOrCreate(EShaderPath::ScopeLensComposite);
+		if (ScopeShader)
+		{
+			FScopeLensConstants ScopeData = {};
+			ScopeData.Radius = Frame.CameraScopeLens.Radius;
+			ScopeData.Feather = Frame.CameraScopeLens.Feather;
+			ScopeData.OuterBlurRadius = Frame.CameraScopeLens.OuterBlurRadius;
+			ScopeData.EdgeBlurRadius = Frame.CameraScopeLens.EdgeBlurRadius;
+			ScopeData.Intensity = Frame.CameraScopeLens.Intensity;
+			ScopeData.AspectRatio = Frame.ViewportHeight > 0.0f ? Frame.ViewportWidth / Frame.ViewportHeight : 1.0f;
+			ScopeLensCB.Update(Ctx, &ScopeData, sizeof(FScopeLensConstants));
+
+			FDrawCommand& Cmd = DrawCommandList.AddCommand();
+			Cmd.InitFullscreenTriangle(ScopeShader, ERenderPass::PostProcess, PPRS);
+			Cmd.Bindings.PerShaderCB[0] = &ScopeLensCB;
+			Cmd.BuildSortKey(4);
 		}
 	}
 

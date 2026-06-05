@@ -5,6 +5,8 @@
 #include "Animation/Graph/AnimGraphTypes.h"
 #include "Animation/AnimInstance.h"
 #include "Asset/AssetRegistry.h"
+#include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Core/Types/PropertyTypes.h"
 #include "Object/Object.h"
 #include "Object/Reflection/UClass.h"
@@ -2604,11 +2606,44 @@ void FAnimGraphEditorWidget::CommitGraphEdit(UAnimGraphAsset* Asset)
 {
 	if (!Asset || bRestoringSnapshot) return;
 	SanitizeGraphReferences(Asset);
+	const TArray<uint8> BeforeSnapshot = UndoStack.empty() ? TArray<uint8>() : UndoStack.back();
 	const TArray<uint8> Snapshot = MakeGraphSnapshot(Asset);
 	if (!Snapshot.empty() && (UndoStack.empty() || UndoStack.back() != Snapshot))
 	{
+		if (!BeforeSnapshot.empty() && EditorEngine)
+		{
+			std::shared_ptr<bool> UndoLifetime = GetEditorLifetimeToken();
+			FEditorUndoSystem& UndoSystem = EditorEngine->GetUndoSystem();
+			UndoSystem.BeginTransaction("Edit Anim Graph");
+			UndoSystem.AddCommand(std::make_unique<FLambdaEditorUndoCommand>(
+				"Edit Anim Graph",
+				BeforeSnapshot,
+				Snapshot,
+				[this, Asset, UndoLifetime](FEditorUndoContext&, const TArray<uint8>& RestoreSnapshot)
+				{
+					if (!UndoLifetime || !*UndoLifetime)
+					{
+						return false;
+					}
+
+					if (!IsOpen() || !IsEditingObject(Asset) || !IsValid(Asset) || RestoreSnapshot.empty())
+					{
+						return false;
+					}
+
+					const bool bRestored = RestoreGraphSnapshot(Asset, RestoreSnapshot);
+					if (bRestored)
+					{
+						UndoStack.clear();
+						UndoStack.push_back(RestoreSnapshot);
+						RedoStack.clear();
+					}
+					return bRestored;
+				}));
+			UndoSystem.EndTransaction();
+		}
+		UndoStack.clear();
 		UndoStack.push_back(Snapshot);
-		if (UndoStack.size() > 128) UndoStack.erase(UndoStack.begin());
 	}
 	RedoStack.clear();
 	MarkDirty();
@@ -2617,19 +2652,18 @@ void FAnimGraphEditorWidget::CommitGraphEdit(UAnimGraphAsset* Asset)
 
 void FAnimGraphEditorWidget::UndoGraphEdit(UAnimGraphAsset* Asset)
 {
-	if (!Asset || UndoStack.size() <= 1) return;
-	RedoStack.push_back(UndoStack.back());
-	UndoStack.pop_back();
-	RestoreGraphSnapshot(Asset, UndoStack.back());
+	if (Asset && EditorEngine)
+	{
+		EditorEngine->GetUndoSystem().Undo();
+	}
 }
 
 void FAnimGraphEditorWidget::RedoGraphEdit(UAnimGraphAsset* Asset)
 {
-	if (!Asset || RedoStack.empty()) return;
-	const TArray<uint8> Snapshot = RedoStack.back();
-	RedoStack.pop_back();
-	UndoStack.push_back(Snapshot);
-	RestoreGraphSnapshot(Asset, Snapshot);
+	if (Asset && EditorEngine)
+	{
+		EditorEngine->GetUndoSystem().Redo();
+	}
 }
 
 bool FAnimGraphEditorWidget::GatherSelectedNodes(UAnimGraphAsset* Asset, TArray<FAnimGraphNode>& OutNodes, TArray<FAnimGraphLink>& OutLinks) const
@@ -4364,13 +4398,13 @@ void FAnimGraphEditorWidget::Render(float DeltaTime)
 			ValidateGraph(Asset);
 		}
 		ImGui::SameLine();
-		if (UndoStack.size() <= 1) ImGui::BeginDisabled();
+		if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo()) ImGui::BeginDisabled();
 		if (ImGui::Button("Undo")) UndoGraphEdit(Asset);
-		if (UndoStack.size() <= 1) ImGui::EndDisabled();
+		if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo()) ImGui::EndDisabled();
 		ImGui::SameLine();
-		if (RedoStack.empty()) ImGui::BeginDisabled();
+		if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo()) ImGui::BeginDisabled();
 		if (ImGui::Button("Redo")) RedoGraphEdit(Asset);
-		if (RedoStack.empty()) ImGui::EndDisabled();
+		if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo()) ImGui::EndDisabled();
 		ImGui::SameLine();
 		ImGui::TextColored(bLastValidationOk ? ImVec4(0.45f, 0.90f, 0.45f, 1.0f) : ImVec4(1.0f, 0.42f, 0.35f, 1.0f),
 			"%s", bLastValidationOk ? "Compiled" : "Needs Fix");

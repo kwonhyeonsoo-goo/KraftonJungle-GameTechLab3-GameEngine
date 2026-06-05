@@ -15,6 +15,8 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "UI/RuntimeUILayoutAsset.h"
+#include "UI/RuntimeUILayoutManager.h"
 
 #include <filesystem>
 
@@ -341,5 +343,56 @@ bool FAssetFactory::CreateLuaBlueprint(const FString& DirectoryPath, const FStri
 	}
 
 	OutCreatedPath = FPaths::ToUtf8(AssetPath.wstring());
+	return true;
+}
+
+bool FAssetFactory::CreateRuntimeUILayout(
+	const FString& DirectoryPath,
+	const FString& AssetName,
+	FString& OutCreatedPath,
+	FString* OutGeneratedRmlPath)
+{
+	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
+	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
+	{
+		return false;
+	}
+
+	const std::filesystem::path AssetPath = BuildUniqueAssetPath(
+		Directory,
+		AssetName.empty() ? "NewRuntimeUI" : AssetName,
+		L".uasset");
+	std::filesystem::path RmlPath = AssetPath;
+	std::filesystem::path RcssPath = AssetPath;
+	RmlPath.replace_extension(L".rml");
+	RcssPath.replace_extension(L".rcss");
+
+	URuntimeUILayoutAsset* NewAsset = UObjectManager::Get().CreateObject<URuntimeUILayoutAsset>();
+	if (!NewAsset)
+	{
+		return false;
+	}
+
+	const FString CreatedPath = FPaths::ToUtf8(AssetPath.wstring());
+	const FString GeneratedRmlPath = FPaths::ToUtf8(RmlPath.wstring());
+	const FString GeneratedRcssPath = FPaths::ToUtf8(RcssPath.wstring());
+	NewAsset->SetAssetPath(CreatedPath);
+	NewAsset->SetGeneratedPaths(GeneratedRmlPath, GeneratedRcssPath);
+
+	const bool bSaved = FRuntimeUILayoutManager::Get().Save(NewAsset);
+	FString ExportError;
+	const bool bExported = bSaved && NewAsset->ExportRmlAndRcss(GeneratedRmlPath, GeneratedRcssPath, &ExportError);
+	UObjectManager::Get().DestroyObject(NewAsset);
+
+	if (!bSaved || !bExported)
+	{
+		return false;
+	}
+
+	OutCreatedPath = CreatedPath;
+	if (OutGeneratedRmlPath)
+	{
+		*OutGeneratedRmlPath = GeneratedRmlPath;
+	}
 	return true;
 }

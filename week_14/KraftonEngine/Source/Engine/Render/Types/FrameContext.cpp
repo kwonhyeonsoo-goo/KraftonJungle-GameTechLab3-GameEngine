@@ -41,6 +41,8 @@ void FFrameContext::SetViewportInfo(const FViewport* VP)
 	SceneColorCopySRV       = VP->GetSceneColorCopySRV();
 	SceneColorCopyTexture   = VP->GetSceneColorCopyTexture();
 	ViewportRenderTexture   = VP->GetRTTexture();
+	ScopeLensRTV           = VP->GetScopeLensRTV();
+	ScopeLensSRV           = VP->GetScopeLensSRV();
 	DepthTexture            = VP->GetDepthTexture();
 	DepthCopyTexture        = VP->GetDepthCopyTexture();
 	DepthCopySRV            = VP->GetDepthCopySRV();

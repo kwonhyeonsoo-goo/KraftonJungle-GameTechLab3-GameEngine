@@ -8,6 +8,7 @@
 #include "ContentBrowserElement.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Subsystem/AssetFactory.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "FloatCurve/FloatCurveManager.h"
@@ -15,6 +16,8 @@
 #include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Animation/Sequence/AnimSequence.h"
+#include "Animation/Skeleton/Skeleton.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 #include "EditorEngine.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
@@ -27,6 +30,8 @@
 #include "Particle/ParticleSystemManager.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "UI/RuntimeUILayoutAsset.h"
+#include "UI/RuntimeUILayoutManager.h"
 
 namespace
 {
@@ -97,6 +102,76 @@ namespace
 
 		return PIt == P.end();
 	}
+
+	FString ToContentUndoPath(const std::filesystem::path& Path)
+	{
+		return FPaths::ToUtf8(Path.wstring());
+	}
+
+	FEditorFileSystemState CaptureContentUndoState(UEditorEngine* Editor, const FString& Path, const FString& Label)
+	{
+		if (!Editor || Path.empty())
+		{
+			return {};
+		}
+		return Editor->GetUndoSystem().CaptureFileSystemState(Path, Label);
+	}
+
+	void RecordCreatedContentPaths(UEditorEngine* Editor, const TArray<FString>& Paths, const FString& Label)
+	{
+		if (!Editor || Paths.empty())
+		{
+			return;
+		}
+
+		TArray<FEditorFileSystemState> CreatedStates;
+		for (const FString& Path : Paths)
+		{
+			FEditorFileSystemState State = CaptureContentUndoState(Editor, Path, Label);
+			if (State.IsValid() && !State.Entries.empty())
+			{
+				CreatedStates.push_back(std::move(State));
+			}
+		}
+
+		if (!CreatedStates.empty())
+		{
+			Editor->GetUndoSystem().RecordCreateFileSystemPaths(CreatedStates, Label);
+		}
+	}
+
+	void RecordCreatedContentPath(UEditorEngine* Editor, const FString& Path, const FString& Label)
+	{
+		RecordCreatedContentPaths(Editor, TArray<FString>{ Path }, Label);
+	}
+
+	FString ReplaceExtensionForUndo(const FString& Path, const wchar_t* Extension)
+	{
+		std::filesystem::path WidePath(FPaths::ToWide(Path));
+		WidePath.replace_extension(Extension);
+		return FPaths::ToUtf8(WidePath.wstring());
+	}
+
+	void RecordFbxSceneImportCreationForBrowser(UEditorEngine* Editor, const FFbxSceneImportResult& Result)
+	{
+		TArray<FString> CreatedPaths;
+		if (Result.Skeleton)
+		{
+			CreatedPaths.push_back(Result.Skeleton->GetAssetPathFileName());
+		}
+		if (Result.SkeletalMesh)
+		{
+			CreatedPaths.push_back(Result.SkeletalMesh->GetAssetPathFileName());
+		}
+		for (const UAnimSequence* AnimSequence : Result.AnimSequences)
+		{
+			if (AnimSequence)
+			{
+				CreatedPaths.push_back(AnimSequence->GetAssetPathFileName());
+			}
+		}
+		RecordCreatedContentPaths(Editor, CreatedPaths, "Import FBX Scene");
+	}
 }
 
 namespace
@@ -115,6 +190,7 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 	if (!InDevice) return;
 
 	IconFileMap[".Scene"] = L"World_64x.png";
+	IconFileMap[".prefab"] = L"StartMerge_42x.png";
 	IconFileMap[".obj"] = L"icon_MatEd_Mesh_40x.png";
 	IconFileMap[".mat"] = L"Sphere_64x.png";
 	IconFileMap[".shake"] = L"StartMerge_42x.png";
@@ -201,8 +277,26 @@ void FEditorContentBrowserWidget::RenderWithFlags(float DeltaTime, ImGuiWindowFl
 			if (BrowserContext.SelectedElement)
 			{
 				FString Error;
+				const FContentItem& Item = BrowserContext.SelectedElement->GetContentItem();
+				const FEditorFileSystemState BeforeState = CaptureContentUndoState(
+					BrowserContext.EditorEngine,
+					ToContentUndoPath(Item.Path),
+					"Rename Content");
 				if (BrowserContext.SelectedElement->RenameTo(sRenameBuf, &Error))
 				{
+					const FContentItem& RenamedItem = BrowserContext.SelectedElement->GetContentItem();
+					const FEditorFileSystemState AfterState = CaptureContentUndoState(
+						BrowserContext.EditorEngine,
+						ToContentUndoPath(RenamedItem.Path),
+						"Rename Content");
+					if (BrowserContext.EditorEngine)
+					{
+						BrowserContext.EditorEngine->GetUndoSystem().RecordRenameFileSystemPath(
+							BeforeState,
+							AfterState,
+							"Rename Content");
+					}
+
 					// 디스크 변경됐으니 다음 frame 에 디렉토리 다시 스캔. SelectedElement 의
 					// shared_ptr 는 무효화될 거라 해제 — 사용자가 다시 클릭해 선택.
 					BrowserContext.SelectedElement.reset();
@@ -256,8 +350,19 @@ void FEditorContentBrowserWidget::RenderWithFlags(float DeltaTime, ImGuiWindowFl
 		if (bConfirmDel && BrowserContext.SelectedElement)
 		{
 			FString Error;
+			const FContentItem& Item = BrowserContext.SelectedElement->GetContentItem();
+			const FEditorFileSystemState DeletedState = CaptureContentUndoState(
+				BrowserContext.EditorEngine,
+				ToContentUndoPath(Item.Path),
+				"Delete Content");
 			if (BrowserContext.SelectedElement->Delete(&Error))
 			{
+				if (BrowserContext.EditorEngine)
+				{
+					BrowserContext.EditorEngine->GetUndoSystem().RecordDeleteFileSystemPath(
+						DeletedState,
+						"Delete Content");
+				}
 				BrowserContext.SelectedElement.reset();
 				BrowserContext.bPendingContentRefresh = true;
 				ImGui::CloseCurrentPopup();
@@ -361,6 +466,7 @@ void FEditorContentBrowserWidget::RenderFbxImportOptionsPopup()
 
 	if (bImported)
 	{
+		RecordFbxSceneImportCreationForBrowser(BrowserContext.EditorEngine, Result);
 		if (Result.SkeletalMesh)
 		{
 			FMeshEditorWidget::RecordImportDurationForAsset(
@@ -428,6 +534,10 @@ void FEditorContentBrowserWidget::RefreshContent()
 		{
 			Element = std::make_shared<SceneElement>();
 		}
+		else if (Extension == ".prefab")
+		{
+			Element = std::make_shared<PrefabElement>();
+		}
 		else if (Extension == ".obj")
 		{
 			Element = std::make_shared<ObjectElement>();
@@ -456,6 +566,10 @@ void FEditorContentBrowserWidget::RefreshContent()
 		{
 			Element = std::make_shared<PNGElement>();
 			Icon = FEditorTextureManager::Get().GetOrLoadThumbnail(FPaths::ToUtf8(Content.Path.lexically_relative(FPaths::RootDir()).generic_wstring()));
+		}
+		else if (Extension == ".rml" || Extension == ".rcss")
+		{
+			Element = std::make_shared<RuntimeUIElement>();
 		}
 		else if (Extension == ".uasset")
 		{
@@ -501,6 +615,9 @@ void FEditorContentBrowserWidget::RefreshContent()
 					break;
 				case EAssetPackageType::PhysicsAsset:
 					Element = std::make_shared<PhysicsAssetElement>();
+					break;
+				case EAssetPackageType::RuntimeUILayout:
+					Element = std::make_shared<RuntimeUILayoutElement>();
 					break;
 				case EAssetPackageType::Material:
 					Element = std::make_shared<MaterialElement>();
@@ -623,6 +740,7 @@ void FEditorContentBrowserWidget::DrawContents()
 				FString CreatedPath;
 				if (FAssetFactory::CreateFloatCurve(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewFloatCurve", CreatedPath))
 				{
+					RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Float Curve");
 					Refresh();
 					if (BrowserContext.EditorEngine)
 					{
@@ -638,6 +756,7 @@ void FEditorContentBrowserWidget::DrawContents()
 				FString CreatedPath;
 				if (FAssetFactory::CreateCameraShake(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewCameraShake", CreatedPath))
 				{
+					RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Camera Shake");
 					Refresh();
 					if (BrowserContext.EditorEngine)
 					{
@@ -653,6 +772,7 @@ void FEditorContentBrowserWidget::DrawContents()
 				FString CreatedPath;
 				if (FAssetFactory::CreateAnimGraph(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewAnimGraph", CreatedPath))
 				{
+					RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Anim Graph");
 					Refresh();
 					if (BrowserContext.EditorEngine)
 					{
@@ -668,6 +788,7 @@ void FEditorContentBrowserWidget::DrawContents()
 					FString CreatedPath;
 					if (FAssetFactory::CreateMaterial(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewMaterial", CreatedPath))
 					{
+						RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Material");
 						Refresh();
 					}
 				}
@@ -676,12 +797,44 @@ void FEditorContentBrowserWidget::DrawContents()
 				FString CreatedPath;
 				if (FAssetFactory::CreateLuaBlueprint(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewLuaBlueprint", CreatedPath))
 				{
+					RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Lua Blueprint");
 					Refresh();
 					if (BrowserContext.EditorEngine)
 					{
 						if (ULuaBlueprintAsset* Asset = FLuaBlueprintManager::Get().Load(CreatedPath))
 						{
 							BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
+						}
+					}
+				}
+			}
+			if (ImGui::MenuItem("Runtime UI Layout"))
+			{
+				FString CreatedPath;
+				FString GeneratedRmlPath;
+				if (FAssetFactory::CreateRuntimeUILayout(
+					FPaths::ToUtf8(BrowserContext.CurrentPath),
+					"NewRuntimeUI",
+					CreatedPath,
+					&GeneratedRmlPath))
+				{
+					TArray<FString> CreatedPaths{ CreatedPath };
+					if (!GeneratedRmlPath.empty())
+					{
+						CreatedPaths.push_back(GeneratedRmlPath);
+						CreatedPaths.push_back(ReplaceExtensionForUndo(GeneratedRmlPath, L".rcss"));
+					}
+					RecordCreatedContentPaths(BrowserContext.EditorEngine, CreatedPaths, "Create Runtime UI Layout");
+					Refresh();
+					if (BrowserContext.EditorEngine)
+					{
+						if (URuntimeUILayoutAsset* Layout = FRuntimeUILayoutManager::Get().Load(CreatedPath))
+						{
+							BrowserContext.EditorEngine->OpenAssetEditorForObject(Layout);
+						}
+						else
+						{
+							BrowserContext.EditorEngine->OpenRuntimeUIPreviewDocument(GeneratedRmlPath);
 						}
 					}
 				}
@@ -694,6 +847,7 @@ void FEditorContentBrowserWidget::DrawContents()
 					"NewParticleSystem",
 					CreatedPath))
 				{
+					RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Particle System");
 					Refresh();
 					if (BrowserContext.EditorEngine)
 					{
@@ -709,6 +863,7 @@ void FEditorContentBrowserWidget::DrawContents()
 					FString CreatedPath;
 					if (FAssetFactory::CreateVectorField(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewVectorField", CreatedPath))
 					{
+						RecordCreatedContentPath(BrowserContext.EditorEngine, CreatedPath, "Create Vector Field");
 						Refresh();
 					}
 				}
@@ -724,7 +879,11 @@ void FEditorContentBrowserWidget::DrawContents()
 				NewDir = Dir / (std::wstring(L"NewFolder_") + std::to_wstring(Suffix++));
 			std::error_code Ec;
 			std::filesystem::create_directories(NewDir, Ec);
-			if (!Ec) Refresh();
+			if (!Ec)
+			{
+				RecordCreatedContentPath(BrowserContext.EditorEngine, ToContentUndoPath(NewDir), "Create Folder");
+				Refresh();
+			}
 		}
 
 		ImGui::Separator();

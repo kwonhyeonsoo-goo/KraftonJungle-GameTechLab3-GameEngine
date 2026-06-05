@@ -75,6 +75,7 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	GetOrCreate(EShaderPath::CameraFade, StartupError);
 	GetOrCreate(EShaderPath::CameraVignette, StartupError);
 	GetOrCreate(EShaderPath::CameraLetterbox, StartupError);
+	GetOrCreate(EShaderPath::ScopeLensComposite, StartupError);
 
 	// UberLit 기본은 StaticMesh VS + Phong으로 컴파일한다. 나머지 ViewMode/VertexFactory 조합은 lazy compile.
 	GetOrCreate(EShaderPath::UberLit, StartupError);

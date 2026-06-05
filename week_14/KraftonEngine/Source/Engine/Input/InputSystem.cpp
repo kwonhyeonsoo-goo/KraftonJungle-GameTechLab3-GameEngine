@@ -113,6 +113,31 @@ void InputSystem::AddRawMouseDelta(int DeltaX, int DeltaY)
     RawMouseDeltaAccumY += DeltaY;
 }
 
+void InputSystem::AddTextInput(uint32_t Codepoint)
+{
+    if (Codepoint == 0)
+    {
+        return;
+    }
+
+    TextInputQueue.push_back(Codepoint);
+    ScriptTextInputQueue.push_back(Codepoint);
+}
+
+TArray<uint32_t> InputSystem::ConsumeTextInput()
+{
+    TArray<uint32_t> Result;
+    Result.swap(TextInputQueue);
+    return Result;
+}
+
+TArray<uint32_t> InputSystem::ConsumeScriptTextInput()
+{
+    TArray<uint32_t> Result;
+    Result.swap(ScriptTextInputQueue);
+    return Result;
+}
+
 void InputSystem::ResetTransientState()
 {
     bLeftDragJustStarted = false;
@@ -122,6 +147,8 @@ void InputSystem::ResetTransientState()
     ResetDragState();
     ResetMouseDelta();
     ResetWheelDelta();
+    TextInputQueue.clear();
+    ScriptTextInputQueue.clear();
     UpdateCurrentSnapshot();
 }
 

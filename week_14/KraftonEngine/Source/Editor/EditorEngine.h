@@ -8,6 +8,7 @@
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Editor/PIE/PIETypes.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include <optional>
 #if STATS
 #include "Editor/EditorRenderPipeline.h"
@@ -57,6 +58,7 @@ public:
 	const FString& GetCurrentLevelFilePath() const { return CurrentLevelFilePath; }
 	void RefreshContentBrowser() { MainPanel.RefreshContentBrowser(); }
 	void OpenAssetEditorForObject(UObject* Object) { MainPanel.OpenAssetEditorForObject(Object); }
+	void OpenRuntimeUIPreviewDocument(const FString& DocumentPath) { MainPanel.OpenRuntimeUIPreviewDocument(DocumentPath); }
 	void SetContentBrowserIconSize(float Size) { MainPanel.SetContentBrowserIconSize(Size); }
 	float GetContentBrowserIconSize() const { return MainPanel.GetContentBrowserIconSize(); }
 	void HideEditorWindows() { MainPanel.HideEditorWindows(); }
@@ -74,6 +76,14 @@ public:
 	const FEditorSettings& GetSettings() const { return FEditorSettings::Get(); }
 
 	FSelectionManager& GetSelectionManager() { return SelectionManager; }
+	FEditorUndoSystem& GetUndoSystem() { return UndoSystem; }
+	const FEditorUndoSystem& GetUndoSystem() const { return UndoSystem; }
+
+	FString CaptureSceneSnapshot() const;
+	bool RestoreSceneSnapshot(
+		const FString& Snapshot,
+		const FName& RestoreWorldHandle = FName::None,
+		bool bRestoreViewportCamera = false);
 
 	// 레이아웃에 위임
 	const TArray<FEditorViewportClient*>& GetAllViewportClients() const { return ViewportLayout.GetAllViewportClients(); }
@@ -128,12 +138,15 @@ public:
 	// 에디터 화면으로 복귀. UE 의 Stop Play 와 동일 의미로 매핑 (PIE 중간에 다른 scene 으로
 	// 점프하는 의미가 모호하므로). InScenePath 는 무시.
 	void RequestTransitionToScene(const FString& InScenePath) override;
+	bool IsSceneTransitionPending() const override { return bRequestEndPlayMapQueued; }
+	FString GetCurrentScenePath() const override { return CurrentLevelFilePath; }
 
 private:
 	// Tick 내에서 호출 — 큐에 요청이 있으면 StartPlayInEditorSession 실행
 	void StartQueuedPlaySessionRequest();
 	void StartPlayInEditorSession(const FRequestPlaySessionParams& Params);
 	void EndPlayMap();
+	void HandleUndoRedoShortcuts(const FInputSystemSnapshot& Snapshot);
 	bool EnterPIEPossessedMode();
 	bool EnterPIEEjectedMode();
 	void SyncGameViewportPIEControlState(bool bPossessedMode);
@@ -143,6 +156,7 @@ private:
 	void RestoreViewportCamera(const FPerspectiveCameraData& CamData);
 
 	FSelectionManager SelectionManager;
+	FEditorUndoSystem UndoSystem;
 	FEditorMainPanel MainPanel;
 	FLevelViewportLayout ViewportLayout;
 	FOverlayStatSystem OverlayStatSystem;

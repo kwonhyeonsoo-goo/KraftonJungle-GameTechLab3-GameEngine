@@ -26,10 +26,18 @@ bool FPostProcessPass::BeginPass(const FPassContext& Ctx)
 
 	DC->OMSetRenderTargets(0, nullptr, nullptr);
 	DC->CopyResource(Frame.DepthCopyTexture, Frame.DepthTexture);
+	if (Frame.SceneColorCopyTexture && Frame.ViewportRenderTexture)
+	{
+		DC->CopyResource(Frame.SceneColorCopyTexture, Frame.ViewportRenderTexture);
+	}
 	DC->OMSetRenderTargets(1, &Cache.RTV, Cache.DSV);
 
 	ID3D11ShaderResourceView* stencilSRV = Frame.StencilCopySRV;
 	DC->PSSetShaderResources(ESystemTexSlot::Stencil, 1, &stencilSRV);
+	ID3D11ShaderResourceView* sceneColorSRV = Frame.SceneColorCopySRV;
+	DC->PSSetShaderResources(ESystemTexSlot::SceneColor, 1, &sceneColorSRV);
+	ID3D11ShaderResourceView* scopeLensSRV = Frame.ScopeLensSRV;
+	DC->PSSetShaderResources(ESystemTexSlot::ScopeLens, 1, &scopeLensSRV);
 
 	Cache.bForceAll = true;
 	return true;

@@ -6,6 +6,7 @@
 #include "Object/Reflection/UClass.h"
 #include "Core/Logging/Log.h"
 #include "Core/ProjectSettings.h"
+#include "Serialization/PrefabManager.h"
 
 AGameModeBase::AGameModeBase()
 {
@@ -44,7 +45,10 @@ void AGameModeBase::StartMatch()
 		PlayerController = Cast<APlayerController>(Spawned);
 	}
 
-	AutoPossessFirstPawn();
+	if (!AutoPossessFirstPawn())
+	{
+		SpawnAndPossessDefaultPawnPrefab();
+	}
 }
 
 void AGameModeBase::EndMatch()
@@ -75,12 +79,12 @@ UClass* AGameModeBase::ResolveClassFromProjectSettings(UClass* InDefault)
 	return Result;
 }
 
-void AGameModeBase::AutoPossessFirstPawn()
+bool AGameModeBase::AutoPossessFirstPawn()
 {
-	if (!PlayerController) return;
+	if (!PlayerController) return false;
 
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!World) return false;
 
 	for (AActor* Actor : World->GetActors())
 	{
@@ -91,8 +95,46 @@ void AGameModeBase::AutoPossessFirstPawn()
 
 		PlayerController->Possess(Pawn);
 		UE_LOG("[GameMode] Auto-possessed Pawn: %s", Pawn->GetName().c_str());
-		return;
+		return true;
 	}
 
 	// 매칭 Pawn 없음 — PC만 살아있고 PossessedPawn은 nullptr.
+	return false;
+}
+
+bool AGameModeBase::SpawnAndPossessDefaultPawnPrefab()
+{
+	if (!PlayerController) return false;
+
+	UWorld* World = GetWorld();
+	if (!World) return false;
+
+	FString PrefabPath = World->GetWorldSettings().DefaultPawnPrefabPath;
+	if (PrefabPath.empty())
+	{
+		PrefabPath = FProjectSettings::Get().Game.DefaultPawnPrefabPath;
+	}
+	if (PrefabPath.empty())
+	{
+		return false;
+	}
+
+	AActor* SpawnedActor = FPrefabManager::SpawnActorFromPrefab(World, PrefabPath);
+	if (!IsValid(SpawnedActor))
+	{
+		UE_LOG("[GameMode] Failed to spawn DefaultPawnPrefab: %s", PrefabPath.c_str());
+		return false;
+	}
+
+	APawn* Pawn = Cast<APawn>(SpawnedActor);
+	if (!IsValid(Pawn))
+	{
+		UE_LOG("[GameMode] DefaultPawnPrefab is not a Pawn: %s", PrefabPath.c_str());
+		World->DestroyActor(SpawnedActor);
+		return false;
+	}
+
+	PlayerController->Possess(Pawn);
+	UE_LOG("[GameMode] Spawned and possessed DefaultPawnPrefab: %s", PrefabPath.c_str());
+	return true;
 }

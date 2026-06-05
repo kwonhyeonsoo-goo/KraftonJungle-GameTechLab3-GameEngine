@@ -133,3 +133,36 @@ struct FCameraLetterboxState
 	UPROPERTY(Save)
 	FLinearColor Color = FLinearColor::Black();
 };
+
+USTRUCT()
+struct FCameraScopeLensState
+{
+	GENERATED_BODY()
+
+	UPROPERTY(Save)
+	bool bEnabled = false;
+
+	UPROPERTY(Save)
+	float Radius = 0.42f;
+
+	UPROPERTY(Save)
+	float Feather = 0.08f;
+
+	UPROPERTY(Save)
+	float OuterBlurRadius = 3.0f;
+
+	UPROPERTY(Save)
+	float EdgeBlurRadius = 1.25f;
+
+	UPROPERTY(Save)
+	float ZoomFOV = 3.14159265358979f / 8.0f;
+
+	UPROPERTY(Save)
+	float Intensity = 1.0f;
+
+	UPROPERTY(Save)
+	float LookSensitivityScale = 0.275f;
+
+	UPROPERTY(Save)
+	float BlendTime = 0.08f;
+};

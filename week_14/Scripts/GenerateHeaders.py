@@ -560,6 +560,8 @@ def make_flags_expr(flags: set[str]) -> str:
         values = [value for value in values if value != "PF_Save"]
     if {"instanced", "instancedreference"} & flags:
         values.append("PF_InstancedReference")
+    if {"animatable", "sequencer", "sequence"} & flags:
+        values.append("PF_Animatable")
 
     return " | ".join(values) if values else "PF_None"
 

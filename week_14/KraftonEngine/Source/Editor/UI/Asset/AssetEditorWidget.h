@@ -3,13 +3,15 @@
 #include "Object/GarbageCollection.h"
 #include "Editor/UI/EditorDocumentTabManager.h"
 
+#include <memory>
+
 class UObject;
 class IEditorPreviewViewportClient;
 
 class FAssetEditorWidget : public FEditorWidget
 {
 public:
-	virtual ~FAssetEditorWidget() = default;
+	virtual ~FAssetEditorWidget();
 
 	virtual bool CanEdit(UObject* Object) const = 0;
 
@@ -37,6 +39,13 @@ protected:
 	void MarkDirty() { bDirty = true; }
 	void ClearDirty() { bDirty = false; }
 	bool IsDirty() const { return bDirty; }
+	std::shared_ptr<bool> GetEditorLifetimeToken() const { return EditorLifetimeToken; }
+	TArray<uint8> CaptureSerializedObjectSnapshot(UObject* Object) const;
+	bool RecordSerializedObjectEdit(
+		UObject* Object,
+		const TArray<uint8>& BeforeSnapshot,
+		const FString& Label);
+	virtual void OnSerializedObjectEditRestored(UObject* Object) { (void)Object; }
 	bool ConsumeFocusRequest()
 	{
 		const bool bWasRequested = bFocusRequested;
@@ -49,4 +58,5 @@ protected:
 	bool bOpen = false;
 	bool bDirty = false;
 	bool bFocusRequested = false;
+	std::shared_ptr<bool> EditorLifetimeToken = std::make_shared<bool>(true);
 };

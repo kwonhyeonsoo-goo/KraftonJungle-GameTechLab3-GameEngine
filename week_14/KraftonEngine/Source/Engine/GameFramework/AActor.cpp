@@ -47,6 +47,36 @@ namespace
 		return std::find(Components.begin(), Components.end(), Component) != Components.end();
 	}
 
+	TArray<FName> BuildValidUniqueTags(const TArray<FName>& InTags)
+	{
+		TArray<FName> Result;
+		for (const FName& Tag : InTags)
+		{
+			if (Tag.IsValid() && std::find(Result.begin(), Result.end(), Tag) == Result.end())
+			{
+				Result.push_back(Tag);
+			}
+		}
+		return Result;
+	}
+
+	bool ComponentHasAllTags(const UActorComponent* Component, const TArray<FName>& RequiredTags)
+	{
+		if (!IsValid(Component) || RequiredTags.empty())
+		{
+			return false;
+		}
+
+		for (const FName& Tag : RequiredTags)
+		{
+			if (!Component->HasTag(Tag))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 }
 
 AActor::AActor()
@@ -381,6 +411,82 @@ UActorComponent* AActor::GetComponentByClass(UClass* ComponentClass) const
 		}
 	}
 	return nullptr;
+}
+
+UActorComponent* AActor::FindComponentByTag(const FName& Tag) const
+{
+	if (!Tag.IsValid())
+	{
+		return nullptr;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (IsValid(Component) && Component->HasTag(Tag))
+		{
+			return Component;
+		}
+	}
+
+	return nullptr;
+}
+
+TArray<UActorComponent*> AActor::FindComponentsByTag(const FName& Tag) const
+{
+	TArray<UActorComponent*> Result;
+	if (!Tag.IsValid())
+	{
+		return Result;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (IsValid(Component) && Component->HasTag(Tag))
+		{
+			Result.push_back(Component);
+		}
+	}
+
+	return Result;
+}
+
+UActorComponent* AActor::FindComponentByTags(const TArray<FName>& InTags) const
+{
+	const TArray<FName> RequiredTags = BuildValidUniqueTags(InTags);
+	if (RequiredTags.empty())
+	{
+		return nullptr;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (ComponentHasAllTags(Component, RequiredTags))
+		{
+			return Component;
+		}
+	}
+
+	return nullptr;
+}
+
+TArray<UActorComponent*> AActor::FindComponentsByTags(const TArray<FName>& InTags) const
+{
+	TArray<UActorComponent*> Result;
+	const TArray<FName> RequiredTags = BuildValidUniqueTags(InTags);
+	if (RequiredTags.empty())
+	{
+		return Result;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (ComponentHasAllTags(Component, RequiredTags))
+		{
+			Result.push_back(Component);
+		}
+	}
+
+	return Result;
 }
 
 float AActor::GetDistanceTo(AActor* Other) const

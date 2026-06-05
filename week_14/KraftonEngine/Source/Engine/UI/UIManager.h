@@ -58,6 +58,10 @@ struct FUIInputCaptureState
 	bool bBlocksGameInput = false;
 	bool bBlocksGameKeyboard = false;
 	bool bBlocksGameMouseLook = false;
+
+	bool bConsumedMouseThisFrame = false;
+	bool bConsumedKeyboardThisFrame = false;
+	bool bConsumedTextInputThisFrame = false;
 };
 
 class FRmlRenderInterfaceD3D11 final : public Rml::RenderInterface
@@ -104,6 +108,10 @@ public:
 	UUserWidget* CreateWidget(APlayerController* OwningPlayer, const FString& DocumentPath);
 	void AddToViewport(UUserWidget* Widget, int32 ZOrder);
 	void RemoveFromViewport(UUserWidget* Widget);
+	void BeginInputFrame();
+	bool PumpViewportInput(uint32 ViewportWidth, uint32 ViewportHeight,
+		int32 ViewportClientX, int32 ViewportClientY,
+		int32 ViewportClientWidth, int32 ViewportClientHeight);
 	// PIE end / TransitionToScene 같은 라이프사이클 경계 — viewport 만 비우고 widget UObject
 	// 는 유지 (Lua 가 캐시한 핸들이 valid 한 채로 다음 세션에 재사용되도록).
 	void ClearViewport();
@@ -118,6 +126,29 @@ public:
 		// viewport 에 올라온 widget들의 입력 요구/게임 입력 차단 정책을 합산한다.
 		FUIInputCaptureState GetViewportInputCaptureState() const;
 		bool AnyViewportWidgetWantsMouse() const;
+		FString GetElementText(const FString& ElementId) const;
+		bool SetElementText(const FString& ElementId, const FString& Text);
+		FString GetElementValue(const FString& ElementId) const;
+		bool SetElementValue(const FString& ElementId, const FString& Value);
+		bool SetElementClass(const FString& ElementId, const FString& ClassName, bool bEnabled);
+		bool HasElementClass(const FString& ElementId, const FString& ClassName) const;
+		FString GetElementClassNames(const FString& ElementId) const;
+		bool SetElementClassNames(const FString& ElementId, const FString& ClassNames);
+		bool HasElementAttribute(const FString& ElementId, const FString& AttributeName) const;
+		FString GetElementAttribute(const FString& ElementId, const FString& AttributeName) const;
+		bool SetElementAttribute(const FString& ElementId, const FString& AttributeName, const FString& Value);
+		bool RemoveElementAttribute(const FString& ElementId, const FString& AttributeName);
+		FString GetElementStyle(const FString& ElementId, const FString& StyleName) const;
+		bool SetElementStyle(const FString& ElementId, const FString& StyleName, const FString& Value);
+		bool RemoveElementStyle(const FString& ElementId, const FString& StyleName);
+		bool FocusElement(const FString& ElementId, bool bFocusVisible = false);
+		bool BlurElement(const FString& ElementId);
+		bool IsElementFocused(const FString& ElementId) const;
+		bool ClickElement(const FString& ElementId);
+		bool SetElementVisible(const FString& ElementId, bool bVisible);
+		bool SetElementEnabled(const FString& ElementId, bool bEnabled);
+		bool SetActionEvent(const FString& ElementId, const FString& EventName);
+		TArray<FString> PollActionEvents();
 
 private:
 	UUIManager() = default;
@@ -127,6 +158,7 @@ private:
 	void CloseDocument(UUserWidget* Widget);
 	void CompactInvalidWidgets();
 	void ProcessInput(const FFrameContext& Frame);
+	void ProcessInputAtPosition(int32 MouseX, int32 MouseY, bool bMouseInsideViewport);
 	void RemoveFromViewportImmediate(UUserWidget* Widget);
 	void FlushDeferredViewportRemovals();
 
@@ -142,4 +174,6 @@ private:
 	Rml::Context* RmlContext = nullptr;
 	bool bRmlInitialized = false;
 	bool bDispatchingRmlEvents = false;
+	bool bInputProcessedThisFrame = false;
+	FUIInputCaptureState LastFrameInputCaptureState;
 };

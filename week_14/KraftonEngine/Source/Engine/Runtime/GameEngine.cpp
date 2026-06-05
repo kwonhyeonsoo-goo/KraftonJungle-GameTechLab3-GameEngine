@@ -142,6 +142,12 @@ void UGameEngine::LoadStartLevel()
 
 void UGameEngine::RequestTransitionToScene(const FString& InScenePath)
 {
+	if (InScenePath.empty())
+	{
+		UE_LOG("[GameEngine] TransitionToScene ignored: empty scene path");
+		return;
+	}
+
 	PendingScenePath = InScenePath;
 	bPendingSceneTransition = true;
 }
@@ -159,6 +165,11 @@ void UGameEngine::ProcessPendingTransition()
 
 	// Lua 에서 "Map" 같은 이름만 넘겨도 동작하도록 SceneDir/Map.Scene 으로 풀어준다.
 	const FString FilePath = ResolveSceneFilePath(ScenePath);
+	if (!std::filesystem::exists(std::filesystem::path(FPaths::ToWide(FilePath))))
+	{
+		UE_LOG("[GameEngine] TransitionToScene failed: scene file not found: %s", FilePath.c_str());
+		return;
+	}
 
 	// 기존 active world 파괴 — EndPlay → 액터/컴포넌트 destruct → PhysicsScene unique_ptr 해제.
 	const FName OldHandle = GetActiveWorldHandle();
@@ -240,7 +251,7 @@ bool UGameEngine::LoadSceneFromPath(const FString& InScenePath)
 
 	WorldList.push_back(LoadContext);
 	SetActiveWorld(LoadContext.ContextHandle);
-
+	CurrentScenePath = InScenePath;
 
 	return true;
 }

@@ -11,6 +11,7 @@
 #include "Editor/UI/Debug/EditorAnimationDebugWidget.h"
 #include "Editor/UI/Panel/EditorProjectSettingsWidget.h"
 #include "Editor/UI/Panel/EditorWorldSettingsWidget.h"
+#include "Editor/UI/Panel/CombatMapEditorWidget.h"
 #include "Editor/UI/ContentBrowser/ContentBrowser.h"
 #include "Editor/UI/Asset/AssetEditorManager.h"
 #include "Editor/UI/EditorDocumentTabManager.h"
@@ -22,6 +23,7 @@ class FRenderer;
 class UEditorEngine;
 class FWindowsWindow;
 class IEditorPreviewViewportClient;
+class UUserWidget;
 
 class FEditorMainPanel
 {
@@ -44,16 +46,23 @@ public:
 	float GetContentBrowserIconSize() const { return ContentBrowserWidget.GetIconSize(); }
 
 	void OpenAssetEditorForObject(UObject* Object);
+	void OpenRuntimeUIPreviewDocument(const FString& DocumentPath);
 	void CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const;
 	bool IsMouseOverAssetEditorPreviewViewport() const;
 	bool IsLevelDocumentActive() const { return DocumentTabs.IsLevelEditorActive(); }
-    void AddReferencedObjects(FReferenceCollector& Collector) { AssetEditorManager.AddReferencedObjects(Collector); }
+    void AddReferencedObjects(FReferenceCollector& Collector);
 
 private:
 	void RenderMainMenuBar();
 	void RenderMainDockSpace(float ReservedBottomHeight, float ReservedTopHeight);
 	void RenderDocumentTabStrip(float ReservedBottomHeight);
 	void RenderActiveDocument(float ReservedTopHeight, float ReservedBottomHeight, float DeltaTime);
+	void RenderRuntimeUIPreviewDocument();
+	void ReloadRuntimeUIPreviewDocument();
+	bool MountRuntimeUIPreviewInViewport(bool bForceReload);
+	void UnmountRuntimeUIPreviewFromViewport();
+	bool IsRuntimeUIPreviewMounted() const;
+	void PollRuntimeUIPreviewEvents();
 	void RenderShortcutOverlay();
 	void RenderEditorDebugPanel();
 	void RenderContentBrowserDrawer(float DeltaTime);
@@ -76,8 +85,17 @@ private:
 	FEditorAnimationDebugWidget AnimationDebugWidget;
 	EditorProjectSettingsWidget ProjectSettingsWidget;
 	EditorWorldSettingsWidget WorldSettingsWidget;
+	FCombatMapEditorWidget CombatMapEditorWidget;
 	FAssetEditorManager AssetEditorManager;
 	FEditorDocumentTabManager DocumentTabs;
+
+	FString RuntimeUIPreviewPath;
+	FString RuntimeUIPreviewSource;
+	FString RuntimeUIPreviewError;
+	TArray<FString> RuntimeUIPreviewActionEvents;
+	TArray<FString> RuntimeUIPreviewElementIds;
+	TArray<FString> RuntimeUIPreviewRuntimeEvents;
+	UUserWidget* RuntimeUIPreviewViewportWidget = nullptr;
 
 	bool bShowWidgetList = false;
 	bool bShowShortcutOverlay = false;

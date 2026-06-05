@@ -9,7 +9,9 @@
 #include <sol/sol.hpp>
 
 class UPrimitiveComponent;
+class USniperWeaponComponent;
 struct FHitResult;
+struct FSniperHitInfo;
 
 UCLASS()
 class ULuaScriptComponent : public UActorComponent
@@ -50,7 +52,9 @@ protected:
 private:
 	void EnsureDefaultScriptFile();
 	void BindOwnerCollisionEvents();
+	void BindOwnerSniperEvents();
 	void ClearCollisionBindings();
+	void ClearSniperBindings();
 	void ClearLuaRuntime();
 	void InvokeLuaEndPlay();
 	void HandleDeferredLuaCleanup();
@@ -76,6 +80,7 @@ private:
 		UPrimitiveComponent* HitComponent,
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp);
+	void HandleSniperHit(const FSniperHitInfo& HitInfo);
 
 	UPROPERTY(Edit, Save, Category="Script", DisplayName="ScriptFile", AssetType="Script")
 	FString ScriptFile;
@@ -88,6 +93,7 @@ private:
 	sol::protected_function LuaOnEndOverlap;
 	sol::protected_function LuaOnHit;
 	sol::protected_function LuaOnEndHit;
+	sol::protected_function LuaOnSniperHit;
 
 	bool bEndPlayRouted = false;
 	bool bHasCalledLuaEndPlay = false;
@@ -128,4 +134,6 @@ private:
 	TArray<FDelegateHandle> EndOverlapHandles;
 	TArray<FDelegateHandle> HitHandles;
 	TArray<FDelegateHandle> EndHitHandles;
+	TWeakObjectPtr<USniperWeaponComponent> BoundSniperWeaponComponent;
+	FDelegateHandle SniperHitHandle;
 };

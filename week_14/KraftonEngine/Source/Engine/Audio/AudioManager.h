@@ -2,7 +2,26 @@
 
 #include "Core/Singleton.h"
 #include "Core/Types/CoreTypes.h"
+#include "Math/Vector.h"
 #include <fmod.hpp>
+
+using FAudioHandle = int32;
+
+struct FAudioPlaybackPolicy
+{
+	int32 MaxConcurrent = 0;
+	float CooldownSeconds = 0.0f;
+	int32 Priority = 0;
+	bool bStopOldest = true;
+};
+
+struct FActiveAudioChannel
+{
+	FMOD::Channel* Channel = nullptr;
+	FString SourceKey;
+	int32 Priority = 0;
+	uint64 Sequence = 0;
+};
 
 class FAudioManager : public TSingleton<FAudioManager>
 {
@@ -15,6 +34,10 @@ public:
 
 	bool LoadAudio(const FString& Key, const FString& Path, bool bLoop = false);
 	void PlayAudio(const FString& Key, float Volume = 1.0f);
+	FAudioHandle PlayAudioHandle(const FString& Key, float Volume = 1.0f);
+	bool PlaySFX(const FString& PathOrKey, float VolumeScale = 1.0f);
+	FAudioHandle PlaySFXHandle(const FString& PathOrKey, float VolumeScale = 1.0f);
+	FAudioHandle PlaySFX3D(const FString& PathOrKey, const FVector& Position, float VolumeScale = 1.0f, float MinDistance = 1.0f, float MaxDistance = 10000.0f);
 	void PlayBGM(const FString& Key, float Volume = 1.0f);
 	void StopBGM();
 	void PlayLoop(const FString& Key, const FString& LoopName, float Volume = 1.0f, float Pitch = 1.0f);
@@ -25,10 +48,33 @@ public:
 	bool IsLoopPlaying(const FString& LoopName);
 
 	void SetMasterVolume(float Volume);
+	float GetMasterVolume() const { return MasterVolume; }
+	void SetBGMVolume(float Volume);
+	float GetBGMVolume() const { return BGMVolume; }
+	void SetSFXVolume(float Volume);
+	float GetSFXVolume() const { return SFXVolume; }
+	void SetListener(const FVector& Position, const FVector& Forward = FVector::ForwardVector, const FVector& Up = FVector::UpVector);
+	void StopSound(FAudioHandle Handle);
+	void StopAllSounds();
+	bool IsSoundPlaying(FAudioHandle Handle);
+	void SetSoundVolume(FAudioHandle Handle, float Volume);
+	void SetSoundPitch(FAudioHandle Handle, float Pitch);
+	void SetSoundPosition(FAudioHandle Handle, const FVector& Position);
+	void SetSFXPlaybackPolicy(const FString& PathOrKey, int32 MaxConcurrent, float CooldownSeconds, int32 Priority = 0, bool bStopOldest = true);
+	void ClearSFXPlaybackPolicy(const FString& PathOrKey);
+	void ClearAllSFXPlaybackPolicies();
+	int32 GetActiveSoundCount(const FString& PathOrKey = {});
 
 private:
 	void LoadDefaultAudios();
+	FMOD::Sound* ResolveSound(const FString& PathOrKey, bool bLoop);
+	FAudioHandle RegisterChannel(FMOD::Channel* Channel, const FString& SourceKey = {}, int32 Priority = 0);
+	FMOD::Channel* FindActiveChannel(FAudioHandle Handle);
 	FMOD::Channel* FindPlayingLoopChannel(const FString& LoopName);
+	void PruneStoppedChannels();
+	double GetAudioTimeSeconds() const;
+	bool ApplySFXPlaybackPolicy(const FString& SourceKey, const FAudioPlaybackPolicy& Policy);
+	void NoteSFXPlayback(const FString& SourceKey);
 
 private:
 	FAudioManager() = default;
@@ -36,8 +82,18 @@ private:
 
 	FMOD::System* System = nullptr;
 	FMOD::ChannelGroup* MasterGroup = nullptr;
+	FMOD::ChannelGroup* BGMGroup = nullptr;
+	FMOD::ChannelGroup* SFXGroup = nullptr;
 	FMOD::Channel* BGMChannel = nullptr;
 
 	TMap<FString, FMOD::Sound*> Audios;
 	TMap<FString, FMOD::Channel*> LoopChannels;
+	TMap<FAudioHandle, FActiveAudioChannel> ActiveChannels;
+	TMap<FString, FAudioPlaybackPolicy> SFXPlaybackPolicies;
+	TMap<FString, double> LastSFXPlaybackTimeSeconds;
+	FAudioHandle NextAudioHandle = 1;
+	uint64 NextAudioSequence = 1;
+	float MasterVolume = 1.0f;
+	float BGMVolume = 1.0f;
+	float SFXVolume = 1.0f;
 };

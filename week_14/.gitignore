@@ -160,3 +160,9 @@ CMakeLists.txt
 # 환경설정
 # ============================================================
 *.env
+
+
+# Local Codex/OMX state
+.omx/
+.codex/
+AGENTS.md

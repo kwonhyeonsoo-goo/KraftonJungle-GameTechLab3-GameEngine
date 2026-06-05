@@ -20,6 +20,7 @@
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/Reflection/UClass.h"
 #include "Mesh/MeshManager.h"
 #include "Core/ProjectSettings.h"
 #include "Input/InputSystem.h"
@@ -86,6 +87,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 	FEditorSettings::Get().LoadFromFile(FEditorSettings::GetDefaultSettingsPath());
 	FProjectSettings::Get().LoadFromFile(FProjectSettings::GetDefaultPath());
 	FEditorTextureManager::Get().Initialize(Renderer.GetFD3DDevice().GetDevice());
+	UndoSystem.SetOwner(this);
 
 	{
 		SCOPE_STARTUP_STAT("EditorMainPanel::Create");
@@ -126,6 +128,7 @@ void UEditorEngine::Shutdown()
 	FProjectSettings::Get().SaveToFile(FProjectSettings::GetDefaultPath());
 	FEditorSettings::Get().SaveToFile(FEditorSettings::GetDefaultSettingsPath());
 	CloseScene();
+	UndoSystem.SetOwner(nullptr);
 	SelectionManager.Shutdown();
 
 	// UI/viewport release 전에 마지막 프레임에서 남은 RTV/SRV/DSV/ImGui 바인딩을 먼저 끊는다.
@@ -166,6 +169,8 @@ void UEditorEngine::Tick(float DeltaTime)
 	TickFrameStart(DeltaTime);
 	MainPanel.Update();
 	InputSystem::Get().RefreshSnapshot();
+	const FInputSystemSnapshot EditorInputSnapshot = InputSystem::Get().MakeSnapshot();
+	HandleUndoRedoShortcuts(EditorInputSnapshot);
 
 	FSlateApplication::Get().UpdateInputOwner();
 	ProcessPIEInput(DeltaTime);
@@ -194,6 +199,100 @@ bool UEditorEngine::GetActiveViewportPOV(FMinimalViewInfo& OutPOV) const
 	return false;
 }
 
+void UEditorEngine::HandleUndoRedoShortcuts(const FInputSystemSnapshot& Snapshot)
+{
+	if (IsPlayingInEditor() || !MainPanel.IsLevelDocumentActive() || Snapshot.bGuiUsingTextInput)
+	{
+		return;
+	}
+
+	const bool bCtrlDown = Snapshot.IsDown(VK_CONTROL) || Snapshot.IsDown(VK_LCONTROL) || Snapshot.IsDown(VK_RCONTROL);
+	const bool bShiftDown = Snapshot.IsDown(VK_SHIFT) || Snapshot.IsDown(VK_LSHIFT) || Snapshot.IsDown(VK_RSHIFT);
+	if (!bCtrlDown)
+	{
+		return;
+	}
+
+	if (Snapshot.WasPressed('Y') || (bShiftDown && Snapshot.WasPressed('Z')))
+	{
+		UndoSystem.Redo();
+		return;
+	}
+
+	if (Snapshot.WasPressed('Z'))
+	{
+		UndoSystem.Undo();
+	}
+}
+
+FString UEditorEngine::CaptureSceneSnapshot() const
+{
+	UEditorEngine* MutableThis = const_cast<UEditorEngine*>(this);
+	FWorldContext* Context = MutableThis->GetWorldContextFromHandle(GetActiveWorldHandle());
+	if (!Context || !Context->World)
+	{
+		return "";
+	}
+
+	// Undo/redo should capture authored scene state only. Editor viewport camera
+	// POV is saved with scene files, but including it here makes camera movement
+	// participate in Ctrl+Z/Ctrl+Y after unrelated edits.
+	return FSceneSaveManager::SaveToString(*Context, nullptr);
+}
+
+bool UEditorEngine::RestoreSceneSnapshot(
+	const FString& Snapshot,
+	const FName& RestoreWorldHandle,
+	bool bRestoreViewportCamera)
+{
+	if (Snapshot.empty())
+	{
+		return false;
+	}
+
+	const FString SavedCurrentLevelFilePath = CurrentLevelFilePath;
+	const FName TargetWorldHandle =
+		RestoreWorldHandle != FName::None ? RestoreWorldHandle : GetActiveWorldHandle();
+
+	FWorldContext LoadContext;
+	FPerspectiveCameraData CameraData;
+	const EWorldType RestoreWorldType = EWorldType::Editor;
+	FSceneSaveManager::LoadFromString(Snapshot, LoadContext, CameraData, &RestoreWorldType);
+	if (!LoadContext.World)
+	{
+		return false;
+	}
+
+	UndoSystem.BeginRestore();
+	SelectionManager.ClearSelection();
+	SelectionManager.SetWorld(nullptr);
+	InvalidateOcclusionResults();
+
+	if (TargetWorldHandle != FName::None)
+	{
+		DestroyWorldContext(TargetWorldHandle);
+	}
+
+	LoadContext.WorldType = EWorldType::Editor;
+	LoadContext.ContextHandle = TargetWorldHandle != FName::None ? TargetWorldHandle : FName("UndoRedoScene");
+	LoadContext.ContextName = "Undo/Redo Scene";
+	LoadContext.World->SetWorldType(EWorldType::Editor);
+	WorldList.push_back(LoadContext);
+	SetActiveWorld(LoadContext.ContextHandle);
+	SelectionManager.SetWorld(LoadContext.World);
+	LoadContext.World->WarmupPickingData();
+
+	ResetViewport();
+	if (bRestoreViewportCamera)
+	{
+		RestoreViewportCamera(CameraData);
+	}
+	CurrentLevelFilePath = SavedCurrentLevelFilePath;
+
+	UndoSystem.EndRestore();
+	return true;
+}
+
 void UEditorEngine::RenderUI(float DeltaTime)
 {
 	MainPanel.Render(DeltaTime);
@@ -216,6 +315,7 @@ void UEditorEngine::ProcessPIEInput(float DeltaTime)
 	if (RawInputSnapshot.WasPressed(VK_F8))
 	{
 		TogglePIEControlMode();
+		return;
 	}
 
 	UGameViewportClient* PIEViewportClient = GetGameViewportClient();
@@ -234,7 +334,15 @@ void UEditorEngine::ProcessPIEInput(float DeltaTime)
 		PIEViewportClient->SetCursorClipRect(ActiveVC->GetViewportScreenRect());
 	}
 
+	const bool bRoutePlayerInput = IsPIEPossessedMode();
+	PIEViewportClient->SetInputPossessed(bRoutePlayerInput);
 	PIEViewportClient->ProcessInput(RawInputSnapshot, DeltaTime);
+
+	if (!bRoutePlayerInput)
+	{
+		return;
+	}
+
 	if (PIEViewportClient->HasGameInputSnapshot())
 	{
 		ProcessActiveWorldPlayerInput(PIEViewportClient->GetGameInputSnapshot(), DeltaTime);
@@ -411,10 +519,28 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 	//MainPanel.HideEditorWindowsForPIE(); //PIE 중에는 에디터 패널을 숨김.
 	//ViewportLayout.DisableWorldAxisForPIE(); //PIE 중에는 월드 축 렌더링을 비활성화.
 
-	// PIE 월드에도 ProjectSettings의 GameMode 클래스 적용.
-	// Editor 모듈은 Game-specific 디폴트를 알 수 없으므로, ProjectSettings에
-	// 지정된 경우에만 GameMode가 spawn된다. 비어있으면 미생성 (회귀 안전).
-	if (UClass* GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr))
+	// PIE도 standalone과 같은 GameMode 우선순위를 따른다:
+	// WorldSettings override -> ProjectSettings default -> no GameMode.
+	UClass* GMClass = nullptr;
+	const FString& SceneGMName = PIEWorld->GetWorldSettings().GameModeClassName;
+	if (!SceneGMName.empty())
+	{
+		UClass* Found = UClass::FindByName(SceneGMName.c_str());
+		if (Found && Found->IsA(AGameModeBase::StaticClass()))
+		{
+			GMClass = Found;
+		}
+		else
+		{
+			UE_LOG("[EditorEngine] WorldSettings.GameMode = '%s' not found or invalid; falling back to ProjectSettings",
+				SceneGMName.c_str());
+		}
+	}
+	if (!GMClass)
+	{
+		GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr);
+	}
+	if (GMClass)
 	{
 		PIEWorld->SetGameModeClass(GMClass);
 	}
@@ -667,6 +793,7 @@ void UEditorEngine::ClearScene()
 
 	ActiveWorldHandle = FName::None;
 	CurrentLevelFilePath.clear();
+	UndoSystem.ClearAllHistory();
 
 	ViewportLayout.DestroyAllCameras();
 }

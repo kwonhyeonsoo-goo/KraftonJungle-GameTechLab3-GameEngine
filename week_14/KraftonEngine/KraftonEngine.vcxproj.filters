@@ -64,6 +64,9 @@
     <Filter Include="Source\Editor\Subsystem">
       <UniqueIdentifier>{6389b5b6-14f6-237a-9b3e-284fd2a8c8d5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\Undo">
+      <UniqueIdentifier>{ec52fa75-f93d-4c50-8cbb-7060a8eb39fd}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\UI">
       <UniqueIdentifier>{d23c3ab5-7e26-ff59-be61-b2a81e9921c0}</UniqueIdentifier>
     </Filter>
@@ -72,6 +75,9 @@
     </Filter>
     <Filter Include="Source\Editor\UI\Asset\Animation">
       <UniqueIdentifier>{6f6ec3f7-5356-0f05-e9a8-97b2d4dceab7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\UI\Asset\ActorSequence">
+      <UniqueIdentifier>{668d3b10-4d72-4f73-bc9d-a7c0e5e71001}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\UI\Asset\CameraShake">
       <UniqueIdentifier>{e92a4d79-885d-3fed-53fc-d67b7fb36d18}</UniqueIdentifier>
@@ -93,6 +99,9 @@
     </Filter>
     <Filter Include="Source\Editor\UI\Asset\Physics">
       <UniqueIdentifier>{a9510143-b9c8-a4a8-aa42-31438e50f6bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Editor\UI\Asset\RuntimeUI">
+      <UniqueIdentifier>{0b56d826-4f56-4dd3-8df2-f14fb3e00c9f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Editor\UI\ContentBrowser">
       <UniqueIdentifier>{09a2ea7f-e891-b580-bef0-471bcd9b5d4b}</UniqueIdentifier>
@@ -192,6 +201,9 @@
     </Filter>
     <Filter Include="Source\Engine\Component\Input">
       <UniqueIdentifier>{358e161e-2bd5-5db1-9e14-9bfb5d4671f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Diagnostics">
+      <UniqueIdentifier>{7c0d1a76-56f8-4b0f-a4a4-57de3f8d5c2e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Component\Light">
       <UniqueIdentifier>{68733902-62c6-6992-604b-99f4fd185b46}</UniqueIdentifier>
@@ -863,6 +875,9 @@
     <ClCompile Include="Source\Editor\EditorRenderPipeline.cpp">
       <Filter>Source\Editor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Undo\EditorUndoSystem.cpp">
+      <Filter>Source\Editor\Undo</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Selection\SelectionManager.cpp">
       <Filter>Source\Editor\Selection</Filter>
     </ClCompile>
@@ -917,6 +932,9 @@
     <ClCompile Include="Source\Editor\UI\Asset\CameraShake\CameraShakeEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\CameraShake</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\ActorSequence\ActorSequenceEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\ActorSequence</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Curve</Filter>
     </ClCompile>
@@ -937,6 +955,9 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Physics\PhysicsAssetEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\RuntimeUI\RuntimeUILayoutEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\RuntimeUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\ContentBrowser\ContentBrowser.cpp">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
@@ -986,6 +1007,9 @@
     <ClCompile Include="Source\Editor\UI\Panel\EditorWorldSettingsWidget.cpp">
       <Filter>Source\Editor\UI\Panel</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Panel\CombatMapEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Panel</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Toolbar\ViewportToolbar.cpp">
       <Filter>Source\Editor\UI\Toolbar</Filter>
     </ClCompile>
@@ -1026,6 +1050,12 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimationRuntime.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\ActorSequence.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\CurvePlayback.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\Graph\AnimGraphAsset.cpp">
@@ -1169,6 +1199,9 @@
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\ActorSequenceComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -1205,10 +1238,25 @@
     <ClCompile Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.cpp">
       <Filter>Source\Engine\Component\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.cpp">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.cpp">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp">
@@ -1216,6 +1264,18 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Input\InputComponent.cpp">
       <Filter>Source\Engine\Component\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\CameraEditorMeshDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\GameViewportInputDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\RuntimeUILayoutDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp">
       <Filter>Source\Engine\Component\Light</Filter>
@@ -1461,6 +1521,9 @@
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Pawn.cpp">
+      <Filter>Source\Engine\GameFramework\Pawn</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\Pawn\SniperPawn.cpp">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.cpp">
@@ -2042,6 +2105,9 @@
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp">
       <Filter>Source\Engine\Runtime</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\PrefabManager.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp">
       <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
@@ -2050,6 +2116,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Texture\stb_image_impl.cpp">
       <Filter>Source\Engine\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutAsset.cpp">
+      <Filter>Source\Engine\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\UI\RuntimeUILayoutManager.cpp">
+      <Filter>Source\Engine\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\UI\UIManager.cpp">
       <Filter>Source\Engine\UI</Filter>
@@ -2134,6 +2206,9 @@
     <ClInclude Include="Source\Editor\EditorRenderPipeline.h">
       <Filter>Source\Editor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Undo\EditorUndoSystem.h">
+      <Filter>Source\Editor\Undo</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\PIE\PIETypes.h">
       <Filter>Source\Editor\PIE</Filter>
     </ClInclude>
@@ -2206,6 +2281,9 @@
     <ClInclude Include="Source\Editor\UI\Asset\CameraShake\CameraShakeEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\CameraShake</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\ActorSequence\ActorSequenceEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\ActorSequence</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Curve</Filter>
     </ClInclude>
@@ -2226,6 +2304,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Physics\PhysicsAssetEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\RuntimeUI\RuntimeUILayoutEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\RuntimeUI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\ContentBrowser\ContentBrowser.h">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
@@ -2279,6 +2360,9 @@
       <Filter>Source\Editor\UI\Panel</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Panel\EditorWorldSettingsWidget.h">
+      <Filter>Source\Editor\UI\Panel</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Panel\CombatMapEditorWidget.h">
       <Filter>Source\Editor\UI\Panel</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Toolbar\ViewportToolbar.h">
@@ -2336,6 +2420,12 @@
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimationRuntime.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\ActorSequence.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\CurvePlayback.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\PoseContext.h">
@@ -2512,6 +2602,9 @@
     <ClInclude Include="Source\Engine\Component\ActorComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\ActorSequenceComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\MeshComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -2548,10 +2641,28 @@
     <ClInclude Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.h">
       <Filter>Source\Engine\Component\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.h">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\SniperTypes.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.h">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h">
@@ -2839,6 +2950,9 @@
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Pawn.h">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\Pawn\SniperPawn.h">
+      <Filter>Source\Engine\GameFramework\Pawn</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.h">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClInclude>
@@ -2925,6 +3039,18 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Vector.h">
       <Filter>Source\Engine\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\CameraEditorMeshDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\GameViewportInputDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\RuntimeUILayoutDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\MeshBinary.h">
       <Filter>Source\Engine\Mesh</Filter>
@@ -3619,6 +3745,9 @@
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\PrefabManager.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
@@ -3627,6 +3756,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Texture\Texture2D.h">
       <Filter>Source\Engine\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutAsset.h">
+      <Filter>Source\Engine\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\UI\RuntimeUILayoutManager.h">
+      <Filter>Source\Engine\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\UI\UIManager.h">
       <Filter>Source\Engine\UI</Filter>

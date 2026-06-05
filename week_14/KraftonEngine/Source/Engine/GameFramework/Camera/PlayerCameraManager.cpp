@@ -518,6 +518,128 @@ void APlayerCameraManager::ClearDepthOfField()
 	bEnableDepthOfField = false;
 }
 
+void APlayerCameraManager::SetScopeLens(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather, float EdgeBlurRadius, float Intensity, float LookSensitivityScale, float BlendTime)
+{
+	SetScopeLensProfile(Radius, OuterBlurRadius, ZoomFOV, Feather, EdgeBlurRadius, Intensity, LookSensitivityScale, BlendTime);
+	bScopeZoomDesired = true;
+	ScopeZoomBlendAlpha = 1.0f;
+	ScopeLensState = ScopeLensProfile;
+	ScopeLensState.bEnabled = true;
+}
+
+void APlayerCameraManager::ClearScopeLens()
+{
+	ScopeLensState.bEnabled = false;
+	ScopeLensState.Intensity = 0.0f;
+	bScopeZoomDesired = false;
+	ScopeZoomBlendAlpha = 0.0f;
+}
+
+void APlayerCameraManager::SetScopeLensProfile(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather, float EdgeBlurRadius, float Intensity, float LookSensitivityScale, float BlendTime)
+{
+	ScopeLensProfile.bEnabled = false;
+	ScopeLensProfile.Radius = std::clamp(Radius, 0.01f, 1.0f);
+	ScopeLensProfile.Feather = std::clamp(Feather, 0.001f, 0.5f);
+	ScopeLensProfile.OuterBlurRadius = std::max(0.0f, OuterBlurRadius);
+	ScopeLensProfile.EdgeBlurRadius = std::max(0.0f, EdgeBlurRadius);
+	ScopeLensProfile.ZoomFOV = std::clamp(ZoomFOV, 0.01f, 3.0f);
+	ScopeLensProfile.Intensity = std::clamp(Intensity, 0.0f, 1.0f);
+	ScopeLensProfile.LookSensitivityScale = std::clamp(LookSensitivityScale, 0.01f, 1.0f);
+	ScopeLensProfile.BlendTime = std::max(0.0f, BlendTime);
+
+	if (ScopeLensState.bEnabled || bScopeZoomDesired)
+	{
+		ScopeLensState = ScopeLensProfile;
+		ScopeLensState.bEnabled = ScopeZoomBlendAlpha > 0.0f || bScopeZoomDesired;
+		ScopeLensState.Intensity = ScopeLensProfile.Intensity * ScopeZoomBlendAlpha;
+	}
+}
+
+void APlayerCameraManager::SetScopeZoomEnabled(bool bEnabled)
+{
+	if (bScopeZoomDesired == bEnabled)
+	{
+		return;
+	}
+
+	bScopeZoomDesired = bEnabled;
+
+	if (ScopeLensProfile.BlendTime <= 0.0f)
+	{
+		ScopeZoomBlendAlpha = bEnabled ? 1.0f : 0.0f;
+	}
+
+	if (bEnabled)
+	{
+		ScopeLensState = ScopeLensProfile;
+		ScopeLensState.bEnabled = true;
+		ScopeLensState.Intensity = ScopeLensProfile.Intensity * ScopeZoomBlendAlpha;
+	}
+	else if (ScopeLensProfile.BlendTime <= 0.0f)
+	{
+		ClearScopeLens();
+	}
+}
+
+bool APlayerCameraManager::IsScopeLensEnabled() const
+{
+	return ScopeLensState.bEnabled;
+}
+
+bool APlayerCameraManager::IsScopeZoomEnabled() const
+{
+	return bScopeZoomDesired;
+}
+
+float APlayerCameraManager::GetScopeLookSensitivityScale() const
+{
+	const float ScaleAlpha = ScopeLensState.bEnabled ? ScopeZoomBlendAlpha : 0.0f;
+	return 1.0f + (ScopeLensProfile.LookSensitivityScale - 1.0f) * ScaleAlpha;
+}
+
+const FCameraScopeLensState& APlayerCameraManager::GetScopeLensState() const
+{
+	return ScopeLensState;
+}
+
+const FCameraScopeLensState& APlayerCameraManager::GetScopeLensProfile() const
+{
+	return ScopeLensProfile;
+}
+
+void APlayerCameraManager::UpdateScopeZoomBlend(float DeltaTime)
+{
+	const float BlendTime = std::max(0.0f, ScopeLensProfile.BlendTime);
+	const float TargetAlpha = bScopeZoomDesired ? 1.0f : 0.0f;
+
+	if (BlendTime <= 0.0f)
+	{
+		ScopeZoomBlendAlpha = TargetAlpha;
+	}
+	else if (ScopeZoomBlendAlpha < TargetAlpha)
+	{
+		ScopeZoomBlendAlpha = std::min(TargetAlpha, ScopeZoomBlendAlpha + DeltaTime / BlendTime);
+	}
+	else if (ScopeZoomBlendAlpha > TargetAlpha)
+	{
+		ScopeZoomBlendAlpha = std::max(TargetAlpha, ScopeZoomBlendAlpha - DeltaTime / BlendTime);
+	}
+
+	if (ScopeZoomBlendAlpha <= 0.0f && !bScopeZoomDesired)
+	{
+		ScopeLensState.bEnabled = false;
+		ScopeLensState.Intensity = 0.0f;
+		return;
+	}
+
+	if (ScopeZoomBlendAlpha > 0.0f || bScopeZoomDesired)
+	{
+		ScopeLensState = ScopeLensProfile;
+		ScopeLensState.bEnabled = true;
+		ScopeLensState.Intensity = ScopeLensProfile.Intensity * ScopeZoomBlendAlpha;
+	}
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Camera Blend — ViewTarget A → Pending B 로 전환 중일 때 매 호출 시 보간된
 // raw POV 를 산출. shake 는 미포함. UpdateCamera 가 이걸 호출해 base POV 로
@@ -678,6 +800,8 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 	}
 
 	// (6) Cache commit — 외부는 GetCameraCachePOV 로 read (shake/blend 적용된 최종 POV).
+	UpdateScopeZoomBlend(DeltaTime);
+
 	if (bHasBasePOV)
 	{
 		CameraCachePOV    = NewPOV;
