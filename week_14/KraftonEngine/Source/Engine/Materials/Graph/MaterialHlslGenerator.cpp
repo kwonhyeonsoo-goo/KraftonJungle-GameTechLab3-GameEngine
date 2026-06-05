@@ -985,6 +985,24 @@ float4 ApplyFogTransparent(float4 color, float3 worldPos, float3 cameraWorldPos)
             SS << "    float2 UVOffset;\n";
         }
         SS << "};\n\n";
+        if (Domain == EMaterialGraphTarget::Surface || Domain == EMaterialGraphTarget::Decal)
+        {
+            SS << "float MaterialRoughnessToShininess(float Roughness)\n";
+            SS << "{\n";
+            SS << "    float R = saturate(Roughness);\n";
+            SS << "    return lerp(256.0f, 2.0f, R * R);\n";
+            SS << "}\n\n";
+            SS << "float3 ApplyMaterialMetallicDiffuse(float3 BaseColor, float Metallic)\n";
+            SS << "{\n";
+            SS << "    return BaseColor * (1.0f - saturate(Metallic));\n";
+            SS << "}\n\n";
+            SS << "float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, float Metallic)\n";
+            SS << "{\n";
+            SS << "    float M = saturate(Metallic);\n";
+            SS << "    float3 SpecularColor = lerp(float3(0.04f, 0.04f, 0.04f), BaseColor, M);\n";
+            SS << "    return SpecularLight * SpecularColor;\n";
+            SS << "}\n\n";
+        }
         return SS.str();
     }
 
@@ -1191,23 +1209,26 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
         {
             // UberLit 과 동일한 라이팅 누적 — directional/point/spot + CSM/spot/point shadows.
             // ForwardLighting.hlsli 가 AccumulateDiffuse / AccumulateSpecular 를 제공한다.
-            const float Shininess = (ShadingModel == EMaterialShadingModel::Phong) ? 32.0f : 8.0f;
             const bool  bSpecular = (ShadingModel == EMaterialShadingModel::Phong || ShadingModel == EMaterialShadingModel::DefaultLit);
 
             SS << R"(
     float3 V = normalize(CameraWorldPos - input.worldPos);
+    float roughness = saturate(Result.Roughness);
+    float metallic = saturate(Result.Metallic);
+    float shininess = MaterialRoughnessToShininess(roughness);
     float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
 )";
             if (bSpecular)
             {
-                SS << "    float3 specular = AccumulateSpecular(input.worldPos, N, V, " << Shininess << ".0f, input.position);\n";
+                SS << "    float3 specular = ApplyMaterialMetallicSpecular(AccumulateSpecular(input.worldPos, N, V, shininess, input.position), Result.BaseColor, metallic);\n";
             }
             else
             {
                 SS << "    float3 specular = float3(0, 0, 0);\n";
             }
             SS << R"(
-    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
+    float3 diffuseBase = ApplyMaterialMetallicDiffuse(Result.BaseColor, metallic);
+    float3 finalRgb = diffuseBase * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
 )";
         }
 
@@ -1293,22 +1314,25 @@ float4 PS(PS_Input_Decal input) : SV_TARGET
         }
         else
         {
-            const float Shininess = (ShadingModel == EMaterialShadingModel::Phong) ? 32.0f : 8.0f;
             const bool bSpecular = (ShadingModel == EMaterialShadingModel::Phong || ShadingModel == EMaterialShadingModel::DefaultLit);
             SS << R"(
     float3 V = normalize(CameraWorldPos - input.worldPos);
+    float roughness = saturate(Result.Roughness);
+    float metallic = saturate(Result.Metallic);
+    float shininess = MaterialRoughnessToShininess(roughness);
     float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
 )";
             if (bSpecular)
             {
-                SS << "    float3 specular = AccumulateSpecular(input.worldPos, N, V, " << Shininess << ".0f, input.position);\n";
+                SS << "    float3 specular = ApplyMaterialMetallicSpecular(AccumulateSpecular(input.worldPos, N, V, shininess, input.position), Result.BaseColor, metallic);\n";
             }
             else
             {
                 SS << "    float3 specular = float3(0, 0, 0);\n";
             }
             SS << R"(
-    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
+    float3 diffuseBase = ApplyMaterialMetallicDiffuse(Result.BaseColor, metallic);
+    float3 finalRgb = diffuseBase * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
 )";
         }
 
