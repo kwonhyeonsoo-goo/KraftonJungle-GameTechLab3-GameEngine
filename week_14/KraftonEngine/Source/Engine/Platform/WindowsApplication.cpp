@@ -37,6 +37,29 @@ LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam,
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
+	case WM_CHAR:
+	{
+		const uint32_t Codepoint = static_cast<uint32_t>(wParam);
+		if (Codepoint >= 0x20 && Codepoint != 0x7F)
+		{
+			InputSystem::Get().AddTextInput(Codepoint);
+		}
+		return bImGuiHandled ? true : 0;
+	}
+	case WM_UNICHAR:
+	{
+		if (wParam == UNICODE_NOCHAR)
+		{
+			return TRUE;
+		}
+
+		const uint32_t Codepoint = static_cast<uint32_t>(wParam);
+		if (Codepoint >= 0x20 && Codepoint != 0x7F)
+		{
+			InputSystem::Get().AddTextInput(Codepoint);
+		}
+		return bImGuiHandled ? true : 0;
+	}
 	case WM_MOUSEWHEEL:
 		InputSystem::Get().AddScrollDelta(GET_WHEEL_DELTA_WPARAM(wParam));
 		return bImGuiHandled ? true : 0;

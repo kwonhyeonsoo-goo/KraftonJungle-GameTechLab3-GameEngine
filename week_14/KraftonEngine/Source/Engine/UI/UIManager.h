@@ -118,6 +118,29 @@ public:
 		// viewport 에 올라온 widget들의 입력 요구/게임 입력 차단 정책을 합산한다.
 		FUIInputCaptureState GetViewportInputCaptureState() const;
 		bool AnyViewportWidgetWantsMouse() const;
+		FString GetElementText(const FString& ElementId) const;
+		bool SetElementText(const FString& ElementId, const FString& Text);
+		FString GetElementValue(const FString& ElementId) const;
+		bool SetElementValue(const FString& ElementId, const FString& Value);
+		bool SetElementClass(const FString& ElementId, const FString& ClassName, bool bEnabled);
+		bool HasElementClass(const FString& ElementId, const FString& ClassName) const;
+		FString GetElementClassNames(const FString& ElementId) const;
+		bool SetElementClassNames(const FString& ElementId, const FString& ClassNames);
+		bool HasElementAttribute(const FString& ElementId, const FString& AttributeName) const;
+		FString GetElementAttribute(const FString& ElementId, const FString& AttributeName) const;
+		bool SetElementAttribute(const FString& ElementId, const FString& AttributeName, const FString& Value);
+		bool RemoveElementAttribute(const FString& ElementId, const FString& AttributeName);
+		FString GetElementStyle(const FString& ElementId, const FString& StyleName) const;
+		bool SetElementStyle(const FString& ElementId, const FString& StyleName, const FString& Value);
+		bool RemoveElementStyle(const FString& ElementId, const FString& StyleName);
+		bool FocusElement(const FString& ElementId, bool bFocusVisible = false);
+		bool BlurElement(const FString& ElementId);
+		bool IsElementFocused(const FString& ElementId) const;
+		bool ClickElement(const FString& ElementId);
+		bool SetElementVisible(const FString& ElementId, bool bVisible);
+		bool SetElementEnabled(const FString& ElementId, bool bEnabled);
+		bool SetActionEvent(const FString& ElementId, const FString& EventName);
+		TArray<FString> PollActionEvents();
 
 private:
 	UUIManager() = default;

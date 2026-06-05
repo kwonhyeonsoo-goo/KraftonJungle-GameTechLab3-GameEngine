@@ -6,6 +6,8 @@
 #include "Object/Reflection/UClass.h"
 #include "ImGui/imgui.h"
 
+#include <cstring>
+
 void EditorWorldSettingsWidget::Render()
 {
 	if (!bOpen) return;
@@ -64,6 +66,13 @@ void EditorWorldSettingsWidget::Render()
 					ImGui::SetItemDefaultFocus();
 			}
 			ImGui::EndCombo();
+		}
+
+		char DefaultPawnPrefabPath[512] = {};
+		strncpy_s(DefaultPawnPrefabPath, WS.DefaultPawnPrefabPath.c_str(), _TRUNCATE);
+		if (ImGui::InputText("Default Pawn Prefab", DefaultPawnPrefabPath, sizeof(DefaultPawnPrefabPath)))
+		{
+			WS.DefaultPawnPrefabPath = DefaultPawnPrefabPath;
 		}
 		ImGui::TextDisabled("Save scene + reload to apply.");
 	}

@@ -193,6 +193,9 @@
     <Filter Include="Source\Engine\Component\Input">
       <UniqueIdentifier>{358e161e-2bd5-5db1-9e14-9bfb5d4671f1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Diagnostics">
+      <UniqueIdentifier>{7c0d1a76-56f8-4b0f-a4a4-57de3f8d5c2e}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Component\Light">
       <UniqueIdentifier>{68733902-62c6-6992-604b-99f4fd185b46}</UniqueIdentifier>
     </Filter>
@@ -1022,6 +1025,12 @@
     <ClCompile Include="Source\Engine\Animation\AnimationRuntime.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\ActorSequence.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\CurvePlayback.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Animation\Graph\AnimGraphAsset.cpp">
       <Filter>Source\Engine\Animation\Graph</Filter>
     </ClCompile>
@@ -1163,6 +1172,9 @@
     <ClCompile Include="Source\Engine\Component\ActorComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\ActorSequenceComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -1210,6 +1222,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Input\InputComponent.cpp">
       <Filter>Source\Engine\Component\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.cpp">
+      <Filter>Source\Engine\Diagnostics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp">
       <Filter>Source\Engine\Component\Light</Filter>
@@ -2036,6 +2051,9 @@
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp">
       <Filter>Source\Engine\Runtime</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\PrefabManager.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp">
       <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
@@ -2330,6 +2348,12 @@
     <ClInclude Include="Source\Engine\Animation\AnimationRuntime.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\ActorSequence.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\CurvePlayback.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Animation\PoseContext.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
@@ -2502,6 +2526,9 @@
       <Filter>Source\Engine\Collision\Ray</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\ActorComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\ActorSequenceComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\MeshComponent.h">
@@ -2917,6 +2944,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\Vector.h">
       <Filter>Source\Engine\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.h">
+      <Filter>Source\Engine\Diagnostics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\MeshBinary.h">
       <Filter>Source\Engine\Mesh</Filter>
@@ -3609,6 +3639,9 @@
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\PrefabManager.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h">

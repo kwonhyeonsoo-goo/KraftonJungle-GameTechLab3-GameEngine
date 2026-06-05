@@ -19,6 +19,10 @@ struct FWorldSettings
 	// 채우면 LoadSceneFromPath 가 UClass::FindByName 으로 resolve.
 	FString GameModeClassName;
 
+	// 비우면 ProjectSettings.Game.DefaultPawnPrefabPath가 fallback.
+	// 채우면 이 씬에서 사용할 기본 Pawn prefab path로 resolve.
+	FString DefaultPawnPrefabPath;
+
 	// World-space gravity in m/s^2. Legacy scenes without this field use earth gravity.
 	FVector Gravity = FVector(0.0f, 0.0f, -9.81f);
 };

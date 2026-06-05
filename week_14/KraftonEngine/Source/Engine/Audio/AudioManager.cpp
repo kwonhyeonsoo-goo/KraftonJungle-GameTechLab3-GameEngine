@@ -2,6 +2,20 @@
 #include "Core/Logging/Log.h"
 #include "Platform/Paths.h"
 #include <algorithm>
+#include <chrono>
+
+namespace
+{
+	FMOD_VECTOR ToFMODVector(const FVector& Vector)
+	{
+		return FMOD_VECTOR { Vector.X, Vector.Y, Vector.Z };
+	}
+
+	FVector SafeNormal(const FVector& Vector, const FVector& Fallback)
+	{
+		return Vector.IsNearlyZero() ? Fallback : Vector.Normalized();
+	}
+}
 
 bool FAudioManager::Initialize()
 {
@@ -19,6 +33,17 @@ bool FAudioManager::Initialize()
 	}
 
 	System->getMasterChannelGroup(&MasterGroup);
+	if (System->createChannelGroup("BGM", &BGMGroup) == FMOD_OK && MasterGroup)
+	{
+		MasterGroup->addGroup(BGMGroup);
+		BGMGroup->setVolume(BGMVolume);
+	}
+	if (System->createChannelGroup("SFX", &SFXGroup) == FMOD_OK && MasterGroup)
+	{
+		MasterGroup->addGroup(SFXGroup);
+		SFXGroup->setVolume(SFXVolume);
+	}
+	SetMasterVolume(MasterVolume);
 
 	LoadDefaultAudios();
 
@@ -30,14 +55,32 @@ void FAudioManager::Shutdown()
 	if (!System)
 	{
 		MasterGroup = nullptr;
+		BGMGroup = nullptr;
+		SFXGroup = nullptr;
 		BGMChannel = nullptr;
 		LoopChannels.clear();
+		ActiveChannels.clear();
+		SFXPlaybackPolicies.clear();
+		LastSFXPlaybackTimeSeconds.clear();
 		Audios.clear();
 		return;
 	}
 
 	StopBGM();
 	StopAllLoops();
+	StopAllSounds();
+	if (BGMGroup)
+	{
+		BGMGroup->stop();
+		BGMGroup->release();
+		BGMGroup = nullptr;
+	}
+	if (SFXGroup)
+	{
+		SFXGroup->stop();
+		SFXGroup->release();
+		SFXGroup = nullptr;
+	}
 	if (MasterGroup)
 	{
 		MasterGroup->stop();
@@ -53,6 +96,8 @@ void FAudioManager::Shutdown()
 		}
 	}
 	Audios.clear();
+	SFXPlaybackPolicies.clear();
+	LastSFXPlaybackTimeSeconds.clear();
 
 	System->update();
 	System->close();
@@ -64,7 +109,9 @@ void FAudioManager::Tick()
 {
 	if (System)
 	{
+		PruneStoppedChannels();
 		System->update();
+		PruneStoppedChannels();
 	}
 }
 
@@ -96,18 +143,123 @@ bool FAudioManager::LoadAudio(const FString& Key, const FString& Path, bool bLoo
 
 void FAudioManager::PlayAudio(const FString& Key, float Volume)
 {
+	PlayAudioHandle(Key, Volume);
+}
+
+FAudioHandle FAudioManager::PlayAudioHandle(const FString& Key, float Volume)
+{
 	if (!System || !Audios.contains(Key))
 	{
-		return;
+		return 0;
 	}
 
 	FMOD::Channel* Channel = nullptr;
-	System->playSound(Audios[Key], nullptr, false, &Channel);
+	System->playSound(Audios[Key], SFXGroup, true, &Channel);
 
 	if (Channel)
 	{
-		Channel->setVolume(Volume);
+		Channel->setMode(FMOD_2D | FMOD_LOOP_OFF);
+		Channel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
+		Channel->setPaused(false);
+		return RegisterChannel(Channel, Key);
 	}
+
+	return 0;
+}
+
+bool FAudioManager::PlaySFX(const FString& PathOrKey, float VolumeScale)
+{
+	return PlaySFXHandle(PathOrKey, VolumeScale) != 0;
+}
+
+FAudioHandle FAudioManager::PlaySFXHandle(const FString& PathOrKey, float VolumeScale)
+{
+	if (!System || PathOrKey.empty())
+	{
+		return 0;
+	}
+
+	FMOD::Sound* Sound = ResolveSound(PathOrKey, false);
+	if (!Sound)
+	{
+		return 0;
+	}
+
+	int32 Priority = 0;
+	if (SFXPlaybackPolicies.contains(PathOrKey))
+	{
+		const FAudioPlaybackPolicy& Policy = SFXPlaybackPolicies[PathOrKey];
+		if (!ApplySFXPlaybackPolicy(PathOrKey, Policy))
+		{
+			return 0;
+		}
+		Priority = Policy.Priority;
+	}
+
+	FMOD::Channel* Channel = nullptr;
+	System->playSound(Sound, SFXGroup, true, &Channel);
+	if (!Channel)
+	{
+		return 0;
+	}
+
+	Channel->setMode(FMOD_2D | FMOD_LOOP_OFF);
+	Channel->setVolume(std::clamp(VolumeScale, 0.0f, 1.0f));
+	Channel->setPaused(false);
+	const FAudioHandle Handle = RegisterChannel(Channel, PathOrKey, Priority);
+	if (Handle != 0)
+	{
+		NoteSFXPlayback(PathOrKey);
+	}
+	return Handle;
+}
+
+FAudioHandle FAudioManager::PlaySFX3D(const FString& PathOrKey, const FVector& Position, float VolumeScale, float MinDistance, float MaxDistance)
+{
+	if (!System || PathOrKey.empty())
+	{
+		return 0;
+	}
+
+	FMOD::Sound* Sound = ResolveSound(PathOrKey, false);
+	if (!Sound)
+	{
+		return 0;
+	}
+
+	int32 Priority = 0;
+	if (SFXPlaybackPolicies.contains(PathOrKey))
+	{
+		const FAudioPlaybackPolicy& Policy = SFXPlaybackPolicies[PathOrKey];
+		if (!ApplySFXPlaybackPolicy(PathOrKey, Policy))
+		{
+			return 0;
+		}
+		Priority = Policy.Priority;
+	}
+
+	FMOD::Channel* Channel = nullptr;
+	System->playSound(Sound, SFXGroup, true, &Channel);
+	if (!Channel)
+	{
+		return 0;
+	}
+
+	const float ClampedMin = (std::max)(0.01f, MinDistance);
+	const float ClampedMax = (std::max)(ClampedMin, MaxDistance);
+	FMOD_VECTOR FMODPosition = ToFMODVector(Position);
+
+	Channel->setMode(FMOD_3D | FMOD_3D_LINEARROLLOFF | FMOD_LOOP_OFF);
+	Channel->set3DMinMaxDistance(ClampedMin, ClampedMax);
+	Channel->set3DAttributes(&FMODPosition, nullptr);
+	Channel->setVolume(std::clamp(VolumeScale, 0.0f, 1.0f));
+	Channel->setPaused(false);
+	const FAudioHandle Handle = RegisterChannel(Channel, PathOrKey, Priority);
+	if (Handle != 0)
+	{
+		NoteSFXPlayback(PathOrKey);
+	}
+	return Handle;
 }
 
 void FAudioManager::PlayBGM(const FString& Key, float Volume)
@@ -118,11 +270,11 @@ void FAudioManager::PlayBGM(const FString& Key, float Volume)
 	}
 
 	StopBGM();
-	System->playSound(Audios[Key], nullptr, false, &BGMChannel);
+	System->playSound(Audios[Key], BGMGroup, false, &BGMChannel);
 
 	if (BGMChannel)
 	{
-		BGMChannel->setVolume(Volume);
+		BGMChannel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
 	}
 }
 
@@ -150,7 +302,7 @@ void FAudioManager::PlayLoop(const FString& Key, const FString& LoopName, float 
 	}
 
 	FMOD::Channel* Channel = nullptr;
-	System->playSound(Audios[Key], nullptr, false, &Channel);
+	System->playSound(Audios[Key], SFXGroup, false, &Channel);
 
 	if (Channel)
 	{
@@ -208,6 +360,66 @@ bool FAudioManager::IsLoopPlaying(const FString& LoopName)
 	return FindPlayingLoopChannel(LoopName) != nullptr;
 }
 
+FMOD::Sound* FAudioManager::ResolveSound(const FString& PathOrKey, bool bLoop)
+{
+	if (!System || PathOrKey.empty())
+	{
+		return nullptr;
+	}
+
+	if (!Audios.contains(PathOrKey) && !LoadAudio(PathOrKey, PathOrKey, bLoop))
+	{
+		return nullptr;
+	}
+
+	return Audios.contains(PathOrKey) ? Audios[PathOrKey] : nullptr;
+}
+
+FAudioHandle FAudioManager::RegisterChannel(FMOD::Channel* Channel, const FString& SourceKey, int32 Priority)
+{
+	if (!Channel)
+	{
+		return 0;
+	}
+
+	const FAudioHandle Handle = NextAudioHandle++;
+	if (NextAudioHandle <= 0)
+	{
+		NextAudioHandle = 1;
+	}
+
+	FActiveAudioChannel Info;
+	Info.Channel = Channel;
+	Info.SourceKey = SourceKey;
+	Info.Priority = Priority;
+	Info.Sequence = NextAudioSequence++;
+	if (NextAudioSequence == 0)
+	{
+		NextAudioSequence = 1;
+	}
+
+	ActiveChannels[Handle] = Info;
+	return Handle;
+}
+
+FMOD::Channel* FAudioManager::FindActiveChannel(FAudioHandle Handle)
+{
+	if (Handle <= 0 || !ActiveChannels.contains(Handle))
+	{
+		return nullptr;
+	}
+
+	FMOD::Channel* Channel = ActiveChannels[Handle].Channel;
+	bool bIsPlaying = false;
+	if (!Channel || Channel->isPlaying(&bIsPlaying) != FMOD_OK || !bIsPlaying)
+	{
+		ActiveChannels.erase(Handle);
+		return nullptr;
+	}
+
+	return Channel;
+}
+
 FMOD::Channel* FAudioManager::FindPlayingLoopChannel(const FString& LoopName)
 {
 	if (!LoopChannels.contains(LoopName))
@@ -226,12 +438,241 @@ FMOD::Channel* FAudioManager::FindPlayingLoopChannel(const FString& LoopName)
 	return Channel;
 }
 
+void FAudioManager::PruneStoppedChannels()
+{
+	for (auto It = ActiveChannels.begin(); It != ActiveChannels.end();)
+	{
+		bool bIsPlaying = false;
+		FMOD::Channel* Channel = It->second.Channel;
+		if (!Channel || Channel->isPlaying(&bIsPlaying) != FMOD_OK || !bIsPlaying)
+		{
+			It = ActiveChannels.erase(It);
+		}
+		else
+		{
+			++It;
+		}
+	}
+}
+
+double FAudioManager::GetAudioTimeSeconds() const
+{
+	using FClock = std::chrono::steady_clock;
+	static const FClock::time_point StartTime = FClock::now();
+	return std::chrono::duration<double>(FClock::now() - StartTime).count();
+}
+
+bool FAudioManager::ApplySFXPlaybackPolicy(const FString& SourceKey, const FAudioPlaybackPolicy& Policy)
+{
+	if (SourceKey.empty())
+	{
+		return false;
+	}
+
+	PruneStoppedChannels();
+
+	if (Policy.CooldownSeconds > 0.0f && LastSFXPlaybackTimeSeconds.contains(SourceKey))
+	{
+		const double ElapsedSeconds = GetAudioTimeSeconds() - LastSFXPlaybackTimeSeconds[SourceKey];
+		if (ElapsedSeconds < static_cast<double>(Policy.CooldownSeconds))
+		{
+			return false;
+		}
+	}
+
+	if (Policy.MaxConcurrent <= 0)
+	{
+		return true;
+	}
+
+	int32 ActiveCount = 0;
+	FAudioHandle OldestReplaceableHandle = 0;
+	uint64 OldestReplaceableSequence = 0;
+	for (const auto& Pair : ActiveChannels)
+	{
+		const FActiveAudioChannel& Info = Pair.second;
+		if (Info.SourceKey != SourceKey)
+		{
+			continue;
+		}
+
+		++ActiveCount;
+		if (Info.Priority <= Policy.Priority
+			&& (OldestReplaceableHandle == 0 || Info.Sequence < OldestReplaceableSequence))
+		{
+			OldestReplaceableHandle = Pair.first;
+			OldestReplaceableSequence = Info.Sequence;
+		}
+	}
+
+	if (ActiveCount < Policy.MaxConcurrent)
+	{
+		return true;
+	}
+
+	if (!Policy.bStopOldest || OldestReplaceableHandle == 0)
+	{
+		return false;
+	}
+
+	if (FMOD::Channel* Channel = FindActiveChannel(OldestReplaceableHandle))
+	{
+		Channel->stop();
+	}
+	ActiveChannels.erase(OldestReplaceableHandle);
+	return true;
+}
+
+void FAudioManager::NoteSFXPlayback(const FString& SourceKey)
+{
+	if (!SourceKey.empty())
+	{
+		LastSFXPlaybackTimeSeconds[SourceKey] = GetAudioTimeSeconds();
+	}
+}
+
 void FAudioManager::SetMasterVolume(float Volume)
 {
+	MasterVolume = std::clamp(Volume, 0.0f, 1.0f);
 	if (MasterGroup)
 	{
-		MasterGroup->setVolume(Volume);
+		MasterGroup->setVolume(MasterVolume);
 	}
+}
+
+void FAudioManager::SetBGMVolume(float Volume)
+{
+	BGMVolume = std::clamp(Volume, 0.0f, 1.0f);
+	if (BGMGroup)
+	{
+		BGMGroup->setVolume(BGMVolume);
+	}
+}
+
+void FAudioManager::SetSFXVolume(float Volume)
+{
+	SFXVolume = std::clamp(Volume, 0.0f, 1.0f);
+	if (SFXGroup)
+	{
+		SFXGroup->setVolume(SFXVolume);
+	}
+}
+
+void FAudioManager::SetListener(const FVector& Position, const FVector& Forward, const FVector& Up)
+{
+	if (!System)
+	{
+		return;
+	}
+
+	const FVector SafeForward = SafeNormal(Forward, FVector::ForwardVector);
+	const FVector SafeUp = SafeNormal(Up, FVector::UpVector);
+	FMOD_VECTOR FMODPosition = ToFMODVector(Position);
+	FMOD_VECTOR FMODForward = ToFMODVector(SafeForward);
+	FMOD_VECTOR FMODUp = ToFMODVector(SafeUp);
+	System->set3DListenerAttributes(0, &FMODPosition, nullptr, &FMODForward, &FMODUp);
+}
+
+void FAudioManager::StopSound(FAudioHandle Handle)
+{
+	if (FMOD::Channel* Channel = FindActiveChannel(Handle))
+	{
+		Channel->stop();
+	}
+	ActiveChannels.erase(Handle);
+}
+
+void FAudioManager::StopAllSounds()
+{
+	for (auto& Pair : ActiveChannels)
+	{
+		if (Pair.second.Channel)
+		{
+			Pair.second.Channel->stop();
+		}
+	}
+	ActiveChannels.clear();
+}
+
+bool FAudioManager::IsSoundPlaying(FAudioHandle Handle)
+{
+	return FindActiveChannel(Handle) != nullptr;
+}
+
+void FAudioManager::SetSoundVolume(FAudioHandle Handle, float Volume)
+{
+	if (FMOD::Channel* Channel = FindActiveChannel(Handle))
+	{
+		Channel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
+	}
+}
+
+void FAudioManager::SetSoundPitch(FAudioHandle Handle, float Pitch)
+{
+	if (FMOD::Channel* Channel = FindActiveChannel(Handle))
+	{
+		Channel->setPitch(std::clamp(Pitch, 0.1f, 3.0f));
+	}
+}
+
+void FAudioManager::SetSoundPosition(FAudioHandle Handle, const FVector& Position)
+{
+	if (FMOD::Channel* Channel = FindActiveChannel(Handle))
+	{
+		FMOD_VECTOR FMODPosition = ToFMODVector(Position);
+		Channel->set3DAttributes(&FMODPosition, nullptr);
+	}
+}
+
+void FAudioManager::SetSFXPlaybackPolicy(const FString& PathOrKey, int32 MaxConcurrent, float CooldownSeconds, int32 Priority, bool bStopOldest)
+{
+	if (PathOrKey.empty())
+	{
+		return;
+	}
+
+	FAudioPlaybackPolicy Policy;
+	Policy.MaxConcurrent = (std::max)(0, MaxConcurrent);
+	Policy.CooldownSeconds = (std::max)(0.0f, CooldownSeconds);
+	Policy.Priority = Priority;
+	Policy.bStopOldest = bStopOldest;
+	SFXPlaybackPolicies[PathOrKey] = Policy;
+}
+
+void FAudioManager::ClearSFXPlaybackPolicy(const FString& PathOrKey)
+{
+	if (PathOrKey.empty())
+	{
+		return;
+	}
+
+	SFXPlaybackPolicies.erase(PathOrKey);
+	LastSFXPlaybackTimeSeconds.erase(PathOrKey);
+}
+
+void FAudioManager::ClearAllSFXPlaybackPolicies()
+{
+	SFXPlaybackPolicies.clear();
+	LastSFXPlaybackTimeSeconds.clear();
+}
+
+int32 FAudioManager::GetActiveSoundCount(const FString& PathOrKey)
+{
+	PruneStoppedChannels();
+	if (PathOrKey.empty())
+	{
+		return static_cast<int32>(ActiveChannels.size());
+	}
+
+	int32 Count = 0;
+	for (const auto& Pair : ActiveChannels)
+	{
+		if (Pair.second.SourceKey == PathOrKey)
+		{
+			++Count;
+		}
+	}
+	return Count;
 }
 
 void FAudioManager::LoadDefaultAudios()

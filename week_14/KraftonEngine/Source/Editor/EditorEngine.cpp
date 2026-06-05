@@ -20,6 +20,7 @@
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/Reflection/UClass.h"
 #include "Mesh/MeshManager.h"
 #include "Core/ProjectSettings.h"
 #include "Input/InputSystem.h"
@@ -216,6 +217,7 @@ void UEditorEngine::ProcessPIEInput(float DeltaTime)
 	if (RawInputSnapshot.WasPressed(VK_F8))
 	{
 		TogglePIEControlMode();
+		return;
 	}
 
 	UGameViewportClient* PIEViewportClient = GetGameViewportClient();
@@ -234,7 +236,15 @@ void UEditorEngine::ProcessPIEInput(float DeltaTime)
 		PIEViewportClient->SetCursorClipRect(ActiveVC->GetViewportScreenRect());
 	}
 
+	const bool bRoutePlayerInput = IsPIEPossessedMode();
+	PIEViewportClient->SetInputPossessed(bRoutePlayerInput);
 	PIEViewportClient->ProcessInput(RawInputSnapshot, DeltaTime);
+
+	if (!bRoutePlayerInput)
+	{
+		return;
+	}
+
 	if (PIEViewportClient->HasGameInputSnapshot())
 	{
 		ProcessActiveWorldPlayerInput(PIEViewportClient->GetGameInputSnapshot(), DeltaTime);
@@ -411,10 +421,28 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 	//MainPanel.HideEditorWindowsForPIE(); //PIE 중에는 에디터 패널을 숨김.
 	//ViewportLayout.DisableWorldAxisForPIE(); //PIE 중에는 월드 축 렌더링을 비활성화.
 
-	// PIE 월드에도 ProjectSettings의 GameMode 클래스 적용.
-	// Editor 모듈은 Game-specific 디폴트를 알 수 없으므로, ProjectSettings에
-	// 지정된 경우에만 GameMode가 spawn된다. 비어있으면 미생성 (회귀 안전).
-	if (UClass* GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr))
+	// PIE도 standalone과 같은 GameMode 우선순위를 따른다:
+	// WorldSettings override -> ProjectSettings default -> no GameMode.
+	UClass* GMClass = nullptr;
+	const FString& SceneGMName = PIEWorld->GetWorldSettings().GameModeClassName;
+	if (!SceneGMName.empty())
+	{
+		UClass* Found = UClass::FindByName(SceneGMName.c_str());
+		if (Found && Found->IsA(AGameModeBase::StaticClass()))
+		{
+			GMClass = Found;
+		}
+		else
+		{
+			UE_LOG("[EditorEngine] WorldSettings.GameMode = '%s' not found or invalid; falling back to ProjectSettings",
+				SceneGMName.c_str());
+		}
+	}
+	if (!GMClass)
+	{
+		GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr);
+	}
+	if (GMClass)
 	{
 		PIEWorld->SetGameModeClass(GMClass);
 	}

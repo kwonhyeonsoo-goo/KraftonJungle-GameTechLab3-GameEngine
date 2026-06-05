@@ -74,6 +74,15 @@ public:
 	UFUNCTION(Pure, Category="Actor|Components")
 	UActorComponent* GetComponentByClass(UClass* ComponentClass) const;
 
+	UFUNCTION(Pure, Category="Actor|Components")
+	UActorComponent* FindComponentByTag(const FName& Tag) const;
+	UFUNCTION(Pure, Category="Actor|Components")
+	TArray<UActorComponent*> FindComponentsByTag(const FName& Tag) const;
+	UFUNCTION(Pure, Category="Actor|Components")
+	UActorComponent* FindComponentByTags(const TArray<FName>& InTags) const;
+	UFUNCTION(Pure, Category="Actor|Components")
+	TArray<UActorComponent*> FindComponentsByTags(const TArray<FName>& InTags) const;
+
 	// 특정 클래스의 컴포넌트를 검색하여 반환 (없으면 nullptr)
 	template<typename T>
 	T* GetComponentByClass() const {
@@ -179,13 +188,13 @@ protected:
 	UPROPERTY(Transient, Instanced, Category="Actor|Components")
 	TObjectPtr<USceneComponent> RootComponent = nullptr;
 
-	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Location")
+	UPROPERTY(Edit, Save, Animatable, Category="Transform", DisplayName="Location")
 	FVector PendingActorLocation = FVector(0, 0, 0);
-	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Rotation")
+	UPROPERTY(Edit, Save, Animatable, Category="Transform", DisplayName="Rotation")
 	FRotator PendingActorRotation = FRotator(0, 0, 0);
-	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Scale")
+	UPROPERTY(Edit, Save, Animatable, Category="Transform", DisplayName="Scale")
 	FVector PendingActorScale = FVector(1, 1, 1);
-	UPROPERTY(Edit, Save, Category="Actor", DisplayName="Visible")
+	UPROPERTY(Edit, Save, Animatable, Category="Actor", DisplayName="Visible")
 	bool PendingActorVisible = true;
 
 	bool bVisible = true;

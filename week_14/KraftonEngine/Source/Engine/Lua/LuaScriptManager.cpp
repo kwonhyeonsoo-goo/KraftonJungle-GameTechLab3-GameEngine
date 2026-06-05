@@ -1,16 +1,24 @@
 #include "LuaScriptManager.h"
 #include "Lua/LuaDebugManager.h"
 
+#include "Asset/AssetRegistry.h"
 #include "Audio/AudioManager.h"
 #include "Core/Logging/Log.h"
 #include "Core/Logging/Notification.h"
 
 #include <algorithm>
+#include <cctype>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
+#include <random>
 #include <sstream>
 #include <windows.h>  // PostQuitMessage
+#ifdef GetCurrentTime
+#undef GetCurrentTime
+#endif
+#include "Animation/ActorSequence.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/Graph/AnimGraphInstance.h"
 #include "Animation/Instance/LuaAnimInstance.h"
@@ -19,6 +27,7 @@
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
 #include "Component/ActorComponent.h"
+#include "Component/ActorSequenceComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/ShapeComponent.h"
@@ -62,6 +71,7 @@
 #include "Core/Property/StringProperty.h"
 #include "Core/Property/StructProperty.h"
 #include "Core/Types/CollisionTypes.h"
+#include "Diagnostics/ActorSequenceDiagnostics.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/Actor/ParticleSystemActor.h"
@@ -102,10 +112,16 @@
 #include "Platform/WindowsWindow.h"
 #include "Profiling/Time/Timer.h"
 #include "Runtime/Engine.h"
+#include "Serialization/PrefabManager.h"
+#include "SimpleJSON/json.hpp"
 #include "Texture/Texture2D.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 #include "Viewport/GameViewportClient.h"
+
+#ifdef GetCurrentTime
+#undef GetCurrentTime
+#endif
 
 std::unique_ptr<sol::state>                 FLuaScriptManager::Lua;
 sol::protected_function                     FLuaScriptManager::OnEscapePressedCallback;
@@ -1806,6 +1822,523 @@ FInputSystemSnapshot FLuaScriptManager::GetLuaInputSnapshot()
     return InputSystem::Get().MakeSnapshot();
 }
 
+namespace
+{
+    UGameViewportClient* GetLuaGameViewportClient()
+    {
+        return GEngine ? GEngine->GetGameViewportClient() : nullptr;
+    }
+
+    void AppendUtf8Codepoint(FString& Out, uint32_t Codepoint)
+    {
+        if (Codepoint <= 0x7F)
+        {
+            Out.push_back(static_cast<char>(Codepoint));
+        }
+        else if (Codepoint <= 0x7FF)
+        {
+            Out.push_back(static_cast<char>(0xC0 | ((Codepoint >> 6) & 0x1F)));
+            Out.push_back(static_cast<char>(0x80 | (Codepoint & 0x3F)));
+        }
+        else if (Codepoint <= 0xFFFF)
+        {
+            Out.push_back(static_cast<char>(0xE0 | ((Codepoint >> 12) & 0x0F)));
+            Out.push_back(static_cast<char>(0x80 | ((Codepoint >> 6) & 0x3F)));
+            Out.push_back(static_cast<char>(0x80 | (Codepoint & 0x3F)));
+        }
+        else if (Codepoint <= 0x10FFFF)
+        {
+            Out.push_back(static_cast<char>(0xF0 | ((Codepoint >> 18) & 0x07)));
+            Out.push_back(static_cast<char>(0x80 | ((Codepoint >> 12) & 0x3F)));
+            Out.push_back(static_cast<char>(0x80 | ((Codepoint >> 6) & 0x3F)));
+            Out.push_back(static_cast<char>(0x80 | (Codepoint & 0x3F)));
+        }
+    }
+
+    FString CodepointsToUtf8(const TArray<uint32_t>& Codepoints)
+    {
+        FString Result;
+        for (size_t Index = 0; Index < Codepoints.size(); ++Index)
+        {
+            uint32_t Codepoint = Codepoints[Index];
+            if (Codepoint >= 0xD800 && Codepoint <= 0xDBFF && Index + 1 < Codepoints.size())
+            {
+                const uint32_t Low = Codepoints[Index + 1];
+                if (Low >= 0xDC00 && Low <= 0xDFFF)
+                {
+                    Codepoint = 0x10000 + ((Codepoint - 0xD800) << 10) + (Low - 0xDC00);
+                    ++Index;
+                }
+            }
+
+            if (Codepoint >= 0xD800 && Codepoint <= 0xDFFF)
+            {
+                Codepoint = 0xFFFD;
+            }
+            AppendUtf8Codepoint(Result, Codepoint);
+        }
+        return Result;
+    }
+
+    bool CanLuaConsumeTextInput()
+    {
+        InputSystem& Input = InputSystem::Get();
+        if (Input.IsGuiUsingTextInput())
+        {
+            return false;
+        }
+
+        if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+        {
+            if (GameViewportClient->GetInputMode() == EGameInputMode::UIOnly)
+            {
+                return false;
+            }
+        }
+
+        const FUIInputCaptureState UIState = UUIManager::Get().GetViewportInputCaptureState();
+        return !UIState.bWantsTextInput && !UIState.bBlocksGameInput && !UIState.bBlocksGameKeyboard;
+    }
+
+    FString ConsumeLuaTextInput()
+    {
+        InputSystem& Input = InputSystem::Get();
+        if (!CanLuaConsumeTextInput())
+        {
+            Input.ConsumeScriptTextInput();
+            return {};
+        }
+
+        return CodepointsToUtf8(Input.ConsumeScriptTextInput());
+    }
+
+    FString LuaArgsToMessage(sol::variadic_args Args)
+    {
+        FString Message;
+
+        for (auto Arg : Args)
+        {
+            if (!Message.empty())
+            {
+                Message += "\t";
+            }
+
+            Message += Arg.as<FString>();
+        }
+
+        return Message;
+    }
+
+    void AddLuaTagObject(const sol::object& Value, TArray<FName>& OutTags)
+    {
+        if (!Value.valid() || Value == sol::nil || Value.get_type() != sol::type::string)
+        {
+            return;
+        }
+
+        const FName Tag(Value.as<FString>());
+        if (!Tag.IsValid() || std::find(OutTags.begin(), OutTags.end(), Tag) != OutTags.end())
+        {
+            return;
+        }
+
+        OutTags.push_back(Tag);
+    }
+
+    TArray<FName> LuaTagsFromArgs(sol::variadic_args Args)
+    {
+        TArray<FName> Tags;
+        if (Args.size() == 1)
+        {
+            const sol::object FirstArg = Args[0];
+            if (FirstArg.valid() && FirstArg.get_type() == sol::type::table)
+            {
+                const sol::table Table = FirstArg.as<sol::table>();
+                for (const auto& Entry : Table)
+                {
+                    AddLuaTagObject(Entry.second, Tags);
+                }
+                return Tags;
+            }
+        }
+
+        for (auto Arg : Args)
+        {
+            const sol::object Value = Arg;
+            AddLuaTagObject(Value, Tags);
+        }
+        return Tags;
+    }
+
+    FString LuaTableStringAny(const sol::table& Table, std::initializer_list<const char*> Keys, const FString& DefaultValue = FString())
+    {
+        for (const char* Key : Keys)
+        {
+            sol::object Value = Table.get<sol::object>(Key);
+            if (Value.valid() && Value != sol::nil && Value.get_type() == sol::type::string)
+            {
+                return Value.as<FString>();
+            }
+        }
+        return DefaultValue;
+    }
+
+    float LuaTableFloatAny(const sol::table& Table, std::initializer_list<const char*> Keys, float DefaultValue)
+    {
+        for (const char* Key : Keys)
+        {
+            sol::object Value = Table.get<sol::object>(Key);
+            if (Value.valid() && Value != sol::nil && Value.get_type() == sol::type::number)
+            {
+                return Value.as<float>();
+            }
+        }
+        return DefaultValue;
+    }
+
+    sol::table ComponentsToLuaTable(sol::this_state State, const TArray<UActorComponent*>& Components)
+    {
+        sol::state_view L(State);
+        sol::table Result = L.create_table();
+        int Index = 1;
+        for (UActorComponent* Component : Components)
+        {
+            if (IsValid(Component))
+            {
+                Result[Index++] = Component;
+            }
+        }
+        return Result;
+    }
+
+    const char* LuaWorldTypeName()
+    {
+        if (!GEngine || !GEngine->GetWorld())
+        {
+            return "None";
+        }
+
+        switch (GEngine->GetWorld()->GetWorldType())
+        {
+        case EWorldType::Editor:
+            return "Editor";
+        case EWorldType::EditorPreview:
+            return "EditorPreview";
+        case EWorldType::PIE:
+            return "PIE";
+        case EWorldType::Game:
+            return "Game";
+        default:
+            return "Unknown";
+        }
+    }
+
+    bool IsLuaArrayTable(const sol::table& Table, int32& OutMaxIndex)
+    {
+        int32 Count = 0;
+        int32 MaxIndex = 0;
+
+        for (const auto& Pair : Table)
+        {
+            const sol::object Key = Pair.first;
+            if (!Key.is<int32>())
+            {
+                return false;
+            }
+
+            const int32 Index = Key.as<int32>();
+            if (Index < 1)
+            {
+                return false;
+            }
+
+            ++Count;
+            MaxIndex = (std::max)(MaxIndex, Index);
+        }
+
+        OutMaxIndex = MaxIndex;
+        return Count == MaxIndex;
+    }
+
+    json::JSON LuaObjectToJson(const sol::object& Object, int32 Depth = 0)
+    {
+        if (Depth > 64 || !Object.valid() || Object == sol::nil)
+        {
+            return json::JSON();
+        }
+
+        switch (Object.get_type())
+        {
+        case sol::type::boolean:
+            return json::JSON(Object.as<bool>());
+        case sol::type::number:
+        {
+            const double Value = Object.as<double>();
+            if (std::isfinite(Value) && std::floor(Value) == Value)
+            {
+                return json::JSON(static_cast<long>(Value));
+            }
+            return json::JSON(Value);
+        }
+        case sol::type::string:
+            return json::JSON(Object.as<FString>());
+        case sol::type::table:
+        {
+            const sol::table Table = Object.as<sol::table>();
+            int32 MaxIndex = 0;
+            if (IsLuaArrayTable(Table, MaxIndex))
+            {
+                json::JSON Array = json::Array();
+                for (int32 Index = 1; Index <= MaxIndex; ++Index)
+                {
+                    Array.append(LuaObjectToJson(Table.get<sol::object>(Index), Depth + 1));
+                }
+                return Array;
+            }
+
+            json::JSON JsonObject = json::Object();
+            for (const auto& Pair : Table)
+            {
+                const sol::object Key = Pair.first;
+                if (Key.is<FString>())
+                {
+                    JsonObject[Key.as<FString>()] = LuaObjectToJson(Pair.second, Depth + 1);
+                }
+            }
+            return JsonObject;
+        }
+        default:
+            return json::JSON();
+        }
+    }
+
+    sol::object JsonToLuaObject(sol::state_view Lua, const json::JSON& Json)
+    {
+        switch (Json.JSONType())
+        {
+        case json::JSON::Class::Object:
+        {
+            sol::table Table = Lua.create_table();
+            for (const auto& Pair : Json.ObjectRange())
+            {
+                Table[Pair.first] = JsonToLuaObject(Lua, Pair.second);
+            }
+            return sol::make_object(Lua, Table);
+        }
+        case json::JSON::Class::Array:
+        {
+            sol::table Table = Lua.create_table();
+            int32 Index = 1;
+            for (const json::JSON& Value : Json.ArrayRange())
+            {
+                Table[Index++] = JsonToLuaObject(Lua, Value);
+            }
+            return sol::make_object(Lua, Table);
+        }
+        case json::JSON::Class::String:
+            return sol::make_object(Lua, Json.ToString());
+        case json::JSON::Class::Floating:
+            return sol::make_object(Lua, Json.ToFloat());
+        case json::JSON::Class::Integral:
+            return sol::make_object(Lua, static_cast<int32>(Json.ToInt()));
+        case json::JSON::Class::Boolean:
+            return sol::make_object(Lua, Json.ToBool());
+        case json::JSON::Class::Null:
+        default:
+            return sol::make_object(Lua, sol::nil);
+        }
+    }
+
+    bool ResolveSafeLuaSavePath(const FString& RelativePath, std::filesystem::path& OutPath)
+    {
+        if (RelativePath.empty())
+        {
+            return false;
+        }
+
+        std::filesystem::path RawPath(FPaths::ToWide(RelativePath));
+        if (RawPath.is_absolute())
+        {
+            return false;
+        }
+
+        std::filesystem::path CleanRelative;
+        bool bSkippedLeadingSaves = false;
+        for (const std::filesystem::path& Part : RawPath.lexically_normal())
+        {
+            const std::wstring PartString = Part.wstring();
+            if (PartString.empty() || PartString == L".")
+            {
+                continue;
+            }
+            if (PartString == L"..")
+            {
+                return false;
+            }
+            if (!bSkippedLeadingSaves && CleanRelative.empty() && (PartString == L"Saves" || PartString == L"saves"))
+            {
+                bSkippedLeadingSaves = true;
+                continue;
+            }
+
+            CleanRelative /= Part;
+        }
+
+        if (CleanRelative.empty())
+        {
+            return false;
+        }
+
+        OutPath = (std::filesystem::path(FPaths::SaveDir()) / CleanRelative).lexically_normal();
+        return true;
+    }
+
+    bool WriteLuaSaveText(const FString& RelativePath, const FString& Text)
+    {
+        std::filesystem::path SavePath;
+        if (!ResolveSafeLuaSavePath(RelativePath, SavePath))
+        {
+            UE_LOG("[Lua.Save] Invalid save path: %s", RelativePath.c_str());
+            return false;
+        }
+
+        std::error_code EC;
+        std::filesystem::create_directories(SavePath.parent_path(), EC);
+        if (EC)
+        {
+            UE_LOG("[Lua.Save] Failed to create save directory: %s", FPaths::ToUtf8(SavePath.parent_path().wstring()).c_str());
+            return false;
+        }
+
+        std::ofstream File(SavePath, std::ios::binary | std::ios::trunc);
+        if (!File.is_open())
+        {
+            UE_LOG("[Lua.Save] Failed to open save file for write: %s", FPaths::ToUtf8(SavePath.wstring()).c_str());
+            return false;
+        }
+
+        File << Text;
+        return File.good();
+    }
+
+    bool ReadLuaSaveText(const FString& RelativePath, FString& OutText)
+    {
+        std::filesystem::path SavePath;
+        if (!ResolveSafeLuaSavePath(RelativePath, SavePath))
+        {
+            UE_LOG("[Lua.Save] Invalid save path: %s", RelativePath.c_str());
+            return false;
+        }
+
+        std::ifstream File(SavePath, std::ios::binary);
+        if (!File.is_open())
+        {
+            return false;
+        }
+
+        OutText.assign((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+        return true;
+    }
+
+    std::mt19937& GetLuaRandomGenerator()
+    {
+        static std::mt19937 Generator{ std::random_device{}() };
+        return Generator;
+    }
+
+    sol::table AssetItemsToLuaTable(sol::state_view Lua, const TArray<FAssetListItem>& Items)
+    {
+        sol::table Result = Lua.create_table();
+        int32 Index = 1;
+        for (const FAssetListItem& Item : Items)
+        {
+            sol::table Entry = Lua.create_table();
+            Entry["DisplayName"] = Item.DisplayName;
+            Entry["FullPath"] = Item.FullPath;
+            Entry["Name"] = Item.DisplayName;
+            Entry["Path"] = Item.FullPath;
+            Result[Index++] = Entry;
+        }
+        return Result;
+    }
+
+    sol::table AssetPathsToLuaTable(sol::state_view Lua, const TArray<FAssetListItem>& Items)
+    {
+        sol::table Result = Lua.create_table();
+        int32 Index = 1;
+        for (const FAssetListItem& Item : Items)
+        {
+            Result[Index++] = Item.FullPath;
+        }
+        return Result;
+    }
+
+    const FAssetListItem* FindLuaAssetItem(const FString& TypeName, const FString& NameOrPath)
+    {
+        if (TypeName.empty() || NameOrPath.empty())
+        {
+            return nullptr;
+        }
+
+        const TArray<FAssetListItem>& Items = FAssetRegistry::ListByTypeName(TypeName.c_str());
+        for (const FAssetListItem& Item : Items)
+        {
+            if (Item.FullPath == NameOrPath || Item.DisplayName == NameOrPath)
+            {
+                return &Item;
+            }
+        }
+        return nullptr;
+    }
+
+    bool ParseLuaInputMode(const FString& ModeName, EGameInputMode& OutMode)
+    {
+        FString Normalized = ModeName;
+        std::transform(
+            Normalized.begin(),
+            Normalized.end(),
+            Normalized.begin(),
+            [](unsigned char Ch)
+            {
+                return static_cast<char>(std::tolower(Ch));
+            }
+        );
+
+        if (Normalized == "gameonly" || Normalized == "game")
+        {
+            OutMode = EGameInputMode::GameOnly;
+            return true;
+        }
+        if (Normalized == "gameandui" || Normalized == "gameui")
+        {
+            OutMode = EGameInputMode::GameAndUI;
+            return true;
+        }
+        if (Normalized == "uionly" || Normalized == "ui")
+        {
+            OutMode = EGameInputMode::UIOnly;
+            return true;
+        }
+
+        return false;
+    }
+
+    const char* ToLuaInputModeName(EGameInputMode Mode)
+    {
+        switch (Mode)
+        {
+        case EGameInputMode::GameOnly:
+            return "GameOnly";
+        case EGameInputMode::GameAndUI:
+            return "GameAndUI";
+        case EGameInputMode::UIOnly:
+            return "UIOnly";
+        default:
+            return "Unknown";
+        }
+    }
+}
+
 void FLuaScriptManager::RegisterLuaHelpers(sol::state& Lua)
 {
     // 한글 경로 호환 — safe_script_file 은 내부적으로 fopen(UTF-8) 을 쓰므로 ANSI 해석에서
@@ -1831,18 +2364,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "print",
         [](sol::variadic_args Args)
         {
-            FString Message;
-
-            for (auto Arg : Args)
-            {
-                if (!Message.empty())
-                {
-                    Message += "\t";
-                }
-
-                Message += Arg.as<FString>();
-            }
-
+            const FString Message = LuaArgsToMessage(Args);
             UE_LOG("[Lua] %s", Message.c_str());
         }
     );
@@ -1901,9 +2423,641 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             return GetLuaInputSnapshot().MouseDeltaY;
         }
     );
+    Input.set_function(
+        "ConsumeTextInput",
+        []()
+        {
+            return ConsumeLuaTextInput();
+        }
+    );
+    Input.set_function(
+        "SetInputMode",
+        [](const FString& ModeName)
+        {
+            UGameViewportClient* GameViewportClient = GetLuaGameViewportClient();
+            if (!GameViewportClient)
+            {
+                return false;
+            }
+
+            EGameInputMode InputMode = EGameInputMode::GameOnly;
+            if (!ParseLuaInputMode(ModeName, InputMode))
+            {
+                return false;
+            }
+
+            GameViewportClient->SetInputMode(InputMode);
+            return true;
+        }
+    );
+    Input.set_function(
+        "GetInputMode",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                return FString(ToLuaInputModeName(GameViewportClient->GetInputMode()));
+            }
+
+            return FString("None");
+        }
+    );
+    Input.set_function(
+        "SetInputModeGameOnly",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetInputMode(EGameInputMode::GameOnly);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetInputModeGameAndUI",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetInputMode(EGameInputMode::GameAndUI);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetInputModeUIOnly",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetInputMode(EGameInputMode::UIOnly);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetCursorVisible",
+        [](bool bVisible)
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetCursorVisible(bVisible);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "IsCursorVisible",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                return GameViewportClient->IsCursorVisible();
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetCursorLocked",
+        [](bool bLocked)
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetCursorLocked(bLocked);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "IsCursorLocked",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                return GameViewportClient->IsCursorLocked();
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetMouseCaptured",
+        [](bool bCaptured)
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetMouseCaptured(bCaptured);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetMouseCapture",
+        [](bool bCaptured)
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->SetMouseCaptured(bCaptured);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "IsMouseCaptured",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                return GameViewportClient->IsMouseCaptured();
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "ReleaseMouseCapture",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            {
+                GameViewportClient->ReleaseMouseCapture();
+                return true;
+            }
+
+            return false;
+        }
+    );
 
     // Engine — 게임 일시정지 / 종료.
+    sol::table Json = Lua.create_named_table("Json");
+    Json.set_function(
+        "Encode",
+        [](sol::object Value) -> FString
+        {
+            return LuaObjectToJson(Value).dump();
+        }
+    );
+    Json.set_function(
+        "Decode",
+        [](sol::this_state State, const FString& Text) -> sol::object
+        {
+            if (Text.empty())
+            {
+                return sol::make_object(State, sol::nil);
+            }
+
+            sol::state_view L(State);
+            json::JSON Data = json::JSON::Load(Text);
+            return JsonToLuaObject(L, Data);
+        }
+    );
+
+    sol::table Save = Lua.create_named_table("Save");
+    Save.set_function(
+        "WriteText",
+        [](const FString& RelativePath, const FString& Text) -> bool
+        {
+            return WriteLuaSaveText(RelativePath, Text);
+        }
+    );
+    Save.set_function(
+        "ReadText",
+        [](sol::this_state State, const FString& RelativePath) -> sol::object
+        {
+            FString Text;
+            if (!ReadLuaSaveText(RelativePath, Text))
+            {
+                return sol::make_object(State, sol::nil);
+            }
+            return sol::make_object(State, Text);
+        }
+    );
+    Save.set_function(
+        "WriteJson",
+        [](const FString& RelativePath, sol::object Value) -> bool
+        {
+            return WriteLuaSaveText(RelativePath, LuaObjectToJson(Value).dump());
+        }
+    );
+    Save.set_function(
+        "ReadJson",
+        [](sol::this_state State, const FString& RelativePath) -> sol::object
+        {
+            FString Text;
+            if (!ReadLuaSaveText(RelativePath, Text) || Text.empty())
+            {
+                return sol::make_object(State, sol::nil);
+            }
+
+            sol::state_view L(State);
+            json::JSON Data = json::JSON::Load(Text);
+            return JsonToLuaObject(L, Data);
+        }
+    );
+    Save.set_function(
+        "Exists",
+        [](const FString& RelativePath) -> bool
+        {
+            std::filesystem::path SavePath;
+            return ResolveSafeLuaSavePath(RelativePath, SavePath) && std::filesystem::exists(SavePath);
+        }
+    );
+    Save.set_function(
+        "Delete",
+        [](const FString& RelativePath) -> bool
+        {
+            std::filesystem::path SavePath;
+            if (!ResolveSafeLuaSavePath(RelativePath, SavePath))
+            {
+                UE_LOG("[Lua.Save] Invalid save path: %s", RelativePath.c_str());
+                return false;
+            }
+
+            std::error_code EC;
+            const bool bRemoved = std::filesystem::remove(SavePath, EC);
+            return !EC && bRemoved;
+        }
+    );
+
+    sol::table Random = Lua.create_named_table("Random");
+    Random.set_function(
+        "SetSeed",
+        [](uint32 Seed)
+        {
+            GetLuaRandomGenerator().seed(static_cast<std::mt19937::result_type>(Seed));
+        }
+    );
+    Random.set_function(
+        "RandomFloat01",
+        []() -> float
+        {
+            return std::uniform_real_distribution<float>(0.0f, 1.0f)(GetLuaRandomGenerator());
+        }
+    );
+    Random.set_function(
+        "RandomFloat",
+        [](float Min, float Max) -> float
+        {
+            if (Min > Max)
+            {
+                std::swap(Min, Max);
+            }
+            return std::uniform_real_distribution<float>(Min, Max)(GetLuaRandomGenerator());
+        }
+    );
+    Random.set_function(
+        "RandomInt",
+        [](int32 Min, int32 Max) -> int32
+        {
+            if (Min > Max)
+            {
+                std::swap(Min, Max);
+            }
+            return std::uniform_int_distribution<int32>(Min, Max)(GetLuaRandomGenerator());
+        }
+    );
+    Random.set_function(
+        "RandomBool",
+        [](sol::optional<float> Probability) -> bool
+        {
+            const float P = (std::max)(0.0f, (std::min)(Probability.value_or(0.5f), 1.0f));
+            return std::bernoulli_distribution(P)(GetLuaRandomGenerator());
+        }
+    );
+
+    sol::table Asset = Lua.create_named_table("Asset");
+    Asset.set_function(
+        "List",
+        [](sol::this_state State, const FString& TypeName) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetItemsToLuaTable(L, FAssetRegistry::ListByTypeName(TypeName.c_str()));
+        }
+    );
+    Asset.set_function(
+        "GetPaths",
+        [](sol::this_state State, const FString& TypeName) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName(TypeName.c_str()));
+        }
+    );
+    Asset.set_function(
+        "Find",
+        [](sol::this_state State, const FString& TypeName, const FString& NameOrPath) -> sol::object
+        {
+            sol::state_view L(State);
+            if (const FAssetListItem* Item = FindLuaAssetItem(TypeName, NameOrPath))
+            {
+                return sol::make_object(L, Item->FullPath);
+            }
+            return sol::make_object(L, sol::nil);
+        }
+    );
+    Asset.set_function(
+        "Exists",
+        [](const FString& TypeName, const FString& NameOrPath) -> bool
+        {
+            return FindLuaAssetItem(TypeName, NameOrPath) != nullptr;
+        }
+    );
+    Asset.set_function(
+        "GetTexturePaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("Texture"));
+        }
+    );
+    Asset.set_function(
+        "GetStaticMeshPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("StaticMesh"));
+        }
+    );
+    Asset.set_function(
+        "GetSkeletalMeshPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("SkeletalMesh"));
+        }
+    );
+    Asset.set_function(
+        "GetMaterialPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("Material"));
+        }
+    );
+    Asset.set_function(
+        "GetAnimationPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("UAnimSequence"));
+        }
+    );
+    Asset.set_function(
+        "GetParticleSystemPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("ParticleSystem"));
+        }
+    );
+    Asset.set_function(
+        "GetLuaScriptPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("LuaScript"));
+        }
+    );
+    Asset.set_function(
+        "GetRmlDocumentPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("RmlDocument"));
+        }
+    );
+    Asset.set_function(
+        "GetSoundPaths",
+        [](sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            return AssetPathsToLuaTable(L, FAssetRegistry::ListByTypeName("Sound"));
+        }
+    );
+
+    sol::table Scene = Lua.create_named_table("Scene");
+    Scene.set_function(
+        "Open",
+        [](const FString& PathOrName)
+        {
+            if (!GEngine || PathOrName.empty())
+            {
+                return false;
+            }
+
+            GEngine->RequestTransitionToScene(PathOrName);
+            return true;
+        }
+    );
+    Scene.set_function(
+        "Load",
+        [](const FString& PathOrName)
+        {
+            if (!GEngine || PathOrName.empty())
+            {
+                return false;
+            }
+
+            GEngine->RequestTransitionToScene(PathOrName);
+            return true;
+        }
+    );
+    Scene.set_function(
+        "TransitionTo",
+        [](const FString& PathOrName)
+        {
+            if (!GEngine || PathOrName.empty())
+            {
+                return false;
+            }
+
+            GEngine->RequestTransitionToScene(PathOrName);
+            return true;
+        }
+    );
+    Scene.set_function(
+        "Reload",
+        []()
+        {
+            if (!GEngine)
+            {
+                return false;
+            }
+
+            const FString CurrentPath = GEngine->GetCurrentScenePath();
+            if (CurrentPath.empty())
+            {
+                return false;
+            }
+
+            GEngine->RequestTransitionToScene(CurrentPath);
+            return true;
+        }
+    );
+    Scene.set_function(
+        "IsOpenPending",
+        []()
+        {
+            return GEngine && GEngine->IsSceneTransitionPending();
+        }
+    );
+    Scene.set_function(
+        "GetCurrentPath",
+        []() -> FString
+        {
+            return GEngine ? GEngine->GetCurrentScenePath() : FString {};
+        }
+    );
+    Scene.set_function(
+        "GetPendingPath",
+        []() -> FString
+        {
+            return GEngine ? GEngine->GetPendingScenePath() : FString {};
+        }
+    );
+
+    sol::table Application = Lua.create_named_table("Application");
+    Application.set_function(
+        "QuitGame",
+        []()
+        {
+            PostQuitMessage(0);
+        }
+    );
+    Application.set_function(
+        "Exit",
+        []()
+        {
+            PostQuitMessage(0);
+        }
+    );
+    Application.set_function(
+        "GetWorldType",
+        []()
+        {
+            return LuaWorldTypeName();
+        }
+    );
+    Application.set_function(
+        "IsGame",
+        []()
+        {
+            return GEngine && GEngine->GetWorld() && GEngine->GetWorld()->GetWorldType() == EWorldType::Game;
+        }
+    );
+    Application.set_function(
+        "IsEditor",
+        []()
+        {
+            if (!GEngine || !GEngine->GetWorld())
+            {
+                return false;
+            }
+
+            const EWorldType Type = GEngine->GetWorld()->GetWorldType();
+            return Type == EWorldType::Editor || Type == EWorldType::EditorPreview || Type == EWorldType::PIE;
+        }
+    );
+    Application.set_function(
+        "GetViewportSize",
+        []() -> sol::table
+        {
+            sol::table Result = FLuaScriptManager::GetState().create_table();
+            Result["Width"] = 0.0f;
+            Result["Height"] = 0.0f;
+
+            if (GEngine)
+            {
+                if (FWindowsWindow* Window = GEngine->GetWindow())
+                {
+                    Result["Width"] = Window->GetWidth();
+                    Result["Height"] = Window->GetHeight();
+                }
+            }
+
+            return Result;
+        }
+    );
+
+    sol::table Debug = Lua.create_named_table("Debug");
+    Debug.set_function(
+        "Log",
+        [](sol::variadic_args Args)
+        {
+            const FString Message = LuaArgsToMessage(Args);
+            UE_LOG("[Lua][Log] %s", Message.c_str());
+        }
+    );
+    Debug.set_function(
+        "Warn",
+        [](sol::variadic_args Args)
+        {
+            const FString Message = LuaArgsToMessage(Args);
+            UE_LOG("[Lua][Warn] %s", Message.c_str());
+        }
+    );
+    Debug.set_function(
+        "Error",
+        [](sol::variadic_args Args)
+        {
+            const FString Message = LuaArgsToMessage(Args);
+            UE_LOG("[Lua][Error] %s", Message.c_str());
+        }
+    );
+    Debug.set_function(
+        "Assert",
+        [](bool bCondition, sol::optional<FString> Message)
+        {
+            if (!bCondition)
+            {
+                UE_LOG("[Lua][Assert] %s", Message.value_or("Assertion failed").c_str());
+            }
+            return bCondition;
+        }
+    );
+    Debug.set_function(
+        "RunActorSequenceRoundTripSelfTest",
+        [](sol::this_state State) -> sol::table
+        {
+            FActorSequenceRoundTripSelfTestResult TestResult =
+                FActorSequenceDiagnostics::RunRoundTripSelfTest();
+
+            sol::state_view L(State);
+            sol::table Result = L.create_table();
+            Result["Passed"] = TestResult.bPassed;
+            Result["ChecksRun"] = TestResult.ChecksRun;
+            Result["Message"] = TestResult.Message;
+            UE_LOG(
+                "[ActorSequenceDiagnostics] %s (%d checks): %s",
+                TestResult.bPassed ? "PASS" : "FAIL",
+                TestResult.ChecksRun,
+                TestResult.Message.c_str());
+            return Result;
+        }
+    );
+
     sol::table Engine = Lua.create_named_table("Engine");
+    Engine["Json"] = Json;
+    Engine["Save"] = Save;
+    Engine["Random"] = Random;
+    Engine["Asset"] = Asset;
+    Engine["Scene"] = Scene;
+    Engine["Application"] = Application;
+    Engine["Debug"] = Debug;
     Engine.set_function(
         "PauseGame",
         []()
@@ -2285,6 +3439,32 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     AudioManager.set_function(
+        "PlaySFX",
+        [](const FString& PathOrKey, sol::optional<float> VolumeScale)
+        {
+            return FAudioManager::Get().PlaySFX(PathOrKey, VolumeScale.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "PlaySFXHandle",
+        [](const FString& PathOrKey, sol::optional<float> VolumeScale)
+        {
+            return FAudioManager::Get().PlaySFXHandle(PathOrKey, VolumeScale.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "PlaySFX3D",
+        [](const FString& PathOrKey, const FVector& Position, sol::optional<float> VolumeScale, sol::optional<float> MinDistance, sol::optional<float> MaxDistance)
+        {
+            return FAudioManager::Get().PlaySFX3D(
+                PathOrKey,
+                Position,
+                VolumeScale.value_or(1.0f),
+                MinDistance.value_or(1.0f),
+                MaxDistance.value_or(10000.0f));
+        }
+    );
+    AudioManager.set_function(
         "PlayBGM",
         [](const FString& SoundName, float Volume)
         {
@@ -2345,6 +3525,126 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         [](float Volume)
         {
             FAudioManager::Get().SetMasterVolume(Volume);
+        }
+    );
+    AudioManager.set_function(
+        "GetMasterVolume",
+        []()
+        {
+            return FAudioManager::Get().GetMasterVolume();
+        }
+    );
+    AudioManager.set_function(
+        "SetBGMVolume",
+        [](float Volume)
+        {
+            FAudioManager::Get().SetBGMVolume(Volume);
+        }
+    );
+    AudioManager.set_function(
+        "GetBGMVolume",
+        []()
+        {
+            return FAudioManager::Get().GetBGMVolume();
+        }
+    );
+    AudioManager.set_function(
+        "SetSFXVolume",
+        [](float Volume)
+        {
+            FAudioManager::Get().SetSFXVolume(Volume);
+        }
+    );
+    AudioManager.set_function(
+        "GetSFXVolume",
+        []()
+        {
+            return FAudioManager::Get().GetSFXVolume();
+        }
+    );
+    AudioManager.set_function(
+        "SetListener",
+        [](const FVector& Position, sol::optional<FVector> Forward, sol::optional<FVector> Up)
+        {
+            FAudioManager::Get().SetListener(
+                Position,
+                Forward.value_or(FVector::ForwardVector),
+                Up.value_or(FVector::UpVector));
+        }
+    );
+    AudioManager.set_function(
+        "StopSound",
+        [](FAudioHandle Handle)
+        {
+            FAudioManager::Get().StopSound(Handle);
+        }
+    );
+    AudioManager.set_function(
+        "StopAllSounds",
+        []()
+        {
+            FAudioManager::Get().StopAllSounds();
+        }
+    );
+    AudioManager.set_function(
+        "IsSoundPlaying",
+        [](FAudioHandle Handle)
+        {
+            return FAudioManager::Get().IsSoundPlaying(Handle);
+        }
+    );
+    AudioManager.set_function(
+        "SetSoundVolume",
+        [](FAudioHandle Handle, float Volume)
+        {
+            FAudioManager::Get().SetSoundVolume(Handle, Volume);
+        }
+    );
+    AudioManager.set_function(
+        "SetSoundPitch",
+        [](FAudioHandle Handle, float Pitch)
+        {
+            FAudioManager::Get().SetSoundPitch(Handle, Pitch);
+        }
+    );
+    AudioManager.set_function(
+        "SetSoundPosition",
+        [](FAudioHandle Handle, const FVector& Position)
+        {
+            FAudioManager::Get().SetSoundPosition(Handle, Position);
+        }
+    );
+    AudioManager.set_function(
+        "SetSFXPolicy",
+        [](const FString& PathOrKey, sol::optional<int32> MaxConcurrent, sol::optional<float> CooldownSeconds, sol::optional<int32> Priority, sol::optional<bool> bStopOldest)
+        {
+            FAudioManager::Get().SetSFXPlaybackPolicy(
+                PathOrKey,
+                MaxConcurrent.value_or(0),
+                CooldownSeconds.value_or(0.0f),
+                Priority.value_or(0),
+                bStopOldest.value_or(true));
+        }
+    );
+    AudioManager.set_function(
+        "ClearSFXPolicy",
+        [](const FString& PathOrKey)
+        {
+            FAudioManager::Get().ClearSFXPlaybackPolicy(PathOrKey);
+        }
+    );
+    AudioManager.set_function(
+        "ClearAllSFXPolicies",
+        []()
+        {
+            FAudioManager::Get().ClearAllSFXPlaybackPolicies();
+        }
+    );
+    AudioManager.set_function(
+        "GetActiveSoundCount",
+        [](sol::optional<FString> PathOrKey)
+        {
+            return FAudioManager::Get().GetActiveSoundCount(PathOrKey.value_or(FString()));
         }
     );
 
@@ -2939,6 +4239,11 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         {
             return IsValid(&Object) ? Cast<UActorComponent>(&Object) : nullptr;
         },
+        "AsActorSequenceComponent",
+        [](UObject& Object) -> UActorSequenceComponent*
+        {
+            return IsValid(&Object) ? Cast<UActorSequenceComponent>(&Object) : nullptr;
+        },
         "GetUUID",
         &UObject::GetUUID,
         "IsValid",
@@ -3046,7 +4351,183 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         "Activate",
         &UActorComponent::Activate,
         "Deactivate",
-        &UActorComponent::Deactivate
+        &UActorComponent::Deactivate,
+        "HasTag",
+        [](UActorComponent& Component, const FString& Tag)
+        {
+            return Component.HasTag(FName(Tag));
+        },
+        "AddTag",
+        [](UActorComponent& Component, const FString& Tag)
+        {
+            Component.AddTag(FName(Tag));
+        },
+        "RemoveTag",
+        [](UActorComponent& Component, const FString& Tag)
+        {
+            Component.RemoveTag(FName(Tag));
+        },
+        "GetTags",
+        [](UActorComponent& Component, sol::this_state State) -> sol::table
+        {
+            sol::state_view L(State);
+            sol::table Result = L.create_table();
+            int Index = 1;
+            for (const FName& Tag : Component.GetTags())
+            {
+                Result[Index++] = Tag.ToString();
+            }
+            return Result;
+        },
+        "SetTags",
+        [](UActorComponent& Component, sol::table Tags)
+        {
+            TArray<FName> Names;
+            for (auto& Entry : Tags)
+            {
+                sol::object Value = Entry.second;
+                if (Value.is<std::string>())
+                {
+                    Names.push_back(FName(FString(Value.as<std::string>())));
+                }
+            }
+            Component.SetTags(Names);
+        },
+        "GetPersistentGuid",
+        [](UActorComponent& Component)
+        {
+            return Component.EnsurePersistentGuid();
+        }
+    );
+
+    Lua.new_usertype<UActorSequence>(
+        "ActorSequence",
+        sol::base_classes,
+        sol::bases<UObject>(),
+        "GetDuration",
+        &UActorSequence::GetDuration,
+        "SetDuration",
+        &UActorSequence::SetDuration,
+        "Clear",
+        &UActorSequence::Clear,
+        "ExportToJsonString",
+        &UActorSequence::ExportToJsonString,
+        "ImportFromJsonString",
+        &UActorSequence::ImportFromJsonString
+    );
+
+    Lua.new_usertype<UActorSequencePlayer>(
+        "ActorSequencePlayer",
+        sol::base_classes,
+        sol::bases<UObject>(),
+        "Play",
+        [](UActorSequencePlayer& Player, sol::optional<bool> bResetTime)
+        {
+            Player.Play(bResetTime.value_or(true));
+        },
+        "Pause",
+        &UActorSequencePlayer::Pause,
+        "Stop",
+        [](UActorSequencePlayer& Player, sol::optional<bool> bRestoreBaseValues)
+        {
+            Player.Stop(bRestoreBaseValues.value_or(true));
+        },
+        "SetCurrentTime",
+        &UActorSequencePlayer::SetCurrentTime,
+        "GetCurrentTime",
+        [](UActorSequencePlayer& Player)
+        {
+            return Player.GetCurrentTime();
+        },
+        "IsPlaying",
+        [](UActorSequencePlayer& Player)
+        {
+            return Player.IsPlaying();
+        },
+        "IsPaused",
+        [](UActorSequencePlayer& Player)
+        {
+            return Player.IsPaused();
+        }
+    );
+
+    Lua.new_usertype<UActorSequenceComponent>(
+        "ActorSequenceComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "Play",
+        &UActorSequenceComponent::Play,
+        "Pause",
+        &UActorSequenceComponent::Pause,
+        "Stop",
+        &UActorSequenceComponent::Stop,
+        "GetSequence",
+        &UActorSequenceComponent::GetSequence,
+        "GetSequencePlayer",
+        &UActorSequenceComponent::GetSequencePlayer,
+        "AddFloatTrack",
+        [](UActorSequenceComponent& Component, sol::table Desc)
+        {
+            const FString Target = LuaTableStringAny(
+                Desc,
+                {
+                    "TargetObjectName",
+                    "Target",
+                    "target",
+                    "Component",
+                    "component",
+                    "TargetComponentGuid",
+                    "ComponentGuid",
+                    "component_guid"
+                },
+                "Owner");
+            const FString Property = LuaTableStringAny(
+                Desc,
+                {
+                    "PropertyName",
+                    "Property",
+                    "property"
+                });
+            if (Property.empty())
+            {
+                UE_LOG("[Lua][ActorSequence] AddFloatTrack rejected: missing property name");
+                return false;
+            }
+
+            const FString Channel = LuaTableStringAny(
+                Desc,
+                {
+                    "ChannelName",
+                    "Channel",
+                    "channel"
+                },
+                "Value");
+            const float StartTime = LuaTableFloatAny(
+                Desc,
+                {
+                    "StartTime",
+                    "start_time",
+                    "start"
+                },
+                0.0f);
+            const float Duration = LuaTableFloatAny(
+                Desc,
+                {
+                    "Duration",
+                    "duration"
+                },
+                1.0f);
+            const FString CurveAssetPath = LuaTableStringAny(
+                Desc,
+                {
+                    "CurveAssetPath",
+                    "Curve",
+                    "curve",
+                    "curve_path"
+                });
+
+            return Component.AddFloatTrack(Target, Property, Channel, StartTime, Duration, CurveAssetPath);
+        }
     );
 
 
@@ -4947,6 +6428,46 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             }
             return Result;
         },
+        "FindComponentByTag",
+        [](AActor& Actor, const FString& Tag) -> UActorComponent*
+        {
+            return Actor.FindComponentByTag(FName(Tag));
+        },
+        "GetComponentByTag",
+        [](AActor& Actor, const FString& Tag) -> UActorComponent*
+        {
+            return Actor.FindComponentByTag(FName(Tag));
+        },
+        "FindComponentsByTag",
+        [](AActor& Actor, const FString& Tag, sol::this_state State) -> sol::table
+        {
+            return ComponentsToLuaTable(State, Actor.FindComponentsByTag(FName(Tag)));
+        },
+        "GetComponentsByTag",
+        [](AActor& Actor, const FString& Tag, sol::this_state State) -> sol::table
+        {
+            return ComponentsToLuaTable(State, Actor.FindComponentsByTag(FName(Tag)));
+        },
+        "FindComponentByTags",
+        [](AActor& Actor, sol::variadic_args Args) -> UActorComponent*
+        {
+            return Actor.FindComponentByTags(LuaTagsFromArgs(Args));
+        },
+        "GetComponentByTags",
+        [](AActor& Actor, sol::variadic_args Args) -> UActorComponent*
+        {
+            return Actor.FindComponentByTags(LuaTagsFromArgs(Args));
+        },
+        "FindComponentsByTags",
+        [](AActor& Actor, sol::variadic_args Args, sol::this_state State) -> sol::table
+        {
+            return ComponentsToLuaTable(State, Actor.FindComponentsByTags(LuaTagsFromArgs(Args)));
+        },
+        "GetComponentsByTags",
+        [](AActor& Actor, sol::variadic_args Args, sol::this_state State) -> sol::table
+        {
+            return ComponentsToLuaTable(State, Actor.FindComponentsByTags(LuaTagsFromArgs(Args)));
+        },
 
         "GetFloatingPawnMovement",
         [](AActor& Actor)
@@ -4998,6 +6519,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         [](AActor& Actor)
         {
             return Actor.GetComponentByClass<ULuaScriptComponent>();
+        },
+
+        "GetActorSequenceComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<UActorSequenceComponent>();
         },
 
         "GetParticleSystemComponent",
@@ -5128,6 +6655,21 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &APlayerController::GetPossessedPawn,
         "GetPlayerCameraManager",
         &APlayerController::GetPlayerCameraManager,
+        "SetInputModeGameOnly",
+        [](APlayerController& Self)
+        {
+            Self.SetInputModeGameOnly();
+        },
+        "SetInputModeUIOnly",
+        [](APlayerController& Self)
+        {
+            Self.SetInputModeUIOnly();
+        },
+        "SetInputModeGameAndUI",
+        [](APlayerController& Self)
+        {
+            Self.SetInputModeGameAndUI();
+        },
         "SetViewTargetWithBlend",
         [](APlayerController& Self, AActor* Target, sol::optional<float> BlendTime)
         {
@@ -5321,6 +6863,16 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         }
     );
     World.set_function(
+        "SpawnActorFromPrefab",
+        [](const FString& Path) -> AActor*
+        {
+            if (!GEngine) return nullptr;
+            UWorld* W = GEngine->GetWorld();
+            if (!W) return nullptr;
+            return FPrefabManager::SpawnActorFromPrefab(W, Path);
+        }
+    );
+    World.set_function(
         "FindActorByName",
         [](const FString& ActorName) -> AActor*
         {
@@ -5509,14 +7061,136 @@ void FLuaScriptManager::RegisterUIBindings(sol::state& Lua)
         &UUserWidget::SetText,
         "set_text",
         &UUserWidget::SetText,
+        "GetText",
+        &UUserWidget::GetText,
+        "get_text",
+        &UUserWidget::GetText,
         "SetProperty",
         &UUserWidget::SetProperty,
         "set_property",
         &UUserWidget::SetProperty,
+        "HasElement",
+        &UUserWidget::HasElement,
+        "GetElementValue",
+        &UUserWidget::GetElementValue,
+        "GetValue",
+        &UUserWidget::GetElementValue,
+        "SetElementValue",
+        &UUserWidget::SetElementValue,
+        "SetValue",
+        &UUserWidget::SetElementValue,
+        "SetElementClass",
+        &UUserWidget::SetElementClass,
+        "SetClass",
+        &UUserWidget::SetElementClass,
+        "HasElementClass",
+        &UUserWidget::HasElementClass,
+        "HasClass",
+        &UUserWidget::HasElementClass,
+        "GetElementClassNames",
+        &UUserWidget::GetElementClassNames,
+        "GetClassNames",
+        &UUserWidget::GetElementClassNames,
+        "SetElementClassNames",
+        &UUserWidget::SetElementClassNames,
+        "SetClassNames",
+        &UUserWidget::SetElementClassNames,
+        "HasElementAttribute",
+        &UUserWidget::HasElementAttribute,
+        "HasAttribute",
+        &UUserWidget::HasElementAttribute,
+        "GetElementAttribute",
+        &UUserWidget::GetElementAttribute,
+        "GetAttribute",
+        &UUserWidget::GetElementAttribute,
+        "SetElementAttribute",
+        &UUserWidget::SetElementAttribute,
+        "SetAttribute",
+        &UUserWidget::SetElementAttribute,
+        "RemoveElementAttribute",
+        &UUserWidget::RemoveElementAttribute,
+        "RemoveAttribute",
+        &UUserWidget::RemoveElementAttribute,
+        "GetElementStyle",
+        &UUserWidget::GetElementStyle,
+        "GetStyle",
+        &UUserWidget::GetElementStyle,
+        "SetElementStyle",
+        &UUserWidget::SetElementStyle,
+        "SetStyle",
+        &UUserWidget::SetElementStyle,
+        "RemoveElementStyle",
+        &UUserWidget::RemoveElementStyle,
+        "RemoveStyle",
+        &UUserWidget::RemoveElementStyle,
+        "FocusElement",
+        [](UUserWidget& Widget, const FString& ElementId, sol::optional<bool> bFocusVisible)
+        {
+            return Widget.FocusElement(ElementId, bFocusVisible.value_or(false));
+        },
+        "Focus",
+        [](UUserWidget& Widget, const FString& ElementId, sol::optional<bool> bFocusVisible)
+        {
+            return Widget.FocusElement(ElementId, bFocusVisible.value_or(false));
+        },
+        "BlurElement",
+        &UUserWidget::BlurElement,
+        "Blur",
+        &UUserWidget::BlurElement,
+        "IsElementFocused",
+        &UUserWidget::IsElementFocused,
+        "IsFocused",
+        &UUserWidget::IsElementFocused,
+        "ClickElement",
+        &UUserWidget::ClickElement,
+        "Click",
+        &UUserWidget::ClickElement,
+        "SetElementVisible",
+        &UUserWidget::SetElementVisible,
+        "SetVisible",
+        &UUserWidget::SetElementVisible,
+        "SetElementEnabled",
+        &UUserWidget::SetElementEnabled,
+        "SetEnabled",
+        &UUserWidget::SetElementEnabled,
+        "SetActionEvent",
+        &UUserWidget::SetActionEvent,
+        "PollActionEvents",
+        [](UUserWidget& Widget, sol::this_state State)
+        {
+            sol::state_view L(State);
+            sol::table Events = L.create_table();
+            int Index = 1;
+            for (const FString& EventName : Widget.PollActionEvents())
+            {
+                Events[Index++] = EventName;
+            }
+            return Events;
+        },
         "SetWantsMouse",
         &UUserWidget::SetWantsMouse,
         "WantsMouse",
-        &UUserWidget::WantsMouse
+        &UUserWidget::WantsMouse,
+        "SetWantsKeyboard",
+        &UUserWidget::SetWantsKeyboard,
+        "WantsKeyboard",
+        &UUserWidget::WantsKeyboard,
+        "SetWantsTextInput",
+        &UUserWidget::SetWantsTextInput,
+        "WantsTextInput",
+        &UUserWidget::WantsTextInput,
+        "SetBlocksGameInput",
+        &UUserWidget::SetBlocksGameInput,
+        "BlocksGameInput",
+        &UUserWidget::BlocksGameInput,
+        "SetBlocksGameKeyboard",
+        &UUserWidget::SetBlocksGameKeyboard,
+        "BlocksGameKeyboard",
+        &UUserWidget::BlocksGameKeyboard,
+        "SetBlocksGameMouseLook",
+        &UUserWidget::SetBlocksGameMouseLook,
+        "BlocksGameMouseLook",
+        &UUserWidget::BlocksGameMouseLook
     );
 
     sol::table UI = Lua.create_named_table("UI");
@@ -5525,6 +7199,314 @@ void FLuaScriptManager::RegisterUIBindings(sol::state& Lua)
         [](const FString& DocumentPath)
         {
             return UUIManager::Get().CreateWidget(nullptr, DocumentPath);
+        }
+    );
+    UI.set_function(
+        "GetElementText",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().GetElementText(ElementId);
+        }
+    );
+    UI.set_function(
+        "SetElementText",
+        [](const FString& ElementId, const FString& Text)
+        {
+            return UUIManager::Get().SetElementText(ElementId, Text);
+        }
+    );
+    UI.set_function(
+        "SetText",
+        [](const FString& ElementId, const FString& Text)
+        {
+            return UUIManager::Get().SetElementText(ElementId, Text);
+        }
+    );
+    UI.set_function(
+        "GetElementValue",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().GetElementValue(ElementId);
+        }
+    );
+    UI.set_function(
+        "GetValue",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().GetElementValue(ElementId);
+        }
+    );
+    UI.set_function(
+        "SetElementValue",
+        [](const FString& ElementId, const FString& Value)
+        {
+            return UUIManager::Get().SetElementValue(ElementId, Value);
+        }
+    );
+    UI.set_function(
+        "SetValue",
+        [](const FString& ElementId, const FString& Value)
+        {
+            return UUIManager::Get().SetElementValue(ElementId, Value);
+        }
+    );
+    UI.set_function(
+        "SetElementClass",
+        [](const FString& ElementId, const FString& ClassName, bool bEnabled)
+        {
+            return UUIManager::Get().SetElementClass(ElementId, ClassName, bEnabled);
+        }
+    );
+    UI.set_function(
+        "SetClass",
+        [](const FString& ElementId, const FString& ClassName, bool bEnabled)
+        {
+            return UUIManager::Get().SetElementClass(ElementId, ClassName, bEnabled);
+        }
+    );
+    UI.set_function(
+        "HasElementClass",
+        [](const FString& ElementId, const FString& ClassName)
+        {
+            return UUIManager::Get().HasElementClass(ElementId, ClassName);
+        }
+    );
+    UI.set_function(
+        "HasClass",
+        [](const FString& ElementId, const FString& ClassName)
+        {
+            return UUIManager::Get().HasElementClass(ElementId, ClassName);
+        }
+    );
+    UI.set_function(
+        "GetElementClassNames",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().GetElementClassNames(ElementId);
+        }
+    );
+    UI.set_function(
+        "GetClassNames",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().GetElementClassNames(ElementId);
+        }
+    );
+    UI.set_function(
+        "SetElementClassNames",
+        [](const FString& ElementId, const FString& ClassNames)
+        {
+            return UUIManager::Get().SetElementClassNames(ElementId, ClassNames);
+        }
+    );
+    UI.set_function(
+        "SetClassNames",
+        [](const FString& ElementId, const FString& ClassNames)
+        {
+            return UUIManager::Get().SetElementClassNames(ElementId, ClassNames);
+        }
+    );
+    UI.set_function(
+        "HasElementAttribute",
+        [](const FString& ElementId, const FString& AttributeName)
+        {
+            return UUIManager::Get().HasElementAttribute(ElementId, AttributeName);
+        }
+    );
+    UI.set_function(
+        "HasAttribute",
+        [](const FString& ElementId, const FString& AttributeName)
+        {
+            return UUIManager::Get().HasElementAttribute(ElementId, AttributeName);
+        }
+    );
+    UI.set_function(
+        "GetElementAttribute",
+        [](const FString& ElementId, const FString& AttributeName)
+        {
+            return UUIManager::Get().GetElementAttribute(ElementId, AttributeName);
+        }
+    );
+    UI.set_function(
+        "GetAttribute",
+        [](const FString& ElementId, const FString& AttributeName)
+        {
+            return UUIManager::Get().GetElementAttribute(ElementId, AttributeName);
+        }
+    );
+    UI.set_function(
+        "SetElementAttribute",
+        [](const FString& ElementId, const FString& AttributeName, const FString& Value)
+        {
+            return UUIManager::Get().SetElementAttribute(ElementId, AttributeName, Value);
+        }
+    );
+    UI.set_function(
+        "SetAttribute",
+        [](const FString& ElementId, const FString& AttributeName, const FString& Value)
+        {
+            return UUIManager::Get().SetElementAttribute(ElementId, AttributeName, Value);
+        }
+    );
+    UI.set_function(
+        "RemoveElementAttribute",
+        [](const FString& ElementId, const FString& AttributeName)
+        {
+            return UUIManager::Get().RemoveElementAttribute(ElementId, AttributeName);
+        }
+    );
+    UI.set_function(
+        "RemoveAttribute",
+        [](const FString& ElementId, const FString& AttributeName)
+        {
+            return UUIManager::Get().RemoveElementAttribute(ElementId, AttributeName);
+        }
+    );
+    UI.set_function(
+        "GetElementStyle",
+        [](const FString& ElementId, const FString& StyleName)
+        {
+            return UUIManager::Get().GetElementStyle(ElementId, StyleName);
+        }
+    );
+    UI.set_function(
+        "GetStyle",
+        [](const FString& ElementId, const FString& StyleName)
+        {
+            return UUIManager::Get().GetElementStyle(ElementId, StyleName);
+        }
+    );
+    UI.set_function(
+        "SetElementStyle",
+        [](const FString& ElementId, const FString& StyleName, const FString& Value)
+        {
+            return UUIManager::Get().SetElementStyle(ElementId, StyleName, Value);
+        }
+    );
+    UI.set_function(
+        "SetStyle",
+        [](const FString& ElementId, const FString& StyleName, const FString& Value)
+        {
+            return UUIManager::Get().SetElementStyle(ElementId, StyleName, Value);
+        }
+    );
+    UI.set_function(
+        "RemoveElementStyle",
+        [](const FString& ElementId, const FString& StyleName)
+        {
+            return UUIManager::Get().RemoveElementStyle(ElementId, StyleName);
+        }
+    );
+    UI.set_function(
+        "RemoveStyle",
+        [](const FString& ElementId, const FString& StyleName)
+        {
+            return UUIManager::Get().RemoveElementStyle(ElementId, StyleName);
+        }
+    );
+    UI.set_function(
+        "FocusElement",
+        [](const FString& ElementId, sol::optional<bool> bFocusVisible)
+        {
+            return UUIManager::Get().FocusElement(ElementId, bFocusVisible.value_or(false));
+        }
+    );
+    UI.set_function(
+        "Focus",
+        [](const FString& ElementId, sol::optional<bool> bFocusVisible)
+        {
+            return UUIManager::Get().FocusElement(ElementId, bFocusVisible.value_or(false));
+        }
+    );
+    UI.set_function(
+        "BlurElement",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().BlurElement(ElementId);
+        }
+    );
+    UI.set_function(
+        "Blur",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().BlurElement(ElementId);
+        }
+    );
+    UI.set_function(
+        "IsElementFocused",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().IsElementFocused(ElementId);
+        }
+    );
+    UI.set_function(
+        "IsFocused",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().IsElementFocused(ElementId);
+        }
+    );
+    UI.set_function(
+        "ClickElement",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().ClickElement(ElementId);
+        }
+    );
+    UI.set_function(
+        "Click",
+        [](const FString& ElementId)
+        {
+            return UUIManager::Get().ClickElement(ElementId);
+        }
+    );
+    UI.set_function(
+        "SetElementVisible",
+        [](const FString& ElementId, bool bVisible)
+        {
+            return UUIManager::Get().SetElementVisible(ElementId, bVisible);
+        }
+    );
+    UI.set_function(
+        "SetVisible",
+        [](const FString& ElementId, bool bVisible)
+        {
+            return UUIManager::Get().SetElementVisible(ElementId, bVisible);
+        }
+    );
+    UI.set_function(
+        "SetElementEnabled",
+        [](const FString& ElementId, bool bEnabled)
+        {
+            return UUIManager::Get().SetElementEnabled(ElementId, bEnabled);
+        }
+    );
+    UI.set_function(
+        "SetEnabled",
+        [](const FString& ElementId, bool bEnabled)
+        {
+            return UUIManager::Get().SetElementEnabled(ElementId, bEnabled);
+        }
+    );
+    UI.set_function(
+        "SetActionEvent",
+        [](const FString& ElementId, const FString& EventName)
+        {
+            return UUIManager::Get().SetActionEvent(ElementId, EventName);
+        }
+    );
+    UI.set_function(
+        "PollActionEvents",
+        [](sol::this_state State)
+        {
+            sol::state_view L(State);
+            sol::table Events = L.create_table();
+            int Index = 1;
+            for (const FString& EventName : UUIManager::Get().PollActionEvents())
+            {
+                Events[Index++] = EventName;
+            }
+            return Events;
         }
     );
 }

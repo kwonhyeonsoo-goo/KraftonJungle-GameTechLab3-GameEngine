@@ -57,12 +57,23 @@ class FProjectSettings : public TSingleton<FProjectSettings>
 		FString StartLevelName;     // Scene 파일 이름 (확장자 제외)
 		FString GameModeClassName;  // ""면 GameEngine이 코드로 지정한 디폴트 사용.
 		                            // 잘못된 이름이거나 AGameModeBase 파생이 아니면 디폴트 fallback.
+		FString DefaultPawnPrefabPath;  // ""면 씬 배치 Pawn auto-possess 또는 코드 fallback만 사용.
+	};
+
+	struct FBuildOption
+	{
+		FString PackageVersionName;
+		bool bValidateStartupScene = true;
+		bool bValidateDefaultPawnPrefab = true;
+		bool bLaunchSmokeTest = false;
+		int32 LaunchSmokeTimeoutSeconds = 5;
 	};
 
 public:
 	FShadowOption Shadow;
 	FPhysicsOption Physics;
 	FGameOption Game;
+	FBuildOption Build;
 
 	// --- 직렬화 ---
 	void SaveToFile(const FString& Path) const;

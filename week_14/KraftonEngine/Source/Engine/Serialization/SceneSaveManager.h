@@ -52,6 +52,9 @@ public:
 
 	static TArray<FString> GetSceneFileList();
 
+	static json::JSON SerializeActorForPrefab(AActor* Actor);
+	static AActor* SpawnActorFromSerializedActor(UWorld* World, json::JSON& ActorJSON, bool bPreserveActorName = false);
+
 	struct FSceneSaveContext
 	{
 		TMap<const UObject*, uint32> ObjectToId;
@@ -94,6 +97,8 @@ private:
 	// ---- Deserialization helpers ----
 	static USceneComponent* DeserializeSceneComponentTree(json::JSON& Node, AActor* Owner, FSceneLoadContext& Context);
 	static void DeserializeProperties(UObject* Obj, json::JSON& PropsJSON, FSceneLoadContext& Context);
+	static void ApplyQueuedProperties(FSceneLoadContext& Context);
+	static void RebuildSerializedActorState(AActor* Actor);
 
 	static string GetCurrentTimeStamp();
 };

@@ -20,6 +20,7 @@
 #undef GetFirstChild
 #endif
 #include <RmlUi/Core.h>
+#include <RmlUi/Core/Elements/ElementFormControl.h>
 
 #include <algorithm>
 #include <chrono>
@@ -76,6 +77,135 @@ namespace
 	Rml::String ToRmlPath(const std::filesystem::path& Path)
 	{
 		return FPaths::ToUtf8(Path.generic_wstring());
+	}
+
+	bool IsMouseVirtualKey(int VK)
+	{
+		return VK == VK_LBUTTON || VK == VK_RBUTTON || VK == VK_MBUTTON ||
+			VK == VK_XBUTTON1 || VK == VK_XBUTTON2;
+	}
+
+	Rml::Input::KeyIdentifier MapVirtualKeyToRmlKey(int VK)
+	{
+		using namespace Rml::Input;
+
+		if (VK >= '0' && VK <= '9')
+		{
+			return static_cast<KeyIdentifier>(KI_0 + (VK - '0'));
+		}
+		if (VK >= 'A' && VK <= 'Z')
+		{
+			return static_cast<KeyIdentifier>(KI_A + (VK - 'A'));
+		}
+		if (VK >= VK_F1 && VK <= VK_F24)
+		{
+			return static_cast<KeyIdentifier>(KI_F1 + (VK - VK_F1));
+		}
+		if (VK >= VK_NUMPAD0 && VK <= VK_NUMPAD9)
+		{
+			return static_cast<KeyIdentifier>(KI_NUMPAD0 + (VK - VK_NUMPAD0));
+		}
+
+		switch (VK)
+		{
+		case VK_SPACE: return KI_SPACE;
+		case VK_BACK: return KI_BACK;
+		case VK_TAB: return KI_TAB;
+		case VK_RETURN: return KI_RETURN;
+		case VK_ESCAPE: return KI_ESCAPE;
+		case VK_PRIOR: return KI_PRIOR;
+		case VK_NEXT: return KI_NEXT;
+		case VK_END: return KI_END;
+		case VK_HOME: return KI_HOME;
+		case VK_LEFT: return KI_LEFT;
+		case VK_UP: return KI_UP;
+		case VK_RIGHT: return KI_RIGHT;
+		case VK_DOWN: return KI_DOWN;
+		case VK_INSERT: return KI_INSERT;
+		case VK_DELETE: return KI_DELETE;
+		case VK_SHIFT: return KI_LSHIFT;
+		case VK_LSHIFT: return KI_LSHIFT;
+		case VK_RSHIFT: return KI_RSHIFT;
+		case VK_CONTROL: return KI_LCONTROL;
+		case VK_LCONTROL: return KI_LCONTROL;
+		case VK_RCONTROL: return KI_RCONTROL;
+		case VK_MENU: return KI_LMENU;
+		case VK_LMENU: return KI_LMENU;
+		case VK_RMENU: return KI_RMENU;
+		case VK_OEM_1: return KI_OEM_1;
+		case VK_OEM_PLUS: return KI_OEM_PLUS;
+		case VK_OEM_COMMA: return KI_OEM_COMMA;
+		case VK_OEM_MINUS: return KI_OEM_MINUS;
+		case VK_OEM_PERIOD: return KI_OEM_PERIOD;
+		case VK_OEM_2: return KI_OEM_2;
+		case VK_OEM_3: return KI_OEM_3;
+		case VK_OEM_4: return KI_OEM_4;
+		case VK_OEM_5: return KI_OEM_5;
+		case VK_OEM_6: return KI_OEM_6;
+		case VK_OEM_7: return KI_OEM_7;
+		case VK_MULTIPLY: return KI_MULTIPLY;
+		case VK_ADD: return KI_ADD;
+		case VK_SEPARATOR: return KI_SEPARATOR;
+		case VK_SUBTRACT: return KI_SUBTRACT;
+		case VK_DECIMAL: return KI_DECIMAL;
+		case VK_DIVIDE: return KI_DIVIDE;
+		case VK_PAUSE: return KI_PAUSE;
+		case VK_CAPITAL: return KI_CAPITAL;
+		case VK_NUMLOCK: return KI_NUMLOCK;
+		case VK_SCROLL: return KI_SCROLL;
+		case VK_LWIN: return KI_LWIN;
+		case VK_RWIN: return KI_RWIN;
+		case VK_APPS: return KI_APPS;
+		default: return KI_UNKNOWN;
+		}
+	}
+
+	int GetRmlKeyModifierState(const InputSystem& Input)
+	{
+		using namespace Rml::Input;
+
+		int Modifiers = 0;
+		if (Input.GetKey(VK_CONTROL) || Input.GetKey(VK_LCONTROL) || Input.GetKey(VK_RCONTROL))
+		{
+			Modifiers |= KM_CTRL;
+		}
+		if (Input.GetKey(VK_SHIFT) || Input.GetKey(VK_LSHIFT) || Input.GetKey(VK_RSHIFT))
+		{
+			Modifiers |= KM_SHIFT;
+		}
+		if (Input.GetKey(VK_MENU) || Input.GetKey(VK_LMENU) || Input.GetKey(VK_RMENU))
+		{
+			Modifiers |= KM_ALT;
+		}
+		if (Input.GetKey(VK_LWIN) || Input.GetKey(VK_RWIN))
+		{
+			Modifiers |= KM_META;
+		}
+		if ((GetKeyState(VK_CAPITAL) & 0x0001) != 0)
+		{
+			Modifiers |= KM_CAPSLOCK;
+		}
+		if ((GetKeyState(VK_NUMLOCK) & 0x0001) != 0)
+		{
+			Modifiers |= KM_NUMLOCK;
+		}
+		if ((GetKeyState(VK_SCROLL) & 0x0001) != 0)
+		{
+			Modifiers |= KM_SCROLLLOCK;
+		}
+		return Modifiers;
+	}
+
+	bool IsElementOrAncestorFormControl(Rml::Element* Element)
+	{
+		for (Rml::Element* Current = Element; Current != nullptr; Current = Current->GetParentNode())
+		{
+			if (rmlui_dynamic_cast<Rml::ElementFormControl*>(Current) != nullptr)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
@@ -656,12 +786,302 @@ FUIInputCaptureState UUIManager::GetViewportInputCaptureState() const
 		State.bBlocksGameKeyboard = State.bBlocksGameKeyboard || Widget->BlocksGameKeyboard();
 		State.bBlocksGameMouseLook = State.bBlocksGameMouseLook || Widget->BlocksGameMouseLook();
 	}
+
+	if (RmlContext && IsElementOrAncestorFormControl(RmlContext->GetFocusElement()))
+	{
+		State.bWantsKeyboard = true;
+		State.bWantsTextInput = true;
+		State.bBlocksGameKeyboard = true;
+	}
 	return State;
 }
 
 bool UUIManager::AnyViewportWidgetWantsMouse() const
 {
 	return GetViewportInputCaptureState().bWantsMouse;
+}
+
+FString UUIManager::GetElementText(const FString& ElementId) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->GetText(ElementId);
+		}
+	}
+	return {};
+}
+
+bool UUIManager::SetElementText(const FString& ElementId, const FString& Text)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			Widget->SetText(ElementId, Text);
+			return true;
+		}
+	}
+	return false;
+}
+
+FString UUIManager::GetElementValue(const FString& ElementId) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->GetElementValue(ElementId);
+		}
+	}
+	return {};
+}
+
+bool UUIManager::SetElementValue(const FString& ElementId, const FString& Value)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementValue(ElementId, Value))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::SetElementClass(const FString& ElementId, const FString& ClassName, bool bEnabled)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementClass(ElementId, ClassName, bEnabled))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::HasElementClass(const FString& ElementId, const FString& ClassName) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->HasElementClass(ElementId, ClassName);
+		}
+	}
+	return false;
+}
+
+FString UUIManager::GetElementClassNames(const FString& ElementId) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->GetElementClassNames(ElementId);
+		}
+	}
+	return {};
+}
+
+bool UUIManager::SetElementClassNames(const FString& ElementId, const FString& ClassNames)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementClassNames(ElementId, ClassNames))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::HasElementAttribute(const FString& ElementId, const FString& AttributeName) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->HasElementAttribute(ElementId, AttributeName);
+		}
+	}
+	return false;
+}
+
+FString UUIManager::GetElementAttribute(const FString& ElementId, const FString& AttributeName) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->GetElementAttribute(ElementId, AttributeName);
+		}
+	}
+	return {};
+}
+
+bool UUIManager::SetElementAttribute(const FString& ElementId, const FString& AttributeName, const FString& Value)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementAttribute(ElementId, AttributeName, Value))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::RemoveElementAttribute(const FString& ElementId, const FString& AttributeName)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->RemoveElementAttribute(ElementId, AttributeName))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+FString UUIManager::GetElementStyle(const FString& ElementId, const FString& StyleName) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->GetElementStyle(ElementId, StyleName);
+		}
+	}
+	return {};
+}
+
+bool UUIManager::SetElementStyle(const FString& ElementId, const FString& StyleName, const FString& Value)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementStyle(ElementId, StyleName, Value))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::RemoveElementStyle(const FString& ElementId, const FString& StyleName)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->RemoveElementStyle(ElementId, StyleName))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::FocusElement(const FString& ElementId, bool bFocusVisible)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->FocusElement(ElementId, bFocusVisible))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::BlurElement(const FString& ElementId)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->BlurElement(ElementId))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::IsElementFocused(const FString& ElementId) const
+{
+	for (const UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->HasElement(ElementId))
+		{
+			return Widget->IsElementFocused(ElementId);
+		}
+	}
+	return false;
+}
+
+bool UUIManager::ClickElement(const FString& ElementId)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->ClickElement(ElementId))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::SetElementVisible(const FString& ElementId, bool bVisible)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementVisible(ElementId, bVisible))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::SetElementEnabled(const FString& ElementId, bool bEnabled)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetElementEnabled(ElementId, bEnabled))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UUIManager::SetActionEvent(const FString& ElementId, const FString& EventName)
+{
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (IsValid(Widget) && Widget->SetActionEvent(ElementId, EventName))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+TArray<FString> UUIManager::PollActionEvents()
+{
+	TArray<FString> Events;
+	for (UUserWidget* Widget : ViewportWidgets)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+
+		for (const FString& EventName : Widget->PollActionEvents())
+		{
+			Events.push_back(EventName);
+		}
+	}
+	return Events;
 }
 
 void UUIManager::AddToViewport(UUserWidget* Widget, int32 /*ZOrder*/)
@@ -671,6 +1091,8 @@ void UUIManager::AddToViewport(UUserWidget* Widget, int32 /*ZOrder*/)
 	{
 		return;
 	}
+
+	InputSystem::Get().ConsumeTextInput();
 
 	if (!LoadDocument(Widget))
 	{
@@ -842,7 +1264,11 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	}
 
 	InputSystem& Input = InputSystem::Get();
-	const int KeyModifierState = 0;
+	const int KeyModifierState = GetRmlKeyModifierState(Input);
+	const FUIInputCaptureState CaptureState = GetViewportInputCaptureState();
+	const bool bTextInputFocused = IsElementOrAncestorFormControl(RmlContext->GetFocusElement());
+	const bool bShouldForwardKeyboard = CaptureState.bWantsKeyboard || CaptureState.bWantsTextInput || bTextInputFocused;
+	const bool bShouldForwardText = CaptureState.bWantsTextInput || bTextInputFocused;
 
 	int MouseX = 0;
 	int MouseY = 0;
@@ -888,6 +1314,41 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	if (WheelDelta != 0.0f)
 	{
 		RmlContext->ProcessMouseWheel(WheelDelta, KeyModifierState);
+	}
+
+	if (bShouldForwardKeyboard)
+	{
+		for (int VK = 0; VK < 256; ++VK)
+		{
+			if (IsMouseVirtualKey(VK))
+			{
+				continue;
+			}
+
+			const Rml::Input::KeyIdentifier Key = MapVirtualKeyToRmlKey(VK);
+			if (Key == Rml::Input::KI_UNKNOWN)
+			{
+				continue;
+			}
+
+			if (Input.GetKeyDown(VK))
+			{
+				RmlContext->ProcessKeyDown(Key, KeyModifierState);
+			}
+			if (Input.GetKeyUp(VK))
+			{
+				RmlContext->ProcessKeyUp(Key, KeyModifierState);
+			}
+		}
+	}
+
+	TArray<uint32_t> TextInput = Input.ConsumeTextInput();
+	if (bShouldForwardText)
+	{
+		for (uint32_t Codepoint : TextInput)
+		{
+			RmlContext->ProcessTextInput(static_cast<Rml::Character>(Codepoint));
+		}
 	}
 	bDispatchingRmlEvents = false;
 }

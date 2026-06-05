@@ -86,6 +86,7 @@ namespace SceneKeys
 	static constexpr const char* ContextHandle = "ContextHandle";
 	static constexpr const char* WorldSettings = "WorldSettings";
 	static constexpr const char* GameMode = "GameMode";  // legacy / WorldSettings 내부 키
+	static constexpr const char* DefaultPawnPrefabPath = "DefaultPawnPrefabPath";
 	static constexpr const char* Gravity = "Gravity";
 	static constexpr const char* Actors = "Actors";
 	static constexpr const char* RootComponent = "RootComponent";
@@ -361,6 +362,7 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 		const FWorldSettings& WS = World->GetWorldSettings();
 		JSON WSObj = json::Object();
 		WSObj[SceneKeys::GameMode] = WS.GameModeClassName;
+		WSObj[SceneKeys::DefaultPawnPrefabPath] = WS.DefaultPawnPrefabPath;
 		WriteVec3(WSObj, SceneKeys::Gravity, WS.Gravity);
 		w[SceneKeys::WorldSettings] = WSObj;
 	}
@@ -423,6 +425,102 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor, FSceneSaveContext& C
 	a[SceneKeys::NonSceneComponents] = NonScene;
 
 	return a;
+}
+
+json::JSON FSceneSaveManager::SerializeActorForPrefab(AActor* Actor)
+{
+	using namespace json;
+	JSON a = json::Object();
+	if (!IsSceneSerializableObject(Actor))
+	{
+		return a;
+	}
+
+	FSceneSaveContext SaveContext;
+	CollectActorObjectIds(Actor, SaveContext);
+	return SerializeActor(Actor, SaveContext);
+}
+
+AActor* FSceneSaveManager::SpawnActorFromSerializedActor(UWorld* World, json::JSON& ActorJSON, bool bPreserveActorName)
+{
+	if (!IsSceneSerializableObject(World))
+	{
+		return nullptr;
+	}
+
+	const string ActorClass = ActorJSON[SceneKeys::ClassName].ToString();
+	if (ActorClass.empty())
+	{
+		return nullptr;
+	}
+
+	UObject* ActorObj = FObjectFactory::Get().Create(ActorClass, World);
+	if (!ActorObj || !ActorObj->IsA<AActor>())
+	{
+		if (ActorObj)
+		{
+			UObjectManager::Get().DestroyObject(ActorObj);
+		}
+		return nullptr;
+	}
+
+	AActor* Actor = static_cast<AActor*>(ActorObj);
+	FSceneLoadContext LoadContextState;
+	LoadContextState.RegisterLoadedObject(ActorJSON, Actor);
+
+	if (bPreserveActorName && ActorJSON.hasKey(SceneKeys::Name))
+	{
+		Actor->SetFName(FName(ActorJSON[SceneKeys::Name].ToString()));
+	}
+
+	if (ActorJSON.hasKey(SceneKeys::RootComponent))
+	{
+		json::JSON& RootJSON = ActorJSON[SceneKeys::RootComponent];
+		USceneComponent* Root = DeserializeSceneComponentTree(RootJSON, Actor, LoadContextState);
+		if (Root)
+		{
+			Actor->SetRootComponent(Root);
+		}
+	}
+
+	if (ActorJSON.hasKey(SceneKeys::Properties))
+	{
+		LoadContextState.QueueProperties(Actor, ActorJSON[SceneKeys::Properties]);
+	}
+
+	if (ActorJSON.hasKey(SceneKeys::NonSceneComponents))
+	{
+		for (auto& CompJSON : ActorJSON[SceneKeys::NonSceneComponents].ArrayRange())
+		{
+			string CompClass = CompJSON[SceneKeys::ClassName].ToString();
+			UObject* CompObj = FObjectFactory::Get().Create(CompClass, Actor);
+			if (!CompObj || !CompObj->IsA<UActorComponent>())
+			{
+				if (CompObj)
+				{
+					UObjectManager::Get().DestroyObject(CompObj);
+				}
+				continue;
+			}
+
+			UActorComponent* Comp = static_cast<UActorComponent*>(CompObj);
+			LoadContextState.RegisterLoadedObject(CompJSON, Comp);
+			Actor->RegisterComponent(Comp);
+
+			if (CompJSON.hasKey(SceneKeys::Properties))
+			{
+				json::JSON& PropsJSON = CompJSON[SceneKeys::Properties];
+				LoadContextState.QueueProperties(Comp, PropsJSON);
+			}
+			DeserializeComponentEditorMetadata(Comp, CompJSON);
+		}
+	}
+
+	ApplyQueuedProperties(LoadContextState);
+	RebuildSerializedActorState(Actor);
+
+	World->AddActor(Actor);
+	return Actor;
 }
 
 json::JSON FSceneSaveManager::SerializeSceneComponentTree(USceneComponent* Comp, FSceneSaveContext& Context)
@@ -559,6 +657,10 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 		{
 			WorldSettings.GameModeClassName = WSObj[SceneKeys::GameMode].ToString();
 		}
+		if (WSObj.hasKey(SceneKeys::DefaultPawnPrefabPath))
+		{
+			WorldSettings.DefaultPawnPrefabPath = WSObj[SceneKeys::DefaultPawnPrefabPath].ToString();
+		}
 		if (WSObj.hasKey(SceneKeys::Gravity) &&
 			WSObj[SceneKeys::Gravity].JSONType() == JSON::Class::Array)
 		{
@@ -632,13 +734,7 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 		}
 	}
 
-	for (FPendingPropertyLoad& Pending : LoadContextState.PendingProperties)
-	{
-		if (IsSceneSerializableObject(Pending.Object) && Pending.Properties)
-		{
-			DeserializeProperties(Pending.Object, *Pending.Properties, LoadContextState);
-		}
-	}
+	ApplyQueuedProperties(LoadContextState);
 
 	// Components are registered while the object graph is being created so object-id
 	// references can be resolved. Some render resources, however, depend on properties
@@ -646,36 +742,7 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 	// all reflected properties/PostLoad fixups are complete.
 	for (AActor* Actor : World->GetActors())
 	{
-		if (!IsValid(Actor))
-		{
-			continue;
-		}
-
-		for (UActorComponent* Component : Actor->GetComponents())
-		{
-			if (!IsValid(Component))
-			{
-				continue;
-			}
-
-			Component->DestroyRenderState();
-			if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
-			{
-				SceneComponent->MarkTransformDirty();
-			}
-			Component->CreateRenderState();
-		}
-	}
-
-	for (AActor* Actor : World->GetActors())
-	{
-		if (!IsSceneSerializableObject(Actor))
-		{
-			continue;
-		}
-
-		World->RemoveActorToOctree(Actor);
-		World->InsertActorToOctree(Actor);
+		RebuildSerializedActorState(Actor);
 	}
 
 	OutWorldContext.WorldType = WorldType;
@@ -786,6 +853,64 @@ void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSO
 
 	FSceneJsonLoadArchive PostLoadArchive(PropsJSON, Context);
 	Obj->PostLoadFromArchive(PostLoadArchive);
+}
+
+void FSceneSaveManager::ApplyQueuedProperties(FSceneLoadContext& Context)
+{
+	for (FPendingPropertyLoad& Pending : Context.PendingProperties)
+	{
+		if (IsSceneSerializableObject(Pending.Object) && Pending.Properties)
+		{
+			DeserializeProperties(Pending.Object, *Pending.Properties, Context);
+		}
+	}
+
+	Context.PendingProperties.clear();
+}
+
+void FSceneSaveManager::RebuildSerializedActorState(AActor* Actor)
+{
+	if (!IsSceneSerializableObject(Actor))
+	{
+		return;
+	}
+
+	for (UActorComponent* Component : Actor->GetComponents())
+	{
+		if (!IsValid(Component))
+		{
+			continue;
+		}
+
+		Component->DestroyRenderState();
+		if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
+		{
+			SceneComponent->MarkTransformDirty();
+		}
+		Component->CreateRenderState();
+	}
+
+	UWorld* World = Actor->GetWorld();
+	if (!IsSceneSerializableObject(World))
+	{
+		return;
+	}
+
+	bool bActorInWorld = false;
+	for (AActor* WorldActor : World->GetActors())
+	{
+		if (WorldActor == Actor)
+		{
+			bActorInWorld = true;
+			break;
+		}
+	}
+
+	if (bActorInWorld)
+	{
+		World->RemoveActorToOctree(Actor);
+		World->InsertActorToOctree(Actor);
+	}
 }
 
 // ============================================================

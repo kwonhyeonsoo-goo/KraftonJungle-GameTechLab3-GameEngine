@@ -60,7 +60,8 @@ public:
 
 protected:
 	// StartMatch가 호출 — 씬에서 bAutoPossessPlayer = true인 첫 APawn을 찾아 Possess 한다.
-	void AutoPossessFirstPawn();
+	bool AutoPossessFirstPawn();
+	bool SpawnAndPossessDefaultPawnPrefab();
 
 	// 서브클래스 생성자에서 지정 — null이면 AGameStateBase가 spawn된다.
 	UClass* GameStateClass = nullptr;

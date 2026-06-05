@@ -51,6 +51,14 @@ public:
 	void SetInputMode(EGameInputMode InMode);
 	EGameInputMode GetInputMode() const { return InputMode; }
 
+	void SetCursorVisible(bool bVisible);
+	bool IsCursorVisible() const { return !bCursorCaptured; }
+	void SetCursorLocked(bool bLocked);
+	bool IsCursorLocked() const { return bCursorCaptured; }
+	void SetMouseCaptured(bool bCaptured);
+	bool IsMouseCaptured() const { return bCursorCaptured; }
+	void ReleaseMouseCapture();
+
 	// 게임 세션 진입/종료 — viewport attach + 입력 상태 리셋. PIE start/stop 또는
 	// standalone 게임 시작/종료에서 호출.
 	void BeginGameSession(FViewport* InViewport);
@@ -80,6 +88,7 @@ private:
 	bool bHasCursorClipRect = false;
 	bool bInputPossessed = false;
 	bool bCursorCaptured = false;
+	bool bWantsMouseCapture = true;
 	EGameInputMode InputMode = EGameInputMode::GameOnly;
 
 	FInputSystemSnapshot GameInputSnapshot{};

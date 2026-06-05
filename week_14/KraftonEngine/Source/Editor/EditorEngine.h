@@ -128,6 +128,8 @@ public:
 	// 에디터 화면으로 복귀. UE 의 Stop Play 와 동일 의미로 매핑 (PIE 중간에 다른 scene 으로
 	// 점프하는 의미가 모호하므로). InScenePath 는 무시.
 	void RequestTransitionToScene(const FString& InScenePath) override;
+	bool IsSceneTransitionPending() const override { return bRequestEndPlayMapQueued; }
+	FString GetCurrentScenePath() const override { return CurrentLevelFilePath; }
 
 private:
 	// Tick 내에서 호출 — 큐에 요청이 있으면 StartPlayInEditorSession 실행

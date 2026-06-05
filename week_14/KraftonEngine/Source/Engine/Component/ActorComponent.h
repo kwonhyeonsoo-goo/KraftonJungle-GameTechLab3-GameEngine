@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
+#include "Object/FName.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 #include "Core/TickFunction.h"
 
@@ -9,6 +10,7 @@
 class AActor;
 class UWorld;
 class FScene;
+class FArchive;
 
 UCLASS()
 class UActorComponent : public UObject
@@ -70,11 +72,27 @@ public:
 	UWorld* GetWorld() const;
 	UWorld* GetWorldEvenIfPendingKill() const;
 
+	void OnPreSave(FArchive& Ar) override;
+	void OnPostLoad(FArchive& Ar) override;
+
 	// 프로퍼티 값 변경 후 호출. 하위 클래스에서 override하여 부수효과(리소스 재로딩 등) 처리.
 	virtual void PostEditProperty(const char* PropertyName) override;
 	// 선택된 프록시의 소유 액터 컴포넌트가 디버그 시각화를 FScene에 기여
 	// FPrimitiveSceneProxy::CollectSelectedVisuals 에서 호출됨
 	virtual void ContributeSelectedVisuals(FScene& Scene) const { (void)Scene; }
+
+	UFUNCTION(Pure, Category="Component|Tags")
+	bool HasTag(const FName& Tag) const;
+	UFUNCTION(Callable, Category="Component|Tags")
+	void AddTag(const FName& Tag);
+	UFUNCTION(Callable, Category="Component|Tags")
+	void RemoveTag(const FName& Tag);
+	UFUNCTION(Pure, Category="Component|Tags")
+	TArray<FName> GetTags() const { return Tags; }
+	UFUNCTION(Callable, Category="Component|Tags")
+	void SetTags(TArray<FName> InTags);
+	const FString& EnsurePersistentGuid();
+	const FString& GetPersistentGuid() const { return PersistentGuid; }
 	
 	FActorComponentTickFunction PrimaryComponentTick;
 
@@ -86,6 +104,11 @@ protected:
 	bool bComponentDestroyRouted = false;
 	UPROPERTY(Edit, Save, Category="Component", DisplayName="bTickEnable")
 	bool bTickEnable = true;
+	TArray<FName> Tags;
+	UPROPERTY(Edit, Save, Category="Component", DisplayName="Tags")
+	FString PendingTagsString;
+	UPROPERTY(Save, Category="Component", DisplayName="Persistent Guid")
+	FString PersistentGuid;
 
 private:
 	UPROPERTY(Edit, Save, Category="Component", DisplayName="bEditorOnly")

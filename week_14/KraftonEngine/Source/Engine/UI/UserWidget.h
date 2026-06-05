@@ -17,7 +17,9 @@
 #include <RmlUi/Core.h>
 
 class APlayerController;
+class UUserWidget;
 class FWidgetClickEventListener;
+class FWidgetActionEventListener;
 namespace Rml { class ElementDocument; }
 
 class FWidgetClickEventListener final : public Rml::EventListener
@@ -52,6 +54,20 @@ private:
 	sol::protected_function Callback;
 };
 
+class FWidgetActionEventListener final : public Rml::EventListener
+{
+public:
+	explicit FWidgetActionEventListener(UUserWidget* InOwner)
+		: Owner(InOwner)
+	{
+	}
+
+	void ProcessEvent(Rml::Event& Event) override;
+
+private:
+	UUserWidget* Owner = nullptr;
+};
+
 UCLASS()
 class UUserWidget : public UObject
 {
@@ -71,8 +87,54 @@ public:
 	void ClearEventListeners();
 	UFUNCTION(Callable, Category="UI")
 	void SetText(const FString& ElementId, const FString& Text);
+	UFUNCTION(Pure, Category="UI")
+	FString GetText(const FString& ElementId) const;
 	UFUNCTION(Callable, Category="UI")
 	bool SetProperty(const FString& ElementId, const FString& PropertyName, const FString& Value);
+	UFUNCTION(Pure, Category="UI")
+	bool HasElement(const FString& ElementId) const;
+	UFUNCTION(Pure, Category="UI")
+	FString GetElementValue(const FString& ElementId) const;
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementValue(const FString& ElementId, const FString& Value);
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementClass(const FString& ElementId, const FString& ClassName, bool bEnabled);
+	UFUNCTION(Pure, Category="UI")
+	bool HasElementClass(const FString& ElementId, const FString& ClassName) const;
+	UFUNCTION(Pure, Category="UI")
+	FString GetElementClassNames(const FString& ElementId) const;
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementClassNames(const FString& ElementId, const FString& ClassNames);
+	UFUNCTION(Pure, Category="UI")
+	bool HasElementAttribute(const FString& ElementId, const FString& AttributeName) const;
+	UFUNCTION(Pure, Category="UI")
+	FString GetElementAttribute(const FString& ElementId, const FString& AttributeName) const;
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementAttribute(const FString& ElementId, const FString& AttributeName, const FString& Value);
+	UFUNCTION(Callable, Category="UI")
+	bool RemoveElementAttribute(const FString& ElementId, const FString& AttributeName);
+	UFUNCTION(Pure, Category="UI")
+	FString GetElementStyle(const FString& ElementId, const FString& StyleName) const;
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementStyle(const FString& ElementId, const FString& StyleName, const FString& Value);
+	UFUNCTION(Callable, Category="UI")
+	bool RemoveElementStyle(const FString& ElementId, const FString& StyleName);
+	UFUNCTION(Callable, Category="UI")
+	bool FocusElement(const FString& ElementId, bool bFocusVisible = false);
+	UFUNCTION(Callable, Category="UI")
+	bool BlurElement(const FString& ElementId);
+	UFUNCTION(Pure, Category="UI")
+	bool IsElementFocused(const FString& ElementId) const;
+	UFUNCTION(Callable, Category="UI")
+	bool ClickElement(const FString& ElementId);
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementVisible(const FString& ElementId, bool bVisible);
+	UFUNCTION(Callable, Category="UI")
+	bool SetElementEnabled(const FString& ElementId, bool bEnabled);
+	UFUNCTION(Callable, Category="UI")
+	bool SetActionEvent(const FString& ElementId, const FString& EventName);
+	TArray<FString> PollActionEvents();
+	void EnqueueActionEvent(const FString& EventName);
 
 	UFUNCTION(Pure, Category="UI")
 	APlayerController* GetOwningPlayer() const { return OwningPlayer; }
@@ -122,14 +184,16 @@ public:
 
 	void MarkDocumentLoaded(Rml::ElementDocument* InDocument) { Document = InDocument; bDocumentLoaded = Document != nullptr; }
 	void MarkRemovedFromViewport() { bInViewport = false; }
-	void ClearDocument() { Document = nullptr; bDocumentLoaded = false; }
+	void ClearDocument() { Document = nullptr; bDocumentLoaded = false; PendingActionEvents.clear(); }
 
 private:
 	TWeakObjectPtr<APlayerController> OwningPlayer;
 	Rml::ElementDocument* Document = nullptr;
 	FString DocumentPath;
 	TArray<std::pair<FString, sol::protected_function>> PendingClickBindings;
+	TArray<FString> PendingActionEvents;
 	TArray<FWidgetClickEventListener*> ClickListeners;
+	FWidgetActionEventListener* ActionListener = nullptr;
 	int32 ZOrder = 0;
 	bool bInViewport = false;
 	bool bDocumentLoaded = false;

@@ -153,15 +153,19 @@ void USceneComponent::PostEditProperty(const char* PropertyName)
 	}
 }
 
-void USceneComponent::OnPreSave(FArchive& /*Ar*/)
+void USceneComponent::OnPreSave(FArchive& Ar)
 {
+	Super::OnPreSave(Ar);
+
 	// 반사 직렬화 전에 Euler 캐시를 현재 Quat 으로부터 스냅샷.
 	CachedEditRotator = RelativeTransform.GetRotator();
 	bCachedEulerDirty = false;
 }
 
-void USceneComponent::OnPostLoad(FArchive& /*Ar*/)
+void USceneComponent::OnPostLoad(FArchive& Ar)
 {
+	Super::OnPostLoad(Ar);
+
 	// ParentComponent / ChildComponents 는 직렬화 제외 — 복제 단계에서 명시적으로 재구성.
 	RelativeTransform.SetRotation(CachedEditRotator);
 	bTransformDirty = true;

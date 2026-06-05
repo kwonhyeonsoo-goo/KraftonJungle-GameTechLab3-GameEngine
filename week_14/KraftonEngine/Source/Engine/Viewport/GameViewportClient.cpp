@@ -168,6 +168,47 @@ void UGameViewportClient::SetInputMode(EGameInputMode InMode)
 	}
 }
 
+void UGameViewportClient::SetCursorVisible(bool bVisible)
+{
+	if (bVisible)
+	{
+		SetMouseCaptured(false);
+		return;
+	}
+
+	SetMouseCaptured(true);
+}
+
+void UGameViewportClient::SetCursorLocked(bool bLocked)
+{
+	SetMouseCaptured(bLocked);
+}
+
+void UGameViewportClient::SetMouseCaptured(bool bCaptured)
+{
+	bWantsMouseCapture = bCaptured;
+
+	if (!bCaptured)
+	{
+		ReleaseGameCapture();
+		return;
+	}
+
+	if (!bInputPossessed || InputMode == EGameInputMode::UIOnly)
+	{
+		ReleaseGameCapture();
+		return;
+	}
+
+	InputSystem::Get().SetUseRawMouse(true);
+	SetCursorCaptured(true);
+}
+
+void UGameViewportClient::ReleaseMouseCapture()
+{
+	SetMouseCaptured(false);
+}
+
 void UGameViewportClient::SetCursorClipRect(const FRect& InViewportScreenRect)
 {
 	if (InViewportScreenRect.Width <= 1.0f || InViewportScreenRect.Height <= 1.0f)
@@ -207,7 +248,8 @@ void UGameViewportClient::ReleaseGameCapture()
 
 void UGameViewportClient::ApplyGameCapturePolicy(const FUIInputCaptureState& UIState)
 {
-	const bool bShouldCaptureMouse = InputMode != EGameInputMode::UIOnly &&
+	const bool bShouldCaptureMouse = bWantsMouseCapture &&
+		InputMode != EGameInputMode::UIOnly &&
 		!UIState.bWantsMouse &&
 		!UIState.bBlocksGameInput &&
 		!UIState.bBlocksGameMouseLook;

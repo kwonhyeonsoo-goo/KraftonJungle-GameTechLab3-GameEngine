@@ -190,6 +190,7 @@ enum EPropertyFlags : uint32
 	PF_ReturnParm = 1 << 7,
 	PF_ConstParm = 1 << 8,
 	PF_ReferenceParm = 1 << 9,
+	PF_Animatable = 1 << 10,
 };
 
 enum EFunctionFlags : uint32
@@ -308,6 +309,10 @@ struct FProperty
 	virtual void	   SerializeValue(void* ValuePtr, FArchive& Ar, const FPropertySerializeContext& Context) const;
 
 	virtual void	   Serialize(UObject* Object, FArchive& Ar) const;
+
+	bool IsSequencerScalar() const;
+	bool ReadScalarChannelValue(const UObject* Container, const FString& ChannelName, float& OutValue) const;
+	bool WriteScalarChannelValue(UObject* Container, const FString& ChannelName, float NewValue) const;
 };
 
 struct FFunctionFrame

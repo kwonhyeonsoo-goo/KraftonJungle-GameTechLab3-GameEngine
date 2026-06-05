@@ -4,6 +4,22 @@
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "Component/ActorComponent.h"
 #include "Component/Camera/CameraComponent.h"
+#include "Runtime/Engine.h"
+#include "Viewport/GameViewportClient.h"
+
+namespace
+{
+	void SetViewportInputMode(EGameInputMode InputMode)
+	{
+		if (GEngine)
+		{
+			if (UGameViewportClient* ViewportClient = GEngine->GetGameViewportClient())
+			{
+				ViewportClient->SetInputMode(InputMode);
+			}
+		}
+	}
+}
 
 void APlayerController::BeginPlay()
 {
@@ -84,4 +100,19 @@ void APlayerController::ProcessPlayerInput(const FInputSystemSnapshot& Snapshot,
 	}
 
 	Pawn->ProcessPlayerInput(Snapshot, DeltaTime);
+}
+
+void APlayerController::SetInputModeGameOnly()
+{
+	SetViewportInputMode(EGameInputMode::GameOnly);
+}
+
+void APlayerController::SetInputModeUIOnly()
+{
+	SetViewportInputMode(EGameInputMode::UIOnly);
+}
+
+void APlayerController::SetInputModeGameAndUI()
+{
+	SetViewportInputMode(EGameInputMode::GameAndUI);
 }

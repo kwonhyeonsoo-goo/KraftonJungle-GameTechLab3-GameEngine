@@ -60,6 +60,7 @@
 #include <cstring>
 #include <filesystem>
 #include <cstdio>
+#include <unordered_map>
 #include <utility>
 
 #include "Component/Primitive/SkeletalMeshComponent.h"
@@ -189,6 +190,164 @@ namespace
 	bool IsSamePropertyName(const FPropertyValue& Prop, const char* Name)
 	{
 		return Name && std::strcmp(Prop.GetName(), Name) == 0;
+	}
+
+	FString TrimTagToken(const FString& Value)
+	{
+		size_t Begin = 0;
+		size_t End = Value.size();
+		while (Begin < End && std::isspace(static_cast<unsigned char>(Value[Begin]))) ++Begin;
+		while (End > Begin && std::isspace(static_cast<unsigned char>(Value[End - 1]))) --End;
+		return Value.substr(Begin, End - Begin);
+	}
+
+	void AddUniqueTagToken(TArray<FString>& Tags, const FString& RawTag)
+	{
+		const FString Tag = TrimTagToken(RawTag);
+		if (Tag.empty() || std::find(Tags.begin(), Tags.end(), Tag) != Tags.end())
+		{
+			return;
+		}
+
+		Tags.push_back(Tag);
+	}
+
+	TArray<FString> SplitTagListString(const FString& Value)
+	{
+		TArray<FString> Tags;
+		size_t Start = 0;
+		while (Start <= Value.size())
+		{
+			size_t End = Value.find(',', Start);
+			if (End == FString::npos)
+			{
+				End = Value.size();
+			}
+
+			AddUniqueTagToken(Tags, Value.substr(Start, End - Start));
+
+			if (End == Value.size())
+			{
+				break;
+			}
+			Start = End + 1;
+		}
+		return Tags;
+	}
+
+	FString JoinTagListString(const TArray<FString>& Tags)
+	{
+		FString Result;
+		for (size_t Index = 0; Index < Tags.size(); ++Index)
+		{
+			if (Index > 0)
+			{
+				Result += ",";
+			}
+			Result += Tags[Index];
+		}
+		return Result;
+	}
+
+	bool IsTagListStringProperty(const FPropertyValue& Prop)
+	{
+		return IsSamePropertyName(Prop, "PendingTagsString")
+			&& (Cast<AActor>(Prop.Object) || Cast<UActorComponent>(Prop.Object));
+	}
+
+	bool RenderTagListStringProperty(FPropertyValue& Prop)
+	{
+		FString* Value = static_cast<FString*>(Prop.GetValuePtr());
+		if (!Value)
+		{
+			return false;
+		}
+
+		TArray<FString> Tags = SplitTagListString(*Value);
+		bool bChanged = false;
+
+		if (Tags.empty())
+		{
+			ImGui::TextDisabled("No tags");
+		}
+		else
+		{
+			bool bFirstInLine = true;
+			for (int32 Index = 0; Index < static_cast<int32>(Tags.size());)
+			{
+				const FString& Tag = Tags[Index];
+				const FString ButtonLabel = Tag + "  x##TagChip" + std::to_string(Index);
+				const float ButtonWidth = ImGui::CalcTextSize(ButtonLabel.c_str()).x
+					+ ImGui::GetStyle().FramePadding.x * 2.0f;
+				const float RemainingWidth = ImGui::GetContentRegionAvail().x;
+				if (!bFirstInLine && ButtonWidth < RemainingWidth)
+				{
+					ImGui::SameLine();
+				}
+
+				if (ImGui::SmallButton(ButtonLabel.c_str()))
+				{
+					Tags.erase(Tags.begin() + Index);
+					bChanged = true;
+					bFirstInLine = true;
+					continue;
+				}
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip("Remove tag '%s'", Tag.c_str());
+				}
+
+				bFirstInLine = false;
+				++Index;
+			}
+		}
+
+		static std::unordered_map<ImGuiID, std::array<char, 128>> TagInputBuffers;
+		const ImGuiID BufferId = ImGui::GetID("TagAddInput");
+		std::array<char, 128>& InputBuffer = TagInputBuffers[BufferId];
+
+		const float AddButtonWidth = ImGui::CalcTextSize("Add").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		const float ClearButtonWidth = ImGui::CalcTextSize("Clear").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		ImGui::SetNextItemWidth(-(AddButtonWidth + ClearButtonWidth + ImGui::GetStyle().ItemSpacing.x * 2.0f));
+		const bool bSubmit = ImGui::InputTextWithHint(
+			"##TagAddInput",
+			"Add tag or paste comma-separated tags",
+			InputBuffer.data(),
+			InputBuffer.size(),
+			ImGuiInputTextFlags_EnterReturnsTrue);
+
+		ImGui::SameLine();
+		const bool bAdd = ImGui::Button("Add");
+		ImGui::SameLine();
+		const bool bClear = ImGui::Button("Clear");
+
+		if ((bSubmit || bAdd) && InputBuffer[0] != '\0')
+		{
+			const size_t OldCount = Tags.size();
+			const TArray<FString> NewTags = SplitTagListString(FString(InputBuffer.data()));
+			for (const FString& Tag : NewTags)
+			{
+				AddUniqueTagToken(Tags, Tag);
+			}
+
+			if (Tags.size() != OldCount)
+			{
+				bChanged = true;
+			}
+			InputBuffer.fill('\0');
+		}
+
+		if (bClear && !Tags.empty())
+		{
+			Tags.clear();
+			bChanged = true;
+		}
+
+		if (bChanged)
+		{
+			*Value = JoinTagListString(Tags);
+		}
+		return bChanged;
 	}
 
 	bool IsAnimGraphInstanceClass(UClass* Class)
@@ -3185,6 +3344,12 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 		FString* Val = static_cast<FString*>(Prop.GetValuePtr());
 		if (!Val)
 		{
+			break;
+		}
+
+		if (IsTagListStringProperty(Prop))
+		{
+			bChanged = RenderTagListStringProperty(Prop);
 			break;
 		}
 

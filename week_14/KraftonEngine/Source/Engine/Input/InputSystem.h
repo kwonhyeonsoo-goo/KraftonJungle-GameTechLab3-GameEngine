@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include "Core/Singleton.h"
+#include "Core/Types/CoreTypes.h"
 
 struct FGuiInputState
 {
@@ -11,9 +12,11 @@ struct FGuiInputState
 
 struct FInputSystemSnapshot
 {
-    bool KeyDown[256] = {};
-    bool KeyPressed[256] = {};
-    bool KeyReleased[256] = {};
+    static constexpr int KeyCount = 256;
+
+    bool KeyDown[KeyCount] = {};
+    bool KeyPressed[KeyCount] = {};
+    bool KeyReleased[KeyCount] = {};
 
     POINT MousePos = { 0, 0 };
     int MouseDeltaX = 0;
@@ -52,9 +55,10 @@ struct FInputSystemSnapshot
     bool bGuiUsingTextInput = false;
     bool bWindowFocused = true;
 
-    bool IsDown(int VK) const { return KeyDown[VK]; }
-    bool WasPressed(int VK) const { return KeyPressed[VK]; }
-    bool WasReleased(int VK) const { return KeyReleased[VK]; }
+    static bool IsValidKeyCode(int VK) { return VK >= 0 && VK < KeyCount; }
+    bool IsDown(int VK) const { return IsValidKeyCode(VK) && KeyDown[VK]; }
+    bool WasPressed(int VK) const { return IsValidKeyCode(VK) && KeyPressed[VK]; }
+    bool WasReleased(int VK) const { return IsValidKeyCode(VK) && KeyReleased[VK]; }
 };
 
 class InputSystem : public TSingleton<InputSystem>
@@ -69,6 +73,9 @@ public:
     void SetUseRawMouse(bool bEnable);
     bool IsUsingRawMouse() const { return bUseRawMouse; }
     void AddRawMouseDelta(int DeltaX, int DeltaY);
+    void AddTextInput(uint32_t Codepoint);
+    TArray<uint32_t> ConsumeTextInput();
+    TArray<uint32_t> ConsumeScriptTextInput();
     void ResetTransientState();
     void ResetAllKeyStates();
     void ResetMouseDelta();
@@ -77,9 +84,9 @@ public:
     bool IsWindowFocused() const { return bWindowFocused; }
 
     // Keyboard
-    bool GetKeyDown(int VK) const { return CurrentStates[VK] && !PrevStates[VK]; }
-    bool GetKey(int VK) const { return CurrentStates[VK]; }
-    bool GetKeyUp(int VK) const { return !CurrentStates[VK] && PrevStates[VK]; }
+    bool GetKeyDown(int VK) const { return FInputSystemSnapshot::IsValidKeyCode(VK) && CurrentStates[VK] && !PrevStates[VK]; }
+    bool GetKey(int VK) const { return FInputSystemSnapshot::IsValidKeyCode(VK) && CurrentStates[VK]; }
+    bool GetKeyUp(int VK) const { return FInputSystemSnapshot::IsValidKeyCode(VK) && !CurrentStates[VK] && PrevStates[VK]; }
 
     // Mouse position
     POINT GetMousePos() const { return MousePos; }
@@ -164,6 +171,9 @@ private:
     // Scrolling
     int ScrollDelta = 0;
     int PrevScrollDelta = 0;
+
+    TArray<uint32_t> TextInputQueue;
+    TArray<uint32_t> ScriptTextInputQueue;
 
     // Window handle for focus check
     HWND OwnerHWnd = nullptr;

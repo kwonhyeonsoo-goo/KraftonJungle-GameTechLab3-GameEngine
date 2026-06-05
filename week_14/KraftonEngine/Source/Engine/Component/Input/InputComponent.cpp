@@ -31,6 +31,12 @@ void UInputComponent::AddAxisMappingForOwner(const void* OwnerKey, const FString
 
 void UInputComponent::AddAxisMappingForOwner(const void* OwnerKey, const FString& Name, int VKey, float Scale)
 {
+	if (!FInputSystemSnapshot::IsValidKeyCode(VKey))
+	{
+		UE_LOG("[InputComponent] Ignored invalid axis key mapping '%s': VK=%d", Name.c_str(), VKey);
+		return;
+	}
+
 	FAxisMapping M;
 	M.Name = Name;
 	M.SourceType = EInputAxisSourceType::Key;
@@ -77,6 +83,12 @@ void UInputComponent::AddActionMappingForOwner(const void* OwnerKey, const FStri
 
 void UInputComponent::AddActionMappingForOwner(const void* OwnerKey, const FString& Name, int VKey)
 {
+	if (!FInputSystemSnapshot::IsValidKeyCode(VKey))
+	{
+		UE_LOG("[InputComponent] Ignored invalid action key mapping '%s': VK=%d", Name.c_str(), VKey);
+		return;
+	}
+
 	FActionMapping M;
 	M.Name = Name;
 	M.VKey = VKey;
