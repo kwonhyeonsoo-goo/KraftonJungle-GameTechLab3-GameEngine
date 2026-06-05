@@ -1,4 +1,4 @@
-#include "Editor/Viewport/EditorViewportClient.h"
+﻿#include "Editor/Viewport/EditorViewportClient.h"
 
 #include "Editor/UI/Panel/EditorConsoleWidget.h"
 #include "Editor/Subsystem/OverlayStatSystem.h"
@@ -310,7 +310,7 @@ void FEditorViewportClient::TickEditorShortcuts()
 		const TArray<AActor*> ToDuplicate = SelectionManager->GetSelectedActors();
 		if (!ToDuplicate.empty())
 		{
-			const FVector DuplicateOffsetStep(0.1f, 0.1f, 0.1f);
+			//const FVector DuplicateOffsetStep(0.1f, 0.1f, 0.1f);
 			TArray<AActor*> NewSelection;
 			int32 DuplicateIndex = 0;
 			for (AActor* Src : ToDuplicate)
@@ -322,7 +322,7 @@ void FEditorViewportClient::TickEditorShortcuts()
 				if (Dup)
 				{
 					Dup->SetFName(FName(DuplicateName));
-					Dup->AddActorWorldOffset(DuplicateOffsetStep * static_cast<float>(DuplicateIndex + 1));
+					//Dup->AddActorWorldOffset(DuplicateOffsetStep * static_cast<float>(DuplicateIndex + 1));
 					NewSelection.push_back(Dup);
 					++DuplicateIndex;
 				}
