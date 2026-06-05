@@ -21,6 +21,12 @@ struct FCombatNodeRuntimeState
     TMap<int32, FCombatSlotRuntimeState> Slots;
 };
 
+struct FCombatAttackRuntimeState
+{
+    TWeakObjectPtr<UCombatCoverAgentComponent> Target;
+    float TimeUntilNextAttack = 0.0f;
+};
+
 struct FCombatCoverGraphValidationResult
 {
     int32 NodeCount = 0;
@@ -76,6 +82,7 @@ public:
     bool IsNodeOccupiedOrReserved(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* RequestingAgent = nullptr) const;
 
     void DrawAllDebugVisuals(bool bIncludeUnselected = true) const;
+    void DrawCombatDebugVisuals(float Duration = 0.0f) const;
 
     UFUNCTION(Callable, Category="CombatFlow|Combat")
     void UpdateCombatSimulation(float DeltaTime);
@@ -122,8 +129,10 @@ private:
     void GatherAdvanceCandidateNodes(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* CurrentNode, TArray<UCombatCoverNodeComponent*>& OutNodes) const;
     UCombatCoverAgentComponent* FindBestTargetFor(UCombatCoverAgentComponent* Agent) const;
     bool CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const;
-    void DrawFireDebugLines() const;
-    void DrawFireRanges() const;
+    void DrawFireDebugLine(UCombatCoverAgentComponent* Shooter, UCombatCoverAgentComponent* Target, float Duration) const;
+    void DrawFireRanges(float Duration) const;
+    float PickAttackInterval(const UCombatCoverAgentComponent* Agent) const;
+    void RemoveStaleAttackState();
     void EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node);
     void RemoveStaleRuntimeState();
     void AddValidationMessage(FCombatCoverGraphValidationResult& Result, bool bError, const FString& Message) const;
@@ -157,6 +166,7 @@ private:
     TArray<UCombatCoverAgentComponent*> CachedAgents;
     TMap<FString, UCombatCoverNodeComponent*> NodeById;
     TMap<FString, FCombatNodeRuntimeState> RuntimeStateByNodeId;
+    TMap<UCombatCoverAgentComponent*, FCombatAttackRuntimeState> AttackStateByAgent;
     float DebugDrawTimer = 0.0f;
 
 protected:

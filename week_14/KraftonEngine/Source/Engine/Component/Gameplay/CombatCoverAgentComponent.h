@@ -82,13 +82,19 @@ public:
     float GetFireRange() const { return FireRange; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
-    float GetDamagePerSecond() const { return DamagePerSecond; }
+    float GetAttackDamage() const { return AttackDamage; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetAttackIntervalMin() const { return AttackIntervalMin; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetAttackIntervalMax() const { return AttackIntervalMax; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     int32 GetIncomingFireCount() const { return IncomingFireCount; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
-    float GetIncomingDamagePerSecond() const { return IncomingDamagePerSecond; }
+    float GetIncomingAttackDamage() const { return IncomingAttackDamage; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     UCombatCoverAgentComponent* GetCurrentTarget() const { return CurrentTarget.Get(); }
@@ -108,7 +114,7 @@ public:
     void SetEngagementTarget(UCombatCoverAgentComponent* Target);
     void ClearEngagementTarget();
     void ApplyDamage(float Damage);
-    void SetIncomingFireStats(int32 Count, float DamagePerSecond);
+    void SetIncomingFireStats(int32 Count, float AttackDamage);
 
 private:
     UCombatFlowManagerComponent* ResolveManager();
@@ -149,8 +155,14 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Fire Range", Min=0.0f, Max=100000.0f, Speed=10.0f)
     float FireRange = 1200.0f;
 
-    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Damage Per Second", Min=0.0f, Max=100000.0f, Speed=1.0f)
-    float DamagePerSecond = 10.0f;
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Damage", Min=0.0f, Max=100000.0f, Speed=1.0f)
+    float AttackDamage = 5.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Interval Min", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float AttackIntervalMin = 1.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Interval Max", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float AttackIntervalMax = 2.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Target Scan Interval", Min=0.01f, Max=10.0f, Speed=0.01f)
     float TargetScanInterval = 0.2f;
@@ -167,7 +179,7 @@ private:
     float RetryTimer = 0.0f;
     float TargetScanTimer = 0.0f;
     int32 IncomingFireCount = 0;
-    float IncomingDamagePerSecond = 0.0f;
+    float IncomingAttackDamage = 0.0f;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
     TWeakObjectPtr<UCombatFlowManagerComponent> CachedManager;

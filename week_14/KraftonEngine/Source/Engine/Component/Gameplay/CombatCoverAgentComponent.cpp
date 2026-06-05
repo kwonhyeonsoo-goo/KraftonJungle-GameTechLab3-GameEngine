@@ -38,7 +38,7 @@ void UCombatCoverAgentComponent::BeginPlay()
     RetryTimer = 0.0f;
     TargetScanTimer = 0.0f;
     IncomingFireCount = 0;
-    IncomingDamagePerSecond = 0.0f;
+    IncomingAttackDamage = 0.0f;
     StateBeforeEngage = ECombatCoverAgentState::Idle;
     CurrentTarget.Reset();
     ResolveManager();
@@ -101,7 +101,7 @@ void UCombatCoverAgentComponent::MarkDead()
 {
     CurrentTarget.Reset();
     IncomingFireCount = 0;
-    IncomingDamagePerSecond = 0.0f;
+    IncomingAttackDamage = 0.0f;
     Health = 0.0f;
 
     if (UCombatFlowManagerComponent* Manager = ResolveManager())
@@ -230,10 +230,10 @@ void UCombatCoverAgentComponent::ApplyDamage(float Damage)
     }
 }
 
-void UCombatCoverAgentComponent::SetIncomingFireStats(int32 Count, float DamagePerSecond)
+void UCombatCoverAgentComponent::SetIncomingFireStats(int32 Count, float AttackDamage)
 {
     IncomingFireCount = (std::max)(0, Count);
-    IncomingDamagePerSecond = (std::max)(0.0f, DamagePerSecond);
+    IncomingAttackDamage = (std::max)(0.0f, AttackDamage);
 }
 
 

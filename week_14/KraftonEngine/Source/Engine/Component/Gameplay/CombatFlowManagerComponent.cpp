@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <random>
 #include <sstream>
 
 namespace
@@ -62,9 +63,9 @@ namespace
         return IsValid(Agent) && IsValid(Agent->GetOwner()) && Agent->IsAlive();
     }
 
-    void AddDebugCircleXY(FScene& Scene, const FVector& Center, float Radius, const FColor& Color)
+    void DrawDebugCircleXY(UWorld* World, const FVector& Center, float Radius, const FColor& Color, float Duration)
     {
-        if (Radius <= 0.0f)
+        if (!World || Radius <= 0.0f)
         {
             return;
         }
@@ -76,7 +77,7 @@ namespace
         {
             const float Angle = TwoPi * static_cast<float>(Index) / static_cast<float>(Segments);
             const FVector Next = Center + FVector(cosf(Angle) * Radius, sinf(Angle) * Radius, 0.0f);
-            Scene.AddDebugLine(Prev, Next, Color);
+            DrawDebugLine(World, Prev, Next, Color, Duration);
             Prev = Next;
         }
     }
@@ -92,6 +93,12 @@ namespace
             return FColor(80, 160, 255);
         }
         return FColor(255, 230, 80);
+    }
+
+    std::mt19937& GetCombatRandomGenerator()
+    {
+        static std::mt19937 Generator{ std::random_device{}() };
+        return Generator;
     }
 }
 
@@ -152,6 +159,7 @@ void UCombatFlowManagerComponent::RefreshRegistry()
     }
 
     RemoveStaleRuntimeState();
+    RemoveStaleAttackState();
     for (UCombatCoverNodeComponent* Node : CachedNodes)
     {
         EnsureRuntimeSlotsForNode(Node);
@@ -161,6 +169,7 @@ void UCombatFlowManagerComponent::RefreshRegistry()
 void UCombatFlowManagerComponent::ResetRuntimeState()
 {
     RuntimeStateByNodeId.clear();
+    AttackStateByAgent.clear();
     for (UCombatCoverNodeComponent* Node : CachedNodes)
     {
         EnsureRuntimeSlotsForNode(Node);
@@ -270,6 +279,7 @@ void UCombatFlowManagerComponent::ReleaseAgent(UCombatCoverAgentComponent* Agent
         return;
     }
 
+    AttackStateByAgent.erase(Agent);
     for (auto& NodePair : RuntimeStateByNodeId)
     {
         for (auto& SlotPair : NodePair.second.Slots)
@@ -902,7 +912,7 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
     RefreshRegistry();
 
     TMap<UCombatCoverAgentComponent*, int32> IncomingFireCounts;
-    TMap<UCombatCoverAgentComponent*, float> IncomingDamagePerSecond;
+    TMap<UCombatCoverAgentComponent*, float> IncomingAttackDamage;
 
     for (UCombatCoverAgentComponent* Agent : CachedAgents)
     {
@@ -924,40 +934,74 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
         if (!Target)
         {
             Agent->ClearEngagementTarget();
+            AttackStateByAgent.erase(Agent);
             continue;
         }
 
         Agent->SetEngagementTarget(Target);
+
+        FCombatAttackRuntimeState& AttackState = AttackStateByAgent[Agent];
+        if (AttackState.Target.Get() != Target)
+        {
+            AttackState.Target.Reset(Target);
+            AttackState.TimeUntilNextAttack = PickAttackInterval(Agent);
+        }
+
+        AttackState.TimeUntilNextAttack -= DeltaTime;
+        if (AttackState.TimeUntilNextAttack > 0.0f)
+        {
+            continue;
+        }
+
+        const float Damage = Agent->GetAttackDamage();
+        Target->ApplyDamage(Damage);
         IncomingFireCounts[Target] += 1;
-        IncomingDamagePerSecond[Target] += Agent->GetDamagePerSecond();
+        IncomingAttackDamage[Target] += Damage;
+
+        if (bDrawFireDebugLines)
+        {
+            DrawFireDebugLine(Agent, Target, 0.12f);
+        }
+
+        AttackState.TimeUntilNextAttack = PickAttackInterval(Agent);
     }
 
-    for (const auto& Pair : IncomingDamagePerSecond)
+    for (const auto& Pair : IncomingAttackDamage)
     {
         UCombatCoverAgentComponent* Target = Pair.first;
-        if (!IsValidCombatAgent(Target))
+        if (!IsValid(Target))
         {
             continue;
         }
 
-        const int32 Count = IncomingFireCounts[Target];
-        const float DamagePerSecond = Pair.second;
-        Target->SetIncomingFireStats(Count, DamagePerSecond);
-        Target->ApplyDamage(DamagePerSecond * DeltaTime);
+        Target->SetIncomingFireStats(IncomingFireCounts[Target], Pair.second);
     }
 
-    if (bDrawFireDebugLines)
-    {
-        DrawFireDebugLines();
-    }
+    DrawCombatDebugVisuals();
+}
 
+void UCombatFlowManagerComponent::DrawCombatDebugVisuals(float Duration) const
+{
     if (bDrawFireRanges)
     {
-        DrawFireRanges();
+        DrawFireRanges(Duration);
     }
 }
 
-void UCombatFlowManagerComponent::DrawFireDebugLines() const
+void UCombatFlowManagerComponent::DrawFireDebugLine(UCombatCoverAgentComponent* Shooter, UCombatCoverAgentComponent* Target, float Duration) const
+{
+    UWorld* World = GetWorld();
+    if (!World || !IsValidCombatAgent(Shooter) || !IsValidCombatAgent(Target))
+    {
+        return;
+    }
+
+    const FVector Start = Shooter->GetOwner()->GetActorLocation();
+    const FVector End = Target->GetOwner()->GetActorLocation();
+    DrawDebugLine(World, Start, End, MakeFireLineColor(Shooter), Duration);
+}
+
+void UCombatFlowManagerComponent::DrawFireRanges(float Duration) const
 {
     UWorld* World = GetWorld();
     if (!World)
@@ -965,35 +1009,6 @@ void UCombatFlowManagerComponent::DrawFireDebugLines() const
         return;
     }
 
-    FScene& Scene = World->GetScene();
-    for (UCombatCoverAgentComponent* Agent : CachedAgents)
-    {
-        if (!IsValidCombatAgent(Agent))
-        {
-            continue;
-        }
-
-        UCombatCoverAgentComponent* Target = Agent->GetCurrentTarget();
-        if (!IsValidCombatAgent(Target))
-        {
-            continue;
-        }
-
-        const FVector Start = Agent->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 90.0f);
-        const FVector End = Target->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 90.0f);
-        Scene.AddDebugLine(Start, End, MakeFireLineColor(Agent));
-    }
-}
-
-void UCombatFlowManagerComponent::DrawFireRanges() const
-{
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        return;
-    }
-
-    FScene& Scene = World->GetScene();
     for (UCombatCoverAgentComponent* Agent : CachedAgents)
     {
         if (!IsValidCombatAgent(Agent))
@@ -1002,8 +1017,25 @@ void UCombatFlowManagerComponent::DrawFireRanges() const
         }
 
         const FVector Center = Agent->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 8.0f);
-        AddDebugCircleXY(Scene, Center, Agent->GetFireRange(), MakeFireLineColor(Agent));
+        DrawDebugCircleXY(World, Center, Agent->GetFireRange(), MakeFireLineColor(Agent), Duration);
     }
+}
+
+float UCombatFlowManagerComponent::PickAttackInterval(const UCombatCoverAgentComponent* Agent) const
+{
+    if (!Agent)
+    {
+        return 1.0f;
+    }
+
+    const float MinInterval = (std::max)(0.0f, Agent->GetAttackIntervalMin());
+    const float MaxInterval = (std::max)(MinInterval, Agent->GetAttackIntervalMax());
+    if (MaxInterval <= MinInterval)
+    {
+        return MinInterval;
+    }
+
+    return std::uniform_real_distribution<float>(MinInterval, MaxInterval)(GetCombatRandomGenerator());
 }
 
 void UCombatFlowManagerComponent::EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node)
@@ -1054,6 +1086,28 @@ void UCombatFlowManagerComponent::RemoveStaleRuntimeState()
     }
 }
 
+void UCombatFlowManagerComponent::RemoveStaleAttackState()
+{
+    TSet<UCombatCoverAgentComponent*> ValidAgents;
+    for (UCombatCoverAgentComponent* Agent : CachedAgents)
+    {
+        if (IsValidCombatAgent(Agent))
+        {
+            ValidAgents.insert(Agent);
+        }
+    }
+
+    for (auto It = AttackStateByAgent.begin(); It != AttackStateByAgent.end(); )
+    {
+        if (ValidAgents.find(It->first) == ValidAgents.end())
+        {
+            It = AttackStateByAgent.erase(It);
+            continue;
+        }
+        ++It;
+    }
+}
+
 void UCombatFlowManagerComponent::AddValidationMessage(FCombatCoverGraphValidationResult& Result, bool bError, const FString& Message) const
 {
     if (bError)
@@ -1075,6 +1129,11 @@ void UCombatFlowManagerComponent::TickComponent(float DeltaTime, ELevelTick Tick
     if (bEnableCombatSimulation)
     {
         UpdateCombatSimulation(DeltaTime);
+    }
+    else
+    {
+        RefreshRegistry();
+        DrawCombatDebugVisuals();
     }
 
     if (!bDrawDebugDuringTick)

@@ -415,8 +415,7 @@ void FCombatMapEditorWidget::RenderToolbar()
 void FCombatMapEditorWidget::RenderMainLayout()
 {
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(260.0f, AvailableHeight * 0.48f);
-    const float MiddleHeight = (std::max)(220.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y);
+    const float MiddleHeight = (std::min)((std::max)(260.0f, AvailableHeight * 0.40f), 360.0f);
 
     ImGui::BeginChild("CombatMapEditorMiddleRegion", ImVec2(0.0f, MiddleHeight), false);
     RenderMiddleLayout();
@@ -424,6 +423,15 @@ void FCombatMapEditorWidget::RenderMainLayout()
 
     ImGui::Separator();
     RenderGraphEditor();
+
+    if (!EditorEngine || !EditorEngine->IsPlayingInEditor())
+    {
+        if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
+        {
+            Manager->RefreshRegistry();
+            Manager->DrawCombatDebugVisuals(0.1f);
+        }
+    }
 }
 
 void FCombatMapEditorWidget::RenderMiddleLayout()
@@ -465,9 +473,8 @@ void FCombatMapEditorWidget::RenderRightColumn()
 
 void FCombatMapEditorWidget::RenderNodeList()
 {
-    ImGui::SeparatorText("Cover Nodes");
-    ImGui::Text("Nodes: %d", static_cast<int32>(CachedNodes.size()));
-    ImGui::BeginChild("CombatNodeList", ImVec2(0.0f, 210.0f), true);
+    ImGui::TextDisabled("Nodes: %d", static_cast<int32>(CachedNodes.size()));
+    ImGui::BeginChild("CombatNodeList", ImVec2(0.0f, 150.0f), true);
     for (int32 Index = 0; Index < static_cast<int32>(CachedNodes.size()); ++Index)
     {
         UCombatCoverNodeComponent* Node = CachedNodes[Index];
@@ -698,7 +705,6 @@ void FCombatMapEditorWidget::RenderGraphEditor()
 	}
     ImGui::SameLine();
     ImGui::Checkbox("Apply Graph To Scene", &bGraphApplyToScene);
-    ImGui::TextDisabled("Top-down graph uses fixed 1/15 scale. Scene X/Y map directly to graph X/Y for top-down view. Scene Z is fixed to 0.");
 
     if (!GraphEditorContext)
     {
@@ -706,7 +712,7 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         return;
     }
 
-    ImGui::BeginChild("CombatGraphEditorChild", ImVec2(0.0f, 0.0f), true);
+    ImGui::BeginChild("CombatGraphEditorChild", ImVec2(0.0f, 0.0f), false);
     ed::SetCurrentEditor(GraphEditorContext);
     ed::Begin("CombatCoverGraphCanvas");
 
@@ -946,9 +952,7 @@ void FCombatMapEditorWidget::RenderGraphEditor()
 
 void FCombatMapEditorWidget::RenderAgentPanel()
 {
-    ImGui::SeparatorText("Simulation");
-
-    ImGui::Text("Agents: %d", static_cast<int32>(CachedAgents.size()));
+    ImGui::TextDisabled("Agents: %d", static_cast<int32>(CachedAgents.size()));
     if (!FindOrUseManager())
     {
         ImGui::TextDisabled("No UCombatFlowManagerComponent in this world.");
@@ -979,15 +983,17 @@ void FCombatMapEditorWidget::RenderAgentPanel()
 
         UCombatCoverAgentComponent* CombatTarget = Agent->GetCurrentTarget();
         const FString TargetName = ActorNameForUI(CombatTarget ? CombatTarget->GetOwner() : nullptr);
-        ImGui::TextDisabled("HP: %.1f / %.1f  Range: %.0f  DPS: %.1f",
+        ImGui::TextDisabled("HP: %.1f / %.1f  Range: %.0f  Damage: %.1f  Interval: %.1f-%.1fs",
             Agent->GetHealth(),
             Agent->GetMaxHealth(),
             Agent->GetFireRange(),
-            Agent->GetDamagePerSecond());
-        ImGui::TextDisabled("CombatTarget: %s  Incoming: %d shooters / %.1f DPS",
+            Agent->GetAttackDamage(),
+            Agent->GetAttackIntervalMin(),
+            Agent->GetAttackIntervalMax());
+        ImGui::TextDisabled("CombatTarget: %s  Incoming: %d attacks / %.1f damage",
             TargetName.c_str(),
             Agent->GetIncomingFireCount(),
-            Agent->GetIncomingDamagePerSecond());
+            Agent->GetIncomingAttackDamage());
         ImGui::TextDisabled("Advance: %s", Agent->GetAdvanceLinkModeName());
         ImGui::Separator();
     }
