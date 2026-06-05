@@ -129,7 +129,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	NormalAmmo.InitialSpeed = 900.0f;
 	NormalAmmo.GravityScale = 1.0f;
 	NormalAmmo.Damage = 100.0f;
-	NormalAmmo.BulletRadius = 2.0f;
+	NormalAmmo.BulletRadius = 0.03f;
 	NormalAmmo.LifeTime = 5.0f;
 	NormalAmmo.FireInterval = 1.0f;
 	NormalAmmo.RecoilPitch = 1.2f;
@@ -142,7 +142,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	AntiMaterialAmmo.InitialSpeed = 1200.0f;
 	AntiMaterialAmmo.GravityScale = 0.9f;
 	AntiMaterialAmmo.Damage = 300.0f;
-	AntiMaterialAmmo.BulletRadius = 3.0f;
+	AntiMaterialAmmo.BulletRadius = 0.05f;
 	AntiMaterialAmmo.LifeTime = 5.0f;
 	AntiMaterialAmmo.FireInterval = 1.5f;
 	AntiMaterialAmmo.RecoilPitch = 2.5f;

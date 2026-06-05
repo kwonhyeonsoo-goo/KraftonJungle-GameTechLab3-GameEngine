@@ -88,7 +88,7 @@ struct FAmmoBallisticData
 	float InitialSpeed = 900.0f;
 	float GravityScale = 1.0f;
 	float Damage = 100.0f;
-	float BulletRadius = 2.0f;
+	float BulletRadius = 0.03f;
 	float LifeTime = 5.0f;
 	float FireInterval = 1.0f;
 	float RecoilPitch = 1.2f;

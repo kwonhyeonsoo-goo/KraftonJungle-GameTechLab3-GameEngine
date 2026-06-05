@@ -36,6 +36,9 @@ protected:
 private:
 	void UpdateBullets(float DeltaTime);
 	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, float DeltaTime, class UWorld* World);
+	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
+	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
+	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	void CompactDeadBullets();
 	void ResolveWeaponComponent();
 
