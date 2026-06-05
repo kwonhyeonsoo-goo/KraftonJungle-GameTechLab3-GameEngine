@@ -190,6 +190,7 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 	if (!InDevice) return;
 
 	IconFileMap[".Scene"] = L"World_64x.png";
+	IconFileMap[".prefab"] = L"StartMerge_42x.png";
 	IconFileMap[".obj"] = L"icon_MatEd_Mesh_40x.png";
 	IconFileMap[".mat"] = L"Sphere_64x.png";
 	IconFileMap[".shake"] = L"StartMerge_42x.png";
@@ -532,6 +533,10 @@ void FEditorContentBrowserWidget::RefreshContent()
 		else if (Extension == ".scene")
 		{
 			Element = std::make_shared<SceneElement>();
+		}
+		else if (Extension == ".prefab")
+		{
+			Element = std::make_shared<PrefabElement>();
 		}
 		else if (Extension == ".obj")
 		{
