@@ -19,6 +19,7 @@
 #include "GameFramework/Actor/SkeletalMeshActor.h"
 #include "GameFramework/Pawn/Character.h"
 #include "GameFramework/Pawn/LuaCharacter.h"
+#include "GameFramework/Pawn/SniperPawn.h"
 #include "GameFramework/Pawn/WheeledVehiclePawn.h"
 #include "GameFramework/World.h"
 #include "Render/Pipeline/Renderer.h"
@@ -1738,6 +1739,7 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 		PlaceActorMenuItem("Skeletal Mesh Actor", EViewportPlaceActorType::SkeletalMesh);
 		PlaceActorMenuItem("Character",           EViewportPlaceActorType::Character);
 		PlaceActorMenuItem("Lua Character", EViewportPlaceActorType::LuaCharacter);
+		PlaceActorMenuItem("Sniper Pawn", EViewportPlaceActorType::SniperPawn);
 		PlaceActorMenuItem("Wheeled Vehicle", EViewportPlaceActorType::WheeledVehicle);
 		PlaceActorMenuItem("Particle System",       EViewportPlaceActorType::ParticleSystem);
 
@@ -2032,6 +2034,16 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 			// Mesh 는 default. ULuaScriptComponent 의 ScriptFile 은 사용자가
 			// PropertyWidget 에서 콤보로 지정 (Content/Script/*.lua).
 			Actor->InitDefaultComponents("Content/Data/Samba Dancing (10).fbx", FString());
+			SpawnedActor = Actor;
+		}
+		break;
+	}
+	case EViewportPlaceActorType::SniperPawn:
+	{
+		ASniperPawn* Actor = World->SpawnActor<ASniperPawn>();
+		if (Actor)
+		{
+			Actor->InitDefaultComponents();
 			SpawnedActor = Actor;
 		}
 		break;

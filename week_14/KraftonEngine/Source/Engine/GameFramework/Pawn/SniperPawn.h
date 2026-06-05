@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/Pawn/Pawn.h"
+#include "Component/Gameplay/SniperTypes.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Pawn/SniperPawn.generated.h"
@@ -21,6 +22,7 @@ public:
 	void BeginPlay() override;
 	void PostDuplicate() override;
 	void SetupInputComponent() override;
+	void Tick(float DeltaTime) override;
 
 	void InitDefaultComponents();
 
@@ -35,9 +37,24 @@ public:
 
 private:
 	void CacheComponentReferences();
+	void SyncSniperRuntimeState();
+	void UpdateScopeState(float DeltaTime);
+	void ApplySniperControlRotation();
+	void HandleTurnInput(float Value);
+	void HandleLookUpInput(float Value);
+	void HandleScopePressed();
+	void HandleScopeReleased();
 
 	TWeakObjectPtr<USceneComponent> SniperRoot;
 	TWeakObjectPtr<UCameraComponent> Camera;
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
 	TWeakObjectPtr<UBallisticBulletManagerComponent> BulletManagerComponent;
+
+	FSniperInputState InputState;
+	FScopeState ScopeState;
+
+	float MouseSensitivity = 0.2f;
+	float MinCameraPitch = -80.0f;
+	float MaxCameraPitch = 60.0f;
+	bool bInvertMouseY = false;
 };

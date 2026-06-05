@@ -61,6 +61,7 @@ const FDebugPlaceActorOption GDebugPlaceActorOptions[] = {
 	{ "Spot Light", FLevelViewportLayout::EViewportPlaceActorType::SpotLight },
 	{ "Character",     FLevelViewportLayout::EViewportPlaceActorType::Character },
 	{ "Lua Character", FLevelViewportLayout::EViewportPlaceActorType::LuaCharacter },
+	{ "Sniper Pawn", FLevelViewportLayout::EViewportPlaceActorType::SniperPawn },
 	{ "Wheeled Vehicle", FLevelViewportLayout::EViewportPlaceActorType::WheeledVehicle },
 };
 
