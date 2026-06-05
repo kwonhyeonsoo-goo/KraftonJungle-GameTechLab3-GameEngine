@@ -980,6 +980,9 @@
     <ClCompile Include="Source\Editor\UI\Panel\EditorWorldSettingsWidget.cpp">
       <Filter>Source\Editor\UI\Panel</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Panel\CombatMapEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Panel</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Toolbar\ViewportToolbar.cpp">
       <Filter>Source\Editor\UI\Toolbar</Filter>
     </ClCompile>
@@ -1203,6 +1206,15 @@
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.cpp">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp">
@@ -2273,6 +2285,9 @@
     <ClInclude Include="Source\Editor\UI\Panel\EditorWorldSettingsWidget.h">
       <Filter>Source\Editor\UI\Panel</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Panel\CombatMapEditorWidget.h">
+      <Filter>Source\Editor\UI\Panel</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\Toolbar\ViewportToolbar.h">
       <Filter>Source\Editor\UI\Toolbar</Filter>
     </ClInclude>
@@ -2544,6 +2559,15 @@
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.h">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h">
