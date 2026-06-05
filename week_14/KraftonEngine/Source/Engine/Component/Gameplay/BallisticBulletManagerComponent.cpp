@@ -1,9 +1,29 @@
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 
 #include "Component/Gameplay/SniperWeaponComponent.h"
+#include "Core/Types/CollisionTypes.h"
+#include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
+#include "Math/Quat.h"
+
+#include <cmath>
 
 #include <algorithm>
+
+namespace
+{
+	constexpr uint32 SniperBulletQueryObjectMask =
+		ObjectTypeBit(ECollisionChannel::WorldStatic) |
+		ObjectTypeBit(ECollisionChannel::WorldDynamic) |
+		ObjectTypeBit(ECollisionChannel::Pawn);
+	constexpr float SniperDebugTrailDuration = 1.5f;
+	constexpr float SniperDebugMarkerMinRadius = 0.15f;
+	constexpr int32 SniperDebugMarkerSegments = 12;
+	constexpr float SniperDebugGravityMultiplier = 1.0f;
+	constexpr float SniperBulletMinSweepRadius = 0.01f;
+	constexpr float SniperDebugHitMarkerRadius = 0.2f;
+}
 
 UBallisticBulletManagerComponent::UBallisticBulletManagerComponent()
 {
@@ -44,11 +64,153 @@ void UBallisticBulletManagerComponent::TickComponent(
 	FActorComponentTickFunction& ThisTickFunction)
 {
 	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	(void)DeltaTime;
 	(void)TickType;
 	(void)ThisTickFunction;
 
+	UpdateBullets(DeltaTime);
 	CompactDeadBullets();
+}
+
+void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
+{
+	if (DeltaTime <= 0.0f || ActiveBullets.empty())
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	const FVector WorldGravity = World ? World->GetWorldSettings().Gravity : FVector(0.0f, 0.0f, -9.81f);
+
+	for (FBallisticBullet& Bullet : ActiveBullets)
+	{
+		UpdateSingleBullet(Bullet, WorldGravity, DeltaTime, World);
+	}
+}
+
+void UBallisticBulletManagerComponent::UpdateSingleBullet(
+	FBallisticBullet& Bullet,
+	const FVector& WorldGravity,
+	float DeltaTime,
+	UWorld* World)
+{
+	if (!Bullet.bIsAlive)
+	{
+		return;
+	}
+
+	Bullet.PreviousPosition = Bullet.Position;
+
+	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale * SniperDebugGravityMultiplier;
+	Bullet.Position += Bullet.Velocity * DeltaTime + GravityAcceleration * (0.5f * DeltaTime * DeltaTime);
+	Bullet.Velocity += GravityAcceleration * DeltaTime;
+	Bullet.LifeTime -= DeltaTime;
+
+	FHitResult Hit;
+	if (World && QueryBulletHit(Bullet, World, Hit))
+	{
+		HandleBulletHit(Bullet, Hit, World);
+	}
+
+	if (World)
+	{
+		DrawDebugLine(World, Bullet.PreviousPosition, Bullet.Position, FColor(0, 220, 255), SniperDebugTrailDuration);
+		DrawDebugSphere(
+			World,
+			Bullet.Position,
+			(std::max)(Bullet.Radius * 3.0f, SniperDebugMarkerMinRadius),
+			SniperDebugMarkerSegments,
+			FColor(255, 80, 80),
+			SniperDebugTrailDuration);
+	}
+
+	const bool bExpired = Bullet.LifeTime <= 0.0f;
+	const bool bInvalidPosition =
+		!std::isfinite(Bullet.Position.X) ||
+		!std::isfinite(Bullet.Position.Y) ||
+		!std::isfinite(Bullet.Position.Z);
+
+	if (bExpired || bInvalidPosition)
+	{
+		Bullet.bIsAlive = false;
+	}
+}
+
+bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bullet, UWorld* World, FHitResult& OutHit) const
+{
+	if (!World)
+	{
+		return false;
+	}
+
+	const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
+	const float SegmentLength = Segment.Length();
+	if (SegmentLength <= SniperBulletMinSweepRadius)
+	{
+		return false;
+	}
+
+	if (Bullet.Radius > SniperBulletMinSweepRadius)
+	{
+		const FCollisionShape SweepShape = FCollisionShape::MakeSphere(Bullet.Radius);
+		if (World->PhysicsSweepByObjectTypes(
+			Bullet.PreviousPosition,
+			Bullet.Position,
+			FQuat::Identity,
+			SweepShape,
+			OutHit,
+			SniperBulletQueryObjectMask,
+			Bullet.Owner))
+		{
+			return OutHit.bHit;
+		}
+	}
+
+	return World->PhysicsRaycastByObjectTypes(
+		Bullet.PreviousPosition,
+		Segment / SegmentLength,
+		SegmentLength,
+		OutHit,
+		SniperBulletQueryObjectMask,
+		Bullet.Owner);
+}
+
+void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet, const FHitResult& Hit, UWorld* World)
+{
+	Bullet.Position = Hit.WorldHitLocation;
+	Bullet.bIsAlive = false;
+
+	if (World)
+	{
+		DrawDebugSphere(
+			World,
+			Hit.WorldHitLocation,
+			SniperDebugHitMarkerRadius,
+			SniperDebugMarkerSegments,
+			FColor(255, 255, 0),
+			SniperDebugTrailDuration);
+	}
+
+	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
+	{
+		SniperWeapon->NotifySniperHit(BuildSniperHitInfo(Bullet, Hit));
+	}
+}
+
+FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBallisticBullet& Bullet, const FHitResult& Hit) const
+{
+	FSniperHitInfo HitInfo;
+	HitInfo.HitActor = Hit.HitActor;
+	HitInfo.HitLocation = Hit.WorldHitLocation;
+	HitInfo.HitNormal = !Hit.ImpactNormal.IsNearlyZero() ? Hit.ImpactNormal : Hit.WorldNormal;
+	HitInfo.ShotDirection = Bullet.Velocity.IsNearlyZero() ? FVector::ZeroVector : Bullet.Velocity.Normalized();
+	HitInfo.Damage = Bullet.Damage;
+	HitInfo.AmmoType = Bullet.AmmoType;
+	HitInfo.bIsScopedShot = Bullet.bWasScopedShot;
+	HitInfo.bIsHeadshot = false;
+	HitInfo.bIsArmorPiercing = Bullet.bCanDamageArmor;
+	HitInfo.Shooter = Bullet.Owner;
+	return HitInfo;
 }
 
 void UBallisticBulletManagerComponent::CompactDeadBullets()
