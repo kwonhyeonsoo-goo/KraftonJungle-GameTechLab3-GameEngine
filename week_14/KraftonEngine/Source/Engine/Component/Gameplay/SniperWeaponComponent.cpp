@@ -81,6 +81,7 @@ bool USniperWeaponComponent::RequestFire(
 	Bullet.Radius = AmmoData->BulletRadius;
 	Bullet.LifeTime = AmmoData->LifeTime;
 	Bullet.GravityScale = AmmoData->GravityScale;
+	Bullet.DragCoefficient = AmmoData->DragCoefficient;
 	Bullet.WindInfluenceScale = AmmoData->WindInfluenceScale;
 	Bullet.AmmoType = AmmoData->AmmoType;
 	Bullet.Owner = Shooter;
@@ -129,6 +130,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	NormalAmmo.AmmoType = ESniperAmmoType::Normal;
 	NormalAmmo.InitialSpeed = 900.0f;
 	NormalAmmo.GravityScale = 1.0f;
+	NormalAmmo.DragCoefficient = 0.015f;
 	NormalAmmo.Damage = 100.0f;
 	NormalAmmo.BulletRadius = 0.03f;
 	NormalAmmo.LifeTime = 5.0f;
@@ -143,6 +145,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	AntiMaterialAmmo.AmmoType = ESniperAmmoType::AntiMaterial;
 	AntiMaterialAmmo.InitialSpeed = 1200.0f;
 	AntiMaterialAmmo.GravityScale = 0.9f;
+	AntiMaterialAmmo.DragCoefficient = 0.0075f;
 	AntiMaterialAmmo.Damage = 300.0f;
 	AntiMaterialAmmo.BulletRadius = 0.05f;
 	AntiMaterialAmmo.LifeTime = 5.0f;

@@ -114,7 +114,10 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 
 	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale * SniperDebugGravityMultiplier;
 	const FVector WindDriftAcceleration = AppliedWindAcceleration * Bullet.WindInfluenceScale;
-	const FVector TotalAcceleration = GravityAcceleration + WindDriftAcceleration;
+	const FVector DragAcceleration = Bullet.Velocity.IsNearlyZero()
+		? FVector::ZeroVector
+		: Bullet.Velocity * (-Bullet.DragCoefficient);
+	const FVector TotalAcceleration = GravityAcceleration + WindDriftAcceleration + DragAcceleration;
 	Bullet.Position += Bullet.Velocity * DeltaTime + TotalAcceleration * (0.5f * DeltaTime * DeltaTime);
 	Bullet.Velocity += TotalAcceleration * DeltaTime;
 	Bullet.LifeTime -= DeltaTime;

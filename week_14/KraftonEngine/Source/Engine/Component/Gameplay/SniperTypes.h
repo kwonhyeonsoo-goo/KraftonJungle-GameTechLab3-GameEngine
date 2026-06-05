@@ -87,6 +87,7 @@ struct FAmmoBallisticData
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
 	float InitialSpeed = 900.0f;
 	float GravityScale = 1.0f;
+	float DragCoefficient = 0.0f;
 	float Damage = 100.0f;
 	float BulletRadius = 0.03f;
 	float LifeTime = 5.0f;
@@ -109,6 +110,7 @@ struct FBallisticBullet
 	float Radius = 0.0f;
 	float LifeTime = 0.0f;
 	float GravityScale = 1.0f;
+	float DragCoefficient = 0.0f;
 	float WindInfluenceScale = 1.0f;
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
 	AActor* Owner = nullptr;
