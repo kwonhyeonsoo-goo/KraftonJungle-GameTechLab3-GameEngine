@@ -171,7 +171,12 @@ void FEditorMaterialInspector::RenderShaderParameter()
 			{
 				float Param = 0.0f;
 				CachedMaterial->GetScalarParameter(ParamName, Param);
-				if (ImGui::DragFloat("##scalar", &Param))
+				if (ParamName == "EmissiveIntensity")
+				{
+					if (ImGui::DragFloat("##scalar", &Param, 0.05f, 0.0f, 100.0f))
+						CachedMaterial->SetScalarParameter(ParamName, Param);
+				}
+				else if (ImGui::DragFloat("##scalar", &Param))
 					CachedMaterial->SetScalarParameter(ParamName, Param);
 				break;
 			}
@@ -187,7 +192,12 @@ void FEditorMaterialInspector::RenderShaderParameter()
 			{
 				FVector4 Param;
 				CachedMaterial->GetVector4Parameter(ParamName, Param);
-				if (ImGui::DragFloat4("##vec4", &Param.X))
+				if (ParamName == "EmissiveColor")
+				{
+					if (ImGui::ColorEdit4("##vec4", &Param.X))
+						CachedMaterial->SetVector4Parameter(ParamName, Param);
+				}
+				else if (ImGui::DragFloat4("##vec4", &Param.X))
 					CachedMaterial->SetVector4Parameter(ParamName, Param);
 				break;
 			}

@@ -14,5 +14,6 @@ Texture2D<float>  CoCTexture            : register(t26); // Depth of Field circl
 Texture2D<float4> DoFBackgroundTexture  : register(t27); // Depth of Field background blur
 Texture2D<float4> DoFForegroundTexture  : register(t28); // Depth of Field foreground blur + mask
 Texture2D<float4> DoFBokehTexture       : register(t29); // Depth of Field highlight bokeh scatter
+Texture2D<float4> BloomTexture          : register(t30); // Bloom ping-pong blur texture
 
 #endif // SYSTEM_RESOURCES_HLSL

@@ -17,6 +17,8 @@ bool FViewport::Initialize(ID3D11Device* InDevice, uint32 InWidth, uint32 InHeig
 	Device = InDevice;
 	Width = InWidth;
 	Height = InHeight;
+	BloomWidth = InWidth / 2;
+	BloomHeight = InHeight / 2;
 
 	return CreateResources();
 }
@@ -108,7 +110,7 @@ bool FViewport::CreateResources()
 	TexDesc.Height = Height;
 	TexDesc.MipLevels = 1;
 	TexDesc.ArraySize = 1;
-	TexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	TexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	TexDesc.SampleDesc.Count = 1;
 	TexDesc.Usage = D3D11_USAGE_DEFAULT;
 	TexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -194,7 +196,7 @@ bool FViewport::CreateResources()
 	StencilCopySRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportStencilCopySRV")), "ViewportStencilCopySRV");
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC SceneColorCopySRVDesc = {};
-	SceneColorCopySRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SceneColorCopySRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	SceneColorCopySRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	SceneColorCopySRVDesc.Texture2D.MipLevels = 1;
 	SceneColorCopySRVDesc.Texture2D.MostDetailedMip = 0;
@@ -232,7 +234,7 @@ bool FViewport::CreateResources()
 	DoFLayerDesc.Height = Height;
 	DoFLayerDesc.MipLevels = 1;
 	DoFLayerDesc.ArraySize = 1;
-	DoFLayerDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DoFLayerDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	DoFLayerDesc.SampleDesc.Count = 1;
 	DoFLayerDesc.Usage = D3D11_USAGE_DEFAULT;
 	DoFLayerDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -278,6 +280,50 @@ bool FViewport::CreateResources()
 	hr = Device->CreateShaderResourceView(DoFBokehTexture, nullptr, &DoFBokehSRV);
 	if (FAILED(hr)) return false;
 	DoFBokehSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBokehSRV")), "ViewportDoFBokehSRV");
+	
+	// Bloom uses half resolution so a small blur radius spreads farther on screen
+	// without producing obvious sparse sample marks.
+	BloomWidth = Width > 1 ? Width / 2 : 1;
+	BloomHeight = Height > 1 ? Height / 2 : 1;
+
+	//Bloom 텍스처
+	D3D11_TEXTURE2D_DESC BloomDesc = {};
+	BloomDesc.Width = BloomWidth;     // 주의: 블룸 최적화를 위해 Width / 2, Height / 2 로 다운샘플링하여 생성하기도 합니다.
+	BloomDesc.Height = BloomHeight;
+	BloomDesc.MipLevels = 1;
+	BloomDesc.ArraySize = 1;
+	BloomDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	BloomDesc.SampleDesc.Count = 1;
+	BloomDesc.Usage = D3D11_USAGE_DEFAULT;
+	BloomDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	// Bloom A 생성
+	hr = Device->CreateTexture2D(&BloomDesc, nullptr, &BloomTextureA);
+	if (FAILED(hr)) return false;
+	BloomTextureA->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportBloomTextureA")), "ViewportBloomTextureA");
+
+	hr = Device->CreateRenderTargetView(BloomTextureA, nullptr, &BloomRTVA);
+	if (FAILED(hr)) return false;
+	BloomRTVA->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportBloomRTVA")), "ViewportBloomRTVA");
+
+	hr = Device->CreateShaderResourceView(BloomTextureA, nullptr, &BloomSRVA);
+	if (FAILED(hr)) return false;
+	BloomSRVA->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportBloomSRVA")), "ViewportBloomSRVA");
+
+	// Bloom B 생성
+	hr = Device->CreateTexture2D(&BloomDesc, nullptr, &BloomTextureB);
+	if (FAILED(hr)) return false;
+	BloomTextureB->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportBloomTextureB")), "ViewportBloomTextureB");
+
+	hr = Device->CreateRenderTargetView(BloomTextureB, nullptr, &BloomRTVB);
+	if (FAILED(hr)) return false;
+	BloomRTVB->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportBloomRTVB")), "ViewportBloomRTVB");
+
+	hr = Device->CreateShaderResourceView(BloomTextureB, nullptr, &BloomSRVB);
+	if (FAILED(hr)) return false;
+	BloomSRVB->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportBloomSRVB")), "ViewportBloomSRVB");
+
+
 
 	// ── 뷰포트 렉트 ──
 	ViewportRect.TopLeftX = 0.0f;
@@ -292,6 +338,15 @@ bool FViewport::CreateResources()
 
 void FViewport::ReleaseResources()
 {
+	if (BloomSRVB) { BloomSRVB->Release(); BloomSRVB = nullptr; }
+	if (BloomRTVB) { BloomRTVB->Release(); BloomRTVB = nullptr; }
+	if (BloomTextureB) { BloomTextureB->Release(); BloomTextureB = nullptr; }
+
+	if (BloomSRVA) { BloomSRVA->Release(); BloomSRVA = nullptr; }
+	if (BloomRTVA) { BloomRTVA->Release(); BloomRTVA = nullptr; }
+	if (BloomTextureA) { BloomTextureA->Release(); BloomTextureA = nullptr; }
+
+
 	if (DoFBokehSRV) { DoFBokehSRV->Release(); DoFBokehSRV = nullptr; }
 	if (DoFBokehRTV) { DoFBokehRTV->Release(); DoFBokehRTV = nullptr; }
 	if (DoFBokehTexture) { DoFBokehTexture->Release(); DoFBokehTexture = nullptr; }
@@ -316,4 +371,6 @@ void FViewport::ReleaseResources()
 	if (RTTexture) { RTTexture->Release(); RTTexture = nullptr; }
 	if (SceneColorCopySRV) { SceneColorCopySRV->Release(); SceneColorCopySRV = nullptr; }
 	if (SceneColorCopyTexture) { SceneColorCopyTexture->Release(); SceneColorCopyTexture = nullptr; }
+	BloomWidth = 0;
+	BloomHeight = 0;
 }

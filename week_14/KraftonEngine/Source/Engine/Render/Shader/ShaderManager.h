@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Singleton.h"
 #include "Render/Shader/Shader.h"
@@ -156,6 +156,10 @@ namespace EShaderPath
 	inline constexpr const char* ParticleSprite = "Shaders/Particle/Sprite.hlsl";
 	inline constexpr const char* ParticleMesh   = "Shaders/Particle/Mesh.hlsl";
 	inline constexpr const char* ParticleBeamTrail = "Shaders/Particle/BeamTrail.hlsl";
+
+	inline constexpr const char* BloomExtract = "Shaders/PostProcess/BloomExtract.hlsl";
+	inline constexpr const char* BloomBlur = "Shaders/PostProcess/BloomBlur.hlsl";
+	inline constexpr const char* BloomComposite = "Shaders/PostProcess/BloomComposite.hlsl";
 
 	inline constexpr const char* ShadowDepth = "Shaders/Lighting/ShadowDepth.hlsl";
 	inline constexpr const char* VSMBlur = "Shaders/Lighting/VSMBlur.hlsl";

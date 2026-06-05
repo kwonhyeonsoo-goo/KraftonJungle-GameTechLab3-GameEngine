@@ -1,5 +1,6 @@
 #include "Common/Functions.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/ForwardFog.hlsli"
 
 // Particle Beam / Ribbon — CPU에서 월드 좌표 strip으로 펼쳐진 정점을 받는다.
 //   Beam:   SourcePoint→TargetPoint 사이를 InterpolationPoints로 분할한 카메라facing 띠.
@@ -17,6 +18,9 @@ cbuffer ParticleBeamTrailParams : register(b2)
     float  UseTexture;   // 0=텍스처 무시(base color만), 1=텍스처 사용
     float  ScrollSpeed;  // beam 길이방향(u) UV 스크롤 속도 (에너지 흐름, 0 = 정지)
     float  _pad;
+    float4 EmissiveColor;
+    float  EmissiveIntensity;
+    float3 _EmissivePad;
 }
 
 struct VS_Input_BeamTrail
@@ -31,6 +35,7 @@ struct PS_Input_BeamTrail
     float4 position : SV_POSITION;
     float4 color    : COLOR;
     float2 texcoord : TEXCOORD;
+    float3 worldPos : TEXCOORD1;
 };
 
 PS_Input_BeamTrail VS(VS_Input_BeamTrail input)
@@ -39,6 +44,7 @@ PS_Input_BeamTrail VS(VS_Input_BeamTrail input)
     output.position = ApplyVP(input.position);
     output.color    = input.color;
     output.texcoord = input.texcoord;
+    output.worldPos = input.position;
     return output;
 }
 
@@ -51,7 +57,10 @@ float4 PS(PS_Input_BeamTrail input) : SV_TARGET
     float3 texRgb = lerp(float3(1,1,1), sampled.rgb, UseTexture);
     float  texA   = lerp(1.0,            sampled.a,   UseTexture);
 
-    float3 rgb = input.color.rgb * BaseColor.rgb * texRgb;
+    float3 surfaceRgb = input.color.rgb * BaseColor.rgb * texRgb;
     float  a   = input.color.a   * BaseColor.a   * Opacity * texA;
-    return float4(ApplyWireframe(rgb), a);
+    float3 emissiveRgb = EmissiveColor.rgb * max(EmissiveIntensity, 0.0f);
+    float3 finalRgb = ApplyWireframe(surfaceRgb + emissiveRgb);
+    finalRgb = ApplyForwardHeightFog(finalRgb, input.worldPos);
+    return float4(finalRgb, a);
 }
