@@ -530,8 +530,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Debug\PhysicsAssetPreviewComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Debug\PhysicsAssetRagdollTestComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\InputComponent.cpp" />
     <ClCompile Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.cpp" />
@@ -617,6 +619,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Character.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\LuaCharacter.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Pawn.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Pawn\SniperPawn.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\ComponentGizmoTarget.cpp" />
@@ -986,8 +989,11 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Debug\PhysicsAssetPreviewComponent.h" />
     <ClInclude Include="Source\Engine\Component\Debug\PhysicsAssetRagdollTestComponent.h" />
     <ClInclude Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\SniperTypes.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.h" />
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h" />
     <ClInclude Include="Source\Engine\Component\Input\InputComponent.h" />
     <ClInclude Include="Source\Engine\Diagnostics\ActorSequenceDiagnostics.h" />
@@ -1084,6 +1090,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Character.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\LuaCharacter.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Pawn.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Pawn\SniperPawn.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.h" />
     <ClInclude Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.h" />
     <ClInclude Include="Source\Engine\Gizmo\ComponentGizmoTarget.h" />
