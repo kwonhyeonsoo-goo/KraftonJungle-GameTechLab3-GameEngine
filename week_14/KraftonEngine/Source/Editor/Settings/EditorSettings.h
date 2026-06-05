@@ -9,6 +9,13 @@
 #include "Math/Rotator.h"
 #include "Render/Types/ViewTypes.h"
 
+enum class EEditorPickingMode : int32
+{
+	IdBuffer = 0,
+	Ray,
+	Count
+};
+
 class FEditorSettings : public TSingleton<FEditorSettings>
 {
 	friend class TSingleton<FEditorSettings>;
@@ -33,6 +40,14 @@ public:
 	FViewportCameraControlSettings LevelViewportCameraControls;
 	FEditorViewportSettings LevelViewportSettings[4];
 	FEditorViewportSettings MeshEditorViewportSettings;
+	EEditorPickingMode PickingMode = EEditorPickingMode::IdBuffer;
+
+	struct FPIEViewportPreviewSettings
+	{
+		bool bFullscreenPreview = false;
+		bool bLockAspectRatio = true;
+		int32 AspectPreset = 0; // 0:16:9, 1:16:10, 2:4:3, 3:21:9, 4:9:16
+	} PIEViewportPreview;
 
 	// File paths
 	FString EditorStartLevel;  // 비어있으면 빈 씬, 씬 파일명(확장자 제외)이면 자동 로드

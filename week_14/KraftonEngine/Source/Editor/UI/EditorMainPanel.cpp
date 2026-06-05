@@ -62,6 +62,7 @@ struct FDebugPlaceActorOption
 };
 
 const FDebugPlaceActorOption GDebugPlaceActorOptions[] = {
+	{ "Empty Actor", FLevelViewportLayout::EViewportPlaceActorType::EmptyActor },
 	{ "Cube", FLevelViewportLayout::EViewportPlaceActorType::Cube },
 	{ "Sphere", FLevelViewportLayout::EViewportPlaceActorType::Sphere },
 	{ "Cylinder", FLevelViewportLayout::EViewportPlaceActorType::Cylinder },
@@ -1251,6 +1252,30 @@ void FEditorMainPanel::Render(float DeltaTime)
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
+	const FEditorSettings& Settings = FEditorSettings::Get();
+	const bool bLevelDocumentActive = DocumentTabs.IsLevelEditorActive();
+	const bool bPIEFullscreenPreview = EditorEngine
+		&& bLevelDocumentActive
+		&& EditorEngine->IsPlayingInEditor()
+		&& Settings.PIEViewportPreview.bFullscreenPreview;
+
+	if (bPIEFullscreenPreview)
+	{
+		SCOPE_STAT_CAT("EditorEngine->RenderViewportUI", "5_UI");
+		EditorEngine->RenderViewportUI(DeltaTime);
+
+		if (FLevelEditorViewportClient* ActiveViewport = EditorEngine->GetActiveViewport())
+		{
+			EditorEngine->GetOverlayStatSystem().RenderImGui(*EditorEngine, ActiveViewport->GetViewportScreenRect());
+		}
+
+		FNotificationToast::Render();
+
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		return;
+	}
+
 	RenderMainMenuBar();
 
 	const float FooterHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
@@ -1268,9 +1293,6 @@ void FEditorMainPanel::Render(float DeltaTime)
 			EditorEngine->GetOverlayStatSystem().RenderImGui(*EditorEngine, ActiveViewport->GetViewportScreenRect());
 		}
 	}
-
-	const FEditorSettings& Settings = FEditorSettings::Get();
-	const bool bLevelDocumentActive = DocumentTabs.IsLevelEditorActive();
 
 	if (!bHideEditorWindows && Settings.UI.bImGUISettings)
 	{
@@ -1377,11 +1399,16 @@ void FEditorMainPanel::RenderMainMenuBar()
 		const char* CurrentSceneLabel = "Current: Unsaved Scene";
 		FString CurrentScenePath;
 		FString CurrentSceneText;
+		const bool bSceneDirty = EditorEngine && EditorEngine->IsSceneDirty();
 		if (EditorEngine && EditorEngine->HasCurrentLevelFilePath())
 		{
 			CurrentScenePath = EditorEngine->GetCurrentLevelFilePath();
-			CurrentSceneText = FString("Current: ") + CurrentScenePath;
+			CurrentSceneText = FString("Current: ") + (bSceneDirty ? FString("* ") : FString()) + CurrentScenePath;
 			CurrentSceneLabel = CurrentSceneText.c_str();
+		}
+		else if (bSceneDirty)
+		{
+			CurrentSceneLabel = "Current: * Unsaved Scene";
 		}
 		ImGui::BeginDisabled();
 		ImGui::MenuItem(CurrentSceneLabel, nullptr, false, false);
@@ -1988,6 +2015,18 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 	{
 		ImGui::End();
 		return;
+	}
+
+	if (ImGui::CollapsingHeader("Picking", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		int32 CurrentPickingMode = static_cast<int32>(Settings.PickingMode);
+		ImGui::RadioButton("ID Buffer", &CurrentPickingMode, static_cast<int32>(EEditorPickingMode::IdBuffer));
+		ImGui::SameLine();
+		ImGui::RadioButton("Ray", &CurrentPickingMode, static_cast<int32>(EEditorPickingMode::Ray));
+		if (CurrentPickingMode >= 0 && CurrentPickingMode < static_cast<int32>(EEditorPickingMode::Count))
+		{
+			Settings.PickingMode = static_cast<EEditorPickingMode>(CurrentPickingMode);
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Scope Lens", ImGuiTreeNodeFlags_DefaultOpen))

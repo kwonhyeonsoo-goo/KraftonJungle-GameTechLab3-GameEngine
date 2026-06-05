@@ -47,6 +47,7 @@ public:
 private:
 	// 패스 루프 종료 후 시스템 텍스처 언바인딩 + 캐시 정리
 	void CleanupPassState(FStateCache& Cache);
+	void RenderEditorIdPickBuffer(const FFrameContext& Frame, FScene& Scene, const FDrawCommandList& CommandList);
 
 private:
 	FD3DDevice Device;

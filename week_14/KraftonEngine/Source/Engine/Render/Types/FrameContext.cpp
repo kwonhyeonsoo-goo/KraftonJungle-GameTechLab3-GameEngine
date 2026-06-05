@@ -32,8 +32,9 @@ void FFrameContext::SetCameraInfo(const UCameraComponent* Camera)
 	SetCameraInfo(POV);
 }
 
-void FFrameContext::SetViewportInfo(const FViewport* VP)
+void FFrameContext::SetViewportInfo(FViewport* VP)
 {
+	SourceViewport   = VP;
 	ViewportWidth    = static_cast<float>(VP->GetWidth());
 	ViewportHeight   = static_cast<float>(VP->GetHeight());
 	ViewportRTV             = VP->GetRTV();
@@ -47,6 +48,12 @@ void FFrameContext::SetViewportInfo(const FViewport* VP)
 	DepthCopyTexture        = VP->GetDepthCopyTexture();
 	DepthCopySRV            = VP->GetDepthCopySRV();
 	StencilCopySRV          = VP->GetStencilCopySRV();
+	EditorIdPickTexture     = VP->GetEditorIdPickTexture();
+	EditorIdPickRTV         = VP->GetEditorIdPickRTV();
+	EditorIdPickSRV         = VP->GetEditorIdPickSRV();
+	EditorIdPickReadbackTexture = VP->GetEditorIdPickReadbackTexture();
+	EditorIdPickDebugRTV    = VP->GetEditorIdPickDebugRTV();
+	EditorIdPickDebugSRV    = VP->GetEditorIdPickDebugSRV();
 	BloomWidth = static_cast<float>(VP->GetBloomWidth());
 	BloomHeight = static_cast<float>(VP->GetBloomHeight());
 	BloomRTVA = VP->GetBloomRTVA();

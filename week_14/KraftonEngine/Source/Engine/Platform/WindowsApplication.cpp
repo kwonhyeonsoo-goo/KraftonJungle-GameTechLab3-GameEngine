@@ -34,6 +34,14 @@ LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam,
 
 	switch (Msg)
 	{
+	case WM_CLOSE:
+		if (OnCloseRequestedCallback && !OnCloseRequestedCallback())
+		{
+			return 0;
+		}
+		bCloseRequestAccepted = true;
+		DestroyWindow(hWnd);
+		return 0;
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
@@ -174,6 +182,12 @@ void FWindowsApplication::PumpMessages()
 
 		if (Msg.message == WM_QUIT)
 		{
+			if (!bCloseRequestAccepted && OnCloseRequestedCallback && !OnCloseRequestedCallback())
+			{
+				continue;
+			}
+
+			bCloseRequestAccepted = true;
 			bIsExitRequested = true;
 			break;
 		}

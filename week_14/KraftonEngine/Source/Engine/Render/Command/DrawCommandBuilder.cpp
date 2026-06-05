@@ -278,7 +278,9 @@ static bool IsEditorHelperProxy(const FPrimitiveSceneProxy& Proxy)
 
 static bool ShouldSuppressPassForViewMode(EViewMode ViewMode, ERenderPass Pass)
 {
-	return ViewModeUtils::SuppressesEditorOverlays(ViewMode) && Pass == ERenderPass::EditorIcon;
+	return ViewModeUtils::SuppressesEditorOverlays(ViewMode) &&
+		ViewMode != EViewMode::IdBuffer &&
+		Pass == ERenderPass::EditorIcon;
 }
 
 static FShader* GetViewModeMeshShader(bool bUseSkeletalVertexFactory)
@@ -455,6 +457,8 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		Cmd.RenderState = BaseRenderState;
 		Cmd.Buffer = EffBuffer;
 		Cmd.PerObjectCB = PerObjCB;
+		Cmd.SourceProxy = &Proxy;
+		Cmd.SourceMaterial = SectionMaterial;
 		Cmd.bIsSkeletal = bSkeletal;
 		Cmd.bIsGpuSkinned = bGPUSkinning;
 		Cmd.Buffer.FirstIndex = Section.FirstIndex;

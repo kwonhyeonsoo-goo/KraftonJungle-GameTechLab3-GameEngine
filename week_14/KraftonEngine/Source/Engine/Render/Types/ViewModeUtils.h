@@ -26,7 +26,7 @@ namespace ViewModeUtils
 
 	inline bool IsFullscreenDebugViewMode(EViewMode ViewMode)
 	{
-		return ViewMode == EViewMode::SceneDepth;
+		return ViewMode == EViewMode::SceneDepth || ViewMode == EViewMode::IdBuffer;
 	}
 
 	inline bool IsPureDebugViewMode(EViewMode ViewMode)

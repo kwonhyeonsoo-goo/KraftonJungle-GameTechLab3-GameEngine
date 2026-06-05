@@ -8,6 +8,8 @@
 
 class FShader;
 class FConstantBuffer;
+class FPrimitiveSceneProxy;
+class UMaterial;
 struct ID3D11ShaderResourceView;
 struct ID3D11Buffer;
 
@@ -76,6 +78,8 @@ struct FDrawCommand
 	// ===== Bindings =====
 	FConstantBuffer*    PerObjectCB = nullptr;        // b1: Model + Color (per-proxy)
 	FDrawCommandBindings Bindings;                    // PerShaderCB + SRVs (per-material)
+	const FPrimitiveSceneProxy* SourceProxy = nullptr;
+	UMaterial* SourceMaterial = nullptr;
 
 	// ===== Sort =====
 	uint64 SortKey = 0;                              // 정렬 키 (Pass → Shader → MeshBuffer → SRV)

@@ -2,6 +2,8 @@
 
 #include "Render/Resource/Buffer.h"
 
+#include <utility>
+
 namespace
 {
 	constexpr uint32 DoFBokehDownsampleFactor = 2;
@@ -114,6 +116,59 @@ void FViewport::BeginScopeLensRender(ID3D11DeviceContext* Ctx, const float Clear
 	Ctx->RSSetViewports(1, &VPRect);
 }
 
+bool FViewport::ReadEditorIdPickAt(uint32 X, uint32 Y, ID3D11DeviceContext* Ctx, uint32& OutPickId) const
+{
+	OutPickId = 0;
+	if (!Ctx || !EditorIdPickTexture || !EditorIdPickReadbackTexture)
+	{
+		return false;
+	}
+	if (X >= Width || Y >= Height)
+	{
+		return false;
+	}
+
+	D3D11_BOX SourceBox = {};
+	SourceBox.left = X;
+	SourceBox.top = Y;
+	SourceBox.front = 0;
+	SourceBox.right = X + 1;
+	SourceBox.bottom = Y + 1;
+	SourceBox.back = 1;
+
+	Ctx->CopySubresourceRegion(EditorIdPickReadbackTexture, 0, 0, 0, 0, EditorIdPickTexture, 0, &SourceBox);
+
+	D3D11_MAPPED_SUBRESOURCE Mapped = {};
+	if (FAILED(Ctx->Map(EditorIdPickReadbackTexture, 0, D3D11_MAP_READ, 0, &Mapped)))
+	{
+		return false;
+	}
+
+	OutPickId = *reinterpret_cast<const uint32*>(Mapped.pData);
+	Ctx->Unmap(EditorIdPickReadbackTexture, 0);
+	return true;
+}
+
+void FViewport::SetEditorIdPickActors(TArray<AActor*>&& InActors)
+{
+	EditorIdPickActors = std::move(InActors);
+}
+
+AActor* FViewport::GetEditorIdPickActor(uint32 PickId) const
+{
+	if (PickId == 0)
+	{
+		return nullptr;
+	}
+
+	const uint32 Index = PickId - 1;
+	if (Index >= EditorIdPickActors.size())
+	{
+		return nullptr;
+	}
+	return EditorIdPickActors[Index];
+}
+
 bool FViewport::CreateResources()
 {
 	if (!Device || Width == 0 || Height == 0) return false;
@@ -218,6 +273,60 @@ bool FViewport::CreateResources()
 	hr = Device->CreateShaderResourceView(SceneColorCopyTexture, &SceneColorCopySRVDesc, &SceneColorCopySRV);
 	if (FAILED(hr)) return false;
 	SceneColorCopySRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportSceneColorCopySRV")), "ViewportSceneColorCopySRV");
+
+	D3D11_TEXTURE2D_DESC IdPickDesc = {};
+	IdPickDesc.Width = Width;
+	IdPickDesc.Height = Height;
+	IdPickDesc.MipLevels = 1;
+	IdPickDesc.ArraySize = 1;
+	IdPickDesc.Format = DXGI_FORMAT_R32_UINT;
+	IdPickDesc.SampleDesc.Count = 1;
+	IdPickDesc.Usage = D3D11_USAGE_DEFAULT;
+	IdPickDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	hr = Device->CreateTexture2D(&IdPickDesc, nullptr, &EditorIdPickTexture);
+	if (FAILED(hr)) return false;
+	EditorIdPickTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickTexture")), "ViewportEditorIdPickTexture");
+
+	hr = Device->CreateRenderTargetView(EditorIdPickTexture, nullptr, &EditorIdPickRTV);
+	if (FAILED(hr)) return false;
+	EditorIdPickRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickRTV")), "ViewportEditorIdPickRTV");
+
+	hr = Device->CreateShaderResourceView(EditorIdPickTexture, nullptr, &EditorIdPickSRV);
+	if (FAILED(hr)) return false;
+	EditorIdPickSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickSRV")), "ViewportEditorIdPickSRV");
+
+	D3D11_TEXTURE2D_DESC IdPickReadbackDesc = IdPickDesc;
+	IdPickReadbackDesc.Width = 1;
+	IdPickReadbackDesc.Height = 1;
+	IdPickReadbackDesc.Usage = D3D11_USAGE_STAGING;
+	IdPickReadbackDesc.BindFlags = 0;
+	IdPickReadbackDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	hr = Device->CreateTexture2D(&IdPickReadbackDesc, nullptr, &EditorIdPickReadbackTexture);
+	if (FAILED(hr)) return false;
+	EditorIdPickReadbackTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickReadbackTexture")), "ViewportEditorIdPickReadbackTexture");
+
+	D3D11_TEXTURE2D_DESC IdPickDebugDesc = {};
+	IdPickDebugDesc.Width = Width;
+	IdPickDebugDesc.Height = Height;
+	IdPickDebugDesc.MipLevels = 1;
+	IdPickDebugDesc.ArraySize = 1;
+	IdPickDebugDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	IdPickDebugDesc.SampleDesc.Count = 1;
+	IdPickDebugDesc.Usage = D3D11_USAGE_DEFAULT;
+	IdPickDebugDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	hr = Device->CreateTexture2D(&IdPickDebugDesc, nullptr, &EditorIdPickDebugTexture);
+	if (FAILED(hr)) return false;
+	EditorIdPickDebugTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickDebugTexture")), "ViewportEditorIdPickDebugTexture");
+
+	hr = Device->CreateRenderTargetView(EditorIdPickDebugTexture, nullptr, &EditorIdPickDebugRTV);
+	if (FAILED(hr)) return false;
+	EditorIdPickDebugRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickDebugRTV")), "ViewportEditorIdPickDebugRTV");
+
+	hr = Device->CreateShaderResourceView(EditorIdPickDebugTexture, nullptr, &EditorIdPickDebugSRV);
+	if (FAILED(hr)) return false;
+	EditorIdPickDebugSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportEditorIdPickDebugSRV")), "ViewportEditorIdPickDebugSRV");
 
 	hr = Device->CreateTexture2D(&TexDesc, nullptr, &ScopeLensTexture);
 	if (FAILED(hr)) return false;
@@ -364,6 +473,15 @@ bool FViewport::CreateResources()
 
 void FViewport::ReleaseResources()
 {
+	EditorIdPickActors.clear();
+	if (EditorIdPickDebugSRV) { EditorIdPickDebugSRV->Release(); EditorIdPickDebugSRV = nullptr; }
+	if (EditorIdPickDebugRTV) { EditorIdPickDebugRTV->Release(); EditorIdPickDebugRTV = nullptr; }
+	if (EditorIdPickDebugTexture) { EditorIdPickDebugTexture->Release(); EditorIdPickDebugTexture = nullptr; }
+	if (EditorIdPickReadbackTexture) { EditorIdPickReadbackTexture->Release(); EditorIdPickReadbackTexture = nullptr; }
+	if (EditorIdPickSRV) { EditorIdPickSRV->Release(); EditorIdPickSRV = nullptr; }
+	if (EditorIdPickRTV) { EditorIdPickRTV->Release(); EditorIdPickRTV = nullptr; }
+	if (EditorIdPickTexture) { EditorIdPickTexture->Release(); EditorIdPickTexture = nullptr; }
+
 	if (BloomSRVB) { BloomSRVB->Release(); BloomSRVB = nullptr; }
 	if (BloomRTVB) { BloomRTVB->Release(); BloomRTVB = nullptr; }
 	if (BloomTextureB) { BloomTextureB->Release(); BloomTextureB = nullptr; }

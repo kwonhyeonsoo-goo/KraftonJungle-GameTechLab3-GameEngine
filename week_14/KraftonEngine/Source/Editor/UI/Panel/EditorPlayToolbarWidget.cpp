@@ -2,6 +2,7 @@
 
 #include "Editor/EditorEngine.h"
 #include "Editor/PIE/PIETypes.h"
+#include "Editor/Settings/EditorSettings.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "Platform/Paths.h"
 #include "ImGui/imgui.h"
@@ -81,6 +82,29 @@ void FEditorPlayToolbarWidget::Render(float Width)
 	}
 
 	ImGui::PopStyleColor(3);
+
+	if (Width > 160.0f)
+	{
+		FEditorSettings::FPIEViewportPreviewSettings& Preview = FEditorSettings::Get().PIEViewportPreview;
+		static const char* AspectPresets[] = { "16:9", "16:10", "4:3", "21:9", "9:16" };
+
+		ImGui::SameLine(0.0f, ButtonSpacing);
+		if (ImGui::Button("PIE", ImVec2(34.0f, IconSize + 8.0f)))
+		{
+			ImGui::OpenPopup("PIEViewportPreviewPopup");
+		}
+
+		if (ImGui::BeginPopup("PIEViewportPreviewPopup"))
+		{
+			ImGui::Checkbox("Fullscreen", &Preview.bFullscreenPreview);
+			ImGui::Checkbox("Aspect", &Preview.bLockAspectRatio);
+			ImGui::BeginDisabled(!Preview.bLockAspectRatio);
+			ImGui::SetNextItemWidth(90.0f);
+			ImGui::Combo("Ratio", &Preview.AspectPreset, AspectPresets, IM_ARRAYSIZE(AspectPresets));
+			ImGui::EndDisabled();
+			ImGui::EndPopup();
+		}
+	}
 
 	// 다음 콘텐츠는 툴바 아래로 이어지도록 커서 복원
 	ImGui::SetCursorScreenPos(ImVec2(CursorStart.x, CursorStart.y + ToolbarHeight));

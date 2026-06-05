@@ -45,6 +45,9 @@ struct FFrameContext
 	float BloomWidth = 0.0f;
 	float BloomHeight = 0.0f;
 
+	FViewport* SourceViewport = nullptr;
+	bool bEnableEditorIdPicking = false;
+
 	ID3D11RenderTargetView*   ViewportRTV          = nullptr;
 	ID3D11DepthStencilView*   ViewportDSV          = nullptr;
 	// SceneColor 복사 — FXAA 등 PostProcess에서 최종 화면 읽기용
@@ -59,6 +62,12 @@ struct FFrameContext
 	ID3D11Texture2D*          DepthCopyTexture     = nullptr;  // 복사본 (CopyResource 대상)
 	ID3D11ShaderResourceView* DepthCopySRV         = nullptr;
 	ID3D11ShaderResourceView* StencilCopySRV       = nullptr;
+	ID3D11Texture2D*          EditorIdPickTexture  = nullptr;
+	ID3D11RenderTargetView*   EditorIdPickRTV      = nullptr;
+	ID3D11ShaderResourceView* EditorIdPickSRV      = nullptr;
+	ID3D11Texture2D*          EditorIdPickReadbackTexture = nullptr;
+	ID3D11RenderTargetView*   EditorIdPickDebugRTV = nullptr;
+	ID3D11ShaderResourceView* EditorIdPickDebugSRV = nullptr;
 
 	// DoF CoC RT
 	ID3D11RenderTargetView*   CoCRTV                = nullptr;
@@ -113,7 +122,7 @@ struct FFrameContext
 	// FMinimalViewInfo 가 카메라 통화. 컴포넌트 오버로드는 통화로 변환 후 위임.
 	void SetCameraInfo(const FMinimalViewInfo& POV);
 	void SetCameraInfo(const UCameraComponent* Camera);
-	void SetViewportInfo(const FViewport* VP);
+	void SetViewportInfo(FViewport* VP);
 
 	void SetViewportSize(float InWidth, float InHeight)
 	{
@@ -131,6 +140,8 @@ struct FFrameContext
 	{
 		ViewportRTV             = nullptr;
 		ViewportDSV             = nullptr;
+		SourceViewport          = nullptr;
+		bEnableEditorIdPicking  = false;
 		SceneColorCopySRV       = nullptr;
 		SceneColorCopyTexture   = nullptr;
 		ViewportRenderTexture   = nullptr;
@@ -140,6 +151,12 @@ struct FFrameContext
 		DepthCopyTexture        = nullptr;
 		DepthCopySRV            = nullptr;
 		StencilCopySRV          = nullptr;
+		EditorIdPickTexture     = nullptr;
+		EditorIdPickRTV         = nullptr;
+		EditorIdPickSRV         = nullptr;
+		EditorIdPickReadbackTexture = nullptr;
+		EditorIdPickDebugRTV    = nullptr;
+		EditorIdPickDebugSRV    = nullptr;
 		BloomRTVA = nullptr;
 		BloomSRVA = nullptr;
 		BloomRTVB = nullptr;

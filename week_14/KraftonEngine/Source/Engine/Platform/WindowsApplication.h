@@ -10,6 +10,7 @@
 
 using FOnSizingCallback = std::function<void()>;
 using FOnResizedCallback = std::function<void(unsigned int, unsigned int)>;
+using FOnCloseRequestedCallback = std::function<bool()>;
 
 class FWindowsApplication
 {
@@ -29,6 +30,7 @@ public:
 
 	void SetOnSizingCallback(FOnSizingCallback InCallback) { OnSizingCallback = std::move(InCallback); }
 	void SetOnResizedCallback(FOnResizedCallback InCallback) { OnResizedCallback = std::move(InCallback); }
+	void SetOnCloseRequestedCallback(FOnCloseRequestedCallback InCallback) { OnCloseRequestedCallback = std::move(InCallback); }
 
 private:
 	static LRESULT CALLBACK StaticWndProc(HWND hWnd, unsigned int Msg, WPARAM wParam, LPARAM lParam);
@@ -40,7 +42,9 @@ private:
 
 	bool bIsExitRequested = false;
 	bool bIsResizing = false;
+	bool bCloseRequestAccepted = false;
 
 	FOnSizingCallback OnSizingCallback;
 	FOnResizedCallback OnResizedCallback;
+	FOnCloseRequestedCallback OnCloseRequestedCallback;
 };

@@ -134,6 +134,8 @@ namespace EShaderPath
 	inline constexpr const char* Editor = "Shaders/Editor/Editor.hlsl";
 	inline constexpr const char* Gizmo = "Shaders/Editor/Gizmo.hlsl";
 	inline constexpr const char* ViewModeMesh = "Shaders/Editor/ViewModeMesh.hlsl";
+	inline constexpr const char* EditorIdPick = "Shaders/Editor/IDPick.hlsl";
+	inline constexpr const char* EditorIdPickDebug = "Shaders/Editor/IDPickDebug.hlsl";
 
 	inline constexpr const char* FXAA = "Shaders/PostProcess/FXAA.hlsl";
 	inline constexpr const char* Outline = "Shaders/PostProcess/Outline.hlsl";

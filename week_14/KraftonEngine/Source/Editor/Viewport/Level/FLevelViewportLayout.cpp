@@ -32,9 +32,11 @@
 #include "Serialization/PrefabManager.h"
 #include "ImGui/imgui.h"
 #include "Component/Camera/CameraComponent.h"
+#include "Component/Primitive/BillboardComponent.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Component/Debug/GizmoComponent.h"
 #include "Component/Light/LightComponentBase.h"
+#include "Materials/MaterialManager.h"
 #include "UI/Toolbar/ViewportToolbar.h"
 
 #include "GameFramework/Actor/StaticMeshActor.h"
@@ -53,6 +55,72 @@
 
 namespace
 {
+float GetPIEPreviewAspectRatio(int32 Preset)
+{
+	switch (Preset)
+	{
+	case 1: return 16.0f / 10.0f;
+	case 2: return 4.0f / 3.0f;
+	case 3: return 21.0f / 9.0f;
+	case 4: return 9.0f / 16.0f;
+	case 0:
+	default:
+		return 16.0f / 9.0f;
+	}
+}
+
+FRect FitRectToAspect(const FRect& Outer, float AspectRatio)
+{
+	if (Outer.Width <= 0.0f || Outer.Height <= 0.0f || AspectRatio <= 0.0f)
+	{
+		return Outer;
+	}
+
+	const float OuterAspect = Outer.Width / Outer.Height;
+	FRect Result = Outer;
+	if (OuterAspect > AspectRatio)
+	{
+		Result.Width = Outer.Height * AspectRatio;
+		Result.X = Outer.X + (Outer.Width - Result.Width) * 0.5f;
+	}
+	else
+	{
+		Result.Height = Outer.Width / AspectRatio;
+		Result.Y = Outer.Y + (Outer.Height - Result.Height) * 0.5f;
+	}
+	return Result;
+}
+
+void AttachEmptyActorBillboard(AActor* Actor)
+{
+	if (!Actor)
+	{
+		return;
+	}
+
+	UBillboardComponent* Billboard = Actor->AddComponent<UBillboardComponent>();
+	if (!Billboard)
+	{
+		return;
+	}
+
+	Billboard->SetBillboardEnabled(true);
+	Billboard->SetEditorOnlyComponent(true);
+	Billboard->SetRelativeScale(FVector(0.7f, 0.7f, 0.7f));
+	if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial("Content/Material/Editor/EmptyActor.uasset"))
+	{
+		Billboard->SetMaterial(Material);
+	}
+
+	Actor->SetRootComponent(Billboard);
+}
+
+bool IsPointInRect(const FRect& Rect, const FPoint& Point)
+{
+	return Point.X >= Rect.X && Point.Y >= Rect.Y &&
+		Point.X < Rect.X + Rect.Width &&
+		Point.Y < Rect.Y + Rect.Height;
+}
 }
 
 // ─── 레이아웃별 슬롯 수 ─────────────────────────────────────
@@ -256,8 +324,16 @@ void FLevelViewportLayout::DisableWorldAxisForPIE()
 	{
 		for (int32 i = 0; i < ActiveSlotCount && i < static_cast<int32>(LevelViewportClients.size()); ++i)
 		{
-			LevelViewportClients[i]->GetRenderOptions().ShowFlags.bGrid = false;
-			LevelViewportClients[i]->GetRenderOptions().ShowFlags.bWorldAxis = false;
+			FShowFlags& ShowFlags = LevelViewportClients[i]->GetRenderOptions().ShowFlags;
+			ShowFlags.bGrid = false;
+			ShowFlags.bWorldAxis = false;
+			ShowFlags.bGizmo = false;
+			ShowFlags.bCollision = false;
+			ShowFlags.bShowCollisionShape = false;
+		}
+		if (SelectionManager)
+		{
+			SelectionManager->SetGizmoEnabled(false);
 		}
 		return;
 	}
@@ -266,6 +342,9 @@ void FLevelViewportLayout::DisableWorldAxisForPIE()
 	{
 		SavedGridVisibility[i] = false;
 		SavedWorldAxisVisibility[i] = false;
+		SavedGizmoVisibility[i] = false;
+		SavedCollisionVisibility[i] = false;
+		SavedCollisionShapeVisibility[i] = false;
 	}
 
 	for (int32 i = 0; i < ActiveSlotCount && i < static_cast<int32>(LevelViewportClients.size()); ++i)
@@ -273,10 +352,21 @@ void FLevelViewportLayout::DisableWorldAxisForPIE()
 		FViewportRenderOptions& Opts = LevelViewportClients[i]->GetRenderOptions();
 		SavedGridVisibility[i] = Opts.ShowFlags.bGrid;
 		SavedWorldAxisVisibility[i] = Opts.ShowFlags.bWorldAxis;
+		SavedGizmoVisibility[i] = Opts.ShowFlags.bGizmo;
+		SavedCollisionVisibility[i] = Opts.ShowFlags.bCollision;
+		SavedCollisionShapeVisibility[i] = Opts.ShowFlags.bShowCollisionShape;
 		Opts.ShowFlags.bGrid = false;
 		Opts.ShowFlags.bWorldAxis = false;
+		Opts.ShowFlags.bGizmo = false;
+		Opts.ShowFlags.bCollision = false;
+		Opts.ShowFlags.bShowCollisionShape = false;
 	}
 
+	SavedSelectionGizmoEnabled = SelectionManager ? SelectionManager->IsGizmoEnabled() : true;
+	if (SelectionManager)
+	{
+		SelectionManager->SetGizmoEnabled(false);
+	}
 	bHasSavedWorldAxisVisibility = true;
 }
 
@@ -289,10 +379,18 @@ void FLevelViewportLayout::RestoreWorldAxisAfterPIE()
 
 	for (int32 i = 0; i < ActiveSlotCount && i < static_cast<int32>(LevelViewportClients.size()); ++i)
 	{
-		LevelViewportClients[i]->GetRenderOptions().ShowFlags.bGrid = SavedGridVisibility[i];
-		LevelViewportClients[i]->GetRenderOptions().ShowFlags.bWorldAxis = SavedWorldAxisVisibility[i];
+		FShowFlags& ShowFlags = LevelViewportClients[i]->GetRenderOptions().ShowFlags;
+		ShowFlags.bGrid = SavedGridVisibility[i];
+		ShowFlags.bWorldAxis = SavedWorldAxisVisibility[i];
+		ShowFlags.bGizmo = SavedGizmoVisibility[i];
+		ShowFlags.bCollision = SavedCollisionVisibility[i];
+		ShowFlags.bShowCollisionShape = SavedCollisionShapeVisibility[i];
 	}
 
+	if (SelectionManager)
+	{
+		SelectionManager->SetGizmoEnabled(SavedSelectionGizmoEnabled);
+	}
 	bHasSavedWorldAxisVisibility = false;
 }
 
@@ -531,6 +629,11 @@ bool FLevelViewportLayout::ShouldRenderViewportClient(const FLevelEditorViewport
 	if (!ViewportClient)
 	{
 		return false;
+	}
+
+	if (Editor && Editor->IsPlayingInEditor() && FEditorSettings::Get().PIEViewportPreview.bFullscreenPreview)
+	{
+		return ViewportClient == ActiveViewportClient;
 	}
 
 	for (int32 i = 0; i < ActiveSlotCount && i < static_cast<int32>(LevelViewportClients.size()); ++i)
@@ -884,8 +987,31 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 	bMouseOverViewport = false;
 	UpdateLayoutTransition(DeltaTime);
 
+	const bool bPIEFullscreenHost = Editor
+		&& Editor->IsPlayingInEditor()
+		&& FEditorSettings::Get().PIEViewportPreview.bFullscreenPreview;
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-	ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_None);
+	if (bPIEFullscreenHost)
+	{
+		if (ImGuiViewport* MainViewport = ImGui::GetMainViewport())
+		{
+			ImGui::SetNextWindowPos(MainViewport->Pos, ImGuiCond_Always);
+			ImGui::SetNextWindowSize(MainViewport->Size, ImGuiCond_Always);
+		}
+	}
+
+	ImGuiWindowFlags ViewportWindowFlags = ImGuiWindowFlags_None;
+	if (bPIEFullscreenHost)
+	{
+		ViewportWindowFlags = ImGuiWindowFlags_NoDecoration
+			| ImGuiWindowFlags_NoDocking
+			| ImGuiWindowFlags_NoMove
+			| ImGuiWindowFlags_NoResize
+			| ImGuiWindowFlags_NoSavedSettings
+			| ImGuiWindowFlags_NoBringToFrontOnFocus;
+	}
+	ImGui::Begin(bPIEFullscreenHost ? "PIE Fullscreen Viewport" : "Viewport", nullptr, ViewportWindowFlags);
 
 	ImVec2 ContentPos = ImGui::GetCursorScreenPos();
 	ImVec2 ContentSize = ImGui::GetContentRegionAvail();
@@ -964,7 +1090,14 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 		const float ToolbarHeight = PlayToolbar.GetDesiredHeight();
 		ImGui::SetCursorScreenPos(ContentPos);
 		PlayToolbar.Render(ContentSize.x);
-		RenderSharedViewportToolbar(ContentPos.x, ContentPos.y, ImGui::GetContentRegionAvail().x);
+		if (!(Editor && Editor->IsPlayingInEditor() && FEditorSettings::Get().PIEViewportPreview.bFullscreenPreview))
+		{
+			const float PIEButtonReserveWidth = ContentSize.x > 160.0f ? 56.0f : 0.0f;
+			RenderSharedViewportToolbar(
+				ContentPos.x + PIEButtonReserveWidth,
+				ContentPos.y,
+				(std::max)(0.0f, ImGui::GetContentRegionAvail().x - PIEButtonReserveWidth));
+		}
 
 		FRect ContentRect = {
 			ContentPos.x,
@@ -982,43 +1115,94 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 			return R.Width > 1.0f && R.Height > 1.0f;
 		};
 
-		// SSplitter 레이아웃 계산
-		if (RootSplitter)
-		{
-			RootSplitter->ComputeLayout(ContentRect);
-		}
-		else if (ViewportWindows[0])
-		{
-			ViewportWindows[0]->SetRect(ContentRect);
-		}
+		const FEditorSettings::FPIEViewportPreviewSettings& PIEPreview = FEditorSettings::Get().PIEViewportPreview;
+		const bool bPIEPreviewActive = Editor && Editor->IsPlayingInEditor();
+		const bool bUsePIEFullscreenPreview = bPIEPreviewActive && PIEPreview.bFullscreenPreview;
+		const bool bUsePIEAspectLock = bPIEPreviewActive && PIEPreview.bLockAspectRatio;
 
-		// 각 ViewportClient에 Rect 반영 + 이미지 렌더
-		for (int32 i = 0; i < ActiveSlotCount; ++i)
+		auto GetPreviewRect = [&](const FRect& SlotRect) -> FRect
 		{
-			if (i < static_cast<int32>(LevelViewportClients.size()) && IsSlotVisibleEnough(i))
+			return bUsePIEAspectLock
+				? FitRectToAspect(SlotRect, GetPIEPreviewAspectRatio(PIEPreview.AspectPreset))
+				: SlotRect;
+		};
+
+		auto RenderViewportSlot = [&](int32 SlotIndex, const FRect& SlotRect)
+		{
+			if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(LevelViewportClients.size()))
 			{
-				FLevelEditorViewportClient* VC = LevelViewportClients[i];
-				VC->UpdateLayoutRect();
-				VC->RenderViewportImage(VC == ActiveViewportClient);
+				return;
 			}
-		}
 
-		// 분할 바 렌더 (재귀 수집)
-		if (RootSplitter)
-		{
-			TArray<SSplitter*> AllSplitters;
-			SSplitter::CollectSplitters(RootSplitter, AllSplitters);
-
-			ImDrawList* DrawList = ImGui::GetWindowDrawList();
-			ImU32 BarColor = IM_COL32(80, 80, 80, 255);
-
-			for (SSplitter* S : AllSplitters)
+			FLevelEditorViewportClient* VC = LevelViewportClients[SlotIndex];
+			if (!VC)
 			{
-				const FRect& Bar = S->GetSplitBarRect();
+				return;
+			}
+
+			const FRect PreviewRect = GetPreviewRect(SlotRect);
+			if (bPIEPreviewActive)
+			{
+				ImDrawList* DrawList = ImGui::GetWindowDrawList();
 				DrawList->AddRectFilled(
-					ImVec2(Bar.X, Bar.Y),
-					ImVec2(Bar.X + Bar.Width, Bar.Y + Bar.Height),
-					BarColor);
+					ImVec2(SlotRect.X, SlotRect.Y),
+					ImVec2(SlotRect.X + SlotRect.Width, SlotRect.Y + SlotRect.Height),
+					IM_COL32(8, 8, 8, 255));
+				if (bUsePIEAspectLock)
+				{
+					DrawList->AddRect(
+						ImVec2(PreviewRect.X, PreviewRect.Y),
+						ImVec2(PreviewRect.X + PreviewRect.Width, PreviewRect.Y + PreviewRect.Height),
+						IM_COL32(105, 105, 105, 180));
+				}
+			}
+
+			VC->UpdateViewportRect(PreviewRect);
+			VC->RenderViewportImage(VC == ActiveViewportClient);
+		};
+
+		if (bUsePIEFullscreenPreview)
+		{
+			RenderViewportSlot(GetActiveViewportSlotIndex(), ContentRect);
+		}
+		else
+		{
+			// SSplitter 레이아웃 계산
+			if (RootSplitter)
+			{
+				RootSplitter->ComputeLayout(ContentRect);
+			}
+			else if (ViewportWindows[0])
+			{
+				ViewportWindows[0]->SetRect(ContentRect);
+			}
+
+			// 각 ViewportClient에 Rect 반영 + 이미지 렌더
+			for (int32 i = 0; i < ActiveSlotCount; ++i)
+			{
+				if (i < static_cast<int32>(LevelViewportClients.size()) && IsSlotVisibleEnough(i))
+				{
+					RenderViewportSlot(i, ViewportWindows[i]->GetRect());
+				}
+			}
+
+			// 분할 바 렌더 (재귀 수집)
+			if (RootSplitter)
+			{
+				TArray<SSplitter*> AllSplitters;
+				SSplitter::CollectSplitters(RootSplitter, AllSplitters);
+
+				ImDrawList* DrawList = ImGui::GetWindowDrawList();
+				ImU32 BarColor = IM_COL32(80, 80, 80, 255);
+
+				for (SSplitter* S : AllSplitters)
+				{
+					const FRect& Bar = S->GetSplitBarRect();
+					DrawList->AddRectFilled(
+						ImVec2(Bar.X, Bar.Y),
+						ImVec2(Bar.X + Bar.Width, Bar.Y + Bar.Height),
+						BarColor);
+				}
 			}
 		}
 
@@ -1028,23 +1212,40 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 			ImVec2 MousePos = ImGui::GetIO().MousePos;
 			FPoint MP = { MousePos.x, MousePos.y };
 
-			// 마우스가 어떤 슬롯 위에 있는지
-			for (int32 i = 0; i < ActiveSlotCount; ++i)
+			auto SetHoveredViewport = [&](int32 SlotIndex) -> bool
 			{
-				if (IsSlotVisibleEnough(i) && ViewportWindows[i]->IsHover(MP))
+				if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(LevelViewportClients.size()) || !LevelViewportClients[SlotIndex])
 				{
-					bMouseOverViewport = true;
-					if (i < static_cast<int32>(LevelViewportClients.size()) && LevelViewportClients[i])
+					return false;
+				}
+				if (!IsPointInRect(LevelViewportClients[SlotIndex]->GetViewportScreenRect(), MP))
+				{
+					return false;
+				}
+
+				bMouseOverViewport = true;
+				FSlateApplication::Get().SetViewportImGuiHovered(LevelViewportClients[SlotIndex], true);
+				return true;
+			};
+
+			if (bUsePIEFullscreenPreview)
+			{
+				SetHoveredViewport(GetActiveViewportSlotIndex());
+			}
+			else
+			{
+				// 마우스가 어떤 슬롯 위에 있는지
+				for (int32 i = 0; i < ActiveSlotCount; ++i)
+				{
+					if (IsSlotVisibleEnough(i) && SetHoveredViewport(i))
 					{
-						// IsWindowHovered() 이미 z-order 반영 → 슬롯 rect 와 결합한 최종 hover.
-						FSlateApplication::Get().SetViewportImGuiHovered(LevelViewportClients[i], true);
+						break;
 					}
-					break;
 				}
 			}
 
 			// 분할 바 드래그
-			if (RootSplitter && LayoutTransition == EViewportLayoutTransition::None)
+			if (!bUsePIEFullscreenPreview && RootSplitter && LayoutTransition == EViewportLayoutTransition::None)
 			{
 				if (ImGui::IsMouseClicked(0))
 				{
@@ -1087,12 +1288,12 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 			}
 
 			// 활성 뷰포트 전환 (분할 바 드래그 중이 아닐 때)
-			if (!DraggingSplitter && (ImGui::IsMouseClicked(0) || ImGui::IsMouseClicked(1)))
+			if (!bUsePIEFullscreenPreview && !DraggingSplitter && (ImGui::IsMouseClicked(0) || ImGui::IsMouseClicked(1)))
 			{
 				for (int32 i = 0; i < ActiveSlotCount; ++i)
 				{
 					if (i < static_cast<int32>(LevelViewportClients.size()) &&
-						IsSlotVisibleEnough(i) && ViewportWindows[i]->IsHover(MP))
+						IsSlotVisibleEnough(i) && SetHoveredViewport(i))
 					{
 						if (LevelViewportClients[i] != ActiveViewportClient)
 							SetActiveViewport(LevelViewportClients[i]);
@@ -1101,7 +1302,10 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 				}
 			}
 
-			HandleViewportContextMenuInput(MP);
+			if (!bUsePIEFullscreenPreview)
+			{
+				HandleViewportContextMenuInput(MP);
+			}
 		}
 	}
 
@@ -1774,6 +1978,7 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 			}
 		};
 
+		PlaceActorMenuItem("Empty Actor", EViewportPlaceActorType::EmptyActor);
 		PlaceActorMenuItem("Cube", EViewportPlaceActorType::Cube);
 		PlaceActorMenuItem("Sphere", EViewportPlaceActorType::Sphere);
 		PlaceActorMenuItem("Cylinder", EViewportPlaceActorType::Cylinder);
@@ -1940,6 +2145,16 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 
 	switch (Type)
 	{
+	case EViewportPlaceActorType::EmptyActor:
+	{
+		AActor* Actor = World->SpawnActor<AActor>();
+		if (Actor)
+		{
+			AttachEmptyActorBillboard(Actor);
+			SpawnedActor = Actor;
+		}
+		break;
+	}
 	case EViewportPlaceActorType::Cube:
 	{
 		AStaticMeshActor* Actor = World->SpawnActor<AStaticMeshActor>();

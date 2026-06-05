@@ -78,6 +78,7 @@ void FSystemResources::Create(ID3D11Device* InDevice)
 
 	FrameBuffer.Create(InDevice, sizeof(FFrameConstants), "FrameBuffer");
 	ForwardFogBuffer.Create(InDevice, sizeof(FFogConstants), "ForwardFogBuffer");
+	EditorPickingBuffer.Create(InDevice, sizeof(FEditorPickingConstants), "EditorPickingBuffer");
 	LightingConstantBuffer.Create(InDevice, sizeof(FLightingCBData), "LightingConstantBuffer");
 	ForwardLights.Create(InDevice, 32);
 
@@ -808,6 +809,7 @@ void FSystemResources::Release()
 
 	FrameBuffer.Release();
 	ForwardFogBuffer.Release();
+	EditorPickingBuffer.Release();
 	LightingConstantBuffer.Release();
 	ForwardLights.Release();
 	TileCullingResource.Release();

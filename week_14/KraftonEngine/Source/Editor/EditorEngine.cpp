@@ -111,6 +111,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 		SCOPE_STARTUP_STAT("Editor::LoadStartLevel");
 		LoadStartLevel();
 	}
+	RefreshCleanSceneSnapshot();
 	ApplyTransformSettingsToGizmo();
 
 	// Editor render pipeline
@@ -127,7 +128,7 @@ void UEditorEngine::Shutdown()
 	MainPanel.SaveToSettings();
 	FProjectSettings::Get().SaveToFile(FProjectSettings::GetDefaultPath());
 	FEditorSettings::Get().SaveToFile(FEditorSettings::GetDefaultSettingsPath());
-	CloseScene();
+	CloseScene(false);
 	UndoSystem.SetOwner(nullptr);
 	SelectionManager.Shutdown();
 
@@ -150,6 +151,11 @@ void UEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
 	UEngine::OnWindowResized(Width, Height);
 	// 윈도우 리사이즈 시에는 ImGui 패널이 실제 크기를 결정하므로
 	// FViewport RT는 SSplitter 레이아웃에서 지연 리사이즈로 처리됨
+}
+
+bool UEditorEngine::CanCloseApplication()
+{
+	return ConfirmDirtySceneAction(L"close the editor");
 }
 
 void UEditorEngine::Tick(float DeltaTime)
@@ -291,6 +297,80 @@ bool UEditorEngine::RestoreSceneSnapshot(
 
 	UndoSystem.EndRestore();
 	return true;
+}
+
+const FWorldContext* UEditorEngine::GetEditorWorldContextForScene() const
+{
+	for (const FWorldContext& Context : WorldList)
+	{
+		if (Context.WorldType == EWorldType::Editor && Context.World)
+		{
+			return &Context;
+		}
+	}
+
+	const FWorldContext* ActiveContext = GetWorldContextFromHandle(GetActiveWorldHandle());
+	return ActiveContext && ActiveContext->World ? ActiveContext : nullptr;
+}
+
+FString UEditorEngine::CaptureEditorSceneDirtySnapshot() const
+{
+	const FWorldContext* Context = GetEditorWorldContextForScene();
+	if (!Context || !Context->World)
+	{
+		return "";
+	}
+
+	FWorldContext& MutableContext = *const_cast<FWorldContext*>(Context);
+	return FSceneSaveManager::SaveToString(MutableContext, nullptr);
+}
+
+void UEditorEngine::RefreshCleanSceneSnapshot()
+{
+	CleanSceneSnapshot = CaptureEditorSceneDirtySnapshot();
+}
+
+bool UEditorEngine::IsSceneDirty() const
+{
+	if (CleanSceneSnapshot.empty())
+	{
+		return false;
+	}
+
+	const FString CurrentSnapshot = CaptureEditorSceneDirtySnapshot();
+	return !CurrentSnapshot.empty() && CurrentSnapshot != CleanSceneSnapshot;
+}
+
+bool UEditorEngine::ConfirmDirtySceneAction(const wchar_t* ActionName)
+{
+	if (!IsSceneDirty())
+	{
+		return true;
+	}
+
+	std::wstring SceneName = L"Unsaved Scene";
+	if (!CurrentLevelFilePath.empty())
+	{
+		SceneName = std::filesystem::path(FPaths::ToWide(CurrentLevelFilePath)).filename().wstring();
+	}
+
+	const wchar_t* Action = ActionName ? ActionName : L"continue";
+	const std::wstring Message =
+		L"The current scene has unsaved changes:\n\n" + SceneName +
+		L"\n\nSave before you " + Action + L"?";
+
+	const int Result = MessageBoxW(
+		Window ? Window->GetHWND() : nullptr,
+		Message.c_str(),
+		L"Unsaved Scene",
+		MB_ICONWARNING | MB_YESNOCANCEL | MB_DEFBUTTON1);
+
+	if (Result == IDYES)
+	{
+		return SaveScene();
+	}
+
+	return Result == IDNO;
 }
 
 void UEditorEngine::RenderUI(float DeltaTime)
@@ -611,6 +691,7 @@ void UEditorEngine::EndPlayMap()
 	SelectionManager.ClearSelection();
 	//SelectionManager.SetGizmoEnabled(true); //PIE가 끝나면 gizmo 활성화
 	SelectionManager.SetWorld(GetWorld());
+	ViewportLayout.RestoreWorldAxisAfterPIE();
 	
 	//이 코드와 대응되는 게 위의 StartPlayInEditorSession()에 있음.
 	//MainPanel.RestoreEditorWindowsAfterPIE();
@@ -670,6 +751,7 @@ bool UEditorEngine::EnterPIEPossessedMode()
 	}
 
 	PIEControlMode = EPIEControlMode::Possessed;
+	ViewportLayout.DisableWorldAxisForPIE();
 	SyncGameViewportPIEControlState(true);
 	InputSystem::Get().SetUseRawMouse(true);
 	InputSystem::Get().ResetTransientState();
@@ -684,6 +766,7 @@ bool UEditorEngine::EnterPIEEjectedMode()
 	}
 
 	PIEControlMode = EPIEControlMode::Ejected;
+	ViewportLayout.RestoreWorldAxisAfterPIE();
 	SyncGameViewportPIEControlState(false);
 	InputSystem::Get().SetUseRawMouse(false);
 	InputSystem::Get().ResetTransientState();
@@ -725,13 +808,25 @@ void UEditorEngine::ResetViewport()
 	ViewportLayout.ResetViewport(GetWorld());
 }
 
-void UEditorEngine::CloseScene()
+bool UEditorEngine::CloseScene(bool bPromptIfDirty)
 {
+	if (bPromptIfDirty && !ConfirmDirtySceneAction(L"close the scene"))
+	{
+		return false;
+	}
+
 	ClearScene();
+	CleanSceneSnapshot.clear();
+	return true;
 }
 
 void UEditorEngine::NewScene()
 {
+	if (!ConfirmDirtySceneAction(L"create a new scene"))
+	{
+		return;
+	}
+
 	StopPlayInEditorImmediate();
 	ClearScene();
 	FWorldContext& Ctx = CreateWorldContext(EWorldType::Editor, FName("NewScene"), "New Scene");
@@ -741,6 +836,7 @@ void UEditorEngine::NewScene()
 
 	ResetViewport();
 	CurrentLevelFilePath.clear();
+	RefreshCleanSceneSnapshot();
 }
 
 void UEditorEngine::LoadStartLevel()
@@ -860,6 +956,7 @@ bool UEditorEngine::SaveSceneAs(const FString& InSceneName)
 	const bool bHasPOV = FindSceneViewportPOV(SavePOV);
 	FSceneSaveManager::SaveSceneAsJSON(InSceneName, *Context, bHasPOV ? &SavePOV : nullptr);
 	CurrentLevelFilePath = BuildScenePathFromStem(InSceneName);
+	RefreshCleanSceneSnapshot();
 	return true;
 }
 
@@ -907,6 +1004,11 @@ bool UEditorEngine::LoadSceneFromPath(const FString& InScenePath)
 		return false;
 	}
 
+	if (!ConfirmDirtySceneAction(L"open another scene"))
+	{
+		return false;
+	}
+
 	StopPlayInEditorImmediate();
 	ClearScene();
 
@@ -926,6 +1028,7 @@ bool UEditorEngine::LoadSceneFromPath(const FString& InScenePath)
 	RestoreViewportCamera(CameraData);
 
 	CurrentLevelFilePath = InScenePath;
+	RefreshCleanSceneSnapshot();
 	return true;
 }
 
