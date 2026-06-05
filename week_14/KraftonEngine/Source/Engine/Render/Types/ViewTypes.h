@@ -13,6 +13,7 @@ enum class EViewMode : int32
 	WorldNormal,
 	LightCulling,
 	DoFCoC,
+	IdBuffer,
 	Count
 };
 

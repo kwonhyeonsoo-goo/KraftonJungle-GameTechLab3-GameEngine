@@ -177,7 +177,7 @@ void FEditorRenderPipeline::RenderViewport(FLevelEditorViewportClient* VC, FRend
 	GPUOcclusion.ReadbackResults(Ctx);
 
 	PrepareViewport(VC, VP, Ctx);
-	BuildFrame(VC, POV, VP, World);
+	BuildFrame(VC, POV, VP, World, bShouldUseGameCamera);
 	RenderScopeLensCapture(VC, VP, POV, World, Renderer, Ctx);
 
 	FCollectOutput Output;
@@ -219,13 +219,14 @@ void FEditorRenderPipeline::PrepareViewport(FLevelEditorViewportClient* VC, FVie
 // ============================================================
 // BuildFrame — FFrameContext 일괄 설정 (POV 통화 입력)
 // ============================================================
-void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMinimalViewInfo& POV, FViewport* VP, UWorld* World)
+void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMinimalViewInfo& POV, FViewport* VP, UWorld* World, bool bUseGameCameraEffects)
 {
 	Frame.ClearViewportResources();
 	Frame.SetViewportInfo(VP);
+	Frame.bEnableEditorIdPicking = true;
 
 	// PC 가 PlayerCameraManager owner — 그쪽으로부터 camera post state read.
-	APlayerController* PC = World->GetFirstPlayerController();
+	APlayerController* PC = bUseGameCameraEffects ? World->GetFirstPlayerController() : nullptr;
 	APlayerCameraManager* CamManager = PC ? PC->GetPlayerCameraManager() : nullptr;
 	Frame.CameraFade.bEnabled = CamManager ? CamManager->IsFadeEnabled() : false;
 	if (Frame.CameraFade.bEnabled)
@@ -441,6 +442,7 @@ void FEditorRenderPipeline::RenderPreviewViewport(IEditorPreviewViewportClient* 
 
 	Frame.ClearViewportResources();
 	Frame.SetViewportInfo(VP);
+	Frame.bEnableEditorIdPicking = true;
 	Frame.SetCameraInfo(POV);
 	Frame.WorldType = World->GetWorldType();
 

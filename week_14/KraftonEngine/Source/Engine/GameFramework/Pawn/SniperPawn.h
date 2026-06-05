@@ -20,6 +20,7 @@ public:
 	~ASniperPawn() override = default;
 
 	void BeginPlay() override;
+	void EndPlay() override;
 	void PostDuplicate() override;
 	void SetupInputComponent() override;
 	void Tick(float DeltaTime) override;
@@ -34,6 +35,33 @@ public:
 	USniperWeaponComponent* GetSniperWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
 	UBallisticBulletManagerComponent* GetBallisticBulletManagerComponent() const { return BulletManagerComponent.Get(); }
+
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float MouseSensitivity = 0.2f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Min Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
+	float MinCameraPitch = -80.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Max Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
+	float MaxCameraPitch = 60.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Invert Mouse Y")
+	bool bInvertMouseY = false;
+
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped FOV", Member=ScopeState.ScopedFOV, Type=Float, Min=0.05f, Max=3.14f, Speed=0.01f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Normal Sensitivity", Member=ScopeState.NormalSensitivity, Type=Float, Min=0.0f, Max=10.0f, Speed=0.01f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped Sensitivity", Member=ScopeState.ScopedSensitivity, Type=Float, Min=0.0f, Max=10.0f, Speed=0.01f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="FOV Blend Speed", Member=ScopeState.ScopeBlendSpeed, Type=Float, Min=0.0f, Max=60.0f, Speed=0.1f);
+
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Radius", Min=0.01f, Max=1.0f, Speed=0.01f)
+	float ScopeLensRadius = 0.42f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Feather", Min=0.001f, Max=0.5f, Speed=0.01f)
+	float ScopeLensFeather = 0.08f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Outer Blur Radius", Min=0.0f, Max=32.0f, Speed=0.1f)
+	float ScopeLensOuterBlurRadius = 4.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Edge Blur Radius", Min=0.0f, Max=16.0f, Speed=0.1f)
+	float ScopeLensEdgeBlurRadius = 1.5f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Intensity", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float ScopeLensIntensity = 1.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Blend Time", Min=0.0f, Max=2.0f, Speed=0.01f)
+	float ScopeLensBlendTime = 0.08f;
 
 private:
 	void CacheComponentReferences();
@@ -65,9 +93,4 @@ private:
 	FScopeState ScopeState;
 	FAimSwayState AimSwayState;
 	FRecoilState RecoilState;
-
-	float MouseSensitivity = 0.2f;
-	float MinCameraPitch = -80.0f;
-	float MaxCameraPitch = 60.0f;
-	bool bInvertMouseY = false;
 };

@@ -90,6 +90,7 @@ public:
 
 	// SWindow Rect → ViewportScreenRect 갱신 + FViewport 리사이즈 요청
 	void UpdateLayoutRect();
+	void UpdateViewportRect(const FRect& InRect);
 
 	// ImDrawList에 자신의 SRV를 SWindow Rect 위치에 렌더 (활성 테두리 포함)
 	void RenderViewportImage(bool bIsActiveViewport);

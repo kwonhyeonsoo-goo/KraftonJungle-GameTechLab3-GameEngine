@@ -2,6 +2,7 @@
 
 #include "Render/Types/RenderTypes.h"
 
+class AActor;
 class FViewportClient;
 
 // UE의 FViewport 대응 — 오프스크린 렌더 타깃 + D3D 리소스
@@ -44,6 +45,15 @@ public:
 	ID3D11ShaderResourceView* GetScopeLensSRV() const { return ScopeLensSRV; }
 	ID3D11DepthStencilView* GetDSV() const { return DSV; }
 	ID3D11Texture2D* GetDepthTexture() const { return DepthTexture; }
+	ID3D11Texture2D* GetEditorIdPickTexture() const { return EditorIdPickTexture; }
+	ID3D11RenderTargetView* GetEditorIdPickRTV() const { return EditorIdPickRTV; }
+	ID3D11ShaderResourceView* GetEditorIdPickSRV() const { return EditorIdPickSRV; }
+	ID3D11Texture2D* GetEditorIdPickReadbackTexture() const { return EditorIdPickReadbackTexture; }
+	ID3D11RenderTargetView* GetEditorIdPickDebugRTV() const { return EditorIdPickDebugRTV; }
+	ID3D11ShaderResourceView* GetEditorIdPickDebugSRV() const { return EditorIdPickDebugSRV; }
+	bool ReadEditorIdPickAt(uint32 X, uint32 Y, ID3D11DeviceContext* Ctx, uint32& OutPickId) const;
+	void SetEditorIdPickActors(TArray<AActor*>&& InActors);
+	AActor* GetEditorIdPickActor(uint32 PickId) const;
 
 	// CopyResource 대상 — 패스 간 안전하게 Depth/Stencil 읽기용
 	ID3D11Texture2D* GetDepthCopyTexture() const { return DepthCopyTexture; }
@@ -87,6 +97,15 @@ private:
 	// 뎁스/스텐실
 	ID3D11Texture2D* DepthTexture = nullptr;
 	ID3D11DepthStencilView* DSV = nullptr;
+
+	ID3D11Texture2D* EditorIdPickTexture = nullptr;
+	ID3D11RenderTargetView* EditorIdPickRTV = nullptr;
+	ID3D11ShaderResourceView* EditorIdPickSRV = nullptr;
+	ID3D11Texture2D* EditorIdPickReadbackTexture = nullptr;
+	ID3D11Texture2D* EditorIdPickDebugTexture = nullptr;
+	ID3D11RenderTargetView* EditorIdPickDebugRTV = nullptr;
+	ID3D11ShaderResourceView* EditorIdPickDebugSRV = nullptr;
+	TArray<AActor*> EditorIdPickActors;
 
 	// CopyResource 대상 — DSV 전환 없이 안전하게 Depth/Stencil 읽기
 	ID3D11Texture2D* DepthCopyTexture = nullptr;

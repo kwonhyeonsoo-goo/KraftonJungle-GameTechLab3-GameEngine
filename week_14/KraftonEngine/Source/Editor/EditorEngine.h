@@ -37,6 +37,7 @@ public:
 	void Shutdown() override;
 	void Tick(float DeltaTime) override;
 	void OnWindowResized(uint32 Width, uint32 Height) override;
+	bool CanCloseApplication() override;
 
 	// Editor-specific API
 	UGizmoComponent* GetGizmo() const { return SelectionManager.GetGizmo(); }
@@ -47,7 +48,7 @@ public:
 
 	void ClearScene();
 	void ResetViewport();
-	void CloseScene();
+	bool CloseScene(bool bPromptIfDirty = true);
 	void NewScene();
 	bool LoadSceneWithDialog();
 	bool LoadSceneFromPath(const FString& InScenePath);
@@ -56,6 +57,7 @@ public:
 	bool SaveSceneAs(const FString& InSceneName);
 	bool HasCurrentLevelFilePath() const { return !CurrentLevelFilePath.empty(); }
 	const FString& GetCurrentLevelFilePath() const { return CurrentLevelFilePath; }
+	bool IsSceneDirty() const;
 	void RefreshContentBrowser() { MainPanel.RefreshContentBrowser(); }
 	void OpenAssetEditorForObject(UObject* Object) { MainPanel.OpenAssetEditorForObject(Object); }
 	void OpenRuntimeUIPreviewDocument(const FString& DocumentPath) { MainPanel.OpenRuntimeUIPreviewDocument(DocumentPath); }
@@ -154,6 +156,10 @@ private:
 	void LoadStartLevel();
 	bool FindSceneViewportPOV(struct FMinimalViewInfo& OutPOV) const;
 	void RestoreViewportCamera(const FPerspectiveCameraData& CamData);
+	const FWorldContext* GetEditorWorldContextForScene() const;
+	FString CaptureEditorSceneDirtySnapshot() const;
+	void RefreshCleanSceneSnapshot();
+	bool ConfirmDirtySceneAction(const wchar_t* ActionName);
 
 	FSelectionManager SelectionManager;
 	FEditorUndoSystem UndoSystem;
@@ -169,5 +175,6 @@ private:
 	bool bRequestEndPlayMapQueued = false;
 	EPIEControlMode PIEControlMode = EPIEControlMode::Possessed;
 	FString CurrentLevelFilePath;
+	FString CleanSceneSnapshot;
 
 };

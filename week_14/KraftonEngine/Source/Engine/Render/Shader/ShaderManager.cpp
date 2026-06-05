@@ -43,6 +43,10 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	GetOrCreate(EShaderPath::Gizmo, StartupError);
 	GetOrCreate(EShaderPath::Editor, StartupError);
 	GetOrCreate(EShaderPath::ViewModeMesh, StartupError);
+	GetOrCreate(FShaderKey(EShaderPath::EditorIdPick, nullptr, "VS_StaticMesh", "PS"), StartupError);
+	GetOrCreate(FShaderKey(EShaderPath::EditorIdPick, nullptr, "VS_EditorIcon", "PS"), StartupError);
+	GetOrCreate(FShaderKey(EShaderPath::EditorIdPick, nullptr, "VS_SkeletalMesh", "PS"), StartupError);
+	GetOrCreate(FShaderKey(EShaderPath::EditorIdPickDebug, nullptr, "VS", "PS"), StartupError);
 	GetOrCreate(EShaderPath::Decal, StartupError);
 	GetOrCreate(
 		FShaderKey(EShaderPath::UberTransparent,

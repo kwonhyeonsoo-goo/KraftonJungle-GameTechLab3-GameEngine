@@ -73,6 +73,7 @@ public:
 
 	enum class EViewportPlaceActorType : uint8
 	{
+		EmptyActor,
 		Cube,
 		Sphere,
 		Cylinder,
@@ -186,4 +187,8 @@ private:
 	bool bHasSavedWorldAxisVisibility = false;
 	bool SavedWorldAxisVisibility[MaxViewportSlots] = {};
 	bool SavedGridVisibility[MaxViewportSlots] = {};
+	bool SavedGizmoVisibility[MaxViewportSlots] = {};
+	bool SavedCollisionVisibility[MaxViewportSlots] = {};
+	bool SavedCollisionShapeVisibility[MaxViewportSlots] = {};
+	bool SavedSelectionGizmoEnabled = true;
 };
