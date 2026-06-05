@@ -32,8 +32,15 @@ void UCombatCoverAgentComponent::BeginPlay()
     CurrentSlotId = -1;
     TargetNodeId.clear();
     TargetSlotId = -1;
+    MaxHealth = (std::max)(1.0f, MaxHealth);
+    Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
+    TargetScanTimer = 0.0f;
+    IncomingFireCount = 0;
+    IncomingDamagePerSecond = 0.0f;
+    StateBeforeEngage = ECombatCoverAgentState::Idle;
+    CurrentTarget.Reset();
     ResolveManager();
 }
 
@@ -49,7 +56,7 @@ void UCombatCoverAgentComponent::EndPlay()
 
 void UCombatCoverAgentComponent::RequestInitialSlot()
 {
-    if (State == ECombatCoverAgentState::Dead)
+    if (State == ECombatCoverAgentState::Dead || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))
     {
         return;
     }
@@ -63,7 +70,7 @@ void UCombatCoverAgentComponent::RequestInitialSlot()
 
 void UCombatCoverAgentComponent::RequestAdvance()
 {
-    if (State == ECombatCoverAgentState::Dead)
+    if (State == ECombatCoverAgentState::Dead || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))
     {
         return;
     }
@@ -92,12 +99,18 @@ void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatCoverSlotHandle
 
 void UCombatCoverAgentComponent::MarkDead()
 {
+    CurrentTarget.Reset();
+    IncomingFireCount = 0;
+    IncomingDamagePerSecond = 0.0f;
+    Health = 0.0f;
+
     if (UCombatFlowManagerComponent* Manager = ResolveManager())
     {
         Manager->ReleaseAgent(this);
     }
 
     State = ECombatCoverAgentState::Dead;
+    StateBeforeEngage = ECombatCoverAgentState::Dead;
     CurrentNodeId.clear();
     CurrentSlotId = -1;
     TargetNodeId.clear();
@@ -112,11 +125,117 @@ const char* UCombatCoverAgentComponent::GetStateName() const
     case ECombatCoverAgentState::MovingToInitialSlot: return "MovingToInitialSlot";
     case ECombatCoverAgentState::InCover: return "InCover";
     case ECombatCoverAgentState::MovingToLinkedNode: return "MovingToLinkedNode";
+    case ECombatCoverAgentState::Engaging: return "Engaging";
     case ECombatCoverAgentState::Blocked: return "Blocked";
     case ECombatCoverAgentState::Dead: return "Dead";
     default: return "Unknown";
     }
 }
+
+const char* UCombatCoverAgentComponent::GetAdvanceLinkModeName() const
+{
+    switch (AdvanceLinkMode)
+    {
+    case ECombatAdvanceLinkMode::OutgoingLinks: return "OutgoingLinks";
+    case ECombatAdvanceLinkMode::IncomingLinks: return "IncomingLinks";
+    case ECombatAdvanceLinkMode::Both: return "Both";
+    default: return "Unknown";
+    }
+}
+
+void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent* Target)
+{
+    if (State == ECombatCoverAgentState::Dead)
+    {
+        return;
+    }
+
+    if (!IsValid(Target) || Target == this || !Target->IsAlive())
+    {
+        ClearEngagementTarget();
+        return;
+    }
+
+    CurrentTarget.Reset(Target);
+
+    if (!bCanFireWhileMoving && State != ECombatCoverAgentState::Engaging)
+    {
+        StateBeforeEngage = State;
+        State = ECombatCoverAgentState::Engaging;
+    }
+}
+
+void UCombatCoverAgentComponent::ClearEngagementTarget()
+{
+    const bool bHadTarget = CurrentTarget.Get() != nullptr;
+    CurrentTarget.Reset();
+
+    if (State != ECombatCoverAgentState::Engaging)
+    {
+        return;
+    }
+
+    switch (StateBeforeEngage)
+    {
+    case ECombatCoverAgentState::MovingToInitialSlot:
+    case ECombatCoverAgentState::MovingToLinkedNode:
+        if (!TargetNodeId.empty() && TargetSlotId >= 0)
+        {
+            State = StateBeforeEngage;
+        }
+        else
+        {
+            State = CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover;
+        }
+        break;
+
+    case ECombatCoverAgentState::Blocked:
+        State = ECombatCoverAgentState::Blocked;
+        break;
+
+    case ECombatCoverAgentState::Dead:
+        State = ECombatCoverAgentState::Dead;
+        break;
+
+    case ECombatCoverAgentState::Idle:
+        State = CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover;
+        break;
+
+    case ECombatCoverAgentState::InCover:
+    case ECombatCoverAgentState::Engaging:
+    default:
+        State = ECombatCoverAgentState::InCover;
+        break;
+    }
+
+    if (bHadTarget)
+    {
+        AdvanceTimer = 0.0f;
+        RetryTimer = 0.0f;
+    }
+    StateBeforeEngage = ECombatCoverAgentState::Idle;
+}
+
+void UCombatCoverAgentComponent::ApplyDamage(float Damage)
+{
+    if (State == ECombatCoverAgentState::Dead || Damage <= 0.0f)
+    {
+        return;
+    }
+
+    Health = (std::max)(0.0f, Health - Damage);
+    if (Health <= 0.0f)
+    {
+        MarkDead();
+    }
+}
+
+void UCombatCoverAgentComponent::SetIncomingFireStats(int32 Count, float DamagePerSecond)
+{
+    IncomingFireCount = (std::max)(0, Count);
+    IncomingDamagePerSecond = (std::max)(0.0f, DamagePerSecond);
+}
+
 
 UCombatFlowManagerComponent* UCombatCoverAgentComponent::ResolveManager()
 {
@@ -221,6 +340,21 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
 {
     UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+    if (State != ECombatCoverAgentState::Dead && Health <= 0.0f)
+    {
+        MarkDead();
+        return;
+    }
+
+    if (State != ECombatCoverAgentState::Dead)
+    {
+        UCombatCoverAgentComponent* Target = CurrentTarget.Get();
+        if (Target && !Target->IsAlive())
+        {
+            ClearEngagementTarget();
+        }
+    }
+
     switch (State)
     {
     case ECombatCoverAgentState::Idle:
@@ -242,6 +376,9 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
             AdvanceTimer = 0.0f;
             RequestAdvance();
         }
+        break;
+
+    case ECombatCoverAgentState::Engaging:
         break;
 
     case ECombatCoverAgentState::Blocked:

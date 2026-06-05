@@ -367,6 +367,43 @@ void FCombatMapEditorWidget::RenderToolbar()
     {
         bPendingOpenAutoLinkPopup = true;
     }
+    if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
+    {
+        bool bEnableCombat = Manager->GetEnableCombatSimulation();
+        if (ImGui::Checkbox("Combat Sim", &bEnableCombat))
+        {
+            Manager->SetEnableCombatSimulation(bEnableCombat);
+        }
+        ImGui::SameLine();
+
+        bool bRequireMutualRange = Manager->GetRequireMutualFireRange();
+        if (ImGui::Checkbox("Mutual Range", &bRequireMutualRange))
+        {
+            Manager->SetRequireMutualFireRange(bRequireMutualRange);
+        }
+        ImGui::SameLine();
+
+        bool bRequireSlotTags = Manager->GetRequireSlotTagMatch();
+        if (ImGui::Checkbox("Slot Tags", &bRequireSlotTags))
+        {
+            Manager->SetRequireSlotTagMatch(bRequireSlotTags);
+        }
+        ImGui::SameLine();
+
+        bool bDrawFireLines = Manager->GetDrawFireDebugLines();
+        if (ImGui::Checkbox("Show Fire Lines", &bDrawFireLines))
+        {
+            Manager->SetDrawFireDebugLines(bDrawFireLines);
+        }
+        ImGui::SameLine();
+
+        bool bDrawFireRanges = Manager->GetDrawFireRanges();
+        if (ImGui::Checkbox("Show Fire Range", &bDrawFireRanges))
+        {
+            Manager->SetDrawFireRanges(bDrawFireRanges);
+        }
+    }
+
     AActor* SelectedActor = GetSelectedActor();
     const FString SelectedActorName = ActorNameForUI(SelectedActor);
     ImGui::Text("Selected Actor: %s", SelectedActorName.c_str());
@@ -934,11 +971,24 @@ void FCombatMapEditorWidget::RenderAgentPanel()
             ActorNameForUI(Agent->GetOwner()).c_str(),
             Agent->GetTeamTag().c_str(),
             Agent->GetStateName());
-        ImGui::TextDisabled("Current: %s:%d  Target: %s:%d",
+        ImGui::TextDisabled("Current: %s:%d  MoveTarget: %s:%d",
             Agent->GetCurrentNodeId().c_str(),
             Agent->GetCurrentSlotId(),
             Agent->GetTargetNodeId().c_str(),
             Agent->GetTargetSlotId());
+
+        UCombatCoverAgentComponent* CombatTarget = Agent->GetCurrentTarget();
+        const FString TargetName = ActorNameForUI(CombatTarget ? CombatTarget->GetOwner() : nullptr);
+        ImGui::TextDisabled("HP: %.1f / %.1f  Range: %.0f  DPS: %.1f",
+            Agent->GetHealth(),
+            Agent->GetMaxHealth(),
+            Agent->GetFireRange(),
+            Agent->GetDamagePerSecond());
+        ImGui::TextDisabled("CombatTarget: %s  Incoming: %d shooters / %.1f DPS",
+            TargetName.c_str(),
+            Agent->GetIncomingFireCount(),
+            Agent->GetIncomingDamagePerSecond());
+        ImGui::TextDisabled("Advance: %s", Agent->GetAdvanceLinkModeName());
         ImGui::Separator();
     }
     ImGui::EndChild();

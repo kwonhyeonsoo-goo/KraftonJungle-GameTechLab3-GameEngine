@@ -5,6 +5,7 @@
 #include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Render/Scene/FScene.h"
 
 #include <algorithm>
 #include <cmath>
@@ -54,6 +55,43 @@ namespace
     bool IsSameAgent(const TWeakObjectPtr<UCombatCoverAgentComponent>& Ptr, const UCombatCoverAgentComponent* Agent)
     {
         return Agent && Ptr.Get() == Agent;
+    }
+
+    bool IsValidCombatAgent(const UCombatCoverAgentComponent* Agent)
+    {
+        return IsValid(Agent) && IsValid(Agent->GetOwner()) && Agent->IsAlive();
+    }
+
+    void AddDebugCircleXY(FScene& Scene, const FVector& Center, float Radius, const FColor& Color)
+    {
+        if (Radius <= 0.0f)
+        {
+            return;
+        }
+
+        constexpr int32 Segments = 36;
+        constexpr float TwoPi = 6.28318530717958647692f;
+        FVector Prev = Center + FVector(Radius, 0.0f, 0.0f);
+        for (int32 Index = 1; Index <= Segments; ++Index)
+        {
+            const float Angle = TwoPi * static_cast<float>(Index) / static_cast<float>(Segments);
+            const FVector Next = Center + FVector(cosf(Angle) * Radius, sinf(Angle) * Radius, 0.0f);
+            Scene.AddDebugLine(Prev, Next, Color);
+            Prev = Next;
+        }
+    }
+
+    FColor MakeFireLineColor(const UCombatCoverAgentComponent* Agent)
+    {
+        if (Agent && Agent->GetTeamTag().find("Enemy") != FString::npos)
+        {
+            return FColor(255, 80, 60);
+        }
+        if (Agent && Agent->GetTeamTag().find("Ally") != FString::npos)
+        {
+            return FColor(80, 160, 255);
+        }
+        return FColor(255, 230, 80);
     }
 }
 
@@ -167,9 +205,11 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
         return AssignInitialSlot(Agent);
     }
 
-    for (const FCombatCoverLink& Link : CurrentNode->GetLinks())
+    TArray<UCombatCoverNodeComponent*> CandidateNodes;
+    GatherAdvanceCandidateNodes(Agent, CurrentNode, CandidateNodes);
+
+    for (UCombatCoverNodeComponent* NextNode : CandidateNodes)
     {
-        UCombatCoverNodeComponent* NextNode = FindNode(Link.TargetNodeId);
         if (!NextNode)
         {
             continue;
@@ -736,6 +776,236 @@ bool UCombatFlowManagerComponent::SlotTagsMatchTeam(const FCombatCoverSlot& Slot
     return Slot.Tags.find(TeamTag) != FString::npos;
 }
 
+void UCombatFlowManagerComponent::GatherAdvanceCandidateNodes(
+    UCombatCoverAgentComponent* Agent,
+    UCombatCoverNodeComponent* CurrentNode,
+    TArray<UCombatCoverNodeComponent*>& OutNodes) const
+{
+    OutNodes.clear();
+    if (!IsValid(Agent) || !CurrentNode || CurrentNode->GetNodeId().empty())
+    {
+        return;
+    }
+
+    const ECombatAdvanceLinkMode LinkMode = Agent->GetAdvanceLinkMode();
+    auto AddUniqueNode = [&OutNodes](UCombatCoverNodeComponent* Node)
+    {
+        if (!Node)
+        {
+            return;
+        }
+        if (std::find(OutNodes.begin(), OutNodes.end(), Node) == OutNodes.end())
+        {
+            OutNodes.push_back(Node);
+        }
+    };
+
+    if (LinkMode == ECombatAdvanceLinkMode::OutgoingLinks || LinkMode == ECombatAdvanceLinkMode::Both)
+    {
+        for (const FCombatCoverLink& Link : CurrentNode->GetLinks())
+        {
+            AddUniqueNode(FindNode(Link.TargetNodeId));
+        }
+    }
+
+    if (LinkMode == ECombatAdvanceLinkMode::IncomingLinks || LinkMode == ECombatAdvanceLinkMode::Both)
+    {
+        const FString& CurrentNodeId = CurrentNode->GetNodeId();
+        for (UCombatCoverNodeComponent* SourceNode : CachedNodes)
+        {
+            if (!SourceNode || SourceNode == CurrentNode)
+            {
+                continue;
+            }
+
+            for (const FCombatCoverLink& Link : SourceNode->GetLinks())
+            {
+                if (Link.TargetNodeId == CurrentNodeId)
+                {
+                    AddUniqueNode(SourceNode);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UCombatCoverAgentComponent* Agent) const
+{
+    if (!IsValidCombatAgent(Agent))
+    {
+        return nullptr;
+    }
+
+    UCombatCoverAgentComponent* BestTarget = nullptr;
+    float BestDistance = 0.0f;
+    bool bHasBest = false;
+    const FVector AgentLocation = Agent->GetOwner()->GetActorLocation();
+
+    for (UCombatCoverAgentComponent* Candidate : CachedAgents)
+    {
+        if (!IsValidCombatAgent(Candidate) || Candidate == Agent)
+        {
+            continue;
+        }
+
+        if (Candidate->GetTeamTag() == Agent->GetTeamTag())
+        {
+            continue;
+        }
+
+        if (!CanEngage(Agent, Candidate))
+        {
+            continue;
+        }
+
+        if (bRequireMutualFireRange && !CanEngage(Candidate, Agent))
+        {
+            continue;
+        }
+
+        const float Distance = Dist2D(AgentLocation, Candidate->GetOwner()->GetActorLocation());
+        if (!bHasBest || Distance < BestDistance)
+        {
+            BestDistance = Distance;
+            BestTarget = Candidate;
+            bHasBest = true;
+        }
+    }
+
+    return BestTarget;
+}
+
+bool UCombatFlowManagerComponent::CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const
+{
+    if (!IsValidCombatAgent(Shooter) || !IsValidCombatAgent(Target))
+    {
+        return false;
+    }
+
+    const float Range = Shooter->GetFireRange();
+    if (Range <= 0.0f)
+    {
+        return false;
+    }
+
+    return Dist2D(Shooter->GetOwner()->GetActorLocation(), Target->GetOwner()->GetActorLocation()) <= Range;
+}
+
+void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
+{
+    if (DeltaTime <= 0.0f)
+    {
+        return;
+    }
+
+    RefreshRegistry();
+
+    TMap<UCombatCoverAgentComponent*, int32> IncomingFireCounts;
+    TMap<UCombatCoverAgentComponent*, float> IncomingDamagePerSecond;
+
+    for (UCombatCoverAgentComponent* Agent : CachedAgents)
+    {
+        if (!IsValid(Agent))
+        {
+            continue;
+        }
+        Agent->SetIncomingFireStats(0, 0.0f);
+    }
+
+    for (UCombatCoverAgentComponent* Agent : CachedAgents)
+    {
+        if (!IsValidCombatAgent(Agent))
+        {
+            continue;
+        }
+
+        UCombatCoverAgentComponent* Target = FindBestTargetFor(Agent);
+        if (!Target)
+        {
+            Agent->ClearEngagementTarget();
+            continue;
+        }
+
+        Agent->SetEngagementTarget(Target);
+        IncomingFireCounts[Target] += 1;
+        IncomingDamagePerSecond[Target] += Agent->GetDamagePerSecond();
+    }
+
+    for (const auto& Pair : IncomingDamagePerSecond)
+    {
+        UCombatCoverAgentComponent* Target = Pair.first;
+        if (!IsValidCombatAgent(Target))
+        {
+            continue;
+        }
+
+        const int32 Count = IncomingFireCounts[Target];
+        const float DamagePerSecond = Pair.second;
+        Target->SetIncomingFireStats(Count, DamagePerSecond);
+        Target->ApplyDamage(DamagePerSecond * DeltaTime);
+    }
+
+    if (bDrawFireDebugLines)
+    {
+        DrawFireDebugLines();
+    }
+
+    if (bDrawFireRanges)
+    {
+        DrawFireRanges();
+    }
+}
+
+void UCombatFlowManagerComponent::DrawFireDebugLines() const
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    FScene& Scene = World->GetScene();
+    for (UCombatCoverAgentComponent* Agent : CachedAgents)
+    {
+        if (!IsValidCombatAgent(Agent))
+        {
+            continue;
+        }
+
+        UCombatCoverAgentComponent* Target = Agent->GetCurrentTarget();
+        if (!IsValidCombatAgent(Target))
+        {
+            continue;
+        }
+
+        const FVector Start = Agent->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 90.0f);
+        const FVector End = Target->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 90.0f);
+        Scene.AddDebugLine(Start, End, MakeFireLineColor(Agent));
+    }
+}
+
+void UCombatFlowManagerComponent::DrawFireRanges() const
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    FScene& Scene = World->GetScene();
+    for (UCombatCoverAgentComponent* Agent : CachedAgents)
+    {
+        if (!IsValidCombatAgent(Agent))
+        {
+            continue;
+        }
+
+        const FVector Center = Agent->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 8.0f);
+        AddDebugCircleXY(Scene, Center, Agent->GetFireRange(), MakeFireLineColor(Agent));
+    }
+}
+
 void UCombatFlowManagerComponent::EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node)
 {
     if (!Node || Node->GetNodeId().empty())
@@ -801,6 +1071,11 @@ void UCombatFlowManagerComponent::AddValidationMessage(FCombatCoverGraphValidati
 void UCombatFlowManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
     UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (bEnableCombatSimulation)
+    {
+        UpdateCombatSimulation(DeltaTime);
+    }
 
     if (!bDrawDebugDuringTick)
     {
