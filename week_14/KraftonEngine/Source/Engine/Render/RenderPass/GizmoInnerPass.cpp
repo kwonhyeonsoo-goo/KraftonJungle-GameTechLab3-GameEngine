@@ -6,6 +6,6 @@ REGISTER_RENDER_PASS(FGizmoInnerPass)
 FGizmoInnerPass::FGizmoInnerPass()
 {
 	PassType    = ERenderPass::GizmoInner;
-	RenderState = { EDepthStencilState::GizmoInside, EBlendState::AlphaBlend,
+	RenderState = { EDepthStencilState::GizmoInside, EBlendState::Opaque,
 	                ERasterizerState::SolidBackCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, false };
 }

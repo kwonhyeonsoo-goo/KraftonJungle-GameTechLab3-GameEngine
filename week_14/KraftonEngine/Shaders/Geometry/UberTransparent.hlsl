@@ -24,6 +24,9 @@ cbuffer PerShader1 : register(b2)
     float HasNormalMap;
     float Opacity;
     float2 _pad;
+    float4 EmissiveColor;
+    float EmissiveIntensity;
+    float3 _EmissivePad;
 };
 
 cbuffer ForwardFogParams : register(b7)
@@ -38,8 +41,12 @@ cbuffer ForwardFogParams : register(b7)
     float2 _fwdFogPad;
 };
 
-static const float4 g_DefaultEmissive = float4(0, 0, 0, 0);
 static const float g_DefaultShininess = 32.0f;
+
+float3 GetMaterialEmissive()
+{
+    return EmissiveColor.rgb * max(EmissiveIntensity, 0.0f);
+}
 
 struct UberTransparentVS_Output
 {
@@ -122,7 +129,7 @@ float4 PS(UberTransparentVS_Output input) : SV_TARGET
     float3 V = normalize(CameraWorldPos - input.worldPos);
 
 #if defined(LIGHTING_MODEL_UNLIT) && LIGHTING_MODEL_UNLIT
-    float3 finalColor = baseColor.rgb;
+    float3 finalColor = baseColor.rgb + GetMaterialEmissive();
 #else
     float3 diffuse = float3(0, 0, 0);
     float3 specular = float3(0, 0, 0);
@@ -137,7 +144,7 @@ float4 PS(UberTransparentVS_Output input) : SV_TARGET
     specular = AccumulateSpecular(input.worldPos, N, V, g_DefaultShininess, input.position);
 #endif
 
-    float3 finalColor = baseColor.rgb * diffuse + specular + g_DefaultEmissive.rgb;
+    float3 finalColor = baseColor.rgb * diffuse + specular + GetMaterialEmissive();
 #endif
 
     float fwdFog = ComputeHeightFogFactor(

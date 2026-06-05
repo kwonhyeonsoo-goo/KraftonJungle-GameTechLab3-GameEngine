@@ -28,6 +28,67 @@ namespace
 		if (P.extension() == L".mat") P.replace_extension(L".uasset");
 		return FPaths::ToUtf8(P.generic_wstring());
 	}
+
+	bool HasMaterialParameter(const UMaterial* Material, const FString& Name)
+	{
+		if (!Material)
+		{
+			return false;
+		}
+
+		const auto& Layout = Material->GetParameterInfo();
+		return Layout.find(Name) != Layout.end();
+	}
+
+	void ApplyRuntimeParameterStoreToBuffers(UMaterial* Material)
+	{
+		if (!Material)
+		{
+			return;
+		}
+
+		const TArray<FMaterialParameterValue> Values = Material->GetRuntimeParameterStore().Values;
+		for (const FMaterialParameterValue& Value : Values)
+		{
+			if (!HasMaterialParameter(Material, Value.FallbackName))
+			{
+				continue;
+			}
+
+			switch (Value.Type)
+			{
+			case EMaterialValueType::Float:
+				Material->SetScalarParameter(Value.FallbackName, Value.Value.X);
+				break;
+			case EMaterialValueType::Float3:
+			case EMaterialValueType::Color:
+				Material->SetVector3Parameter(Value.FallbackName, FVector(Value.Value.X, Value.Value.Y, Value.Value.Z));
+				break;
+			case EMaterialValueType::Float4:
+			default:
+				Material->SetVector4Parameter(Value.FallbackName, Value.Value);
+				break;
+			}
+		}
+	}
+
+	void ApplyDefaultEmissiveParameters(UMaterial* Material)
+	{
+		if (!Material)
+		{
+			return;
+		}
+
+		const FMaterialRuntimeParameterStore& Store = Material->GetRuntimeParameterStore();
+		if (HasMaterialParameter(Material, "EmissiveColor") && !Store.FindByName("EmissiveColor"))
+		{
+			Material->SetVector4Parameter("EmissiveColor", FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+		if (HasMaterialParameter(Material, "EmissiveIntensity") && !Store.FindByName("EmissiveIntensity"))
+		{
+			Material->SetScalarParameter("EmissiveIntensity", 0.0f);
+		}
+	}
 }
 
 static EMaterialGraphTarget ResolveMaterialGraphCompileTarget(const UMaterial* Material);
@@ -150,6 +211,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	DefaultMaterial->Create(UassetPath, Template, EMaterialDomain::Surface, EBlendMode::Opaque, std::move(Buffers));
 	DefaultMaterial->SetShaderPathForSerialize(DefaultShaderPath);
 	DefaultMaterial->SetVector4Parameter("SectionColor", FVector4(1.0f, 0.0f, 1.0f, 1.0f));
+	ApplyDefaultEmissiveParameters(DefaultMaterial);
 	MaterialCache.emplace(UassetPath, DefaultMaterial);
 	return DefaultMaterial;
 }
@@ -220,6 +282,7 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
         MI->InitializeFromParent(ParentMat, UassetPath); // Template/CB 를 Parent 에서 복제. id=로드 경로(rename 안전)
         MI->Serialize(Ar, Header.Version);               // 복제된 CB 에 override/CPUData/텍스처 기록
 		if (!Ar.IsValid()) { UObjectManager::Get().DestroyObject(MI); return nullptr; }
+		ApplyDefaultEmissiveParameters(MI);
 		return MI;
 	}
 
@@ -251,6 +314,7 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
         }
     }
 
+	ApplyDefaultEmissiveParameters(Material);
 	return Material;
 }
 
@@ -270,6 +334,7 @@ UMaterial* FMaterialManager::CreateImportedMaterialAsset(const FString& UassetPa
 	Material->SetVector4Parameter("SectionColor", SectionColor);
 	Material->SetScalarParameter("HasNormalMap", NormalTexturePath.empty() ? 0.0f : 1.0f);
 	Material->SetScalarParameter("Opacity", 1.0f); // CB zero-init=0(투명) 방지 — 신규 머티리얼 기본 불투명
+	ApplyDefaultEmissiveParameters(Material);
 
 	if (!DiffuseTexturePath.empty())
 		if (UTexture2D* Tex = UTexture2D::LoadFromFile(DiffuseTexturePath, Device, ETextureColorSpace::SRGB))
@@ -306,6 +371,8 @@ bool FMaterialManager::SetMaterialShader(UMaterial* Material, const FString& Sha
 	Material->Create(Material->GetAssetPathFileName(), Template,
 		Material->GetDomain(), Material->GetBlendMode(), std::move(Buffers));
 	Material->SetShaderPathForSerialize(ShaderPath);
+	ApplyRuntimeParameterStoreToBuffers(Material);
+	ApplyDefaultEmissiveParameters(Material);
 
 	// 기본 UberLit 은 엔진이 (ViewMode×VertexFactory) 퍼뮤테이션으로 도출 가능 → custom 해제.
 	// 그 외(非UberLit) 셰이더는 도출 불가 → custom 강제(인스펙터 레이아웃 = 실제 렌더 셰이더 일치 보장).
@@ -436,6 +503,7 @@ UMaterial* FMaterialManager::CreatePreviewMaterialClone(UMaterial* SourceMateria
             break;
         }
     }
+    ApplyDefaultEmissiveParameters(PreviewMaterial);
     PreviewMaterial->RebuildCachedSRVs();
     return PreviewMaterial;
 }

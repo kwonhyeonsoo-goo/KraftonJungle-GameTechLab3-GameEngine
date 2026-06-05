@@ -1,5 +1,6 @@
 #include "Common/Functions.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/ForwardFog.hlsli"
 
 // Particle Mesh — 정적 mesh + per-instance transform/color로 DrawIndexedInstanced.
 // slot 0: 정적 mesh VB (FVertexPNCT layout, 기존 StaticMesh와 동일)
@@ -16,6 +17,10 @@ cbuffer ParticleMeshParams : register(b2)
     float  UseTexture;     // 0=텍스처 무시, 1=사용
     float  SubImagesH;     // atlas 가로 분할 (1 = SubUV 비활성)
     float  SubImagesV;     // atlas 세로 분할
+    float3 _pad;
+    float4 EmissiveColor;
+    float  EmissiveIntensity;
+    float3 _EmissivePad;
 }
 
 struct VS_Input_MeshParticle
@@ -40,7 +45,8 @@ struct PS_Input_MeshParticle
     float4 position : SV_POSITION;
     float4 color    : COLOR;
     float2 texcoord : TEXCOORD0;
-    nointerpolation int subImage : TEXCOORD1;   // per-instance — interpolation 안 함
+    float3 worldPos : TEXCOORD1;
+    nointerpolation int subImage : TEXCOORD2;   // per-instance — interpolation 안 함
 };
 
 PS_Input_MeshParticle VS(VS_Input_MeshParticle input)
@@ -58,6 +64,7 @@ PS_Input_MeshParticle VS(VS_Input_MeshParticle input)
     output.position = ApplyVP(worldPos.xyz);
     output.color    = input.color * input.instColor;
     output.texcoord = input.texcoord;
+    output.worldPos = worldPos.xyz;
     output.subImage = input.subImage;
     return output;
 }
@@ -81,7 +88,10 @@ float4 PS(PS_Input_MeshParticle input) : SV_TARGET
     float3 texRgb = lerp(float3(1,1,1), sampled.rgb, UseTexture);
     float  texA   = lerp(1.0,            sampled.a,   UseTexture);
 
-    float3 rgb = input.color.rgb * BaseColor.rgb * texRgb;
+    float3 surfaceRgb = input.color.rgb * BaseColor.rgb * texRgb;
     float  a   = input.color.a   * BaseColor.a   * Opacity * texA;
-    return float4(ApplyWireframe(rgb), a);
+    float3 emissiveRgb = EmissiveColor.rgb * max(EmissiveIntensity, 0.0f);
+    float3 finalRgb = ApplyWireframe(surfaceRgb + emissiveRgb);
+    finalRgb = ApplyForwardHeightFog(finalRgb, input.worldPos);
+    return float4(finalRgb, a);
 }

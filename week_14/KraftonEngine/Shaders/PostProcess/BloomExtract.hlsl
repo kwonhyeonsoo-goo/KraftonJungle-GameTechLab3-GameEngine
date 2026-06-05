@@ -23,8 +23,7 @@ float4 PS(PS_Input_UV input) : SV_TARGET
     float contribution = max(soft, luminance - threshold);
     contribution /= max(luminance, 0.0001f);
 
-    float3 desaturated = lerp(color, luminance.xxx, 0.75f);
-    float3 bloom = desaturated * contribution;
+    float3 bloom = color * contribution;
 
     return float4(bloom, 1.0f);
 }

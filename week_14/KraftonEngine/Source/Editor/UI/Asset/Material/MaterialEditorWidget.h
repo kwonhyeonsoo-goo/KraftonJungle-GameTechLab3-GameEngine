@@ -139,6 +139,8 @@ private:
     bool   bShowAddNodeMenu        = false;
     bool   bShowPinSpawnMenu       = false;
     uint32 PendingPinSpawnPinId    = 0;
+    uint32 ContextMenuNodeId       = 0;
+    uint32 ContextMenuLinkId       = 0;
     // 모든 미정 노드 spawn 위치는 SCREEN 좌표로 저장. 노드 생성 직후 ed::ScreenToCanvas + ed::SetNodePosition
     // 으로 변환해 적용한다 (imgui-node-editor 표준 패턴 — child window 변환 누락으로 인한 좌표 오류 방지).
     ImVec2 PendingNewNodeScreenPos = ImVec2(0, 0);
