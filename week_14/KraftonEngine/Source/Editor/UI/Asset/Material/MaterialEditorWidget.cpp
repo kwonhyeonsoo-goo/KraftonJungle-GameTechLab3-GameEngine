@@ -1750,14 +1750,20 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
     ed::Suspend();
     if (ed::ShowNodeContextMenu(&ContextNodeId))
     {
+        ContextMenuNodeId = NodeIdToU32(ContextNodeId);
+        ContextMenuLinkId = 0;
         ImGui::OpenPopup("MaterialNodeMenu");
     }
     else if (ed::ShowLinkContextMenu(&ContextLinkId))
     {
+        ContextMenuNodeId = 0;
+        ContextMenuLinkId = LinkIdToU32(ContextLinkId);
         ImGui::OpenPopup("MaterialLinkMenu");
     }
     else if (ed::ShowBackgroundContextMenu())
     {
+        ContextMenuNodeId = 0;
+        ContextMenuLinkId = 0;
         PendingNewNodeScreenPos = ImGui::GetMousePos();
         AddNodeSearchBuf[0]     = 0;
         ImGui::OpenPopup("MaterialCanvasAddNode");
@@ -1768,7 +1774,7 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
         if (ImGui::MenuItem("Duplicate")) bQueuedDuplicateSelected = true;
         if (ImGui::MenuItem("Group Selection as Comment")) bQueuedGroupSelected = true;
         ImGui::Separator();
-        const bool bContextIsOutput = ContextNodeId && IsOutputNode(WorkingGraph, NodeIdToU32(ContextNodeId));
+        const bool bContextIsOutput = ContextMenuNodeId != 0 && IsOutputNode(WorkingGraph, ContextMenuNodeId);
         if (bContextIsOutput)
         {
             ImGui::BeginDisabled();
@@ -1778,7 +1784,11 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
         }
         else if (ImGui::MenuItem("Delete"))
         {
-            if (ContextNodeId && WorkingGraph.RemoveNode(NodeIdToU32(ContextNodeId))) CommitGraphEdit();
+            if (ContextMenuNodeId != 0 && WorkingGraph.RemoveNode(ContextMenuNodeId))
+            {
+                ContextMenuNodeId = 0;
+                CommitGraphEdit();
+            }
         }
         ImGui::EndPopup();
     }
@@ -1786,7 +1796,11 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
     {
         if (ImGui::MenuItem("Break Link"))
         {
-            if (ContextLinkId && WorkingGraph.RemoveLink(LinkIdToU32(ContextLinkId))) CommitGraphEdit();
+            if (ContextMenuLinkId != 0 && WorkingGraph.RemoveLink(ContextMenuLinkId))
+            {
+                ContextMenuLinkId = 0;
+                CommitGraphEdit();
+            }
         }
         ImGui::EndPopup();
     }

@@ -708,6 +708,12 @@ namespace
             return HlslName;
         }
 
+        void RegisterCommonEmissiveParameters()
+        {
+            RegisterParameter("EmissiveColor", EMaterialGraphPinType::Float4, FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+            RegisterParameter("EmissiveIntensity", EMaterialGraphPinType::Float, FVector4(0.0f, 0.0f, 0.0f, 0.0f));
+        }
+
         // 동일 슬롯이면 하나의 Texture2D만 선언. register 충돌 방지.
         FString RegisterTexture(const FMaterialGraphNode& Node)
         {
@@ -785,6 +791,10 @@ namespace
                 }
             }
             SS << "};\n\n";
+            SS << "float3 GetCommonMaterialEmissive()\n";
+            SS << "{\n";
+            SS << "    return Param_EmissiveColor.rgb * max(Param_EmissiveIntensity, 0.0f);\n";
+            SS << "}\n\n";
             return SS.str();
         }
 
@@ -1028,7 +1038,7 @@ float4 PS(PS_Input_MaterialParticle input) : SV_TARGET
     MaterialInput.DynamicParam  = input.dynamicParam;
 
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
-    float4 FinalColor = float4(Result.Color + Result.Emissive, Result.Opacity);
+    float4 FinalColor = float4(Result.Color + Result.Emissive + GetCommonMaterialEmissive(), Result.Opacity);
     clip(FinalColor.a - 0.01f);
     return ApplyFogTransparent(FinalColor, input.worldPos, CameraWorldPos);
 }
@@ -1103,7 +1113,7 @@ float4 PS(PS_Input_MaterialMeshParticle input) : SV_TARGET
         }
 
         SS << R"(
-    float4 FinalColor = float4(BaseColor + Result.Emissive, Result.Opacity);
+    float4 FinalColor = float4(BaseColor + Result.Emissive + GetCommonMaterialEmissive(), Result.Opacity);
     clip(FinalColor.a - 0.01f);
     return ApplyFogTransparent(FinalColor, input.worldPos, CameraWorldPos);
 }
@@ -1174,7 +1184,7 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
         {
             // Unlit: 라이팅 무시, BaseColor + Emissive 만.
             SS << R"(
-    float3 finalRgb = Result.BaseColor + Result.Emissive;
+    float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
 )";
         }
         else
@@ -1197,7 +1207,7 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
                 SS << "    float3 specular = float3(0, 0, 0);\n";
             }
             SS << R"(
-    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive;
+    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
 )";
         }
 
@@ -1278,7 +1288,7 @@ float4 PS(PS_Input_Decal input) : SV_TARGET
         if (bUnlit)
         {
             SS << R"(
-    float3 finalRgb = Result.BaseColor + Result.Emissive;
+    float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
 )";
         }
         else
@@ -1298,7 +1308,7 @@ float4 PS(PS_Input_Decal input) : SV_TARGET
                 SS << "    float3 specular = float3(0, 0, 0);\n";
             }
             SS << R"(
-    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive;
+    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
 )";
         }
 
@@ -1330,7 +1340,7 @@ float4 PS(PS_Input_UV input) : SV_TARGET
     MaterialInput.DynamicParam  = float4(0, 0, 0, 0);
 
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
-    return float4(Result.Color + Result.Emissive, Result.Opacity);
+    return float4(Result.Color + Result.Emissive + GetCommonMaterialEmissive(), Result.Opacity);
 }
 )";
     }
@@ -1349,6 +1359,7 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
             : ECBSlot::PerShader0; // b2
 
     FHlslBuildContext Context(Graph, OutResult, PerMaterialSlot);
+    Context.RegisterCommonEmissiveParameters();
     const FString     EvaluateMaterial = BuildEvaluateMaterial(Graph, Context, Options.Domain, OutResult);
 
     if (!OutResult.Errors.empty())

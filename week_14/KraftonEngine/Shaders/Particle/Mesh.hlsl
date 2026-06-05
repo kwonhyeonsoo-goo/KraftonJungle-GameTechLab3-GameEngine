@@ -17,6 +17,10 @@ cbuffer ParticleMeshParams : register(b2)
     float  UseTexture;     // 0=텍스처 무시, 1=사용
     float  SubImagesH;     // atlas 가로 분할 (1 = SubUV 비활성)
     float  SubImagesV;     // atlas 세로 분할
+    float3 _pad;
+    float4 EmissiveColor;
+    float  EmissiveIntensity;
+    float3 _EmissivePad;
 }
 
 struct VS_Input_MeshParticle
@@ -86,7 +90,8 @@ float4 PS(PS_Input_MeshParticle input) : SV_TARGET
 
     float3 surfaceRgb = input.color.rgb * BaseColor.rgb * texRgb;
     float  a   = input.color.a   * BaseColor.a   * Opacity * texA;
-    float3 finalRgb = ApplyWireframe(surfaceRgb);
+    float3 emissiveRgb = EmissiveColor.rgb * max(EmissiveIntensity, 0.0f);
+    float3 finalRgb = ApplyWireframe(surfaceRgb + emissiveRgb);
     finalRgb = ApplyForwardHeightFog(finalRgb, input.worldPos);
     return float4(finalRgb, a);
 }

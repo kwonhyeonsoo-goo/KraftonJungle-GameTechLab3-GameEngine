@@ -50,7 +50,7 @@ float4 PS(PS_Input_Color input) : SV_TARGET
 
     if ((bool) bIsInnerGizmo)
     {
-        outColor.a *= HoveredAxisOpacity;
+        outColor.a = 1.0f;
     }
 
     if (axis != SelectedAxis && bClicking)
