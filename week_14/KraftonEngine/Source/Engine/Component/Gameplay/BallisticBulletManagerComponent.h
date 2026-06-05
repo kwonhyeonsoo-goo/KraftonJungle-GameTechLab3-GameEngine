@@ -34,6 +34,8 @@ protected:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
+	void UpdateBullets(float DeltaTime);
+	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, float DeltaTime, class UWorld* World);
 	void CompactDeadBullets();
 	void ResolveWeaponComponent();
 

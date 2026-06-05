@@ -1,4 +1,4 @@
-#include "GameFramework/Pawn/SniperPawn.h"
+﻿#include "GameFramework/Pawn/SniperPawn.h"
 
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
@@ -69,6 +69,7 @@ void ASniperPawn::SetupInputComponent()
 
 	InputComponent->AddMouseAxisMapping("SniperTurn", EInputAxisSourceType::MouseX, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
+	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
 	InputComponent->AddActionMapping("SniperScope", "RightMouseButton");
 
 	InputComponent->BindAxis("SniperTurn", [this](float Value)
@@ -84,6 +85,11 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->BindAction("SniperScope", EInputEvent::Pressed, [this]()
 	{
 		HandleScopePressed();
+	});
+
+	InputComponent->BindAction("SniperFire", EInputEvent::Pressed, [this]()
+	{
+		HandleFirePressed();
 	});
 
 	InputComponent->BindAction("SniperScope", EInputEvent::Released, [this]()
@@ -234,4 +240,36 @@ void ASniperPawn::HandleScopePressed()
 void ASniperPawn::HandleScopeReleased()
 {
 	InputState.bScopeHeld = false;
+}
+
+void ASniperPawn::HandleFirePressed()
+{
+	InputState.bFirePressed = true;
+	FireCurrentRound();
+}
+
+bool ASniperPawn::FireCurrentRound()
+{
+	USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+	UCameraComponent* SniperCamera = Camera.Get();
+	if (!SniperWeapon || !SniperCamera)
+	{
+		return false;
+	}
+
+	const FVector ShotDirection = GetControlRotation().GetForwardVector().Normalized();
+	if (ShotDirection.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const FVector MuzzlePosition = SniperCamera->GetWorldLocation() + ShotDirection * 10.0f;
+	const bool bFired = SniperWeapon->RequestFire(
+		MuzzlePosition,
+		ShotDirection,
+		InputState.bScopeHeld,
+		this);
+
+	InputState.bFirePressed = false;
+	return bFired;
 }

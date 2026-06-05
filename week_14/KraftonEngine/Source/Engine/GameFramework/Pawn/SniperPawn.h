@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "GameFramework/Pawn/Pawn.h"
 #include "Component/Gameplay/SniperTypes.h"
@@ -42,8 +42,10 @@ private:
 	void ApplySniperControlRotation();
 	void HandleTurnInput(float Value);
 	void HandleLookUpInput(float Value);
+	void HandleFirePressed();
 	void HandleScopePressed();
 	void HandleScopeReleased();
+	bool FireCurrentRound();
 
 	TWeakObjectPtr<USceneComponent> SniperRoot;
 	TWeakObjectPtr<UCameraComponent> Camera;

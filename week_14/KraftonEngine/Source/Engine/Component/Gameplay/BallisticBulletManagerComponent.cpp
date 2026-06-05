@@ -1,7 +1,11 @@
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 
 #include "Component/Gameplay/SniperWeaponComponent.h"
+#include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
+
+#include <cmath>
 
 #include <algorithm>
 
@@ -44,11 +48,64 @@ void UBallisticBulletManagerComponent::TickComponent(
 	FActorComponentTickFunction& ThisTickFunction)
 {
 	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	(void)DeltaTime;
 	(void)TickType;
 	(void)ThisTickFunction;
 
+	UpdateBullets(DeltaTime);
 	CompactDeadBullets();
+}
+
+void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
+{
+	if (DeltaTime <= 0.0f || ActiveBullets.empty())
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	const FVector WorldGravity = World ? World->GetWorldSettings().Gravity : FVector(0.0f, 0.0f, -9.81f);
+
+	for (FBallisticBullet& Bullet : ActiveBullets)
+	{
+		UpdateSingleBullet(Bullet, WorldGravity, DeltaTime, World);
+	}
+}
+
+void UBallisticBulletManagerComponent::UpdateSingleBullet(
+	FBallisticBullet& Bullet,
+	const FVector& WorldGravity,
+	float DeltaTime,
+	UWorld* World)
+{
+	if (!Bullet.bIsAlive)
+	{
+		return;
+	}
+
+	Bullet.PreviousPosition = Bullet.Position;
+
+	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale;
+	Bullet.Position += Bullet.Velocity * DeltaTime + GravityAcceleration * (0.5f * DeltaTime * DeltaTime);
+	Bullet.Velocity += GravityAcceleration * DeltaTime;
+	Bullet.LifeTime -= DeltaTime;
+
+	if (World)
+	{
+		DrawDebugLine(World, Bullet.PreviousPosition, Bullet.Position, FColor(255, 220, 0), 0.0f);
+		DrawDebugPoint(World, Bullet.Position, (std::max)(Bullet.Radius * 0.5f, 0.05f), FColor(255, 120, 0), 0.0f);
+	}
+
+	const bool bExpired = Bullet.LifeTime <= 0.0f;
+	const bool bInvalidPosition =
+		!std::isfinite(Bullet.Position.X) ||
+		!std::isfinite(Bullet.Position.Y) ||
+		!std::isfinite(Bullet.Position.Z);
+
+	if (bExpired || bInvalidPosition)
+	{
+		Bullet.bIsAlive = false;
+	}
 }
 
 void UBallisticBulletManagerComponent::CompactDeadBullets()
