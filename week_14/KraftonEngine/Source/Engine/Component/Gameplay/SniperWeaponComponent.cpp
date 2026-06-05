@@ -81,6 +81,7 @@ bool USniperWeaponComponent::RequestFire(
 	Bullet.Radius = AmmoData->BulletRadius;
 	Bullet.LifeTime = AmmoData->LifeTime;
 	Bullet.GravityScale = AmmoData->GravityScale;
+	Bullet.WindInfluenceScale = AmmoData->WindInfluenceScale;
 	Bullet.AmmoType = AmmoData->AmmoType;
 	Bullet.Owner = Shooter;
 	Bullet.bIsAlive = true;
@@ -132,6 +133,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	NormalAmmo.BulletRadius = 0.03f;
 	NormalAmmo.LifeTime = 5.0f;
 	NormalAmmo.FireInterval = 1.0f;
+	NormalAmmo.WindInfluenceScale = 1.0f;
 	NormalAmmo.RecoilPitch = 1.2f;
 	NormalAmmo.RecoilYawRandomRange = 0.25f;
 	NormalAmmo.bCanDamageArmor = false;
@@ -145,6 +147,7 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	AntiMaterialAmmo.BulletRadius = 0.05f;
 	AntiMaterialAmmo.LifeTime = 5.0f;
 	AntiMaterialAmmo.FireInterval = 1.5f;
+	AntiMaterialAmmo.WindInfluenceScale = 0.7f;
 	AntiMaterialAmmo.RecoilPitch = 2.5f;
 	AntiMaterialAmmo.RecoilYawRandomRange = 0.5f;
 	AntiMaterialAmmo.bCanDamageArmor = true;

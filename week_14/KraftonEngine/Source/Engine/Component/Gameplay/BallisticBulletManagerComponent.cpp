@@ -23,6 +23,10 @@ namespace
 	constexpr float SniperDebugGravityMultiplier = 1.0f;
 	constexpr float SniperBulletMinSweepRadius = 0.01f;
 	constexpr float SniperDebugHitMarkerRadius = 0.2f;
+	constexpr float SniperWindDebugArrowScale = 3.0f;
+	constexpr float SniperWindDebugArrowHeadSize = 0.35f;
+	constexpr float SniperWindDebugArrowDuration = 0.0f;
+	constexpr float SniperWindDebugMinMagnitude = 0.01f;
 }
 
 UBallisticBulletManagerComponent::UBallisticBulletManagerComponent()
@@ -81,16 +85,23 @@ void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
 	AActor* OwnerActor = GetOwner();
 	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
 	const FVector WorldGravity = World ? World->GetWorldSettings().Gravity : FVector(0.0f, 0.0f, -9.81f);
+	const FVector AppliedWindAcceleration = bEnableWind ? WindAcceleration : FVector::ZeroVector;
+
+	if (World)
+	{
+		DrawWindDebug(World);
+	}
 
 	for (FBallisticBullet& Bullet : ActiveBullets)
 	{
-		UpdateSingleBullet(Bullet, WorldGravity, DeltaTime, World);
+		UpdateSingleBullet(Bullet, WorldGravity, AppliedWindAcceleration, DeltaTime, World);
 	}
 }
 
 void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	FBallisticBullet& Bullet,
 	const FVector& WorldGravity,
+	const FVector& AppliedWindAcceleration,
 	float DeltaTime,
 	UWorld* World)
 {
@@ -102,8 +113,10 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	Bullet.PreviousPosition = Bullet.Position;
 
 	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale * SniperDebugGravityMultiplier;
-	Bullet.Position += Bullet.Velocity * DeltaTime + GravityAcceleration * (0.5f * DeltaTime * DeltaTime);
-	Bullet.Velocity += GravityAcceleration * DeltaTime;
+	const FVector WindDriftAcceleration = AppliedWindAcceleration * Bullet.WindInfluenceScale;
+	const FVector TotalAcceleration = GravityAcceleration + WindDriftAcceleration;
+	Bullet.Position += Bullet.Velocity * DeltaTime + TotalAcceleration * (0.5f * DeltaTime * DeltaTime);
+	Bullet.Velocity += TotalAcceleration * DeltaTime;
 	Bullet.LifeTime -= DeltaTime;
 
 	FHitResult Hit;
@@ -134,6 +147,42 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	{
 		Bullet.bIsAlive = false;
 	}
+}
+
+void UBallisticBulletManagerComponent::DrawWindDebug(UWorld* World) const
+{
+	if (!World || !bEnableWind)
+	{
+		return;
+	}
+
+	if (WindAcceleration.Length() <= SniperWindDebugMinMagnitude)
+	{
+		return;
+	}
+
+	const AActor* OwnerActor = GetOwner();
+	const FVector ArrowStart = OwnerActor ? OwnerActor->GetActorLocation() + FVector(0.0f, 0.0f, 1.5f) : FVector::ZeroVector;
+	const FVector ArrowEnd = ArrowStart + (WindAcceleration * SniperWindDebugArrowScale);
+	const FVector Direction = (ArrowEnd - ArrowStart).Normalized();
+	const FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
+	FVector ArrowSide = FVector::Cross(Direction, UpVector);
+	if (ArrowSide.IsNearlyZero())
+	{
+		ArrowSide = FVector(0.0f, 1.0f, 0.0f);
+	}
+	else
+	{
+		ArrowSide = ArrowSide.Normalized();
+	}
+
+	const FVector ArrowHeadBase = ArrowEnd - Direction * SniperWindDebugArrowHeadSize;
+	const FVector ArrowHeadLeft = ArrowHeadBase + ArrowSide * (SniperWindDebugArrowHeadSize * 0.5f);
+	const FVector ArrowHeadRight = ArrowHeadBase - ArrowSide * (SniperWindDebugArrowHeadSize * 0.5f);
+
+	DrawDebugLine(World, ArrowStart, ArrowEnd, FColor(80, 255, 120), SniperWindDebugArrowDuration);
+	DrawDebugLine(World, ArrowEnd, ArrowHeadLeft, FColor(80, 255, 120), SniperWindDebugArrowDuration);
+	DrawDebugLine(World, ArrowEnd, ArrowHeadRight, FColor(80, 255, 120), SniperWindDebugArrowDuration);
 }
 
 bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bullet, UWorld* World, FHitResult& OutHit) const
