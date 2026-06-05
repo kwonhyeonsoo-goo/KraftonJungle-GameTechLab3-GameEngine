@@ -45,7 +45,9 @@ private:
     void RenderValidationPopup();
     template<typename TComponent>
     TComponent* AddComponentToSelectedActor();
-    void SelectNode(UCombatCoverNodeComponent* Node);
+    void SelectNode(UCombatCoverNodeComponent* Node, bool bNavigateGraphToNode = false);
+    void QueueGraphNavigationToNode(UCombatCoverNodeComponent* Node);
+    void ProcessPendingGraphNavigationToNode();
 
     void InitializeGraphEditor();
     void DestroyGraphEditor();
@@ -59,6 +61,7 @@ private:
     UCombatCoverNodeComponent* DuplicateCoverNodeActor(UCombatCoverNodeComponent* SourceNode, const ImVec2* GraphPosition = nullptr);
     UCombatCoverNodeComponent* FindNodeByGraphNodeId(uint32 GraphNodeId) const;
     void GenerateNodeIdsAndRenameActors();
+    int32 AutoLinkNearbyFromCachedNodes(float MaxDistance, int32 MaxLinksPerNode, bool bDirectedByX);
     void RenameActorToNodeId(UCombatCoverNodeComponent* Node);
 
 private:
@@ -79,6 +82,8 @@ private:
     bool bGraphApplyToScene = true;
 	bool bWasPlayingInEditor = false;
 	bool bPendingGraphNavigateToContent = false;
+	bool bPendingGraphNavigateToNode = false;
+	uint32 PendingGraphNavigateNodeId = 0;
     bool bPendingOpenAutoLinkPopup = false;
     bool bPendingOpenValidationPopup = false;
     bool bPendingOpenRoleStatsPopup = false;

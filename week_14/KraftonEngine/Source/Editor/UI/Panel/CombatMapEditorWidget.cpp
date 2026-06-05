@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <utility>
@@ -69,6 +70,13 @@ namespace
         uint32 Hash = A ? A : 2166136261u;
         Hash ^= B + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
         return Hash ? Hash : 1u;
+    }
+
+    float Dist2DForCombatMap(const FVector& A, const FVector& B)
+    {
+        const float DX = A.X - B.X;
+        const float DY = A.Y - B.Y;
+        return std::sqrt(DX * DX + DY * DY);
     }
 
     uint32 GraphKeyForNode(const UCombatCoverNodeComponent* Node)
@@ -486,7 +494,7 @@ void FCombatMapEditorWidget::RenderNodeList()
         const FString Label = NodeListLabel(Node) + "##CombatNode" + std::to_string(Index);
         if (ImGui::Selectable(Label.c_str(), Node == SelectedNode))
         {
-            SelectNode(Node);
+            SelectNode(Node, true);
         }
     }
     ImGui::EndChild();
@@ -803,6 +811,8 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         }
     }
 
+	ProcessPendingGraphNavigationToNode();
+
 	if (bPendingGraphNavigateToContent && !CachedNodes.empty())
 	{
 		ed::NavigateToContent(0.25f);
@@ -1049,11 +1059,21 @@ void FCombatMapEditorWidget::RenderAutoLinkPopup()
 
         if (ImGui::Button("Run Auto Link"))
         {
+            // Prefab으로 배치한 커버 노드는 NodeId가 비어 있을 수 있다.
+            // AutoLink는 TargetNodeId 문자열을 저장하므로, 링크 생성 전에 항상 id를 먼저 보장한다.
+            GenerateNodeIdsAndRenameActors();
+
+            int32 Count = 0;
             if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
             {
-                const int32 Count = Manager->AutoLinkNearby(AutoLinkMaxDistance, AutoLinkMaxLinksPerNode, bAutoLinkDirectedByX);
-                UE_LOG("CombatMapEditor: auto linked %d edges", Count);
+                Count = Manager->AutoLinkNearby(AutoLinkMaxDistance, AutoLinkMaxLinksPerNode, bAutoLinkDirectedByX);
             }
+            else
+            {
+                Count = AutoLinkNearbyFromCachedNodes(AutoLinkMaxDistance, AutoLinkMaxLinksPerNode, bAutoLinkDirectedByX);
+            }
+            UE_LOG("CombatMapEditor: auto linked %d edges", Count);
+
             Refresh();
             ResetGraphLayoutFromScene();
             ImGui::CloseCurrentPopup();
@@ -1324,6 +1344,69 @@ void FCombatMapEditorWidget::GenerateNodeIdsAndRenameActors()
     ResetGraphLayoutFromScene();
 }
 
+int32 FCombatMapEditorWidget::AutoLinkNearbyFromCachedNodes(float MaxDistance, int32 MaxLinksPerNode, bool bDirectedByX)
+{
+    Refresh();
+
+    if (MaxDistance <= 0.0f || MaxLinksPerNode <= 0)
+    {
+        return 0;
+    }
+
+    int32 CreatedCount = 0;
+    for (UCombatCoverNodeComponent* Source : CachedNodes)
+    {
+        if (!IsValidCombatNode(Source) || Source->GetNodeId().empty())
+        {
+            continue;
+        }
+
+        TArray<TPair<float, UCombatCoverNodeComponent*>> Candidates;
+        const FVector SourceLocation = Source->GetOwner()->GetActorLocation();
+        for (UCombatCoverNodeComponent* Target : CachedNodes)
+        {
+            if (!IsValidCombatNode(Target) || Target == Source || Target->GetNodeId().empty())
+            {
+                continue;
+            }
+
+            const FVector TargetLocation = Target->GetOwner()->GetActorLocation();
+            if (bDirectedByX && TargetLocation.X <= SourceLocation.X)
+            {
+                continue;
+            }
+
+            const float Distance = Dist2DForCombatMap(SourceLocation, TargetLocation);
+            if (Distance <= MaxDistance)
+            {
+                Candidates.push_back({ Distance, Target });
+            }
+        }
+
+        std::sort(Candidates.begin(), Candidates.end(), [](const auto& A, const auto& B)
+        {
+            return A.first < B.first;
+        });
+
+        int32 LinksMadeForNode = 0;
+        for (const auto& Candidate : Candidates)
+        {
+            if (LinksMadeForNode >= MaxLinksPerNode)
+            {
+                break;
+            }
+
+            if (Source->AddLinkToNodeId(Candidate.second->GetNodeId(), false))
+            {
+                ++LinksMadeForNode;
+                ++CreatedCount;
+            }
+        }
+    }
+
+    return CreatedCount;
+}
+
 void FCombatMapEditorWidget::RenameActorToNodeId(UCombatCoverNodeComponent* Node)
 {
 	if (!IsValidCombatNode(Node) || Node->GetNodeId().empty())
@@ -1363,12 +1446,49 @@ TComponent* FCombatMapEditorWidget::AddComponentToSelectedActor()
     return Component;
 }
 
-void FCombatMapEditorWidget::SelectNode(UCombatCoverNodeComponent* Node)
+void FCombatMapEditorWidget::QueueGraphNavigationToNode(UCombatCoverNodeComponent* Node)
+{
+	if (!IsValidCombatNode(Node))
+	{
+		bPendingGraphNavigateToNode = false;
+		PendingGraphNavigateNodeId = 0;
+		return;
+	}
+
+	PendingGraphNavigateNodeId = MakeCombatNodeGraphNodeId(Node);
+	bPendingGraphNavigateToNode = PendingGraphNavigateNodeId != 0;
+	if (bPendingGraphNavigateToNode)
+	{
+		bPendingGraphNavigateToContent = false;
+	}
+}
+
+void FCombatMapEditorWidget::ProcessPendingGraphNavigationToNode()
+{
+	if (!GraphEditorContext || !bPendingGraphNavigateToNode || PendingGraphNavigateNodeId == 0)
+	{
+		return;
+	}
+
+	ed::NodeId NodeId = ToGraphNodeId(PendingGraphNavigateNodeId);
+	ed::SelectNode(NodeId, false);
+	ed::NavigateToSelection(false, 0.20f);
+
+	bPendingGraphNavigateToNode = false;
+	PendingGraphNavigateNodeId = 0;
+}
+
+void FCombatMapEditorWidget::SelectNode(UCombatCoverNodeComponent* Node, bool bNavigateGraphToNode)
 {
 	if (!IsValidCombatNode(Node))
 	{
 		SelectedNode = nullptr;
 		SelectedSlotIndex = -1;
+		if (bNavigateGraphToNode)
+		{
+			bPendingGraphNavigateToNode = false;
+			PendingGraphNavigateNodeId = 0;
+		}
 		return;
 	}
 
@@ -1379,4 +1499,9 @@ void FCombatMapEditorWidget::SelectNode(UCombatCoverNodeComponent* Node)
     {
         EditorEngine->GetSelectionManager().Select(Node->GetOwner());
     }
+
+	if (bNavigateGraphToNode)
+	{
+		QueueGraphNavigationToNode(Node);
+	}
 }
