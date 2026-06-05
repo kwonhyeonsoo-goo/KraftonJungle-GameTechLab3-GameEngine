@@ -58,6 +58,7 @@ struct FShowFlags
 	bool bDebugDraw = true;
 	bool bOctree = false;
 	bool bFog = true;
+	bool bBloom = false;
 	bool bDoF = false;
 	bool bFXAA = false;
 	bool bGammaCorrection = true;

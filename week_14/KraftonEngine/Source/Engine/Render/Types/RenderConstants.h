@@ -75,6 +75,7 @@ namespace ESystemTexSlot
 	constexpr uint32 DoFBackground      = 27;  // t27: Depth of Field background blur (R8G8B8A8_UNORM)
 	constexpr uint32 DoFForeground      = 28;  // t28: Depth of Field foreground blur + mask (R8G8B8A8_UNORM)
 	constexpr uint32 DoFBokeh           = 29;  // t29: Depth of Field highlight bokeh scatter (R16G16B16A16_FLOAT)
+	constexpr uint32 Bloom              = 30;  // t30: Bloom ping-pong blur texture (R16G16B16A16_FLOAT)
 
 	// 하위 호환용 별칭
 	constexpr uint32 ShadowMap = ShadowMapCSM;

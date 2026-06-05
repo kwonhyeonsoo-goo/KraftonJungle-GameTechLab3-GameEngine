@@ -1,4 +1,4 @@
-#include "ShaderManager.h"
+﻿#include "ShaderManager.h"
 #include "Platform/Paths.h"
 #include "Core/Logging/Log.h"
 #include "Core/Logging/Notification.h"
@@ -58,6 +58,9 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	GetOrCreate(EShaderPath::SubUV, StartupError);
 	GetOrCreate(EShaderPath::Billboard, StartupError);
 	GetOrCreate(EShaderPath::HeightFog, StartupError);
+	GetOrCreate(EShaderPath::BloomExtract, StartupError);
+	GetOrCreate(EShaderPath::BloomBlur, StartupError);
+	GetOrCreate(EShaderPath::BloomComposite, StartupError);
 	GetOrCreate(EShaderPath::DoFSetup, StartupError);
 	GetOrCreate(EShaderPath::DoFBackgroundBlur, StartupError);
 	GetOrCreate(EShaderPath::DoFForegroundBlur, StartupError);

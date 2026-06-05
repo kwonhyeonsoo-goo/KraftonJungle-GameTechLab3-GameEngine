@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
 #include "Math/Matrix.h"
@@ -42,6 +42,8 @@ struct FFrameContext
 	// Viewport
 	float ViewportWidth  = 0.0f;
 	float ViewportHeight = 0.0f;
+	float BloomWidth = 0.0f;
+	float BloomHeight = 0.0f;
 
 	ID3D11RenderTargetView*   ViewportRTV          = nullptr;
 	ID3D11DepthStencilView*   ViewportDSV          = nullptr;
@@ -65,6 +67,11 @@ struct FFrameContext
 	ID3D11ShaderResourceView* DoFForegroundSRV      = nullptr;
 	ID3D11RenderTargetView*   DoFBokehRTV           = nullptr;
 	ID3D11ShaderResourceView* DoFBokehSRV           = nullptr;
+	ID3D11RenderTargetView* BloomRTVA = nullptr;
+	ID3D11ShaderResourceView* BloomSRVA = nullptr;
+	ID3D11RenderTargetView* BloomRTVB = nullptr;
+	ID3D11ShaderResourceView* BloomSRVB = nullptr;
+
 	float DoFBokehWidth = 0.0f;
 	float DoFBokehHeight = 0.0f;
 
@@ -128,6 +135,12 @@ struct FFrameContext
 		DepthCopyTexture        = nullptr;
 		DepthCopySRV            = nullptr;
 		StencilCopySRV          = nullptr;
+		BloomRTVA = nullptr;
+		BloomSRVA = nullptr;
+		BloomRTVB = nullptr;
+		BloomSRVB = nullptr;
+		BloomWidth = 0.0f;
+		BloomHeight = 0.0f;
 		CoCRTV                  = nullptr;
 		CoCSRV                  = nullptr;
 		DoFBackgroundRTV        = nullptr;

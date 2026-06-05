@@ -30,6 +30,8 @@ public:
 	// 크기
 	uint32 GetWidth() const { return Width; }
 	uint32 GetHeight() const { return Height; }
+	uint32 GetBloomWidth() const { return BloomWidth; }
+	uint32 GetBloomHeight() const { return BloomHeight; }
 
 	// D3D 리소스 접근자
 	ID3D11RenderTargetView* GetRTV() const { return RTV; }
@@ -56,6 +58,12 @@ public:
 	ID3D11ShaderResourceView* GetDoFBokehSRV() const { return DoFBokehSRV; }
 	uint32 GetDoFBokehWidth() const { return DoFBokehWidth; }
 	uint32 GetDoFBokehHeight() const { return DoFBokehHeight; }
+
+	// Bloom ping-pong RTs
+	ID3D11RenderTargetView* GetBloomRTVA() const { return BloomRTVA; }
+	ID3D11ShaderResourceView* GetBloomSRVA() const { return BloomSRVA; }
+	ID3D11RenderTargetView* GetBloomRTVB() const { return BloomRTVB; }
+	ID3D11ShaderResourceView* GetBloomSRVB() const { return BloomSRVB; }
 
 	const D3D11_VIEWPORT& GetViewportRect() const { return ViewportRect; }
 
@@ -108,6 +116,17 @@ private:
 
 	uint32 Width = 0;
 	uint32 Height = 0;
+	uint32 BloomWidth = 0;
+	uint32 BloomHeight = 0;
+
+	//Bloom용 텍스쳐
+	ID3D11Texture2D* BloomTextureA = nullptr;
+	ID3D11RenderTargetView* BloomRTVA = nullptr;
+	ID3D11ShaderResourceView* BloomSRVA = nullptr;
+
+	ID3D11Texture2D* BloomTextureB = nullptr;
+	ID3D11RenderTargetView* BloomRTVB = nullptr;
+	ID3D11ShaderResourceView* BloomSRVB = nullptr;
 
 	// 지연 리사이즈 요청
 	uint32 PendingWidth = 0;
