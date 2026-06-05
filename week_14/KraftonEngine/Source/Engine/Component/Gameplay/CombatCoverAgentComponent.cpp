@@ -71,6 +71,22 @@ void UCombatCoverAgentComponent::EndPlay()
     UActorComponent::EndPlay();
 }
 
+void UCombatCoverAgentComponent::PostEditProperty(const char* PropertyName)
+{
+    UActorComponent::PostEditProperty(PropertyName);
+
+    (void)PropertyName;
+    ApplyCombatRoleDefaults();
+    MaxHealth = (std::max)(1.0f, MaxHealth);
+    Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
+    FireRange = (std::max)(0.0f, FireRange);
+    MovingFireRange = (std::max)(0.0f, MovingFireRange);
+    AttackDamage = (std::max)(0.0f, AttackDamage);
+    AttackIntervalMin = (std::max)(0.0f, AttackIntervalMin);
+    AttackIntervalMax = (std::max)(AttackIntervalMin, AttackIntervalMax);
+    DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
+}
+
 void UCombatCoverAgentComponent::RequestInitialSlot()
 {
     if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))

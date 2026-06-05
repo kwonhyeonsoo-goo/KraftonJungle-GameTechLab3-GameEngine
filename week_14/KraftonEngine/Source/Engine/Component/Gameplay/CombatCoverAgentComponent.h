@@ -49,6 +49,7 @@ public:
 
     void BeginPlay() override;
     void EndPlay() override;
+    void PostEditProperty(const char* PropertyName) override;
 
     UFUNCTION(Callable, Category="CombatAgent")
     void RequestInitialSlot();

@@ -9,6 +9,7 @@
 #include "Component/Movement/MovementComponent.h"
 #include "Component/Movement/WheeledVehicleMovementComponent.h"
 #include "Component/Debug/GizmoComponent.h"
+#include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/Primitive/TextRenderComponent.h"
@@ -98,6 +99,15 @@ namespace
 
 		return Component->IsHiddenInComponentTree()
 			&& !(bShowEditorOnlyComponents && Component->IsEditorOnlyComponent());
+	}
+
+	bool ShouldHideComponentPropertyCategory(const UActorComponent* Component, const std::string& Category)
+	{
+		if (Component && Component->IsA<UCombatCoverAgentComponent>())
+		{
+			return Category == "CombatAgent|Combat" || Category == "CombatAgent|Debug";
+		}
+		return false;
 	}
 
 	struct FComponentClassGroup
@@ -1985,7 +1995,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 		{
 			if (C == PropertyCategory) { bFound = true; break; }
 		}
-		if (!bFound) CategoryOrder.push_back(PropertyCategory);
+		if (!bFound && !ShouldHideComponentPropertyCategory(SelectedComponent.Get(), PropertyCategory)) CategoryOrder.push_back(PropertyCategory);
 	}
 
 	bool bAnyChanged = false;
@@ -1998,6 +2008,9 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	for (const auto& Cat : CategoryOrder)
 	{
 		if (bPropsInvalidated) break;
+
+		if (ShouldHideComponentPropertyCategory(SelectedComponent.Get(), Cat))
+			continue;
 
 		// Root 컴포넌트는 Transform 카테고리 스킵
 		if (bIsRoot && Cat == "Transform")

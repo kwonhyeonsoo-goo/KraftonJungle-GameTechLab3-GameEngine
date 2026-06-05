@@ -873,11 +873,6 @@ UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UComb
             continue;
         }
 
-        if (bRequireMutualFireRange && !CanEngage(Candidate, Agent))
-        {
-            continue;
-        }
-
         const float Distance = Dist2D(AgentLocation, Candidate->GetOwner()->GetActorLocation());
         if (!bHasBest || Distance < BestDistance)
         {
@@ -1215,15 +1210,7 @@ void UCombatFlowManagerComponent::TickComponent(float DeltaTime, ELevelTick Tick
 {
     UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (bEnableCombatSimulation)
-    {
-        UpdateCombatSimulation(DeltaTime);
-    }
-    else
-    {
-        RefreshRegistry();
-        DrawCombatDebugVisuals();
-    }
+    UpdateCombatSimulation(DeltaTime);
 
     if (!bDrawDebugDuringTick)
     {
