@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/ActorComponent.h"
 #include "Component/Gameplay/CombatCoverNodeComponent.h"
@@ -72,10 +72,10 @@ private:
     FString TeamTag = "Enemy";
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
-    float MoveSpeed = 250.0f;
+    float MoveSpeed = 10.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Acceptance Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
-    float AcceptanceRadius = 80.0f;
+    float AcceptanceRadius = 3.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Interval", Min=0.0f, Max=120.0f, Speed=0.1f)
     float AdvanceInterval = 3.0f;

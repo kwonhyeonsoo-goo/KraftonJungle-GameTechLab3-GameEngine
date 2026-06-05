@@ -8,13 +8,19 @@
 #include "Editor/PIE/PIETypes.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "GameFramework/AActor.h"
+#include "Component/SceneComponent.h"
 #include "GameFramework/World.h"
 
 #include "ImGui/imgui.h"
+#include "imgui_node_editor.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <string>
+#include <utility>
+
+namespace ed = ax::NodeEditor;
 
 namespace
 {
@@ -30,20 +36,123 @@ namespace
         return false;
     }
 
-    const char* SafeActorName(const AActor* Actor)
+    FString ActorNameForUI(const AActor* Actor)
     {
-        return Actor ? Actor->GetName().c_str() : "(none)";
+		return IsValid(Actor) ? Actor->GetName() : FString("(none)");
+    }
+
+	bool IsValidCombatNode(const UCombatCoverNodeComponent* Node)
+	{
+		return IsValid(Node) && IsValid(Node->GetOwner());
+	}
+
+	bool IsValidCombatAgent(const UCombatCoverAgentComponent* Agent)
+	{
+		return IsValid(Agent) && IsValid(Agent->GetOwner());
+	}
+
+    uint32 HashString32(const FString& Text)
+    {
+        uint32 Hash = 2166136261u;
+        for (char Ch : Text)
+        {
+            Hash ^= static_cast<uint8>(Ch);
+            Hash *= 16777619u;
+        }
+        return Hash ? Hash : 1u;
+    }
+
+    uint32 HashCombine32(uint32 A, uint32 B)
+    {
+        uint32 Hash = A ? A : 2166136261u;
+        Hash ^= B + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+        return Hash ? Hash : 1u;
+    }
+
+    uint32 GraphKeyForNode(const UCombatCoverNodeComponent* Node)
+    {
+		if (!IsValid(Node))
+        {
+            return 1u;
+        }
+
+        uint32 Key = Node->GetUUID();
+		if (Key == 0 && IsValid(Node->GetOwner()))
+        {
+            Key = Node->GetOwner()->GetUUID();
+        }
+        if (Key == 0)
+        {
+            Key = HashString32(Node->GetNodeId());
+        }
+        return Key ? Key : 1u;
+    }
+
+    uint32 MakeCombatNodeGraphNodeId(const UCombatCoverNodeComponent* Node)
+    {
+        return 0x71000000u | (GraphKeyForNode(Node) & 0x00ffffffu);
+    }
+
+    uint32 MakeCombatNodeInputPinId(const UCombatCoverNodeComponent* Node)
+    {
+        return 0x72000000u | (GraphKeyForNode(Node) & 0x00ffffffu);
+    }
+
+    uint32 MakeCombatNodeOutputPinId(const UCombatCoverNodeComponent* Node)
+    {
+        return 0x73000000u | (GraphKeyForNode(Node) & 0x00ffffffu);
+    }
+
+    uint32 MakeCombatLinkGraphId(const UCombatCoverNodeComponent* Source, const FCombatCoverLink& Link, int32 LinkIndex)
+    {
+        return 0x75000000u | (HashCombine32(GraphKeyForNode(Source), HashCombine32(HashString32(Link.TargetNodeId), static_cast<uint32>(LinkIndex + 1))) & 0x00ffffffu);
+    }
+
+    inline ed::NodeId ToGraphNodeId(uint32 Id) { return static_cast<ed::NodeId>(Id); }
+    inline ed::PinId ToGraphPinId(uint32 Id) { return static_cast<ed::PinId>(Id); }
+    inline ed::LinkId ToGraphLinkId(uint32 Id) { return static_cast<ed::LinkId>(Id); }
+    inline uint32 GraphPinIdToU32(ed::PinId Id) { return static_cast<uint32>(Id.Get()); }
+    inline uint32 GraphLinkIdToU32(ed::LinkId Id) { return static_cast<uint32>(Id.Get()); }
+
+    bool IsActorNameInUse(UWorld* World, const FString& CandidateName, const AActor* IgnoreActor)
+    {
+        if (!World || CandidateName.empty())
+        {
+            return false;
+        }
+
+        const FName CandidateFName(CandidateName);
+        for (AActor* Actor : World->GetActors())
+        {
+            if (Actor && Actor != IgnoreActor && Actor->GetFName() == CandidateFName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    FString MakeUniqueActorName(UWorld* World, const FString& BaseName, const AActor* IgnoreActor)
+    {
+        FString Base = BaseName.empty() ? FString("CoverNode") : BaseName;
+        FString Candidate = Base;
+        int32 Suffix = 2;
+        while (IsActorNameInUse(World, Candidate, IgnoreActor))
+        {
+            Candidate = Base + "_" + std::to_string(Suffix++);
+        }
+        return Candidate;
     }
 
     FString NodeListLabel(const UCombatCoverNodeComponent* Node)
     {
-        if (!Node)
+		if (!IsValidCombatNode(Node))
         {
             return "(null)";
         }
 
         FString Label = Node->GetNodeId().empty() ? FString("<empty NodeId>") : Node->GetNodeId();
-        if (Node->GetOwner())
+		if (IsValid(Node->GetOwner()))
         {
             Label += "  [" + Node->GetOwner()->GetName() + "]";
         }
@@ -51,14 +160,23 @@ namespace
     }
 }
 
+FCombatMapEditorWidget::~FCombatMapEditorWidget()
+{
+    DestroyGraphEditor();
+}
+
 void FCombatMapEditorWidget::Initialize(UEditorEngine* InEditorEngine)
 {
     FEditorWidget::Initialize(InEditorEngine);
+    InitializeGraphEditor();
     Refresh();
 }
 
 void FCombatMapEditorWidget::Render(float /*DeltaTime*/)
 {
+	RefreshIfWorldOrPIEStateChanged();
+	PruneInvalidCachedReferences();
+
     ImGui::SetNextWindowSize(ImVec2(900.0f, 720.0f), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Combat Map Editor"))
     {
@@ -78,6 +196,7 @@ void FCombatMapEditorWidget::Refresh()
     CachedNodes.clear();
     CachedAgents.clear();
     CachedManager = nullptr;
+	CachedWorld = nullptr;
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -86,13 +205,27 @@ void FCombatMapEditorWidget::Refresh()
         SelectedSlotIndex = -1;
         return;
     }
+	CachedWorld = World;
+	bWasPlayingInEditor = EditorEngine && EditorEngine->IsPlayingInEditor();
 
     CachedManager = UCombatFlowManagerComponent::FindInWorld(World);
-    if (CachedManager)
+	if (IsValid(CachedManager))
     {
         CachedManager->RefreshRegistry();
-        CachedNodes = CachedManager->GetNodes();
-        CachedAgents = CachedManager->GetAgents();
+		for (UCombatCoverNodeComponent* Node : CachedManager->GetNodes())
+		{
+			if (IsValidCombatNode(Node))
+			{
+				CachedNodes.push_back(Node);
+			}
+		}
+		for (UCombatCoverAgentComponent* Agent : CachedManager->GetAgents())
+		{
+			if (IsValidCombatAgent(Agent))
+			{
+				CachedAgents.push_back(Agent);
+			}
+		}
     }
     else
     {
@@ -103,18 +236,79 @@ void FCombatMapEditorWidget::Refresh()
                 continue;
             }
 
-            if (UCombatCoverNodeComponent* Node = Actor->GetComponentByClass<UCombatCoverNodeComponent>())
+			if (UCombatCoverNodeComponent* Node = Actor->GetComponentByClass<UCombatCoverNodeComponent>())
             {
-                CachedNodes.push_back(Node);
+				if (IsValidCombatNode(Node))
+				{
+					CachedNodes.push_back(Node);
+				}
             }
             if (UCombatCoverAgentComponent* Agent = Actor->GetComponentByClass<UCombatCoverAgentComponent>())
             {
-                CachedAgents.push_back(Agent);
+				if (IsValidCombatAgent(Agent))
+				{
+					CachedAgents.push_back(Agent);
+				}
             }
         }
     }
 
-    if (SelectedNode && std::find(CachedNodes.begin(), CachedNodes.end(), SelectedNode) == CachedNodes.end())
+	PruneInvalidCachedReferences();
+}
+
+void FCombatMapEditorWidget::RefreshIfWorldOrPIEStateChanged()
+{
+	const bool bPlaying = EditorEngine && EditorEngine->IsPlayingInEditor();
+	UWorld* CurrentWorld = GetEditorWorld();
+	if (CurrentWorld == CachedWorld && bPlaying == bWasPlayingInEditor)
+	{
+		return;
+	}
+
+	ClearCachedRuntimePointers();
+	Refresh();
+	ResetGraphLayoutFromScene();
+}
+
+void FCombatMapEditorWidget::ClearCachedRuntimePointers()
+{
+	CachedNodes.clear();
+	CachedAgents.clear();
+	CachedManager = nullptr;
+	CachedWorld = nullptr;
+	SelectedNode = nullptr;
+	SelectedSlotIndex = -1;
+	LinkTargetIndex = -1;
+}
+
+void FCombatMapEditorWidget::PruneInvalidCachedReferences()
+{
+	CachedNodes.erase(
+		std::remove_if(
+			CachedNodes.begin(),
+			CachedNodes.end(),
+			[](const UCombatCoverNodeComponent* Node)
+			{
+				return !IsValidCombatNode(Node);
+			}),
+		CachedNodes.end());
+
+	CachedAgents.erase(
+		std::remove_if(
+			CachedAgents.begin(),
+			CachedAgents.end(),
+			[](const UCombatCoverAgentComponent* Agent)
+			{
+				return !IsValidCombatAgent(Agent);
+			}),
+		CachedAgents.end());
+
+	if (!IsValid(CachedManager))
+	{
+		CachedManager = nullptr;
+	}
+
+	if (SelectedNode && std::find(CachedNodes.begin(), CachedNodes.end(), SelectedNode) == CachedNodes.end())
     {
         SelectedNode = nullptr;
         SelectedSlotIndex = -1;
@@ -133,7 +327,7 @@ AActor* FCombatMapEditorWidget::GetSelectedActor() const
 
 UCombatFlowManagerComponent* FCombatMapEditorWidget::FindOrUseManager() const
 {
-    if (CachedManager)
+	if (IsValid(CachedManager))
     {
         return CachedManager;
     }
@@ -165,7 +359,8 @@ void FCombatMapEditorWidget::RenderToolbar()
     ImGui::Checkbox("Selected Debug Only", &bShowOnlySelectedNodeDebug);
 
     AActor* SelectedActor = GetSelectedActor();
-    ImGui::Text("Selected Actor: %s", SafeActorName(SelectedActor));
+    const FString SelectedActorName = ActorNameForUI(SelectedActor);
+    ImGui::Text("Selected Actor: %s", SelectedActorName.c_str());
 
     if (ImGui::Button("Add Cover Node Component"))
     {
@@ -175,6 +370,22 @@ void FCombatMapEditorWidget::RenderToolbar()
         }
     }
     ImGui::SameLine();
+    if (ImGui::Button("Create Cover Node Actor"))
+    {
+        if (UCombatCoverNodeComponent* Node = CreateCoverNodeActorFromEditor())
+        {
+            SelectNode(Node);
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Duplicate Cover Node"))
+    {
+        if (UCombatCoverNodeComponent* Node = DuplicateSelectedCoverNodeActor())
+        {
+            SelectNode(Node);
+        }
+    }
+
     if (ImGui::Button("Add Cover Agent"))
     {
         AddComponentToSelectedActor<UCombatCoverAgentComponent>();
@@ -184,26 +395,10 @@ void FCombatMapEditorWidget::RenderToolbar()
     {
         AddComponentToSelectedActor<UCombatFlowManagerComponent>();
     }
-
+    ImGui::SameLine();
     if (ImGui::Button("Auto Generate Missing NodeIds"))
     {
-        if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
-        {
-            const int32 Count = Manager->AutoGenerateMissingNodeIds();
-            UE_LOG("CombatMapEditor: generated %d missing NodeIds", Count);
-        }
-        else
-        {
-            int32 Index = 1;
-            for (UCombatCoverNodeComponent* Node : CachedNodes)
-            {
-                if (Node)
-                {
-                    Node->EnsureNodeId(Index++);
-                }
-            }
-        }
-        Refresh();
+        GenerateNodeIdsAndRenameActors();
     }
     ImGui::SameLine();
     if (ImGui::Button("Auto Link Nearby"))
@@ -263,7 +458,7 @@ void FCombatMapEditorWidget::RenderRightColumn()
     ImGui::Separator();
     RenderLinkPanel(SelectedNode);
     ImGui::Separator();
-    RenderGraphPreview();
+    RenderGraphEditor();
 }
 
 void FCombatMapEditorWidget::RenderNodeList()
@@ -274,6 +469,10 @@ void FCombatMapEditorWidget::RenderNodeList()
     for (int32 Index = 0; Index < static_cast<int32>(CachedNodes.size()); ++Index)
     {
         UCombatCoverNodeComponent* Node = CachedNodes[Index];
+		if (!IsValidCombatNode(Node))
+		{
+			continue;
+		}
         const FString Label = NodeListLabel(Node) + "##CombatNode" + std::to_string(Index);
         if (ImGui::Selectable(Label.c_str(), Node == SelectedNode))
         {
@@ -287,15 +486,24 @@ void FCombatMapEditorWidget::RenderSelectedNodePanel()
 {
     ImGui::SeparatorText("Selected Node");
 
-    UCombatCoverNodeComponent* Node = SelectedNode;
+	UCombatCoverNodeComponent* Node = IsValidCombatNode(SelectedNode) ? SelectedNode : nullptr;
+	if (!Node)
+	{
+		SelectedNode = nullptr;
+		SelectedSlotIndex = -1;
+	}
     if (!Node)
     {
         AActor* SelectedActor = GetSelectedActor();
-        Node = SelectedActor ? SelectedActor->GetComponentByClass<UCombatCoverNodeComponent>() : nullptr;
-        if (Node)
+		Node = IsValid(SelectedActor) ? SelectedActor->GetComponentByClass<UCombatCoverNodeComponent>() : nullptr;
+		if (IsValidCombatNode(Node))
         {
             SelectedNode = Node;
         }
+		else
+		{
+			Node = nullptr;
+		}
     }
 
     if (!Node)
@@ -304,7 +512,8 @@ void FCombatMapEditorWidget::RenderSelectedNodePanel()
         return;
     }
 
-    ImGui::Text("Owner: %s", SafeActorName(Node->GetOwner()));
+    const FString OwnerName = ActorNameForUI(Node->GetOwner());
+    ImGui::Text("Owner: %s", OwnerName.c_str());
 
     FString NodeId = Node->GetNodeId();
     if (InputTextString("NodeId", NodeId))
@@ -339,7 +548,7 @@ void FCombatMapEditorWidget::RenderSelectedNodePanel()
 
 void FCombatMapEditorWidget::RenderSlotPanel(UCombatCoverNodeComponent* Node)
 {
-    if (!Node)
+	if (!IsValidCombatNode(Node))
     {
         return;
     }
@@ -386,7 +595,7 @@ void FCombatMapEditorWidget::RenderSlotPanel(UCombatCoverNodeComponent* Node)
 void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
 {
     ImGui::SeparatorText("Links");
-    if (!Node)
+	if (!IsValidCombatNode(Node))
     {
         ImGui::TextDisabled("Select a cover node first.");
         return;
@@ -437,7 +646,7 @@ void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
         for (int32 Index = 0; Index < static_cast<int32>(CachedNodes.size()); ++Index)
         {
             UCombatCoverNodeComponent* Candidate = CachedNodes[Index];
-            if (!Candidate || Candidate == Node)
+			if (!IsValidCombatNode(Candidate) || Candidate == Node)
             {
                 continue;
             }
@@ -457,7 +666,7 @@ void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
         if (LinkTargetIndex >= 0 && LinkTargetIndex < static_cast<int32>(CachedNodes.size()))
         {
             UCombatCoverNodeComponent* Target = CachedNodes[LinkTargetIndex];
-            if (Target && !Target->GetNodeId().empty())
+			if (IsValidCombatNode(Target) && !Target->GetNodeId().empty())
             {
                 Node->AddLinkToNodeId(Target->GetNodeId(), bNewLinkBidirectional);
                 if (bNewLinkBidirectional && !Node->GetNodeId().empty())
@@ -470,55 +679,236 @@ void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
     }
 }
 
-void FCombatMapEditorWidget::RenderGraphPreview()
+void FCombatMapEditorWidget::RenderGraphEditor()
 {
-    ImGui::SeparatorText("Graph Preview");
-    ImGui::BeginChild("CombatGraphPreview", ImVec2(0.0f, 180.0f), true);
+    ImGui::SeparatorText("Graph Editor");
 
-    if (CachedNodes.empty())
+    InitializeGraphEditor();
+
+    if (ImGui::Button("Pull Layout From Scene"))
     {
-        ImGui::TextDisabled("No cover nodes.");
-        ImGui::EndChild();
+        ResetGraphLayoutFromScene();
+    }
+	ImGui::SameLine();
+	if (ImGui::Button("Fit Graph"))
+	{
+		bPendingGraphNavigateToContent = true;
+	}
+    ImGui::SameLine();
+    ImGui::Checkbox("Apply Graph To Scene", &bGraphApplyToScene);
+    ImGui::SetNextItemWidth(180.0f);
+    if (ImGui::DragFloat("Scene Units / Graph Unit", &GraphSceneUnitsPerGraphUnit, 0.001f, 0.001f, 1000.0f, "%.4f"))
+    {
+        ResetGraphLayoutFromScene();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Use 1/15 Scale"))
+    {
+        GraphSceneUnitsPerGraphUnit = 1.0f / 15.0f;
+        ResetGraphLayoutFromScene();
+    }
+
+    bool bGraphAxisChanged = false;
+    bGraphAxisChanged |= ImGui::Checkbox("Mirror Graph X", &bGraphMirrorX);
+    ImGui::SameLine();
+    bGraphAxisChanged |= ImGui::Checkbox("Mirror Graph Y", &bGraphMirrorY);
+    if (bGraphAxisChanged)
+    {
+        ResetGraphLayoutFromScene();
+    }
+    ImGui::TextDisabled("Graph default is 1 graph unit = 0.0667 scene units. Mirror X/Y only changes the top-down graph view mapping. Scene Z is fixed to 0.");
+
+    if (!GraphEditorContext)
+    {
+        ImGui::TextDisabled("Node editor context is not available.");
         return;
     }
 
-    for (UCombatCoverNodeComponent* Node : CachedNodes)
+    ImGui::BeginChild("CombatGraphEditorChild", ImVec2(0.0f, 360.0f), true);
+    ed::SetCurrentEditor(GraphEditorContext);
+    ed::Begin("CombatCoverGraphCanvas");
+
+    TMap<uint32, UCombatCoverNodeComponent*> InputPinToNode;
+    TMap<uint32, UCombatCoverNodeComponent*> OutputPinToNode;
+    TMap<uint32, std::pair<UCombatCoverNodeComponent*, FString>> LinkIdToEdge;
+
+    for (int32 NodeIndex = 0; NodeIndex < static_cast<int32>(CachedNodes.size()); ++NodeIndex)
     {
-        if (!Node)
+        UCombatCoverNodeComponent* Node = CachedNodes[NodeIndex];
+		if (!IsValidCombatNode(Node))
         {
             continue;
         }
+
+        EnsureGraphNodePositionFromScene(Node, NodeIndex);
+
+        const uint32 NodeGraphId = MakeCombatNodeGraphNodeId(Node);
+        const uint32 InputPinId = MakeCombatNodeInputPinId(Node);
+        const uint32 OutputPinId = MakeCombatNodeOutputPinId(Node);
+        InputPinToNode[InputPinId] = Node;
+        OutputPinToNode[OutputPinId] = Node;
 
         const bool bSelected = Node == SelectedNode;
-        if (bSelected)
-        {
-            ImGui::Text("[selected] %s", NodeListLabel(Node).c_str());
-        }
-        else
-        {
-            ImGui::TextUnformatted(NodeListLabel(Node).c_str());
-        }
+        const FString OwnerName = ActorNameForUI(Node->GetOwner());
+        const FString NodeIdText = Node->GetNodeId().empty() ? FString("<empty NodeId>") : Node->GetNodeId();
 
-        const TArray<FCombatCoverLink>& Links = Node->GetLinks();
-        if (Links.empty())
+        ed::BeginNode(ToGraphNodeId(NodeGraphId));
+        ed::BeginPin(ToGraphPinId(InputPinId), ed::PinKind::Input);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "in");
+        ed::EndPin();
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        ImGui::TextColored(
+            bSelected ? ImVec4(1.0f, 0.86f, 0.18f, 1.0f) : ImVec4(0.45f, 0.78f, 1.0f, 1.0f),
+            "%s",
+            NodeIdText.c_str());
+        if (ImGui::IsItemClicked())
         {
-            ImGui::Indent();
-            ImGui::TextDisabled("(no outgoing links)");
-            ImGui::Unindent();
+            SelectNode(Node);
+			if (EditorEngine && IsValid(Node->GetOwner()))
+            {
+                EditorEngine->GetSelectionManager().Select(Node->GetOwner());
+            }
+        }
+        ImGui::TextDisabled("%s", OwnerName.c_str());
+        ImGui::TextDisabled("S %d | L %d", Node->GetSlotCount(), Node->GetLinkCount());
+        ImGui::EndGroup();
+        ImGui::SameLine();
+        ed::BeginPin(ToGraphPinId(OutputPinId), ed::PinKind::Output);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "out");
+        ed::EndPin();
+        ed::EndNode();
+
+    }
+
+    for (int32 SourceIndex = 0; SourceIndex < static_cast<int32>(CachedNodes.size()); ++SourceIndex)
+    {
+        UCombatCoverNodeComponent* Source = CachedNodes[SourceIndex];
+		if (!IsValidCombatNode(Source))
+        {
             continue;
         }
 
-        ImGui::Indent();
-        for (const FCombatCoverLink& Link : Links)
+        const TArray<FCombatCoverLink>& Links = Source->GetLinks();
+        for (int32 LinkIndex = 0; LinkIndex < static_cast<int32>(Links.size()); ++LinkIndex)
         {
-            ImGui::BulletText("-> %s  weight %.2f%s",
-                Link.TargetNodeId.c_str(),
-                Link.Weight,
-                Link.bBidirectional ? "  bidirectional" : "");
+            const FCombatCoverLink& Link = Links[LinkIndex];
+            UCombatCoverNodeComponent* Target = nullptr;
+            for (UCombatCoverNodeComponent* Candidate : CachedNodes)
+            {
+				if (IsValidCombatNode(Candidate) && Candidate->GetNodeId() == Link.TargetNodeId)
+                {
+                    Target = Candidate;
+                    break;
+                }
+            }
+            if (!Target)
+            {
+                continue;
+            }
+
+            const uint32 LinkGraphId = MakeCombatLinkGraphId(Source, Link, LinkIndex);
+            LinkIdToEdge[LinkGraphId] = { Source, Link.TargetNodeId };
+            ed::Link(
+                ToGraphLinkId(LinkGraphId),
+                ToGraphPinId(MakeCombatNodeOutputPinId(Source)),
+                ToGraphPinId(MakeCombatNodeInputPinId(Target)),
+                ImColor(125, 210, 190),
+                Link.bBidirectional ? 4.0f : 2.0f);
         }
-        ImGui::Unindent();
     }
 
+	if (bPendingGraphNavigateToContent && !CachedNodes.empty())
+	{
+		ed::NavigateToContent(0.25f);
+		bPendingGraphNavigateToContent = false;
+	}
+
+    if (ed::BeginCreate())
+    {
+        ed::PinId StartPinId = 0;
+        ed::PinId EndPinId = 0;
+        if (ed::QueryNewLink(&StartPinId, &EndPinId) && StartPinId && EndPinId)
+        {
+            UCombatCoverNodeComponent* Source = nullptr;
+            UCombatCoverNodeComponent* Target = nullptr;
+
+            const uint32 Start = GraphPinIdToU32(StartPinId);
+            const uint32 End = GraphPinIdToU32(EndPinId);
+            const auto StartOut = OutputPinToNode.find(Start);
+            const auto EndIn = InputPinToNode.find(End);
+            if (StartOut != OutputPinToNode.end() && EndIn != InputPinToNode.end())
+            {
+                Source = StartOut->second;
+                Target = EndIn->second;
+            }
+            else
+            {
+                const auto EndOut = OutputPinToNode.find(End);
+                const auto StartIn = InputPinToNode.find(Start);
+                if (EndOut != OutputPinToNode.end() && StartIn != InputPinToNode.end())
+                {
+                    Source = EndOut->second;
+                    Target = StartIn->second;
+                }
+            }
+
+            const bool bCanCreate =
+			IsValidCombatNode(Source) && IsValidCombatNode(Target) && Source != Target &&
+                !Source->GetNodeId().empty() && !Target->GetNodeId().empty();
+
+            if (bCanCreate)
+            {
+                if (ed::AcceptNewItem(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), 2.0f))
+                {
+                    Source->AddLinkToNodeId(Target->GetNodeId(), false);
+                    Refresh();
+                }
+            }
+            else
+            {
+                ed::RejectNewItem(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), 2.0f);
+            }
+        }
+    }
+    ed::EndCreate();
+
+    if (ed::BeginDelete())
+    {
+        ed::LinkId DeletedLinkId = 0;
+        while (ed::QueryDeletedLink(&DeletedLinkId))
+        {
+            const uint32 LinkId = GraphLinkIdToU32(DeletedLinkId);
+            const auto It = LinkIdToEdge.find(LinkId);
+            if (It != LinkIdToEdge.end() && It->second.first)
+            {
+                if (ed::AcceptDeletedItem())
+                {
+                    It->second.first->RemoveLinkToNodeId(It->second.second);
+                    Refresh();
+                }
+            }
+        }
+    }
+    ed::EndDelete();
+
+    ed::End();
+
+    if (bGraphApplyToScene)
+    {
+        for (int32 NodeIndex = 0; NodeIndex < static_cast<int32>(CachedNodes.size()); ++NodeIndex)
+        {
+            UCombatCoverNodeComponent* Node = CachedNodes[NodeIndex];
+		if (!IsValidCombatNode(Node))
+            {
+                continue;
+            }
+
+            ApplyGraphPositionToScene(Node, NodeIndex);
+        }
+    }
+
+    ed::SetCurrentEditor(nullptr);
     ImGui::EndChild();
 }
 
@@ -554,13 +944,13 @@ void FCombatMapEditorWidget::RenderAgentPanel()
 
     for (UCombatCoverAgentComponent* Agent : CachedAgents)
     {
-        if (!Agent)
+		if (!IsValidCombatAgent(Agent))
         {
             continue;
         }
 
         ImGui::TextWrapped("%s | Team %s | %s",
-            SafeActorName(Agent->GetOwner()),
+            ActorNameForUI(Agent->GetOwner()).c_str(),
             Agent->GetTeamTag().c_str(),
             Agent->GetStateName());
         ImGui::TextDisabled("Current: %s:%d  Target: %s:%d",
@@ -643,11 +1033,249 @@ void FCombatMapEditorWidget::RenderPIEControls()
     ImGui::TextDisabled("PIE State: %s", bPlaying ? "Running" : "Stopped");
 }
 
+void FCombatMapEditorWidget::InitializeGraphEditor()
+{
+    if (GraphEditorContext)
+    {
+        return;
+    }
+
+    ed::Config Config;
+    GraphEditorContext = ed::CreateEditor(&Config);
+    InitializedGraphItemIds.clear();
+}
+
+void FCombatMapEditorWidget::DestroyGraphEditor()
+{
+    if (GraphEditorContext)
+    {
+        ed::DestroyEditor(GraphEditorContext);
+        GraphEditorContext = nullptr;
+    }
+    InitializedGraphItemIds.clear();
+}
+
+void FCombatMapEditorWidget::ResetGraphLayoutFromScene()
+{
+    InitializedGraphItemIds.clear();
+	bPendingGraphNavigateToContent = true;
+}
+
+ImVec2 FCombatMapEditorWidget::WorldToGraph(const FVector& Position) const
+{
+    const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
+    float GraphX = Position.X / SafeUnitsPerGraphUnit;
+    float GraphY = -Position.Y / SafeUnitsPerGraphUnit;
+    if (bGraphMirrorX)
+    {
+        GraphX = -GraphX;
+    }
+    if (bGraphMirrorY)
+    {
+        GraphY = -GraphY;
+    }
+    return ImVec2(GraphX, GraphY);
+}
+
+FVector FCombatMapEditorWidget::GraphToWorld(const ImVec2& Position) const
+{
+    const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
+    const float GraphX = bGraphMirrorX ? -Position.x : Position.x;
+    const float GraphY = bGraphMirrorY ? -Position.y : Position.y;
+    return FVector(GraphX * SafeUnitsPerGraphUnit, -GraphY * SafeUnitsPerGraphUnit, 0.0f);
+}
+
+void FCombatMapEditorWidget::EnsureGraphNodePositionFromScene(UCombatCoverNodeComponent* Node, int32 /*NodeIndex*/)
+{
+	if (!GraphEditorContext || !IsValidCombatNode(Node))
+    {
+        return;
+    }
+
+    const uint32 NodeGraphId = MakeCombatNodeGraphNodeId(Node);
+    if (InitializedGraphItemIds.find(NodeGraphId) != InitializedGraphItemIds.end())
+    {
+        return;
+    }
+
+	const FVector WorldLocation = Node->GetOwner()->GetActorLocation();
+    ed::SetNodePosition(ToGraphNodeId(NodeGraphId), WorldToGraph(WorldLocation));
+    InitializedGraphItemIds.insert(NodeGraphId);
+}
+
+void FCombatMapEditorWidget::ApplyGraphPositionToScene(UCombatCoverNodeComponent* Node, int32 /*NodeIndex*/)
+{
+	if (!GraphEditorContext || !IsValidCombatNode(Node))
+    {
+        return;
+    }
+
+    const uint32 NodeGraphId = MakeCombatNodeGraphNodeId(Node);
+    const ImVec2 GraphPosition = ed::GetNodePosition(ToGraphNodeId(NodeGraphId));
+    Node->GetOwner()->SetActorLocation(GraphToWorld(GraphPosition));
+}
+
+UCombatCoverNodeComponent* FCombatMapEditorWidget::CreateCoverNodeActorFromEditor()
+{
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    AActor* Actor = World->SpawnActor<AActor>();
+    if (!Actor)
+    {
+        return nullptr;
+    }
+
+    USceneComponent* Root = Actor->AddComponent<USceneComponent>();
+    if (Root)
+    {
+        Actor->SetRootComponent(Root);
+    }
+
+    FVector SpawnLocation(static_cast<float>(CachedNodes.size()) * 500.0f, 0.0f, 0.0f);
+	if (IsValidCombatNode(SelectedNode))
+    {
+        SpawnLocation = SelectedNode->GetOwner()->GetActorLocation() + FVector(500.0f, 0.0f, 0.0f);
+    }
+    SpawnLocation.Z = 0.0f;
+    Actor->SetActorLocation(SpawnLocation);
+
+    UCombatCoverNodeComponent* Node = Actor->AddComponent<UCombatCoverNodeComponent>();
+    if (!Node)
+    {
+        return nullptr;
+    }
+
+    Node->AddSlotAtLocalPosition(FVector::ZeroVector);
+    Refresh();
+    GenerateNodeIdsAndRenameActors();
+    Refresh();
+
+    if (EditorEngine)
+    {
+        EditorEngine->GetSelectionManager().Select(Actor);
+    }
+    ResetGraphLayoutFromScene();
+    return Actor->GetComponentByClass<UCombatCoverNodeComponent>();
+}
+
+UCombatCoverNodeComponent* FCombatMapEditorWidget::DuplicateSelectedCoverNodeActor()
+{
+	UCombatCoverNodeComponent* SourceNode = IsValidCombatNode(SelectedNode) ? SelectedNode : nullptr;
+	if (!SourceNode)
+    {
+        if (AActor* SelectedActor = GetSelectedActor())
+        {
+			SourceNode = IsValid(SelectedActor) ? SelectedActor->GetComponentByClass<UCombatCoverNodeComponent>() : nullptr;
+        }
+    }
+
+	AActor* SourceActor = IsValidCombatNode(SourceNode) ? SourceNode->GetOwner() : nullptr;
+	if (!IsValid(SourceActor))
+    {
+        return nullptr;
+    }
+
+    AActor* DuplicateActor = Cast<AActor>(SourceActor->Duplicate(nullptr));
+    if (!DuplicateActor)
+    {
+        return nullptr;
+    }
+
+    FVector NewLocation = SourceActor->GetActorLocation() + FVector(500.0f, 0.0f, 0.0f);
+    NewLocation.Z = 0.0f;
+    DuplicateActor->SetActorLocation(NewLocation);
+
+    UCombatCoverNodeComponent* DuplicateNode = DuplicateActor->GetComponentByClass<UCombatCoverNodeComponent>();
+    if (DuplicateNode)
+    {
+        DuplicateNode->SetNodeId(FString());
+        DuplicateNode->SetDisplayName(FString());
+        DuplicateNode->GetMutableLinks().clear();
+    }
+
+    Refresh();
+    GenerateNodeIdsAndRenameActors();
+    Refresh();
+
+    if (EditorEngine)
+    {
+        EditorEngine->GetSelectionManager().Select(DuplicateActor);
+    }
+    ResetGraphLayoutFromScene();
+    return DuplicateActor->GetComponentByClass<UCombatCoverNodeComponent>();
+}
+
+void FCombatMapEditorWidget::GenerateNodeIdsAndRenameActors()
+{
+    if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
+    {
+        const int32 Count = Manager->AutoGenerateMissingNodeIds();
+        UE_LOG("CombatMapEditor: generated %d missing NodeIds", Count);
+    }
+    else
+    {
+        TSet<FString> UsedIds;
+		for (UCombatCoverNodeComponent* Node : CachedNodes)
+        {
+			if (IsValidCombatNode(Node) && !Node->GetNodeId().empty())
+            {
+                UsedIds.insert(Node->GetNodeId());
+            }
+        }
+
+        int32 NextIndex = 1;
+		for (UCombatCoverNodeComponent* Node : CachedNodes)
+        {
+			if (!IsValidCombatNode(Node) || !Node->GetNodeId().empty())
+            {
+                continue;
+            }
+
+            FString Candidate;
+            do
+            {
+                char Buffer[64] = {};
+                std::snprintf(Buffer, sizeof(Buffer), "CoverNode_%03d", NextIndex++);
+                Candidate = Buffer;
+            }
+            while (UsedIds.find(Candidate) != UsedIds.end());
+
+            Node->SetNodeId(Candidate);
+            UsedIds.insert(Candidate);
+        }
+    }
+
+    Refresh();
+    for (UCombatCoverNodeComponent* Node : CachedNodes)
+    {
+        RenameActorToNodeId(Node);
+    }
+    Refresh();
+    ResetGraphLayoutFromScene();
+}
+
+void FCombatMapEditorWidget::RenameActorToNodeId(UCombatCoverNodeComponent* Node)
+{
+	if (!IsValidCombatNode(Node) || Node->GetNodeId().empty())
+    {
+        return;
+    }
+
+    UWorld* World = GetEditorWorld();
+    AActor* Owner = Node->GetOwner();
+    const FString UniqueName = MakeUniqueActorName(World, Node->GetNodeId(), Owner);
+    Owner->SetFName(FName(UniqueName));
+}
+
 template<typename TComponent>
 TComponent* FCombatMapEditorWidget::AddComponentToSelectedActor()
 {
     AActor* SelectedActor = GetSelectedActor();
-    if (!SelectedActor)
+	if (!IsValid(SelectedActor))
     {
         return nullptr;
     }
@@ -686,7 +1314,7 @@ void FCombatMapEditorWidget::DrawAllDebugOnce()
 
     for (UCombatCoverNodeComponent* Node : CachedNodes)
     {
-        if (Node && (!bShowOnlySelectedNodeDebug || Node == SelectedNode))
+		if (IsValidCombatNode(Node) && (!bShowOnlySelectedNodeDebug || Node == SelectedNode))
         {
             Node->DrawDebugVisuals(World->GetScene(), Node == SelectedNode);
         }
@@ -695,6 +1323,18 @@ void FCombatMapEditorWidget::DrawAllDebugOnce()
 
 void FCombatMapEditorWidget::SelectNode(UCombatCoverNodeComponent* Node)
 {
+	if (!IsValidCombatNode(Node))
+	{
+		SelectedNode = nullptr;
+		SelectedSlotIndex = -1;
+		return;
+	}
+
     SelectedNode = Node;
     SelectedSlotIndex = -1;
+
+	if (EditorEngine && IsValid(Node->GetOwner()))
+    {
+        EditorEngine->GetSelectionManager().Select(Node->GetOwner());
+    }
 }

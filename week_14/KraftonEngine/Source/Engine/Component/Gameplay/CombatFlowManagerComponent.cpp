@@ -44,6 +44,13 @@ namespace
         return FString(Buffer);
     }
 
+    FString MakeGeneratedNodeId(int32 PreferredIndex)
+    {
+        char Buffer[64] = {};
+        std::snprintf(Buffer, sizeof(Buffer), "CoverNode_%03d", (std::max)(1, PreferredIndex));
+        return FString(Buffer);
+    }
+
     bool IsSameAgent(const TWeakObjectPtr<UCombatCoverAgentComponent>& Ptr, const UCombatCoverAgentComponent* Agent)
     {
         return Agent && Ptr.Get() == Agent;
@@ -244,21 +251,34 @@ int32 UCombatFlowManagerComponent::AutoGenerateMissingNodeIds()
 {
     RefreshRegistry();
 
-    int32 GeneratedCount = 0;
-    int32 Index = 1;
+    TSet<FString> UsedNodeIds;
     for (UCombatCoverNodeComponent* Node : CachedNodes)
     {
-        if (!Node)
+        if (Node && !Node->GetNodeId().empty())
+        {
+            UsedNodeIds.insert(Node->GetNodeId());
+        }
+    }
+
+    int32 GeneratedCount = 0;
+    int32 NextIndex = 1;
+    for (UCombatCoverNodeComponent* Node : CachedNodes)
+    {
+        if (!Node || !Node->GetNodeId().empty())
         {
             continue;
         }
 
-        if (Node->GetNodeId().empty())
+        FString Candidate;
+        do
         {
-            Node->EnsureNodeId(Index);
-            ++GeneratedCount;
+            Candidate = MakeGeneratedNodeId(NextIndex++);
         }
-        ++Index;
+        while (UsedNodeIds.find(Candidate) != UsedNodeIds.end());
+
+        Node->SetNodeId(Candidate);
+        UsedNodeIds.insert(Candidate);
+        ++GeneratedCount;
     }
 
     RefreshRegistry();
