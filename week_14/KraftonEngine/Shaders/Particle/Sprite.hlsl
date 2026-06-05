@@ -1,5 +1,6 @@
 #include "Common/Functions.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/ForwardFog.hlsli"
 
 // Particle Sprite — GPU 인스턴싱 빌보드.
 //   slot 0: 정적 unit quad (POSITION=cornerSign ±0.5, TEXTCOORD=base uv) — 모든 입자 공유.
@@ -46,7 +47,8 @@ struct PS_Input_Sprite
     float4 position : SV_POSITION;
     float4 color    : COLOR;
     float2 texcoord : TEXCOORD0;
-    nointerpolation int subImage : TEXCOORD1; // per-instance — interpolation 안 함
+    float3 worldPos : TEXCOORD1;
+    nointerpolation int subImage : TEXCOORD2; // per-instance — interpolation 안 함
 };
 
 PS_Input_Sprite VS(VS_Input_SpriteParticle input)
@@ -98,6 +100,8 @@ PS_Input_Sprite VS(VS_Input_SpriteParticle input)
     output.position = clip;
     output.color    = input.instColor;
     output.texcoord = input.baseUV;
+    float4 worldFromClip = mul(clip, InvViewProj);
+    output.worldPos = worldFromClip.xyz / worldFromClip.w;
     output.subImage = input.subImage;
     return output;
 }
@@ -121,7 +125,9 @@ float4 PS(PS_Input_Sprite input) : SV_TARGET
     float3 texRgb = lerp(float3(1,1,1), sampled.rgb, UseTexture);
     float  texA   = lerp(1.0,            sampled.a,   UseTexture);
 
-    float3 rgb = input.color.rgb * BaseColor.rgb * texRgb;
+    float3 surfaceRgb = input.color.rgb * BaseColor.rgb * texRgb;
     float  a   = input.color.a   * BaseColor.a   * Opacity * texA;
-    return float4(ApplyWireframe(rgb), a);
+    float3 finalRgb = ApplyWireframe(surfaceRgb);
+    finalRgb = ApplyForwardHeightFog(finalRgb, input.worldPos);
+    return float4(finalRgb, a);
 }
