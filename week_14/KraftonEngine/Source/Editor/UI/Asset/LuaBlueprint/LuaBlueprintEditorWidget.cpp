@@ -1,5 +1,7 @@
 #include "Editor/UI/Asset/LuaBlueprint/LuaBlueprintEditorWidget.h"
 
+#include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Input/InputKeyCodes.h"
 #include "Lua/LuaDebugManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
@@ -2827,14 +2829,22 @@ void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
     ImGui::TextDisabled("|");
     ImGui::SameLine();
 
-    if (ToolbarAccentButton("Undo", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), UndoStack.size() > 1))
+    if (ToolbarAccentButton(
+            "Undo",
+            ImGui::GetStyleColorVec4(ImGuiCol_Button),
+            ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered),
+            EditorEngine && EditorEngine->GetUndoSystem().CanUndo()))
     {
         UndoBlueprintEdit(Blueprint);
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Undo (Ctrl+Z)");
 
     ImGui::SameLine();
-    if (ToolbarAccentButton("Redo", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), !RedoStack.empty()))
+    if (ToolbarAccentButton(
+            "Redo",
+            ImGui::GetStyleColorVec4(ImGuiCol_Button),
+            ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered),
+            EditorEngine && EditorEngine->GetUndoSystem().CanRedo()))
     {
         RedoBlueprintEdit(Blueprint);
     }
@@ -6618,14 +6628,44 @@ void FLuaBlueprintEditorWidget::CaptureInitialUndoSnapshot(ULuaBlueprintAsset* B
 void FLuaBlueprintEditorWidget::CommitBlueprintEdit(ULuaBlueprintAsset* Blueprint)
 {
     if (!Blueprint || bRestoringSnapshot) return;
+    const TArray<uint8> BeforeSnapshot = UndoStack.empty() ? TArray<uint8>() : UndoStack.back();
     const TArray<uint8> Snapshot = CaptureLuaBlueprintSnapshot(Blueprint);
     if (!Snapshot.empty() && (UndoStack.empty() || UndoStack.back() != Snapshot))
     {
-        UndoStack.push_back(Snapshot);
-        if (UndoStack.size() > 128)
+        if (!BeforeSnapshot.empty() && EditorEngine)
         {
-            UndoStack.erase(UndoStack.begin());
+            std::shared_ptr<bool> UndoLifetime = GetEditorLifetimeToken();
+            FEditorUndoSystem& UndoSystem = EditorEngine->GetUndoSystem();
+            UndoSystem.BeginTransaction("Edit Lua Blueprint");
+            UndoSystem.AddCommand(std::make_unique<FLambdaEditorUndoCommand>(
+                "Edit Lua Blueprint",
+                BeforeSnapshot,
+                Snapshot,
+                [this, Blueprint, UndoLifetime](FEditorUndoContext&, const TArray<uint8>& RestoreSnapshot)
+                {
+                    if (!UndoLifetime || !*UndoLifetime)
+                    {
+                        return false;
+                    }
+
+                    if (!IsOpen() || !IsEditingObject(Blueprint) || !IsValid(Blueprint) || RestoreSnapshot.empty())
+                    {
+                        return false;
+                    }
+
+                    const bool bRestored = RestoreBlueprintSnapshot(Blueprint, RestoreSnapshot);
+                    if (bRestored)
+                    {
+                        UndoStack.clear();
+                        UndoStack.push_back(RestoreSnapshot);
+                        RedoStack.clear();
+                    }
+                    return bRestored;
+                }));
+            UndoSystem.EndTransaction();
         }
+        UndoStack.clear();
+        UndoStack.push_back(Snapshot);
     }
     RedoStack.clear();
     MarkDirty();
@@ -6633,19 +6673,18 @@ void FLuaBlueprintEditorWidget::CommitBlueprintEdit(ULuaBlueprintAsset* Blueprin
 
 void FLuaBlueprintEditorWidget::UndoBlueprintEdit(ULuaBlueprintAsset* Blueprint)
 {
-    if (!Blueprint || UndoStack.size() <= 1) return;
-    RedoStack.push_back(UndoStack.back());
-    UndoStack.pop_back();
-    RestoreBlueprintSnapshot(Blueprint, UndoStack.back());
+    if (Blueprint && EditorEngine)
+    {
+        EditorEngine->GetUndoSystem().Undo();
+    }
 }
 
 void FLuaBlueprintEditorWidget::RedoBlueprintEdit(ULuaBlueprintAsset* Blueprint)
 {
-    if (!Blueprint || RedoStack.empty()) return;
-    const TArray<uint8> Snapshot = RedoStack.back();
-    RedoStack.pop_back();
-    UndoStack.push_back(Snapshot);
-    RestoreBlueprintSnapshot(Blueprint, Snapshot);
+    if (Blueprint && EditorEngine)
+    {
+        EditorEngine->GetUndoSystem().Redo();
+    }
 }
 
 bool FLuaBlueprintEditorWidget::RestoreBlueprintSnapshot(ULuaBlueprintAsset* Blueprint, const TArray<uint8>& Snapshot)

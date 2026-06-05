@@ -76,6 +76,7 @@ namespace ESystemTexSlot
 	constexpr uint32 DoFForeground      = 28;  // t28: Depth of Field foreground blur + mask (R8G8B8A8_UNORM)
 	constexpr uint32 DoFBokeh           = 29;  // t29: Depth of Field highlight bokeh scatter (R16G16B16A16_FLOAT)
 	constexpr uint32 Bloom              = 30;  // t30: Bloom ping-pong blur texture (R16G16B16A16_FLOAT)
+	constexpr uint32 ScopeLens          = 31;  // t31: secondary narrow-FOV scope color
 
 	// 하위 호환용 별칭
 	constexpr uint32 ShadowMap = ShadowMapCSM;
@@ -316,6 +317,17 @@ struct FCameraLetterboxConstants
 	float LetterboxAmount;    // 4B
 	float LetterboxThickness; // 4B
 	float _pad[2];            // 8B - 16B boundary
+};
+
+struct FScopeLensConstants
+{
+	float Radius;
+	float Feather;
+	float OuterBlurRadius;
+	float EdgeBlurRadius;
+	float Intensity;
+	float AspectRatio;
+	float _pad[2];
 };
 
 // ============================================================

@@ -15,4 +15,5 @@ public:
 	static bool CreatePhysicsAssetForSkeletalMesh(const FString& DirectoryPath, const FString& AssetName, const USkeletalMesh* SkeletalMesh, FString& OutCreatedPath);
 	static bool CreateMaterial(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
 	static bool CreateLuaBlueprint(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
+	static bool CreateRuntimeUILayout(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath, FString* OutGeneratedRmlPath = nullptr);
 };

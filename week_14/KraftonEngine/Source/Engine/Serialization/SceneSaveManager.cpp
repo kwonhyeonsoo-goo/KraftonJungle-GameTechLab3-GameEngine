@@ -286,6 +286,25 @@ void FSceneSaveManager::SaveSceneAsJSON(const string& InSceneName, FWorldContext
 	}
 }
 
+FString FSceneSaveManager::SaveToString(FWorldContext& WorldContext, const FMinimalViewInfo* PerspectivePOV)
+{
+	using namespace json;
+	FScopedGarbageCollectionBlocker GCBlocker;
+
+	if (!IsSceneSerializableObject(WorldContext.World))
+	{
+		return "";
+	}
+
+	FSceneSaveContext SaveContext;
+	CollectWorldObjectIds(WorldContext.World, SaveContext);
+
+	JSON Root = SerializeWorld(WorldContext.World, WorldContext, PerspectivePOV, SaveContext);
+	Root[SceneKeys::Version] = 2;
+	Root[SceneKeys::Name] = "UndoSnapshot";
+	return Root.dump();
+}
+
 void FSceneSaveManager::CollectWorldObjectIds(UWorld* World, FSceneSaveContext& Context)
 {
 	if (!IsSceneSerializableObject(World))
@@ -376,9 +395,14 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 	w[SceneKeys::Actors] = Actors;
 
 	// ---- Perspective camera ----
-	JSON cam = SerializeCamera(PerspectivePOV);
-	if (cam.size() > 0) {
-		w["PerspectiveCamera"] = cam;
+	// Scene files may persist the editor camera, but transaction-style scene
+	// snapshots pass nullptr so transient viewport movement stays out of undo.
+	if (PerspectivePOV)
+	{
+		JSON cam = SerializeCamera(PerspectivePOV);
+		if (cam.size() > 0) {
+			w["PerspectiveCamera"] = cam;
+		}
 	}
 
 	return w;
@@ -582,29 +606,58 @@ void FSceneSaveManager::DeserializeCamera(json::JSON& CameraJSON, FPerspectiveCa
 	using namespace json;
 	if (CameraJSON.JSONType() == JSON::Class::Null) return;
 
-	if (CameraJSON.hasKey("Location")) OutCam.Location = ReadVec3(CameraJSON["Location"]);
-	if (CameraJSON.hasKey("Rotation")) OutCam.Rotation = ReadVec3(CameraJSON["Rotation"]);
+	bool bHasCameraData = false;
+	if (CameraJSON.hasKey("Location")) { OutCam.Location = ReadVec3(CameraJSON["Location"]); bHasCameraData = true; }
+	if (CameraJSON.hasKey("Rotation")) { OutCam.Rotation = ReadVec3(CameraJSON["Rotation"]); bHasCameraData = true; }
 	if (CameraJSON.hasKey("FOV")) {
 		auto& Val = CameraJSON["FOV"];
 		float fov = static_cast<float>(Val.JSONType() == JSON::Class::Array ? Val[0].ToFloat() : Val.ToFloat());
 		// 엔진 내부는 라디안 — π(~3.14)를 넘으면 degree로 간주하고 변환
 		if (fov > 3.14159265f) fov *= (3.14159265f / 180.0f);
 		OutCam.FOV = fov;
+		bHasCameraData = true;
 	}
 	if (CameraJSON.hasKey("NearClip")) {
 		auto& Val = CameraJSON["NearClip"];
 		OutCam.NearClip = static_cast<float>(Val.JSONType() == JSON::Class::Array ? Val[0].ToFloat() : Val.ToFloat());
+		bHasCameraData = true;
 	}
 	if (CameraJSON.hasKey("FarClip")) {
 		auto& Val = CameraJSON["FarClip"];
 		OutCam.FarClip = static_cast<float>(Val.JSONType() == JSON::Class::Array ? Val[0].ToFloat() : Val.ToFloat());
+		bHasCameraData = true;
 	}
-	OutCam.bValid = true;
+	OutCam.bValid = bHasCameraData;
 }
 
 // ============================================================
 // Load
 // ============================================================
+
+void FSceneSaveManager::LoadFromString(const FString& Snapshot, FWorldContext& OutWorldContext, FPerspectiveCameraData& OutCam, const EWorldType* OverrideWorldType)
+{
+	if (Snapshot.empty())
+	{
+		return;
+	}
+
+	std::filesystem::path TempPath = std::filesystem::temp_directory_path()
+		/ (L"KraftonEngine_UndoRedo_" + FPaths::ToWide(GetCurrentTimeStamp()) + L".Scene");
+
+	{
+		std::ofstream TempFile(TempPath, std::ios::out | std::ios::trunc);
+		if (!TempFile.is_open())
+		{
+			return;
+		}
+		TempFile << Snapshot;
+	}
+
+	LoadSceneFromJSON(FPaths::ToUtf8(TempPath.wstring()), OutWorldContext, OutCam, OverrideWorldType);
+
+	std::error_code Ec;
+	std::filesystem::remove(TempPath, Ec);
+}
 
 void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext& OutWorldContext, FPerspectiveCameraData& OutCam, const EWorldType* OverrideWorldType)
 {

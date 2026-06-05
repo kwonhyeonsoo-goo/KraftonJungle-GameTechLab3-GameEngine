@@ -5,6 +5,8 @@
 #include "Component/Input/InputComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/GameMode/PlayerController.h"
 #include "Math/Rotator.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -19,6 +21,18 @@
 
 namespace
 {
+	float GetCameraLookSensitivityScale(const ACharacter* Character)
+	{
+		if (!Character)
+		{
+			return 1.0f;
+		}
+
+		APlayerController* Controller = Character->GetController();
+		APlayerCameraManager* CameraManager = Controller ? Controller->GetPlayerCameraManager() : nullptr;
+		return CameraManager ? CameraManager->GetScopeLookSensitivityScale() : 1.0f;
+	}
+
 	FString ToLowerCopy(const FString& Value)
 	{
 		FString Result = Value;
@@ -962,7 +976,7 @@ void ACharacter::SetupInputComponent()
 		{
 			if (Value == 0.0f) return;
 			FRotator Rot = GetControlRotation();
-			Rot.Yaw += Value;
+			Rot.Yaw += Value * GetCameraLookSensitivityScale(this);
 			SetControlRotation(Rot);
 		});
 
@@ -970,7 +984,7 @@ void ACharacter::SetupInputComponent()
 		{
 			if (Value == 0.0f) return;
 			FRotator Rot = GetControlRotation();
-			Rot.Pitch += Value;
+			Rot.Pitch += Value * GetCameraLookSensitivityScale(this);
 			Rot.Pitch = std::clamp(Rot.Pitch, MinCameraPitch, MaxCameraPitch);
 			SetControlRotation(Rot);
 		});

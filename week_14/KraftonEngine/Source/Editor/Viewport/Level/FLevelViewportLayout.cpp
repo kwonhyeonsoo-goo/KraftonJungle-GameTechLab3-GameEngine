@@ -2086,6 +2086,9 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 	{
 		SelectionManager->Select(SpawnedActor);
 	}
+	Editor->GetUndoSystem().RecordActorCreation(
+		Editor->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ SpawnedActor }),
+		"Create Actor");
 
 	return SpawnedActor;
 }

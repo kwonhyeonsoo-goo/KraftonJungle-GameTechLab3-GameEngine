@@ -86,8 +86,12 @@ public:
 	TArray<FActorSequenceBinding>& GetBindings() { return Bindings; }
 	const TArray<FActorSequenceBinding>& GetBindings() const { return Bindings; }
 
+	float GetStartTime() const { return StartTime; }
 	float GetDuration() const { return Duration; }
+	float GetEndTime() const { return StartTime + Duration; }
+	void SetStartTime(float InStartTime);
 	void SetDuration(float InDuration);
+	void SetPlaybackRange(float InStartTime, float InEndTime);
 	void Clear();
 
 	bool AddFloatTrack(
@@ -114,6 +118,7 @@ private:
 
 private:
 	TArray<FActorSequenceBinding> Bindings;
+	float StartTime = 0.0f;
 	float Duration = 1.0f;
 };
 

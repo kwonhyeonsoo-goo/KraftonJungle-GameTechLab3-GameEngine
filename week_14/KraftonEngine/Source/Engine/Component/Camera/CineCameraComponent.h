@@ -22,4 +22,5 @@ public:
 	void SetLetterboxColor(FLinearColor Color) { UCameraComponent::SetLetterboxColor(Color); }
 
 	const FCameraLetterboxState& GetLetterboxSettings() const { return UCameraComponent::GetLetterboxSettings(); }
+	const char* GetEditorVisualizationMaterialPath() const override;
 };

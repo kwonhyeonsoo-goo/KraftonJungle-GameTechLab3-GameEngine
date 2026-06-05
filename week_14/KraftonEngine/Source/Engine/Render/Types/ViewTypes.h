@@ -60,6 +60,7 @@ struct FShowFlags
 	bool bFog = true;
 	bool bBloom = false;
 	bool bDoF = false;
+	bool bScopeLens = true;
 	bool bFXAA = false;
 	bool bGammaCorrection = true;
 	bool bViewLightCulling = false;
@@ -117,6 +118,13 @@ struct FViewportRenderOptions
 	float DoFBokehRadiusThreshold = 2.5f;
 	float DoFBokehLumaThreshold = 0.45f;
 	float DoFBokehIntensity = 0.65f;
+
+	float ScopeLensRadius = 0.42f;
+	float ScopeLensFeather = 0.08f;
+	float ScopeLensOuterBlurRadius = 3.0f;
+	float ScopeLensEdgeBlurRadius = 1.25f;
+	float ScopeLensZoomFOV = 3.14159265358979f / 8.0f;
+	float ScopeLensIntensity = 1.0f;
 
 	// Light Culling 뷰모드 전용 설정
 	ELightCullingMode LightCullingMode = ELightCullingMode::Cluster;

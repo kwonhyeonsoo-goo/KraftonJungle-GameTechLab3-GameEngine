@@ -20,4 +20,5 @@ namespace FEditorFileUtils
 {
 	FString OpenFileDialog(const FEditorFileDialogOptions& InOptions);
 	FString SaveFileDialog(const FEditorFileDialogOptions& InOptions);
+	FString OpenFolderDialog(const FEditorFileDialogOptions& InOptions);
 }
