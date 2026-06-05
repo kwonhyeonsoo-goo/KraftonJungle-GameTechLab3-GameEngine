@@ -9,6 +9,14 @@
 
 #include <algorithm>
 
+namespace
+{
+	constexpr float SniperDebugTrailDuration = 1.5f;
+	constexpr float SniperDebugMarkerMinRadius = 8.0f;
+	constexpr int32 SniperDebugMarkerSegments = 12;
+	constexpr float SniperDebugGravityMultiplier = 1.0f;
+}
+
 UBallisticBulletManagerComponent::UBallisticBulletManagerComponent()
 {
 	bTickEnable = true;
@@ -85,15 +93,21 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 
 	Bullet.PreviousPosition = Bullet.Position;
 
-	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale;
+	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale * SniperDebugGravityMultiplier;
 	Bullet.Position += Bullet.Velocity * DeltaTime + GravityAcceleration * (0.5f * DeltaTime * DeltaTime);
 	Bullet.Velocity += GravityAcceleration * DeltaTime;
 	Bullet.LifeTime -= DeltaTime;
 
 	if (World)
 	{
-		DrawDebugLine(World, Bullet.PreviousPosition, Bullet.Position, FColor(255, 220, 0), 0.0f);
-		DrawDebugPoint(World, Bullet.Position, (std::max)(Bullet.Radius * 0.5f, 0.05f), FColor(255, 120, 0), 0.0f);
+		DrawDebugLine(World, Bullet.PreviousPosition, Bullet.Position, FColor(0, 220, 255), SniperDebugTrailDuration);
+		DrawDebugSphere(
+			World,
+			Bullet.Position,
+			(std::max)(Bullet.Radius * 2.0f, SniperDebugMarkerMinRadius),
+			SniperDebugMarkerSegments,
+			FColor(255, 80, 80),
+			SniperDebugTrailDuration);
 	}
 
 	const bool bExpired = Bullet.LifeTime <= 0.0f;

@@ -85,7 +85,7 @@ struct FAmmoBallisticData
 	GENERATED_BODY()
 
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
-	float InitialSpeed = 90000.0f;
+	float InitialSpeed = 900.0f;
 	float GravityScale = 1.0f;
 	float Damage = 100.0f;
 	float BulletRadius = 2.0f;
