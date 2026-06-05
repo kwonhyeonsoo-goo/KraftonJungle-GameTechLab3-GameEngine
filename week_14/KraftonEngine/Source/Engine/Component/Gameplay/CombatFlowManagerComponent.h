@@ -27,6 +27,12 @@ struct FCombatAttackRuntimeState
     float TimeUntilNextAttack = 0.0f;
 };
 
+struct FCombatSuppressionRuntimeState
+{
+    int32 IncomingHitCount = 0;
+    float TimeRemaining = 0.0f;
+};
+
 struct FCombatCoverGraphValidationResult
 {
     int32 NodeCount = 0;
@@ -117,6 +123,21 @@ public:
     UFUNCTION(Callable, Category="CombatFlow|Debug")
     void SetDrawFireRanges(bool bEnabled) { bDrawFireRanges = bEnabled; }
 
+    UFUNCTION(Pure, Category="CombatFlow|Combat")
+    bool GetEnableSuppression() const { return bEnableSuppression; }
+
+    UFUNCTION(Callable, Category="CombatFlow|Combat")
+    void SetEnableSuppression(bool bEnabled) { bEnableSuppression = bEnabled; }
+
+    UFUNCTION(Pure, Category="CombatFlow|Combat")
+    int32 GetSuppressionIncomingFireThreshold() const { return SuppressionIncomingFireThreshold; }
+
+    UFUNCTION(Pure, Category="CombatFlow|Combat")
+    float GetSuppressionDuration() const { return SuppressionDuration; }
+
+    UFUNCTION(Pure, Category="CombatFlow|Combat")
+    float GetSuppressionAccumulationWindow() const { return SuppressionAccumulationWindow; }
+
     static UCombatFlowManagerComponent* FindInWorld(UWorld* World);
 
 private:
@@ -135,6 +156,7 @@ private:
     void RemoveStaleAttackState();
     void EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node);
     void RemoveStaleRuntimeState();
+    void RemoveInvalidOrDeadRuntimeClaims();
     void AddValidationMessage(FCombatCoverGraphValidationResult& Result, bool bError, const FString& Message) const;
 
 private:
@@ -149,6 +171,18 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Require Mutual Fire Range")
     bool bRequireMutualFireRange = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Enable Suppression")
+    bool bEnableSuppression = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Suppression Incoming Fire Threshold", Min=1, Max=16, Speed=1)
+    int32 SuppressionIncomingFireThreshold = 2;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Suppression Duration", Min=0.0f, Max=30.0f, Speed=0.1f)
+    float SuppressionDuration = 1.5f;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Suppression Accumulation Window", Min=0.0f, Max=10.0f, Speed=0.1f)
+    float SuppressionAccumulationWindow = 1.0f;
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw Fire Debug Lines")
     bool bDrawFireDebugLines = true;
@@ -167,6 +201,7 @@ private:
     TMap<FString, UCombatCoverNodeComponent*> NodeById;
     TMap<FString, FCombatNodeRuntimeState> RuntimeStateByNodeId;
     TMap<UCombatCoverAgentComponent*, FCombatAttackRuntimeState> AttackStateByAgent;
+    TMap<UCombatCoverAgentComponent*, FCombatSuppressionRuntimeState> SuppressionStateByAgent;
     float DebugDrawTimer = 0.0f;
 
 protected:

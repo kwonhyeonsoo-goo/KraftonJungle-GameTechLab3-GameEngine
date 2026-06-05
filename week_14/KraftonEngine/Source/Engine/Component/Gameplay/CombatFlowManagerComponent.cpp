@@ -164,12 +164,14 @@ void UCombatFlowManagerComponent::RefreshRegistry()
     {
         EnsureRuntimeSlotsForNode(Node);
     }
+    RemoveInvalidOrDeadRuntimeClaims();
 }
 
 void UCombatFlowManagerComponent::ResetRuntimeState()
 {
     RuntimeStateByNodeId.clear();
     AttackStateByAgent.clear();
+    SuppressionStateByAgent.clear();
     for (UCombatCoverNodeComponent* Node : CachedNodes)
     {
         EnsureRuntimeSlotsForNode(Node);
@@ -541,7 +543,9 @@ bool UCombatFlowManagerComponent::IsSlotFree(const FCombatCoverSlotHandle& SlotH
     const FCombatSlotRuntimeState& SlotState = SlotIt->second;
     const UCombatCoverAgentComponent* ReservedBy = SlotState.ReservedBy.Get();
     const UCombatCoverAgentComponent* OccupiedBy = SlotState.OccupiedBy.Get();
-    return (!ReservedBy || ReservedBy == RequestingAgent) && (!OccupiedBy || OccupiedBy == RequestingAgent);
+    const bool bReservedBlocks = ReservedBy && ReservedBy != RequestingAgent && ReservedBy->IsAlive();
+    const bool bOccupiedBlocks = OccupiedBy && OccupiedBy != RequestingAgent && OccupiedBy->IsAlive();
+    return !bReservedBlocks && !bOccupiedBlocks;
 }
 
 bool UCombatFlowManagerComponent::IsNodeOccupiedOrReserved(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* RequestingAgent) const
@@ -764,11 +768,11 @@ int32 UCombatFlowManagerComponent::CountNodeClaims(const UCombatCoverNodeCompone
         const UCombatCoverAgentComponent* ReservedBy = SlotState.ReservedBy.Get();
         const UCombatCoverAgentComponent* OccupiedBy = SlotState.OccupiedBy.Get();
 
-        if (ReservedBy && ReservedBy != IgnoreAgent)
+        if (ReservedBy && ReservedBy != IgnoreAgent && ReservedBy->IsAlive())
         {
             ++Count;
         }
-        if (OccupiedBy && OccupiedBy != IgnoreAgent && OccupiedBy != ReservedBy)
+        if (OccupiedBy && OccupiedBy != IgnoreAgent && OccupiedBy != ReservedBy && OccupiedBy->IsAlive())
         {
             ++Count;
         }
@@ -842,7 +846,7 @@ void UCombatFlowManagerComponent::GatherAdvanceCandidateNodes(
 
 UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UCombatCoverAgentComponent* Agent) const
 {
-    if (!IsValidCombatAgent(Agent))
+    if (!IsValidCombatAgent(Agent) || Agent->IsSuppressed())
     {
         return nullptr;
     }
@@ -893,7 +897,7 @@ bool UCombatFlowManagerComponent::CanEngage(const UCombatCoverAgentComponent* Sh
         return false;
     }
 
-    const float Range = Shooter->GetFireRange();
+    const float Range = Shooter->GetEffectiveFireRange();
     if (Range <= 0.0f)
     {
         return false;
@@ -914,6 +918,19 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
     TMap<UCombatCoverAgentComponent*, int32> IncomingFireCounts;
     TMap<UCombatCoverAgentComponent*, float> IncomingAttackDamage;
 
+    for (auto It = SuppressionStateByAgent.begin(); It != SuppressionStateByAgent.end(); )
+    {
+        UCombatCoverAgentComponent* Agent = It->first;
+        FCombatSuppressionRuntimeState& SuppressionState = It->second;
+        SuppressionState.TimeRemaining -= DeltaTime;
+        if (!IsValidCombatAgent(Agent) || SuppressionState.TimeRemaining <= 0.0f)
+        {
+            It = SuppressionStateByAgent.erase(It);
+            continue;
+        }
+        ++It;
+    }
+
     for (UCombatCoverAgentComponent* Agent : CachedAgents)
     {
         if (!IsValid(Agent))
@@ -927,6 +944,13 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
     {
         if (!IsValidCombatAgent(Agent))
         {
+            continue;
+        }
+
+        if (Agent->IsSuppressed())
+        {
+            Agent->ClearEngagementTarget();
+            AttackStateByAgent.erase(Agent);
             continue;
         }
 
@@ -958,6 +982,13 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
         IncomingFireCounts[Target] += 1;
         IncomingAttackDamage[Target] += Damage;
 
+        if (bEnableSuppression && Target->IsAlive())
+        {
+            FCombatSuppressionRuntimeState& SuppressionState = SuppressionStateByAgent[Target];
+            SuppressionState.IncomingHitCount += 1;
+            SuppressionState.TimeRemaining = (std::max)(0.01f, SuppressionAccumulationWindow);
+        }
+
         if (bDrawFireDebugLines)
         {
             DrawFireDebugLine(Agent, Target, 0.12f);
@@ -974,7 +1005,32 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             continue;
         }
 
-        Target->SetIncomingFireStats(IncomingFireCounts[Target], Pair.second);
+        const int32 IncomingCount = IncomingFireCounts[Target];
+        Target->SetIncomingFireStats(IncomingCount, Pair.second);
+    }
+
+    if (bEnableSuppression)
+    {
+        for (auto It = SuppressionStateByAgent.begin(); It != SuppressionStateByAgent.end(); )
+        {
+            UCombatCoverAgentComponent* Target = It->first;
+            FCombatSuppressionRuntimeState& SuppressionState = It->second;
+            if (!IsValidCombatAgent(Target))
+            {
+                It = SuppressionStateByAgent.erase(It);
+                continue;
+            }
+
+            if (SuppressionState.IncomingHitCount >= (std::max)(1, SuppressionIncomingFireThreshold))
+            {
+                Target->ApplySuppression(SuppressionDuration);
+                AttackStateByAgent.erase(Target);
+                It = SuppressionStateByAgent.erase(It);
+                continue;
+            }
+
+            ++It;
+        }
     }
 
     DrawCombatDebugVisuals();
@@ -1017,7 +1073,7 @@ void UCombatFlowManagerComponent::DrawFireRanges(float Duration) const
         }
 
         const FVector Center = Agent->GetOwner()->GetActorLocation() + FVector(0.0f, 0.0f, 8.0f);
-        DrawDebugCircleXY(World, Center, Agent->GetFireRange(), MakeFireLineColor(Agent), Duration);
+        DrawDebugCircleXY(World, Center, Agent->GetEffectiveFireRange(), MakeFireLineColor(Agent), Duration);
     }
 }
 
@@ -1105,6 +1161,39 @@ void UCombatFlowManagerComponent::RemoveStaleAttackState()
             continue;
         }
         ++It;
+    }
+
+    for (auto It = SuppressionStateByAgent.begin(); It != SuppressionStateByAgent.end(); )
+    {
+        if (ValidAgents.find(It->first) == ValidAgents.end())
+        {
+            It = SuppressionStateByAgent.erase(It);
+            continue;
+        }
+        ++It;
+    }
+}
+
+void UCombatFlowManagerComponent::RemoveInvalidOrDeadRuntimeClaims()
+{
+    for (auto& NodePair : RuntimeStateByNodeId)
+    {
+        for (auto& SlotPair : NodePair.second.Slots)
+        {
+            FCombatSlotRuntimeState& SlotState = SlotPair.second;
+
+            UCombatCoverAgentComponent* ReservedBy = SlotState.ReservedBy.Get();
+            if (!IsValid(ReservedBy) || !ReservedBy->IsAlive())
+            {
+                SlotState.ReservedBy.Reset();
+            }
+
+            UCombatCoverAgentComponent* OccupiedBy = SlotState.OccupiedBy.Get();
+            if (!IsValid(OccupiedBy) || !OccupiedBy->IsAlive())
+            {
+                SlotState.OccupiedBy.Reset();
+            }
+        }
     }
 }
 

@@ -32,14 +32,31 @@ void UCombatCoverAgentComponent::BeginPlay()
     CurrentSlotId = -1;
     TargetNodeId.clear();
     TargetSlotId = -1;
+    ApplyCombatRoleDefaults();
     MaxHealth = (std::max)(1.0f, MaxHealth);
     Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
+    FireRange = (std::max)(0.0f, FireRange);
+    MovingFireRange = (std::max)(0.0f, MovingFireRange);
+    DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
+    if (AActor* Owner = GetOwner())
+    {
+        InitialActorScale = Owner->GetActorScale();
+        bHasInitialActorScale = true;
+    }
+    else
+    {
+        InitialActorScale = FVector(1.0f, 1.0f, 1.0f);
+        bHasInitialActorScale = false;
+    }
+    bDeathDebugScaleApplied = false;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     TargetScanTimer = 0.0f;
     IncomingFireCount = 0;
     IncomingAttackDamage = 0.0f;
+    SuppressionTimer = 0.0f;
     StateBeforeEngage = ECombatCoverAgentState::Idle;
+    StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     CurrentTarget.Reset();
     ResolveManager();
 }
@@ -56,7 +73,7 @@ void UCombatCoverAgentComponent::EndPlay()
 
 void UCombatCoverAgentComponent::RequestInitialSlot()
 {
-    if (State == ECombatCoverAgentState::Dead || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))
+    if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))
     {
         return;
     }
@@ -70,7 +87,7 @@ void UCombatCoverAgentComponent::RequestInitialSlot()
 
 void UCombatCoverAgentComponent::RequestAdvance()
 {
-    if (State == ECombatCoverAgentState::Dead || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))
+    if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed || (State == ECombatCoverAgentState::Engaging && !bCanFireWhileMoving))
     {
         return;
     }
@@ -99,9 +116,19 @@ void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatCoverSlotHandle
 
 void UCombatCoverAgentComponent::MarkDead()
 {
+    if (State == ECombatCoverAgentState::Dead && bDeathDebugScaleApplied)
+    {
+        if (UCombatFlowManagerComponent* Manager = ResolveManager())
+        {
+            Manager->ReleaseAgent(this);
+        }
+        return;
+    }
+
     CurrentTarget.Reset();
     IncomingFireCount = 0;
     IncomingAttackDamage = 0.0f;
+    SuppressionTimer = 0.0f;
     Health = 0.0f;
 
     if (UCombatFlowManagerComponent* Manager = ResolveManager())
@@ -109,12 +136,101 @@ void UCombatCoverAgentComponent::MarkDead()
         Manager->ReleaseAgent(this);
     }
 
+    if (bShrinkActorOnDeath && !bDeathDebugScaleApplied)
+    {
+        if (AActor* Owner = GetOwner())
+        {
+            const FVector BaseScale = bHasInitialActorScale ? InitialActorScale : Owner->GetActorScale();
+            Owner->SetActorScale(BaseScale * DeathDebugScaleMultiplier);
+            bDeathDebugScaleApplied = true;
+        }
+    }
+
     State = ECombatCoverAgentState::Dead;
     StateBeforeEngage = ECombatCoverAgentState::Dead;
+    StateBeforeSuppressed = ECombatCoverAgentState::Dead;
     CurrentNodeId.clear();
     CurrentSlotId = -1;
     TargetNodeId.clear();
     TargetSlotId = -1;
+}
+
+
+ECombatAgentRole UCombatCoverAgentComponent::GetResolvedCombatRole() const
+{
+    if (CombatRole != ECombatAgentRole::AutoFromTeam)
+    {
+        return CombatRole;
+    }
+
+    if (TeamTag.find("Ally") != FString::npos)
+    {
+        return ECombatAgentRole::Ally;
+    }
+
+    return ECombatAgentRole::EnemyShortRange;
+}
+
+void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
+{
+    if (!bUseRoleCombatDefaults)
+    {
+        return;
+    }
+
+    switch (GetResolvedCombatRole())
+    {
+    case ECombatAgentRole::Ally:
+        TeamTag = "Ally";
+        AdvanceLinkMode = ECombatAdvanceLinkMode::OutgoingLinks;
+        FireRange = 50.0f;
+        MovingFireRange = 30.0f;
+        AttackDamage = 5.0f;
+        AttackIntervalMin = 1.0f;
+        AttackIntervalMax = 2.0f;
+        break;
+
+    case ECombatAgentRole::EnemyLongRangeSlow:
+        TeamTag = "Enemy";
+        AdvanceLinkMode = ECombatAdvanceLinkMode::IncomingLinks;
+        FireRange = 80.0f;
+        MovingFireRange = 30.0f;
+        AttackDamage = 7.0f;
+        AttackIntervalMin = 2.4f;
+        AttackIntervalMax = 3.6f;
+        break;
+
+    case ECombatAgentRole::EnemyShortRange:
+    case ECombatAgentRole::AutoFromTeam:
+    default:
+        TeamTag = "Enemy";
+        AdvanceLinkMode = ECombatAdvanceLinkMode::IncomingLinks;
+        FireRange = 35.0f;
+        MovingFireRange = 25.0f;
+        AttackDamage = 5.0f;
+        AttackIntervalMin = 0.8f;
+        AttackIntervalMax = 1.4f;
+        break;
+    }
+
+    bUseMovingFireRange = true;
+    bCanFireWhileMoving = false;
+}
+
+bool UCombatCoverAgentComponent::IsMovingForCombatRange() const
+{
+    return State == ECombatCoverAgentState::MovingToInitialSlot ||
+        State == ECombatCoverAgentState::MovingToLinkedNode;
+}
+
+float UCombatCoverAgentComponent::GetEffectiveFireRange() const
+{
+    if (bUseMovingFireRange && IsMovingForCombatRange())
+    {
+        return (std::max)(0.0f, MovingFireRange);
+    }
+
+    return (std::max)(0.0f, FireRange);
 }
 
 const char* UCombatCoverAgentComponent::GetStateName() const
@@ -126,6 +242,7 @@ const char* UCombatCoverAgentComponent::GetStateName() const
     case ECombatCoverAgentState::InCover: return "InCover";
     case ECombatCoverAgentState::MovingToLinkedNode: return "MovingToLinkedNode";
     case ECombatCoverAgentState::Engaging: return "Engaging";
+    case ECombatCoverAgentState::Suppressed: return "Suppressed";
     case ECombatCoverAgentState::Blocked: return "Blocked";
     case ECombatCoverAgentState::Dead: return "Dead";
     default: return "Unknown";
@@ -143,9 +260,34 @@ const char* UCombatCoverAgentComponent::GetAdvanceLinkModeName() const
     }
 }
 
+
+const char* UCombatCoverAgentComponent::GetCombatRoleName() const
+{
+    switch (CombatRole)
+    {
+    case ECombatAgentRole::AutoFromTeam: return "AutoFromTeam";
+    case ECombatAgentRole::Ally: return "Ally";
+    case ECombatAgentRole::EnemyShortRange: return "EnemyShortRange";
+    case ECombatAgentRole::EnemyLongRangeSlow: return "EnemyLongRangeSlow";
+    default: return "Unknown";
+    }
+}
+
+const char* UCombatCoverAgentComponent::GetResolvedCombatRoleName() const
+{
+    switch (GetResolvedCombatRole())
+    {
+    case ECombatAgentRole::Ally: return "Ally";
+    case ECombatAgentRole::EnemyShortRange: return "EnemyShortRange";
+    case ECombatAgentRole::EnemyLongRangeSlow: return "EnemyLongRangeSlow";
+    case ECombatAgentRole::AutoFromTeam: return "AutoFromTeam";
+    default: return "Unknown";
+    }
+}
+
 void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent* Target)
 {
-    if (State == ECombatCoverAgentState::Dead)
+    if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed)
     {
         return;
     }
@@ -189,6 +331,10 @@ void UCombatCoverAgentComponent::ClearEngagementTarget()
         }
         break;
 
+    case ECombatCoverAgentState::Suppressed:
+        State = ECombatCoverAgentState::Suppressed;
+        break;
+
     case ECombatCoverAgentState::Blocked:
         State = ECombatCoverAgentState::Blocked;
         break;
@@ -228,6 +374,68 @@ void UCombatCoverAgentComponent::ApplyDamage(float Damage)
     {
         MarkDead();
     }
+}
+
+
+void UCombatCoverAgentComponent::ApplySuppression(float Duration)
+{
+    if (State == ECombatCoverAgentState::Dead || Duration <= 0.0f)
+    {
+        return;
+    }
+
+    CurrentTarget.Reset();
+    AdvanceTimer = 0.0f;
+    RetryTimer = 0.0f;
+
+    if (State != ECombatCoverAgentState::Suppressed)
+    {
+        StateBeforeSuppressed = State;
+        State = ECombatCoverAgentState::Suppressed;
+    }
+
+    SuppressionTimer = (std::max)(SuppressionTimer, Duration);
+}
+
+void UCombatCoverAgentComponent::FinishSuppression()
+{
+    SuppressionTimer = 0.0f;
+
+    switch (StateBeforeSuppressed)
+    {
+    case ECombatCoverAgentState::MovingToInitialSlot:
+    case ECombatCoverAgentState::MovingToLinkedNode:
+        if (!TargetNodeId.empty() && TargetSlotId >= 0)
+        {
+            State = StateBeforeSuppressed;
+        }
+        else
+        {
+            State = CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover;
+        }
+        break;
+
+    case ECombatCoverAgentState::Blocked:
+        State = ECombatCoverAgentState::Blocked;
+        break;
+
+    case ECombatCoverAgentState::Dead:
+        State = ECombatCoverAgentState::Dead;
+        break;
+
+    case ECombatCoverAgentState::Idle:
+        State = CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover;
+        break;
+
+    case ECombatCoverAgentState::Engaging:
+    case ECombatCoverAgentState::Suppressed:
+    case ECombatCoverAgentState::InCover:
+    default:
+        State = CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover;
+        break;
+    }
+
+    StateBeforeSuppressed = ECombatCoverAgentState::Idle;
 }
 
 void UCombatCoverAgentComponent::SetIncomingFireStats(int32 Count, float AttackDamage)
@@ -379,6 +587,14 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
         break;
 
     case ECombatCoverAgentState::Engaging:
+        break;
+
+    case ECombatCoverAgentState::Suppressed:
+        SuppressionTimer -= DeltaTime;
+        if (SuppressionTimer <= 0.0f)
+        {
+            FinishSuppression();
+        }
         break;
 
     case ECombatCoverAgentState::Blocked:

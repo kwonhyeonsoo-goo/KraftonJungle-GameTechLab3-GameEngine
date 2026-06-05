@@ -390,6 +390,13 @@ void FCombatMapEditorWidget::RenderToolbar()
         }
         ImGui::SameLine();
 
+        bool bEnableSuppression = Manager->GetEnableSuppression();
+        if (ImGui::Checkbox("Suppression", &bEnableSuppression))
+        {
+            Manager->SetEnableSuppression(bEnableSuppression);
+        }
+        ImGui::SameLine();
+
         bool bDrawFireLines = Manager->GetDrawFireDebugLines();
         if (ImGui::Checkbox("Show Fire Lines", &bDrawFireLines))
         {
@@ -975,6 +982,11 @@ void FCombatMapEditorWidget::RenderAgentPanel()
             ActorNameForUI(Agent->GetOwner()).c_str(),
             Agent->GetTeamTag().c_str(),
             Agent->GetStateName());
+        ImGui::TextDisabled("Role: %s -> %s  RoleDefaults: %s  Suppress: %.1fs",
+            Agent->GetCombatRoleName(),
+            Agent->GetResolvedCombatRoleName(),
+            Agent->UsesRoleCombatDefaults() ? "On" : "Off",
+            Agent->GetSuppressionTimeRemaining());
         ImGui::TextDisabled("Current: %s:%d  MoveTarget: %s:%d",
             Agent->GetCurrentNodeId().c_str(),
             Agent->GetCurrentSlotId(),
@@ -983,10 +995,12 @@ void FCombatMapEditorWidget::RenderAgentPanel()
 
         UCombatCoverAgentComponent* CombatTarget = Agent->GetCurrentTarget();
         const FString TargetName = ActorNameForUI(CombatTarget ? CombatTarget->GetOwner() : nullptr);
-        ImGui::TextDisabled("HP: %.1f / %.1f  Range: %.0f  Damage: %.1f  Interval: %.1f-%.1fs",
+        ImGui::TextDisabled("HP: %.1f / %.1f  Range: %.0f active / %.0f base / %.0f moving  Damage: %.1f  Interval: %.1f-%.1fs",
             Agent->GetHealth(),
             Agent->GetMaxHealth(),
+            Agent->GetEffectiveFireRange(),
             Agent->GetFireRange(),
+            Agent->GetMovingFireRange(),
             Agent->GetAttackDamage(),
             Agent->GetAttackIntervalMin(),
             Agent->GetAttackIntervalMax());
