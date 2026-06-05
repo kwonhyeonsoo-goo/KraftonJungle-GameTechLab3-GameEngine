@@ -100,6 +100,20 @@ void FViewport::BeginRender(ID3D11DeviceContext* Ctx, const float ClearColor[4])
 	Ctx->RSSetViewports(1, &VPRect);
 }
 
+void FViewport::BeginScopeLensRender(ID3D11DeviceContext* Ctx, const float ClearColor[4])
+{
+	if (!ScopeLensRTV) return;
+
+	const float DefaultColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	const float* Color = ClearColor ? ClearColor : DefaultColor;
+	D3D11_VIEWPORT VPRect = GetViewportRect();
+
+	Ctx->ClearRenderTargetView(ScopeLensRTV, Color);
+	Ctx->ClearDepthStencilView(DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 0.0f, 0);
+	Ctx->OMSetRenderTargets(1, &ScopeLensRTV, DSV);
+	Ctx->RSSetViewports(1, &VPRect);
+}
+
 bool FViewport::CreateResources()
 {
 	if (!Device || Width == 0 || Height == 0) return false;
@@ -204,6 +218,18 @@ bool FViewport::CreateResources()
 	hr = Device->CreateShaderResourceView(SceneColorCopyTexture, &SceneColorCopySRVDesc, &SceneColorCopySRV);
 	if (FAILED(hr)) return false;
 	SceneColorCopySRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportSceneColorCopySRV")), "ViewportSceneColorCopySRV");
+
+	hr = Device->CreateTexture2D(&TexDesc, nullptr, &ScopeLensTexture);
+	if (FAILED(hr)) return false;
+	ScopeLensTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportScopeLensTexture")), "ViewportScopeLensTexture");
+
+	hr = Device->CreateRenderTargetView(ScopeLensTexture, nullptr, &ScopeLensRTV);
+	if (FAILED(hr)) return false;
+	ScopeLensRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportScopeLensRTV")), "ViewportScopeLensRTV");
+
+	hr = Device->CreateShaderResourceView(ScopeLensTexture, nullptr, &ScopeLensSRV);
+	if (FAILED(hr)) return false;
+	ScopeLensSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportScopeLensSRV")), "ViewportScopeLensSRV");
 
 	// ── DoF CoC RT (R16_FLOAT) ──
 	D3D11_TEXTURE2D_DESC CoCDesc = {};
@@ -369,6 +395,9 @@ void FViewport::ReleaseResources()
 	if (SRV) { SRV->Release(); SRV = nullptr; }
 	if (RTV) { RTV->Release(); RTV = nullptr; }
 	if (RTTexture) { RTTexture->Release(); RTTexture = nullptr; }
+	if (ScopeLensSRV) { ScopeLensSRV->Release(); ScopeLensSRV = nullptr; }
+	if (ScopeLensRTV) { ScopeLensRTV->Release(); ScopeLensRTV = nullptr; }
+	if (ScopeLensTexture) { ScopeLensTexture->Release(); ScopeLensTexture = nullptr; }
 	if (SceneColorCopySRV) { SceneColorCopySRV->Release(); SceneColorCopySRV = nullptr; }
 	if (SceneColorCopyTexture) { SceneColorCopyTexture->Release(); SceneColorCopyTexture = nullptr; }
 	BloomWidth = 0;

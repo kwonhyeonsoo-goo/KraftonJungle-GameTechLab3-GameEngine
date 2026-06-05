@@ -69,6 +69,7 @@ void FGameRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 
 	PrepareViewport(VP, Ctx);
 	BuildFrame(VP, POV, Scene, World);
+	RenderScopeLensCapture(VP, POV, Scene, World, Renderer, Ctx);
 
 	FCollectOutput Output;
 	CollectCommands(Scene, Renderer, Output);
@@ -133,6 +134,21 @@ void FGameRenderPipeline::BuildFrame(FViewport* VP, const FMinimalViewInfo& POV,
 		Frame.SetRenderOptions(Opts);
 	}
 
+	Frame.CameraScopeLens.bEnabled = CamManager ? CamManager->IsScopeLensEnabled() : false;
+	if (Frame.CameraScopeLens.bEnabled)
+	{
+		Frame.CameraScopeLens = CamManager->GetScopeLensState();
+		FViewportRenderOptions Opts = Frame.RenderOptions;
+		Opts.ShowFlags.bScopeLens = true;
+		Opts.ScopeLensRadius = Frame.CameraScopeLens.Radius;
+		Opts.ScopeLensFeather = Frame.CameraScopeLens.Feather;
+		Opts.ScopeLensOuterBlurRadius = Frame.CameraScopeLens.OuterBlurRadius;
+		Opts.ScopeLensEdgeBlurRadius = Frame.CameraScopeLens.EdgeBlurRadius;
+		Opts.ScopeLensZoomFOV = Frame.CameraScopeLens.ZoomFOV;
+		Opts.ScopeLensIntensity = Frame.CameraScopeLens.Intensity;
+		Frame.SetRenderOptions(Opts);
+	}
+
 	UCameraComponent* ActiveCamera = CamManager ? CamManager->GetActiveCamera() : nullptr;
 	if (ActiveCamera)
 	{
@@ -176,4 +192,44 @@ void FGameRenderPipeline::CollectCommands(FScene* Scene, FRenderer& Renderer, FC
 
 	Collector.Collect(Game->GetWorld(), Frame, Output);
 	Builder.BuildCommands(Frame, Scene, Output);
+}
+
+void FGameRenderPipeline::RenderScopeLensCapture(FViewport* VP, const FMinimalViewInfo& POV, FScene* Scene, UWorld* World, FRenderer& Renderer, ID3D11DeviceContext* Ctx)
+{
+	if (!VP || !Scene || !World || !Ctx || !Frame.CameraScopeLens.bEnabled || !Frame.RenderOptions.ShowFlags.bScopeLens || !Frame.ScopeLensRTV)
+	{
+		return;
+	}
+
+	const FFrameContext MainFrame = Frame;
+	FFrameContext ScopeFrame = MainFrame;
+	ScopeFrame.CameraScopeLens.bEnabled = false;
+	ScopeFrame.CameraFade.bEnabled = false;
+	ScopeFrame.CameraVignette.bEnabled = false;
+	ScopeFrame.CameraLetterbox.bEnabled = false;
+	ScopeFrame.ViewportRTV = MainFrame.ScopeLensRTV;
+	ScopeFrame.SceneColorCopySRV = nullptr;
+	ScopeFrame.SceneColorCopyTexture = nullptr;
+	ScopeFrame.ViewportRenderTexture = nullptr;
+	ScopeFrame.ScopeLensSRV = nullptr;
+	ScopeFrame.RenderOptions.ShowFlags.bDoF = false;
+	ScopeFrame.RenderOptions.ShowFlags.bFXAA = false;
+	ScopeFrame.RenderOptions.ShowFlags.bBloom = false;
+	ScopeFrame.RenderOptions.ShowFlags.bGammaCorrection = false;
+	ScopeFrame.RenderOptions.ShowFlags.bScopeLens = false;
+
+	FMinimalViewInfo ScopePOV = POV;
+	ScopePOV.FOV = MainFrame.CameraScopeLens.ZoomFOV;
+	ApplyLetterboxAspect(ScopePOV, ScopeFrame.CameraLetterbox, ScopeFrame.ViewportWidth, ScopeFrame.ViewportHeight);
+	ScopeFrame.SetCameraInfo(ScopePOV);
+
+	VP->BeginScopeLensRender(Ctx);
+
+	Frame = ScopeFrame;
+	FCollectOutput ScopeOutput;
+	CollectCommands(Scene, Renderer, ScopeOutput);
+	Renderer.Render(Frame, World, *Scene);
+
+	Frame = MainFrame;
+	VP->BeginRender(Ctx);
 }

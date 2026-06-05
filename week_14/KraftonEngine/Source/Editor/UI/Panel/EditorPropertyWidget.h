@@ -7,6 +7,7 @@
 #include "Object/Ptr/WeakObjectPtr.h"
 
 class UActorComponent;
+class UActorSequenceComponent;
 class AActor;
 
 class FEditorPropertyWidget : public FEditorWidget
@@ -37,6 +38,7 @@ private:
 	void RenderDetails(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
 	void RenderComponentProperties(AActor* Actor, const TArray<AActor*>& SelectedActors);
 	void RenderActorProperties(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
+	void RenderActorSequenceComponentTools(UActorSequenceComponent* SequenceComp);
 	bool RenderPropertyWidget(TArray<struct FPropertyValue>& Props, int32& Index, bool bDispatchChange = true, const FString& PropertyPath = {});
 	bool RenderSoftObjectPropertyWidget(struct FPropertyValue& Prop);
 	bool RenderAttachSocketNameProperty(struct FPropertyValue& Prop);
@@ -56,7 +58,7 @@ private:
 	static FString OpenObjFileDialog();
 	static FString OpenStaticMeshFileDialog();
 	static FString OpenFbxFileDialog();
-	static FString OpenPrefabSaveFileDialog(AActor* Actor);
+	static FString OpenPrefabSaveDirectoryDialog(AActor* Actor);
 	void SaveActorAsPrefab(AActor* Actor);
 
 	TWeakObjectPtr<UActorComponent> SelectedComponent = nullptr;
@@ -66,6 +68,15 @@ private:
 
 	float PendingDetailsScrollY = -1.0f;
 	bool bRestoreDetailsScrollY = false;
+	bool bDetailsEditUndoSnapshotCapturedThisFrame = false;
+
+	TWeakObjectPtr<UActorSequenceComponent> LastActorSequenceComponent = nullptr;
+	TWeakObjectPtr<UObject> ActorSequenceTrackTarget = nullptr;
+	FString ActorSequenceTrackPropertyName;
+	int32 ActorSequenceTrackChannelIndex = 0;
+	float ActorSequenceTrackStartTime = 0.0f;
+	float ActorSequenceTrackDuration = 1.0f;
+	char ActorSequenceCurveAssetPathBuffer[260] = {};
 
 	//Rename
 	TWeakObjectPtr<AActor> RenameTargetActor = nullptr;

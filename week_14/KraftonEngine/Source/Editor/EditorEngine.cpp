@@ -87,6 +87,7 @@ void UEditorEngine::Init(FWindowsWindow* InWindow)
 	FEditorSettings::Get().LoadFromFile(FEditorSettings::GetDefaultSettingsPath());
 	FProjectSettings::Get().LoadFromFile(FProjectSettings::GetDefaultPath());
 	FEditorTextureManager::Get().Initialize(Renderer.GetFD3DDevice().GetDevice());
+	UndoSystem.SetOwner(this);
 
 	{
 		SCOPE_STARTUP_STAT("EditorMainPanel::Create");
@@ -127,6 +128,7 @@ void UEditorEngine::Shutdown()
 	FProjectSettings::Get().SaveToFile(FProjectSettings::GetDefaultPath());
 	FEditorSettings::Get().SaveToFile(FEditorSettings::GetDefaultSettingsPath());
 	CloseScene();
+	UndoSystem.SetOwner(nullptr);
 	SelectionManager.Shutdown();
 
 	// UI/viewport release 전에 마지막 프레임에서 남은 RTV/SRV/DSV/ImGui 바인딩을 먼저 끊는다.
@@ -167,6 +169,8 @@ void UEditorEngine::Tick(float DeltaTime)
 	TickFrameStart(DeltaTime);
 	MainPanel.Update();
 	InputSystem::Get().RefreshSnapshot();
+	const FInputSystemSnapshot EditorInputSnapshot = InputSystem::Get().MakeSnapshot();
+	HandleUndoRedoShortcuts(EditorInputSnapshot);
 
 	FSlateApplication::Get().UpdateInputOwner();
 	ProcessPIEInput(DeltaTime);
@@ -193,6 +197,100 @@ bool UEditorEngine::GetActiveViewportPOV(FMinimalViewInfo& OutPOV) const
 		return true;
 	}
 	return false;
+}
+
+void UEditorEngine::HandleUndoRedoShortcuts(const FInputSystemSnapshot& Snapshot)
+{
+	if (IsPlayingInEditor() || !MainPanel.IsLevelDocumentActive() || Snapshot.bGuiUsingTextInput)
+	{
+		return;
+	}
+
+	const bool bCtrlDown = Snapshot.IsDown(VK_CONTROL) || Snapshot.IsDown(VK_LCONTROL) || Snapshot.IsDown(VK_RCONTROL);
+	const bool bShiftDown = Snapshot.IsDown(VK_SHIFT) || Snapshot.IsDown(VK_LSHIFT) || Snapshot.IsDown(VK_RSHIFT);
+	if (!bCtrlDown)
+	{
+		return;
+	}
+
+	if (Snapshot.WasPressed('Y') || (bShiftDown && Snapshot.WasPressed('Z')))
+	{
+		UndoSystem.Redo();
+		return;
+	}
+
+	if (Snapshot.WasPressed('Z'))
+	{
+		UndoSystem.Undo();
+	}
+}
+
+FString UEditorEngine::CaptureSceneSnapshot() const
+{
+	UEditorEngine* MutableThis = const_cast<UEditorEngine*>(this);
+	FWorldContext* Context = MutableThis->GetWorldContextFromHandle(GetActiveWorldHandle());
+	if (!Context || !Context->World)
+	{
+		return "";
+	}
+
+	// Undo/redo should capture authored scene state only. Editor viewport camera
+	// POV is saved with scene files, but including it here makes camera movement
+	// participate in Ctrl+Z/Ctrl+Y after unrelated edits.
+	return FSceneSaveManager::SaveToString(*Context, nullptr);
+}
+
+bool UEditorEngine::RestoreSceneSnapshot(
+	const FString& Snapshot,
+	const FName& RestoreWorldHandle,
+	bool bRestoreViewportCamera)
+{
+	if (Snapshot.empty())
+	{
+		return false;
+	}
+
+	const FString SavedCurrentLevelFilePath = CurrentLevelFilePath;
+	const FName TargetWorldHandle =
+		RestoreWorldHandle != FName::None ? RestoreWorldHandle : GetActiveWorldHandle();
+
+	FWorldContext LoadContext;
+	FPerspectiveCameraData CameraData;
+	const EWorldType RestoreWorldType = EWorldType::Editor;
+	FSceneSaveManager::LoadFromString(Snapshot, LoadContext, CameraData, &RestoreWorldType);
+	if (!LoadContext.World)
+	{
+		return false;
+	}
+
+	UndoSystem.BeginRestore();
+	SelectionManager.ClearSelection();
+	SelectionManager.SetWorld(nullptr);
+	InvalidateOcclusionResults();
+
+	if (TargetWorldHandle != FName::None)
+	{
+		DestroyWorldContext(TargetWorldHandle);
+	}
+
+	LoadContext.WorldType = EWorldType::Editor;
+	LoadContext.ContextHandle = TargetWorldHandle != FName::None ? TargetWorldHandle : FName("UndoRedoScene");
+	LoadContext.ContextName = "Undo/Redo Scene";
+	LoadContext.World->SetWorldType(EWorldType::Editor);
+	WorldList.push_back(LoadContext);
+	SetActiveWorld(LoadContext.ContextHandle);
+	SelectionManager.SetWorld(LoadContext.World);
+	LoadContext.World->WarmupPickingData();
+
+	ResetViewport();
+	if (bRestoreViewportCamera)
+	{
+		RestoreViewportCamera(CameraData);
+	}
+	CurrentLevelFilePath = SavedCurrentLevelFilePath;
+
+	UndoSystem.EndRestore();
+	return true;
 }
 
 void UEditorEngine::RenderUI(float DeltaTime)
@@ -695,6 +793,7 @@ void UEditorEngine::ClearScene()
 
 	ActiveWorldHandle = FName::None;
 	CurrentLevelFilePath.clear();
+	UndoSystem.ClearAllHistory();
 
 	ViewportLayout.DestroyAllCameras();
 }

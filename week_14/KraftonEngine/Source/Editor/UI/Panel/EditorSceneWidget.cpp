@@ -48,7 +48,16 @@ void FEditorSceneWidget::HandleSceneManagerShortcuts()
 
 	if (Input.GetKeyDown(VK_DELETE))
 	{
-		Selection.DeleteSelectedActors();
+		const TArray<AActor*> SelectedActors = Selection.GetSelectedActors();
+		if (!SelectedActors.empty())
+		{
+			TArray<FEditorSerializedActorState> DeletedStates =
+				EditorEngine->GetUndoSystem().CaptureActorStates(SelectedActors);
+			if (Selection.DeleteSelectedActors() > 0)
+			{
+				EditorEngine->GetUndoSystem().RecordActorDeletion(DeletedStates, "Delete Actors");
+			}
+		}
 		return;
 	}
 

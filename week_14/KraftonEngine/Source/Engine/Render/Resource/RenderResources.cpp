@@ -1005,9 +1005,9 @@ void FSystemResources::UnbindSystemTextures(FD3DDevice& Device)
 	ID3D11ShaderResourceView* nullShadowSRVs[5] = {};
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowMapCSM, 5, nullShadowSRVs);
 
-	// t26~t29: DoF CoC/background/foreground/bokeh
-	ID3D11ShaderResourceView* nullDoFSRVs[4] = {};
-	Ctx->PSSetShaderResources(ESystemTexSlot::CoC, 4, nullDoFSRVs);
+	// t26~t31: DoF, bloom, and secondary scope lens color
+	ID3D11ShaderResourceView* nullPostProcessSRVs[6] = {};
+	Ctx->PSSetShaderResources(ESystemTexSlot::CoC, 6, nullPostProcessSRVs);
 }
 
 // ============================================================

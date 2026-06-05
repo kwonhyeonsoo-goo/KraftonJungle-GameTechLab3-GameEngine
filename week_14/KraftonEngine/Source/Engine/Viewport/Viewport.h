@@ -22,6 +22,7 @@ public:
 
 	// 오프스크린 RT 클리어 + 바인딩 (렌더 시작 시 호출)
 	void BeginRender(ID3D11DeviceContext* Ctx, const float ClearColor[4] = nullptr);
+	void BeginScopeLensRender(ID3D11DeviceContext* Ctx, const float ClearColor[4] = nullptr);
 
 	// ViewportClient 참조
 	void SetClient(FViewportClient* InClient) { ViewportClient = InClient; }
@@ -39,6 +40,8 @@ public:
 	ID3D11Texture2D* GetRTTexture() const { return RTTexture; }
 	ID3D11ShaderResourceView* GetSceneColorCopySRV() const { return SceneColorCopySRV; }
 	ID3D11Texture2D* GetSceneColorCopyTexture() const { return SceneColorCopyTexture; }
+	ID3D11RenderTargetView* GetScopeLensRTV() const { return ScopeLensRTV; }
+	ID3D11ShaderResourceView* GetScopeLensSRV() const { return ScopeLensSRV; }
 	ID3D11DepthStencilView* GetDSV() const { return DSV; }
 	ID3D11Texture2D* GetDepthTexture() const { return DepthTexture; }
 
@@ -93,6 +96,10 @@ private:
 	// SceneColor 복사본 — FXAA 등 PostProcess에서 최종 화면을 읽기 위한 CopyResource 대상
 	ID3D11Texture2D* SceneColorCopyTexture = nullptr;
 	ID3D11ShaderResourceView* SceneColorCopySRV = nullptr;
+
+	ID3D11Texture2D* ScopeLensTexture = nullptr;
+	ID3D11RenderTargetView* ScopeLensRTV = nullptr;
+	ID3D11ShaderResourceView* ScopeLensSRV = nullptr;
 
 	// DoF CoC RT — DoFSetup에서 R16_FLOAT로 기록, DoF composite에서 읽기
 	ID3D11Texture2D* CoCTexture = nullptr;

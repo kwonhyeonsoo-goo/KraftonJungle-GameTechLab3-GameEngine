@@ -10,6 +10,10 @@
 #include "Render/Types/RenderConstants.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Engine/Platform/CrashDump.h"
+#include "Diagnostics/ActorSequenceDiagnostics.h"
+#include "Diagnostics/CameraEditorMeshDiagnostics.h"
+#include "Diagnostics/GameViewportInputDiagnostics.h"
+#include "Diagnostics/RuntimeUILayoutDiagnostics.h"
 #include "GameFramework/World.h"
 #include "Render/Scene/FScene.h"
 
@@ -276,6 +280,26 @@ void FEditorConsoleWidget::RegisterDiagnosticsCommands()
 		"Diagnostics", "stat clothcollision", "Shows the cloth collision overlay stat for the level world.");
 	RegisterCommand("stat none", [this](const TArray<FString>& Args) { HandleStatNone(Args); },
 		"Diagnostics", "stat none", "Hides all overlay stats.");
+	RegisterCommand("diagnostics actorsequence", [this](const TArray<FString>& Args) { HandleActorSequenceDiagnostics(Args); },
+		"Diagnostics", "diagnostics actorsequence|diag actorsequence", "Runs the Actor Sequence round-trip self-test.");
+	RegisterCommand("diag actorsequence", [this](const TArray<FString>& Args) { HandleActorSequenceDiagnostics(Args); },
+		"Diagnostics", "diag actorsequence", "Alias for diagnostics actorsequence.");
+	RegisterCommand("diagnostics camera mesh", [this](const TArray<FString>& Args) { HandleCameraEditorMeshDiagnostics(Args); },
+		"Diagnostics", "diagnostics camera mesh|diag camera mesh", "Runs the Camera editor visualization mesh self-test.");
+	RegisterCommand("diag camera mesh", [this](const TArray<FString>& Args) { HandleCameraEditorMeshDiagnostics(Args); },
+		"Diagnostics", "diag camera mesh", "Alias for diagnostics camera mesh.");
+	RegisterCommand("diagnostics gameinput", [this](const TArray<FString>& Args) { HandleGameViewportInputDiagnostics(Args); },
+		"Diagnostics", "diagnostics gameinput|diag gameinput", "Runs the GameViewport input routing self-test.");
+	RegisterCommand("diag gameinput", [this](const TArray<FString>& Args) { HandleGameViewportInputDiagnostics(Args); },
+		"Diagnostics", "diag gameinput", "Alias for diagnostics gameinput.");
+	RegisterCommand("diagnostics gamejam", [this](const TArray<FString>& Args) { HandleGameJamDiagnostics(Args); },
+		"Diagnostics", "diagnostics gamejam|diag gamejam", "Runs the jam-ready automated smoke tests.");
+	RegisterCommand("diag gamejam", [this](const TArray<FString>& Args) { HandleGameJamDiagnostics(Args); },
+		"Diagnostics", "diag gamejam", "Alias for diagnostics gamejam.");
+	RegisterCommand("diagnostics runtimeui", [this](const TArray<FString>& Args) { HandleRuntimeUILayoutDiagnostics(Args); },
+		"Diagnostics", "diagnostics runtimeui|diag runtimeui", "Runs the Runtime UI layout save/load/export self-test.");
+	RegisterCommand("diag runtimeui", [this](const TArray<FString>& Args) { HandleRuntimeUILayoutDiagnostics(Args); },
+		"Diagnostics", "diag runtimeui", "Alias for diagnostics runtimeui.");
 	RegisterCommand("cause crash", [this](const TArray<FString>& Args) { HandleCauseCrash(Args); },
 		"Diagnostics", "cause crash", "Immediately raises an intentional crash for minidump testing.");
 }
@@ -1089,6 +1113,124 @@ void FEditorConsoleWidget::HandleStatNone(const TArray<FString>& Args)
 	}
 	EditorEngine->GetOverlayStatSystem().HideAll();
 	AddLog("Overlay stat disabled: all\n");
+}
+
+void FEditorConsoleWidget::HandleActorSequenceDiagnostics(const TArray<FString>& Args)
+{
+	(void)Args;
+	AddLog("[ActorSequenceDiagnostics] Running round-trip self-test...\n");
+	const FActorSequenceRoundTripSelfTestResult Result =
+		FActorSequenceDiagnostics::RunRoundTripSelfTest();
+	AddLog(
+		"[ActorSequenceDiagnostics] %s (%d checks)\n",
+		Result.bPassed ? "PASS" : "FAIL",
+		Result.ChecksRun);
+	if (!Result.Message.empty())
+	{
+		AddLog("[ActorSequenceDiagnostics] %s\n", Result.Message.c_str());
+	}
+}
+
+void FEditorConsoleWidget::HandleCameraEditorMeshDiagnostics(const TArray<FString>& Args)
+{
+	(void)Args;
+	AddLog("[CameraEditorMeshDiagnostics] Running editor visualization mesh self-test...\n");
+	const FCameraEditorMeshSelfTestResult Result =
+		FCameraEditorMeshDiagnostics::RunSelfTest();
+	AddLog(
+		"[CameraEditorMeshDiagnostics] %s (%d checks)\n",
+		Result.bPassed ? "PASS" : "FAIL",
+		Result.ChecksRun);
+	if (!Result.Message.empty())
+	{
+		AddLog("[CameraEditorMeshDiagnostics] %s\n", Result.Message.c_str());
+	}
+}
+
+void FEditorConsoleWidget::HandleGameViewportInputDiagnostics(const TArray<FString>& Args)
+{
+	(void)Args;
+	AddLog("[GameViewportInputDiagnostics] Running input routing self-test...\n");
+	const FGameViewportInputSelfTestResult Result =
+		FGameViewportInputDiagnostics::RunSelfTest();
+	AddLog(
+		"[GameViewportInputDiagnostics] %s (%d checks)\n",
+		Result.bPassed ? "PASS" : "FAIL",
+		Result.ChecksRun);
+	if (!Result.Message.empty())
+	{
+		AddLog("[GameViewportInputDiagnostics] %s\n", Result.Message.c_str());
+	}
+}
+
+void FEditorConsoleWidget::HandleRuntimeUILayoutDiagnostics(const TArray<FString>& Args)
+{
+	(void)Args;
+	AddLog("[RuntimeUILayoutDiagnostics] Running layout save/load/export self-test...\n");
+	const FRuntimeUILayoutSelfTestResult Result =
+		FRuntimeUILayoutDiagnostics::RunRoundTripSelfTest();
+	AddLog(
+		"[RuntimeUILayoutDiagnostics] %s (%d checks)\n",
+		Result.bPassed ? "PASS" : "FAIL",
+		Result.ChecksRun);
+	if (!Result.Message.empty())
+	{
+		AddLog("[RuntimeUILayoutDiagnostics] %s\n", Result.Message.c_str());
+	}
+}
+
+void FEditorConsoleWidget::HandleGameJamDiagnostics(const TArray<FString>& Args)
+{
+	(void)Args;
+	AddLog("[GameJamDiagnostics] Running automated smoke tests...\n");
+
+	const FActorSequenceRoundTripSelfTestResult ActorSequenceResult =
+		FActorSequenceDiagnostics::RunRoundTripSelfTest();
+	AddLog(
+		"[GameJamDiagnostics][ActorSequence] %s (%d checks)\n",
+		ActorSequenceResult.bPassed ? "PASS" : "FAIL",
+		ActorSequenceResult.ChecksRun);
+	if (!ActorSequenceResult.Message.empty())
+	{
+		AddLog("[GameJamDiagnostics][ActorSequence] %s\n", ActorSequenceResult.Message.c_str());
+	}
+
+	const FCameraEditorMeshSelfTestResult CameraMeshResult =
+		FCameraEditorMeshDiagnostics::RunSelfTest();
+	AddLog(
+		"[GameJamDiagnostics][CameraEditorMesh] %s (%d checks)\n",
+		CameraMeshResult.bPassed ? "PASS" : "FAIL",
+		CameraMeshResult.ChecksRun);
+	if (!CameraMeshResult.Message.empty())
+	{
+		AddLog("[GameJamDiagnostics][CameraEditorMesh] %s\n", CameraMeshResult.Message.c_str());
+	}
+
+	const FRuntimeUILayoutSelfTestResult RuntimeUILayoutResult =
+		FRuntimeUILayoutDiagnostics::RunRoundTripSelfTest();
+	AddLog(
+		"[GameJamDiagnostics][RuntimeUILayout] %s (%d checks)\n",
+		RuntimeUILayoutResult.bPassed ? "PASS" : "FAIL",
+		RuntimeUILayoutResult.ChecksRun);
+	if (!RuntimeUILayoutResult.Message.empty())
+	{
+		AddLog("[GameJamDiagnostics][RuntimeUILayout] %s\n", RuntimeUILayoutResult.Message.c_str());
+	}
+
+	const FGameViewportInputSelfTestResult GameViewportInputResult =
+		FGameViewportInputDiagnostics::RunSelfTest();
+	AddLog(
+		"[GameJamDiagnostics][GameViewportInput] %s (%d checks)\n",
+		GameViewportInputResult.bPassed ? "PASS" : "FAIL",
+		GameViewportInputResult.ChecksRun);
+	if (!GameViewportInputResult.Message.empty())
+	{
+		AddLog("[GameJamDiagnostics][GameViewportInput] %s\n", GameViewportInputResult.Message.c_str());
+	}
+
+	AddLog(
+		"[GameJamDiagnostics] %s\n",
+		(ActorSequenceResult.bPassed && CameraMeshResult.bPassed && RuntimeUILayoutResult.bPassed && GameViewportInputResult.bPassed) ? "PASS" : "FAIL");
 }
 
 void FEditorConsoleWidget::HandleCauseCrash(const TArray<FString>& Args)

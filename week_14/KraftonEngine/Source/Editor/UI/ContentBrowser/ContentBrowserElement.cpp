@@ -28,8 +28,11 @@
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 #include "Editor/Subsystem/AssetFactory.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "UI/RuntimeUILayoutAsset.h"
+#include "UI/RuntimeUILayoutManager.h"
 
 #include <algorithm>
 #include <chrono>
@@ -108,6 +111,97 @@ static bool ProjectFileExistsForContentBrowser(const FString& Path)
 	return std::filesystem::exists(FullPath) && std::filesystem::is_regular_file(FullPath);
 }
 
+static FEditorFileSystemState CaptureContentUndoStateForElement(ContentBrowserContext& Context, const FString& Path, const FString& Label)
+{
+	if (!Context.EditorEngine || Path.empty())
+	{
+		return {};
+	}
+	return Context.EditorEngine->GetUndoSystem().CaptureFileSystemState(Path, Label);
+}
+
+static void RecordContentCreateForElement(ContentBrowserContext& Context, const FString& Path, const FString& Label)
+{
+	if (!Context.EditorEngine)
+	{
+		return;
+	}
+
+	const FEditorFileSystemState State = CaptureContentUndoStateForElement(Context, Path, Label);
+	Context.EditorEngine->GetUndoSystem().RecordCreateFileSystemPath(State, Label);
+}
+
+static void RecordContentCreatesForElement(ContentBrowserContext& Context, const TArray<FString>& Paths, const FString& Label)
+{
+	if (!Context.EditorEngine || Paths.empty())
+	{
+		return;
+	}
+
+	TArray<FEditorFileSystemState> States;
+	for (const FString& Path : Paths)
+	{
+		if (Path.empty() || Path == "None")
+		{
+			continue;
+		}
+
+		FEditorFileSystemState State = CaptureContentUndoStateForElement(Context, Path, Label);
+		if (State.IsValid() && !State.Entries.empty())
+		{
+			States.push_back(std::move(State));
+		}
+	}
+
+	if (!States.empty())
+	{
+		Context.EditorEngine->GetUndoSystem().RecordCreateFileSystemPaths(States, Label);
+	}
+}
+
+static void RecordContentModifyForElement(
+	ContentBrowserContext& Context,
+	const FEditorFileSystemState& BeforeState,
+	const FString& Path,
+	const FString& Label)
+{
+	if (!Context.EditorEngine)
+	{
+		return;
+	}
+
+	const FEditorFileSystemState AfterState = CaptureContentUndoStateForElement(Context, Path, Label);
+	Context.EditorEngine->GetUndoSystem().RecordModifyFileSystemPath(BeforeState, AfterState, Label);
+}
+
+static FString BuildVectorFieldPackagePathForContentBrowser(const FString& SourceFgaPath)
+{
+	std::filesystem::path SourcePath = ResolveProjectPathForContentBrowser(SourceFgaPath);
+	SourcePath.replace_extension(L".uasset");
+	return FPaths::MakeProjectRelative(FPaths::ToUtf8(SourcePath.wstring()));
+}
+
+static void RecordFbxSceneImportCreation(ContentBrowserContext& Context, const FFbxSceneImportResult& Result)
+{
+	TArray<FString> CreatedPaths;
+	if (Result.Skeleton)
+	{
+		CreatedPaths.push_back(Result.Skeleton->GetAssetPathFileName());
+	}
+	if (Result.SkeletalMesh)
+	{
+		CreatedPaths.push_back(Result.SkeletalMesh->GetAssetPathFileName());
+	}
+	for (const UAnimSequence* AnimSequence : Result.AnimSequences)
+	{
+		if (AnimSequence)
+		{
+			CreatedPaths.push_back(AnimSequence->GetAssetPathFileName());
+		}
+	}
+	RecordContentCreatesForElement(Context, CreatedPaths, "Import FBX Scene");
+}
+
 static bool HasImportedFbxAssetForContentBrowser(const FString& SourceFbxPath)
 {
 	return ProjectFileExistsForContentBrowser(FMeshManager::GetSkeletalMeshBinaryFilePath(SourceFbxPath)) ||
@@ -159,9 +253,14 @@ static bool ReimportOrImportStaticFbxForContentBrowser(ContentBrowserContext& Co
 
 	if (ProjectFileExistsForContentBrowser(StaticPackagePath))
 	{
+		const FEditorFileSystemState BeforeState = CaptureContentUndoStateForElement(
+			Context,
+			StaticPackagePath,
+			"Reimport Static Mesh");
 		UStaticMesh* Reimported = nullptr;
 		if (FMeshManager::ReimportStaticMesh(StaticPackagePath, Device, Reimported) && Reimported)
 		{
+			RecordContentModifyForElement(Context, BeforeState, StaticPackagePath, "Reimport Static Mesh");
 			Context.bPendingContentRefresh = true;
 			Context.EditorEngine->OpenAssetEditorForObject(Reimported);
 			return true;
@@ -171,6 +270,7 @@ static bool ReimportOrImportStaticFbxForContentBrowser(ContentBrowserContext& Co
 
 	if (UStaticMesh* Imported = FMeshManager::LoadStaticMesh(SourceFbxPath, Device))
 	{
+		RecordContentCreateForElement(Context, StaticPackagePath, "Import Static Mesh");
 		Context.bPendingContentRefresh = true;
 		Context.EditorEngine->OpenAssetEditorForObject(Imported);
 		return true;
@@ -213,6 +313,7 @@ static bool ImportFbxWithDefaultOptionsForContentBrowser(ContentBrowserContext& 
 
 		if (Result.SkeletalMesh)
 		{
+			RecordFbxSceneImportCreation(Context, Result);
 			const std::chrono::duration<double> Elapsed = std::chrono::steady_clock::now() - ImportStart;
 			FMeshEditorWidget::RecordImportDurationForAsset(
 				Result.SkeletalMesh->GetAssetPathFileName(),
@@ -228,6 +329,7 @@ static bool ImportFbxWithDefaultOptionsForContentBrowser(ContentBrowserContext& 
 
 	if (UStaticMesh* MeshAsset = FMeshManager::LoadStaticMesh(SourceFbxPath, Device))
 	{
+		RecordContentCreateForElement(Context, FMeshManager::GetStaticMeshBinaryFilePath(SourceFbxPath), "Import Static Mesh");
 		Context.bPendingContentRefresh = true;
 		Context.EditorEngine->OpenAssetEditorForObject(MeshAsset);
 		return true;
@@ -258,6 +360,12 @@ static FString FormatVector3ForContentBrowser(const FVector& Value)
 
 static bool ImportFgaVectorFieldForContentBrowser(ContentBrowserContext& Context, const FString& SourceFgaPath)
 {
+	const FString PredictedPackagePath = BuildVectorFieldPackagePathForContentBrowser(SourceFgaPath);
+	const bool bExistedBefore = ProjectFileExistsForContentBrowser(PredictedPackagePath);
+	const FEditorFileSystemState BeforeState = bExistedBefore
+		? CaptureContentUndoStateForElement(Context, PredictedPackagePath, "Import Vector Field")
+		: FEditorFileSystemState();
+
 	FString PackagePath;
 	UVectorFieldAsset* ImportedAsset = nullptr;
 	FString Error;
@@ -267,6 +375,14 @@ static bool ImportFgaVectorFieldForContentBrowser(ContentBrowserContext& Context
 		return false;
 	}
 
+	if (bExistedBefore)
+	{
+		RecordContentModifyForElement(Context, BeforeState, PackagePath, "Import Vector Field");
+	}
+	else
+	{
+		RecordContentCreateForElement(Context, PackagePath, "Import Vector Field");
+	}
 	Context.bPendingContentRefresh = true;
 	return true;
 }
@@ -593,6 +709,10 @@ void ObjectElement::RenderContextMenu(ContentBrowserContext& Context)
 	{
 		if (ImGui::MenuItem("Reimport"))
 		{
+			const FEditorFileSystemState BeforeState = CaptureContentUndoStateForElement(
+				Context,
+				PackagePath,
+				"Reimport Static Mesh");
 			UStaticMesh* Reimported = nullptr;
 
 			if (Context.EditorEngine && FMeshManager::ReimportStaticMesh(
@@ -601,6 +721,7 @@ void ObjectElement::RenderContextMenu(ContentBrowserContext& Context)
 					Reimported
 			) && Reimported)
 			{
+				RecordContentModifyForElement(Context, BeforeState, PackagePath, "Reimport Static Mesh");
 				Context.bPendingContentRefresh = true;
 				Context.EditorEngine->OpenAssetEditorForObject(Reimported);
 			}
@@ -702,6 +823,34 @@ void PhysicsAssetElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	}
 }
 
+void RuntimeUIElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		ShellExecuteW(nullptr, L"open", ContentItem.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+		return;
+	}
+
+	Context.EditorEngine->OpenRuntimeUIPreviewDocument(FPaths::ToUtf8(ContentItem.Path.wstring()));
+}
+
+void RuntimeUILayoutElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		return;
+	}
+
+	const FString FilePath = FPaths::ToUtf8(ContentItem.Path.wstring());
+	URuntimeUILayoutAsset* LayoutAsset = FRuntimeUILayoutManager::Get().Load(FilePath);
+	if (!LayoutAsset)
+	{
+		return;
+	}
+
+	Context.EditorEngine->OpenAssetEditorForObject(LayoutAsset);
+}
+
 
 void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 {
@@ -743,14 +892,20 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 				{
 					const FString DirectoryPath = FPaths::ToUtf8(ContentItem.Path.parent_path().wstring());
 					const FString AssetName = FPaths::ToUtf8(ContentItem.Path.stem().wstring()) + "_PhysicsAsset";
+					const FEditorFileSystemState MeshBeforeState = CaptureContentUndoStateForElement(
+						Context,
+						PackagePath,
+						"Assign Physics Asset");
 					FString CreatedPath;
 					if (FAssetFactory::CreatePhysicsAssetForSkeletalMesh(DirectoryPath, AssetName, MeshAsset, CreatedPath))
 					{
+						RecordContentCreateForElement(Context, CreatedPath, "Create Physics Asset");
 						Context.bPendingContentRefresh = true;
 						if (UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CreatedPath))
 						{
 							MeshAsset->SetPhysicsAsset(PhysicsAsset);
 							FMeshManager::SaveSkeletalMeshPreservingMetadata(MeshAsset);
+							RecordContentModifyForElement(Context, MeshBeforeState, PackagePath, "Assign Physics Asset");
 							Context.EditorEngine->OpenAssetEditorForObject(PhysicsAsset);
 						}
 					}
@@ -760,6 +915,10 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 
 		if (ImGui::MenuItem("Reimport"))
 		{
+			const FEditorFileSystemState BeforeState = CaptureContentUndoStateForElement(
+				Context,
+				PackagePath,
+				"Reimport Skeletal Mesh");
 			USkeletalMesh* Reimported = nullptr;
 
 			const auto ReimportStart = std::chrono::steady_clock::now();
@@ -769,6 +928,7 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 					Reimported
 			) && Reimported)
 			{
+				RecordContentModifyForElement(Context, BeforeState, PackagePath, "Reimport Skeletal Mesh");
 				const std::chrono::duration<double> Elapsed = std::chrono::steady_clock::now() - ReimportStart;
 				FMeshEditorWidget::RecordImportDurationForAsset(
 					Reimported->GetAssetPathFileName(),
@@ -944,10 +1104,15 @@ void VectorFieldElement::RenderContextMenu(ContentBrowserContext& Context)
 	const FString PackagePath = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
 	if (ImGui::MenuItem("Reimport"))
 	{
+		const FEditorFileSystemState BeforeState = CaptureContentUndoStateForElement(
+			Context,
+			PackagePath,
+			"Reimport Vector Field");
 		FString Error;
 		UVectorFieldAsset* Reimported = nullptr;
 		if (FVectorFieldManager::Get().Reimport(PackagePath, &Reimported, &Error))
 		{
+			RecordContentModifyForElement(Context, BeforeState, PackagePath, "Reimport Vector Field");
 			Context.bPendingContentRefresh = true;
 		}
 		else

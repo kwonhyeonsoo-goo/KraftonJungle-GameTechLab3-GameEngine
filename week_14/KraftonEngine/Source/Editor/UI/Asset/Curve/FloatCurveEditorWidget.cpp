@@ -1,5 +1,7 @@
 ﻿#include "FloatCurveEditorWidget.h"
 
+#include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "FloatCurve/FloatCurveManager.h"
 #include "Object/Object.h"
@@ -133,8 +135,7 @@ void FFloatCurveEditorWidget::Open(UObject* Object)
 		return;
 	}
 
-	EditedObject = Object;
-	bOpen = true;
+	FAssetEditorWidget::Open(Object);
 	ClearDirty();
 	SelectedKeyIndex = -1;
 	bDraggingSelectedKey = false;
@@ -195,6 +196,7 @@ void FFloatCurveEditorWidget::Render(float DeltaTime)
 	}
 
 	UFloatCurveAsset* CurveAsset = static_cast<UFloatCurveAsset*>(EditedObject);
+	const TArray<uint8> UndoBeforeSnapshot = CaptureSerializedObjectSnapshot(CurveAsset);
 	FFloatCurve& Curve = CurveAsset->GetCurve();
 
 	bool bWindowOpen = true;
@@ -229,10 +231,55 @@ void FFloatCurveEditorWidget::Render(float DeltaTime)
 			ClearDirty();
 		}
 	}
-
+	ImGui::SameLine();
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+	{
+		ImGui::BeginDisabled();
+	}
+	if (ImGui::Button("Undo"))
+	{
+		EditorEngine->GetUndoSystem().Undo();
+	}
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo())
+	{
+		ImGui::EndDisabled();
+	}
+	ImGui::SameLine();
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+	{
+		ImGui::BeginDisabled();
+	}
+	if (ImGui::Button("Redo"))
+	{
+		EditorEngine->GetUndoSystem().Redo();
+	}
+	if (!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo())
+	{
+		ImGui::EndDisabled();
+	}
 	ImGui::SameLine();
 	ImGui::TextDisabled("%s", CurveAsset->GetSourcePath().empty() ? "Unsaved asset" : CurveAsset->GetSourcePath().c_str());
 	ImGui::Separator();
+
+	if (EditorEngine && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+	{
+		ImGuiIO& IO = ImGui::GetIO();
+		if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Z))
+		{
+			if (IO.KeyShift)
+			{
+				EditorEngine->GetUndoSystem().Redo();
+			}
+			else
+			{
+				EditorEngine->GetUndoSystem().Undo();
+			}
+		}
+		else if (IO.KeyCtrl && !IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Y))
+		{
+			EditorEngine->GetUndoSystem().Redo();
+		}
+	}
 
 	bool bChanged = false;
 
@@ -775,7 +822,7 @@ void FFloatCurveEditorWidget::Render(float DeltaTime)
 
 	if (bChanged)
 	{
-		MarkDirty();
+		RecordSerializedObjectEdit(CurveAsset, UndoBeforeSnapshot, "Edit Float Curve");
 	}
 
 	ImGui::End();

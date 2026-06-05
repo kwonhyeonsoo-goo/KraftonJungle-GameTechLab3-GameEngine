@@ -769,6 +769,71 @@ void UUIManager::CompactInvalidWidgets()
 	RemoveInvalid(PendingRemoveWidgets);
 }
 
+void UUIManager::BeginInputFrame()
+{
+	bInputProcessedThisFrame = false;
+	LastFrameInputCaptureState = {};
+
+	InputSystem& Input = InputSystem::Get();
+	Input.SetGuiMouseCapture(false);
+	Input.SetGuiKeyboardCapture(false);
+	Input.SetGuiTextInputCapture(false);
+	Input.RefreshSnapshot();
+}
+
+bool UUIManager::PumpViewportInput(uint32 ViewportWidth, uint32 ViewportHeight,
+	int32 ViewportClientX, int32 ViewportClientY,
+	int32 ViewportClientWidth, int32 ViewportClientHeight)
+{
+	if (!RmlContext || bInputProcessedThisFrame || ViewportWidgets.empty())
+	{
+		return false;
+	}
+
+	ViewportWidth = (std::max)(ViewportWidth, static_cast<uint32>(1));
+	ViewportHeight = (std::max)(ViewportHeight, static_cast<uint32>(1));
+	ViewportClientWidth = (std::max)(ViewportClientWidth, static_cast<int32>(1));
+	ViewportClientHeight = (std::max)(ViewportClientHeight, static_cast<int32>(1));
+
+	RmlContext->SetDimensions({
+		static_cast<int>(ViewportWidth),
+		static_cast<int>(ViewportHeight)
+	});
+
+	InputSystem& Input = InputSystem::Get();
+	const POINT ClientMousePos = Input.GetMouseClientPos();
+	const bool bInsideViewport =
+		ClientMousePos.x >= ViewportClientX &&
+		ClientMousePos.y >= ViewportClientY &&
+		ClientMousePos.x < ViewportClientX + ViewportClientWidth &&
+		ClientMousePos.y < ViewportClientY + ViewportClientHeight;
+
+	const FUIInputCaptureState CaptureState = GetViewportInputCaptureState();
+	const bool bHasFocusedElement = RmlContext->GetFocusElement() != nullptr;
+	if (!bInsideViewport &&
+		!RmlContext->IsMouseInteracting() &&
+		!bHasFocusedElement &&
+		!CaptureState.bWantsKeyboard &&
+		!CaptureState.bWantsTextInput)
+	{
+		bInputProcessedThisFrame = true;
+		return false;
+	}
+
+	const int32 LocalMouseX = static_cast<int32>(
+		static_cast<float>(ClientMousePos.x - ViewportClientX) * static_cast<float>(ViewportWidth) /
+		static_cast<float>(ViewportClientWidth));
+	const int32 LocalMouseY = static_cast<int32>(
+		static_cast<float>(ClientMousePos.y - ViewportClientY) * static_cast<float>(ViewportHeight) /
+		static_cast<float>(ViewportClientHeight));
+
+	ProcessInputAtPosition(LocalMouseX, LocalMouseY, bInsideViewport);
+	bInputProcessedThisFrame = true;
+	return LastFrameInputCaptureState.bConsumedMouseThisFrame ||
+		LastFrameInputCaptureState.bConsumedKeyboardThisFrame ||
+		LastFrameInputCaptureState.bConsumedTextInputThisFrame;
+}
+
 FUIInputCaptureState UUIManager::GetViewportInputCaptureState() const
 {
 	FUIInputCaptureState State;
@@ -793,6 +858,10 @@ FUIInputCaptureState UUIManager::GetViewportInputCaptureState() const
 		State.bWantsTextInput = true;
 		State.bBlocksGameKeyboard = true;
 	}
+
+	State.bConsumedMouseThisFrame = LastFrameInputCaptureState.bConsumedMouseThisFrame;
+	State.bConsumedKeyboardThisFrame = LastFrameInputCaptureState.bConsumedKeyboardThisFrame;
+	State.bConsumedTextInputThisFrame = LastFrameInputCaptureState.bConsumedTextInputThisFrame;
 	return State;
 }
 
@@ -1258,24 +1327,20 @@ void UUIManager::Render(const FPassContext& Ctx)
 
 void UUIManager::ProcessInput(const FFrameContext& Frame)
 {
-	if (!RmlContext)
+	if (!RmlContext || bInputProcessedThisFrame)
 	{
 		return;
 	}
 
 	InputSystem& Input = InputSystem::Get();
-	const int KeyModifierState = GetRmlKeyModifierState(Input);
-	const FUIInputCaptureState CaptureState = GetViewportInputCaptureState();
-	const bool bTextInputFocused = IsElementOrAncestorFormControl(RmlContext->GetFocusElement());
-	const bool bShouldForwardKeyboard = CaptureState.bWantsKeyboard || CaptureState.bWantsTextInput || bTextInputFocused;
-	const bool bShouldForwardText = CaptureState.bWantsTextInput || bTextInputFocused;
-
-	int MouseX = 0;
-	int MouseY = 0;
+	bool bMouseInsideViewport = false;
+	int32 MouseX = 0;
+	int32 MouseY = 0;
 	if (Frame.CursorViewportX != UINT32_MAX && Frame.CursorViewportY != UINT32_MAX)
 	{
-		MouseX = static_cast<int>(Frame.CursorViewportX);
-		MouseY = static_cast<int>(Frame.CursorViewportY);
+		MouseX = static_cast<int32>(Frame.CursorViewportX);
+		MouseY = static_cast<int32>(Frame.CursorViewportY);
+		bMouseInsideViewport = true;
 	}
 	else
 	{
@@ -1284,36 +1349,83 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 		MouseY = MousePos.y;
 	}
 
+	ProcessInputAtPosition(MouseX, MouseY, bMouseInsideViewport);
+	bInputProcessedThisFrame = true;
+}
+
+void UUIManager::ProcessInputAtPosition(int32 MouseX, int32 MouseY, bool bMouseInsideViewport)
+{
+	if (!RmlContext)
+	{
+		return;
+	}
+
+	LastFrameInputCaptureState = {};
+
+	InputSystem& Input = InputSystem::Get();
+	const int KeyModifierState = GetRmlKeyModifierState(Input);
+	const FUIInputCaptureState CaptureState = GetViewportInputCaptureState();
+	const bool bTextInputFocused = IsElementOrAncestorFormControl(RmlContext->GetFocusElement());
+	const bool bShouldForwardKeyboard = CaptureState.bWantsKeyboard || CaptureState.bWantsTextInput || bTextInputFocused;
+	const bool bShouldForwardText = CaptureState.bWantsTextInput || bTextInputFocused;
+
 	bDispatchingRmlEvents = true;
-	RmlContext->ProcessMouseMove(MouseX, MouseY, KeyModifierState);
+	if (bMouseInsideViewport)
+	{
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseMove(MouseX, MouseY, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame ||
+			(!bMouseEventNotConsumed && RmlContext->IsMouseInteracting());
+	}
+	else
+	{
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseLeave();
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+	}
+
 	if (Input.GetKeyDown(VK_LBUTTON))
 	{
-		RmlContext->ProcessMouseButtonDown(0, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(0, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 	if (Input.GetKeyUp(VK_LBUTTON))
 	{
-		RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 	if (Input.GetKeyDown(VK_RBUTTON))
 	{
-		RmlContext->ProcessMouseButtonDown(1, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(1, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 	if (Input.GetKeyUp(VK_RBUTTON))
 	{
-		RmlContext->ProcessMouseButtonUp(1, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(1, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 	if (Input.GetKeyDown(VK_MBUTTON))
 	{
-		RmlContext->ProcessMouseButtonDown(2, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(2, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 	if (Input.GetKeyUp(VK_MBUTTON))
 	{
-		RmlContext->ProcessMouseButtonUp(2, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(2, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 	const float WheelDelta = Input.GetScrollNotches();
 	if (WheelDelta != 0.0f)
 	{
-		RmlContext->ProcessMouseWheel(WheelDelta, KeyModifierState);
+		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseWheel(WheelDelta, KeyModifierState);
+		LastFrameInputCaptureState.bConsumedMouseThisFrame =
+			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 	}
 
 	if (bShouldForwardKeyboard)
@@ -1333,11 +1445,15 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 
 			if (Input.GetKeyDown(VK))
 			{
-				RmlContext->ProcessKeyDown(Key, KeyModifierState);
+				const bool bKeyEventNotConsumed = RmlContext->ProcessKeyDown(Key, KeyModifierState);
+				LastFrameInputCaptureState.bConsumedKeyboardThisFrame =
+					LastFrameInputCaptureState.bConsumedKeyboardThisFrame || !bKeyEventNotConsumed;
 			}
 			if (Input.GetKeyUp(VK))
 			{
-				RmlContext->ProcessKeyUp(Key, KeyModifierState);
+				const bool bKeyEventNotConsumed = RmlContext->ProcessKeyUp(Key, KeyModifierState);
+				LastFrameInputCaptureState.bConsumedKeyboardThisFrame =
+					LastFrameInputCaptureState.bConsumedKeyboardThisFrame || !bKeyEventNotConsumed;
 			}
 		}
 	}
@@ -1347,10 +1463,29 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	{
 		for (uint32_t Codepoint : TextInput)
 		{
-			RmlContext->ProcessTextInput(static_cast<Rml::Character>(Codepoint));
+			const bool bTextEventNotConsumed = RmlContext->ProcessTextInput(static_cast<Rml::Character>(Codepoint));
+			LastFrameInputCaptureState.bConsumedTextInputThisFrame =
+				LastFrameInputCaptureState.bConsumedTextInputThisFrame || !bTextEventNotConsumed;
+			LastFrameInputCaptureState.bConsumedKeyboardThisFrame =
+				LastFrameInputCaptureState.bConsumedKeyboardThisFrame || !bTextEventNotConsumed;
 		}
 	}
 	bDispatchingRmlEvents = false;
+
+	if (LastFrameInputCaptureState.bConsumedMouseThisFrame)
+	{
+		Input.SetGuiMouseCapture(true);
+	}
+	if (LastFrameInputCaptureState.bConsumedKeyboardThisFrame)
+	{
+		Input.SetGuiKeyboardCapture(true);
+	}
+	if (LastFrameInputCaptureState.bConsumedTextInputThisFrame || bTextInputFocused)
+	{
+		Input.SetGuiKeyboardCapture(true);
+		Input.SetGuiTextInputCapture(true);
+	}
+	Input.RefreshSnapshot();
 }
 
 void UUIManager::FlushDeferredViewportRemovals()

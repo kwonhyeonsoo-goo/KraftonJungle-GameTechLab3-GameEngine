@@ -16,6 +16,7 @@ enum class ECombatCoverAgentState : uint8
     InCover,
     MovingToLinkedNode,
     Engaging,
+    Suppressed,
     Blocked,
     Dead
 };
@@ -26,6 +27,15 @@ enum class ECombatAdvanceLinkMode : uint8
     OutgoingLinks,
     IncomingLinks,
     Both
+};
+
+UENUM()
+enum class ECombatAgentRole : uint8
+{
+    AutoFromTeam,
+    Ally,
+    EnemyShortRange,
+    EnemyLongRangeSlow
 };
 
 UCLASS()
@@ -39,6 +49,7 @@ public:
 
     void BeginPlay() override;
     void EndPlay() override;
+    void PostEditProperty(const char* PropertyName) override;
 
     UFUNCTION(Callable, Category="CombatAgent")
     void RequestInitialSlot();
@@ -72,6 +83,15 @@ public:
     UFUNCTION(Pure, Category="CombatAgent")
     ECombatAdvanceLinkMode GetAdvanceLinkMode() const { return AdvanceLinkMode; }
 
+    UFUNCTION(Pure, Category="CombatAgent")
+    ECombatAgentRole GetCombatRole() const { return CombatRole; }
+
+    UFUNCTION(Pure, Category="CombatAgent")
+    ECombatAgentRole GetResolvedCombatRole() const;
+
+    UFUNCTION(Pure, Category="CombatAgent")
+    bool UsesRoleCombatDefaults() const { return bUseRoleCombatDefaults; }
+
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetMaxHealth() const { return MaxHealth; }
 
@@ -80,6 +100,18 @@ public:
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetFireRange() const { return FireRange; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetMovingFireRange() const { return MovingFireRange; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool UsesMovingFireRange() const { return bUseMovingFireRange; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool IsMovingForCombatRange() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetEffectiveFireRange() const;
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetAttackDamage() const { return AttackDamage; }
@@ -103,6 +135,15 @@ public:
     bool CanFireWhileMoving() const { return bCanFireWhileMoving; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool IsSuppressed() const { return State == ECombatCoverAgentState::Suppressed; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetSuppressionTimeRemaining() const { return SuppressionTimer; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetDeathDebugScaleMultiplier() const { return DeathDebugScaleMultiplier; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool IsAlive() const { return State != ECombatCoverAgentState::Dead && Health > 0.0f; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
@@ -110,14 +151,19 @@ public:
 
     const char* GetStateName() const;
     const char* GetAdvanceLinkModeName() const;
+    const char* GetCombatRoleName() const;
+    const char* GetResolvedCombatRoleName() const;
 
     void SetEngagementTarget(UCombatCoverAgentComponent* Target);
     void ClearEngagementTarget();
     void ApplyDamage(float Damage);
+    void ApplySuppression(float Duration);
     void SetIncomingFireStats(int32 Count, float AttackDamage);
 
 private:
     UCombatFlowManagerComponent* ResolveManager();
+    void ApplyCombatRoleDefaults();
+    void FinishSuppression();
     void TickMoveToTarget(float DeltaTime);
     void SetBlocked();
 
@@ -127,6 +173,12 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Link Mode", Enum=ECombatAdvanceLinkMode)
     ECombatAdvanceLinkMode AdvanceLinkMode = ECombatAdvanceLinkMode::OutgoingLinks;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Combat Role", Enum=ECombatAgentRole)
+    ECombatAgentRole CombatRole = ECombatAgentRole::AutoFromTeam;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Use Role Combat Defaults")
+    bool bUseRoleCombatDefaults = true;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
     float MoveSpeed = 10.0f;
@@ -152,8 +204,20 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Health", Min=0.0f, Max=100000.0f, Speed=1.0f)
     float Health = 100.0f;
 
-    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Fire Range", Min=0.0f, Max=100000.0f, Speed=10.0f)
-    float FireRange = 1200.0f;
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Fire Range", Min=0.0f, Max=100000.0f, Speed=1.0f)
+    float FireRange = 50.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Moving Fire Range", Min=0.0f, Max=100000.0f, Speed=1.0f)
+    float MovingFireRange = 30.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Use Moving Fire Range")
+    bool bUseMovingFireRange = true;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Debug", DisplayName="Shrink Actor On Death")
+    bool bShrinkActorOnDeath = true;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Debug", DisplayName="Death Debug Scale Multiplier", Min=0.01f, Max=1.0f, Speed=0.01f)
+    float DeathDebugScaleMultiplier = 0.1f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Damage", Min=0.0f, Max=100000.0f, Speed=1.0f)
     float AttackDamage = 5.0f;
@@ -180,7 +244,12 @@ private:
     float TargetScanTimer = 0.0f;
     int32 IncomingFireCount = 0;
     float IncomingAttackDamage = 0.0f;
+    float SuppressionTimer = 0.0f;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
+    ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
+    FVector InitialActorScale = FVector(1.0f, 1.0f, 1.0f);
+    bool bHasInitialActorScale = false;
+    bool bDeathDebugScaleApplied = false;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
     TWeakObjectPtr<UCombatFlowManagerComponent> CachedManager;
 

@@ -1,10 +1,17 @@
 #include "Component/Camera/CameraComponent.h"
+#include "Component/Camera/SpringArmComponent.h"
+#include "Component/Primitive/StaticMeshComponent.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "Render/Types/MinimalViewInfo.h"
+#include "Core/Types/CollisionTypes.h"
+#include "Engine/Runtime/Engine.h"
+#include "Materials/MaterialManager.h"
+#include "Mesh/Importer/MeshImportOptions.h"
+#include "Mesh/MeshManager.h"
 #include <cmath>
 
 void UCameraComponent::BeginPlay()
@@ -38,6 +45,135 @@ void UCameraComponent::EndPlay()
 			}
 		}
 	}
+}
+
+void UCameraComponent::CreateRenderState()
+{
+	USceneComponent::CreateRenderState();
+	EnsureEditorVisualizationMesh();
+}
+
+void UCameraComponent::UpdateWorldMatrix() const
+{
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	if (World && World->GetWorldType() == EWorldType::Editor)
+	{
+		if (USpringArmComponent* SpringArm = Cast<USpringArmComponent>(GetParent()))
+		{
+			SpringArm->RefreshSpringArm(0.0f, false);
+		}
+	}
+
+	USceneComponent::UpdateWorldMatrix();
+}
+
+void UCameraComponent::PreGetEditableProperties()
+{
+	USceneComponent::PreGetEditableProperties();
+	EnsureEditorVisualizationMesh();
+}
+
+const char* UCameraComponent::GetEditorVisualizationMaterialPath() const
+{
+	return "Content/Material/Editor/EditorCamera_Blue.uasset";
+}
+
+namespace
+{
+	void ConfigureEditorCameraVisualizationMesh(UStaticMeshComponent* MeshComponent, UStaticMesh* Mesh, const char* MaterialPath)
+	{
+		if (!MeshComponent || !Mesh)
+		{
+			return;
+		}
+
+		MeshComponent->SetHiddenInComponentTree(true);
+		if (!MeshComponent->IsEditorOnlyComponent())
+		{
+			MeshComponent->SetEditorOnlyComponent(true);
+		}
+
+		MeshComponent->SetVisibility(true);
+		MeshComponent->SetStaticMesh(Mesh);
+		MeshComponent->SetMaterial(0, FMaterialManager::Get().GetOrCreateMaterial(MaterialPath));
+		MeshComponent->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
+		MeshComponent->SetRelativeScale(FVector(0.01f, 0.01f, 0.01f));
+		MeshComponent->SetCastShadow(false);
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		MeshComponent->MarkWorldBoundsDirty();
+		MeshComponent->MarkRenderStateDirty();
+	}
+
+	UStaticMesh* LoadEditorCameraVisualizationMesh(ID3D11Device* Device)
+	{
+		if (!Device)
+		{
+			return nullptr;
+		}
+
+		if (UStaticMesh* PackageMesh = FMeshManager::LoadStaticMesh("Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset", Device))
+		{
+			return PackageMesh;
+		}
+
+		FImportOptions CameraMeshImportOptions = FImportOptions::Default();
+		CameraMeshImportOptions.ForwardAxis = EForwardAxis::Identity;
+		CameraMeshImportOptions.WindingOrder = EWindingOrder::Keep;
+		return FMeshManager::LoadStaticMesh("Content/Data/EditorCamera/CameraMesh.OBJ", CameraMeshImportOptions, Device);
+	}
+}
+
+UStaticMeshComponent* UCameraComponent::EnsureEditorVisualizationMesh()
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = OwnerActor->GetWorld();
+	if (!World || World->GetWorldType() != EWorldType::Editor)
+	{
+		return nullptr;
+	}
+
+	if (!GEngine)
+	{
+		return nullptr;
+	}
+
+	static UStaticMesh* SharedCameraVizMesh = nullptr;
+	if (!SharedCameraVizMesh)
+	{
+		ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+		SharedCameraVizMesh = LoadEditorCameraVisualizationMesh(Device);
+	}
+
+	if (!SharedCameraVizMesh)
+	{
+		return nullptr;
+	}
+
+	for (USceneComponent* Child : GetChildren())
+	{
+		UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(Child);
+		if (MeshComponent && MeshComponent->IsEditorOnlyComponent())
+		{
+			ConfigureEditorCameraVisualizationMesh(MeshComponent, SharedCameraVizMesh, GetEditorVisualizationMaterialPath());
+			return MeshComponent;
+		}
+	}
+
+	UStaticMeshComponent* MeshComponent = OwnerActor->AddComponent<UStaticMeshComponent>();
+	if (!MeshComponent)
+	{
+		return nullptr;
+	}
+
+	MeshComponent->AttachToComponent(this);
+	ConfigureEditorCameraVisualizationMesh(MeshComponent, SharedCameraVizMesh, GetEditorVisualizationMaterialPath());
+	return MeshComponent;
 }
 
 void UCameraComponent::LookAt(const FVector& Target)

@@ -21,6 +21,7 @@ private:
 	void PrepareViewport(FViewport* VP, ID3D11DeviceContext* Ctx);
 	void BuildFrame(FViewport* VP, const FMinimalViewInfo& POV, FScene* Scene, UWorld* World);
 	void CollectCommands(FScene* Scene, FRenderer& Renderer, FCollectOutput& Output);
+	void RenderScopeLensCapture(FViewport* VP, const FMinimalViewInfo& POV, FScene* Scene, UWorld* World, FRenderer& Renderer, ID3D11DeviceContext* Ctx);
 
 private:
 	UGameEngine* Game = nullptr;

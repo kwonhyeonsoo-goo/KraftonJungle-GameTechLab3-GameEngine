@@ -46,6 +46,7 @@ public:
 	void PreviewPlay();
 	void PreviewPause();
 	void PreviewStop();
+	float GetPreviewTime() const;
 	void SetPreviewTime(float Time);
 	void CommitSequenceEditsForSerialization();
 
@@ -58,6 +59,7 @@ private:
 	void InitializeRuntimePlayer();
 	void InitializePreviewPlayer();
 	void InitializePlayers();
+	void StopRuntimePlayerForPreview();
 	UObject* ResolveTargetByName(const FString& TargetObjectName) const;
 	void SyncSequenceDataFromRuntime();
 	void SyncRuntimeFromSequenceData();
@@ -69,9 +71,9 @@ private:
 	bool bLoop = false;
 	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Pause At End")
 	bool bPauseAtEnd = true;
-	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Play Rate", Min=0.0f, Max=0.0f, Speed=0.05f)
+	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Play Rate", Min=0.0f, Max=10.0f, Speed=0.05f)
 	float PlayRate = 1.0f;
-	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Start Offset Seconds", Min=0.0f, Max=0.0f, Speed=0.05f)
+	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Start Offset Seconds", Min=0.0f, Max=60.0f, Speed=0.05f)
 	float StartOffsetSeconds = 0.0f;
 	UPROPERTY(Save, Category="Actor Sequence", DisplayName="Sequence Data")
 	FString SequenceDataJson;

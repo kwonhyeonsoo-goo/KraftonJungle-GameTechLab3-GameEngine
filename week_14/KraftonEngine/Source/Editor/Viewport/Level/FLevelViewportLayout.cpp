@@ -4,6 +4,7 @@
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
+#include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "Core/ProjectSettings.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Engine/Platform/WindowsWindow.h"
@@ -28,6 +29,7 @@
 #include "Slate/SlateApplication.h"
 #include "Math/MathUtils.h"
 #include "Platform/Paths.h"
+#include "Serialization/PrefabManager.h"
 #include "ImGui/imgui.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Render/Types/MinimalViewInfo.h"
@@ -45,6 +47,7 @@
 #include "Engine/Runtime/ActorPlacementRegistry.h"
 
 #include <algorithm>
+#include <optional>
 
 #include "GameFramework/Actor/ParticleSystemActor.h"
 
@@ -892,15 +895,65 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 		ImGui::SetCursorScreenPos(ContentPos);
 		ImGui::Selectable("##ViewportArea", false, 0, ContentSize);
 		if (ImGui::BeginDragDropTarget())
-		{			
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ObjectContentItem"))
+		{
+			auto ComputeDropLocation = [&]() -> std::optional<FVector>
 			{
-				FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(payload->Data);
+				const ImVec2 MousePos = ImGui::GetIO().MousePos;
+				const FPoint DropPos = { MousePos.x, MousePos.y };
 
-				AStaticMeshActor* NewActor = Cast<AStaticMeshActor>(FObjectFactory::Get().Create(AStaticMeshActor::StaticClass()->GetName(), Editor->GetWorld()));
-				NewActor->InitDefaultComponents(FPaths::ToUtf8(ContentItem.Path));
-				Editor->GetWorld()->AddActor(NewActor);
+				int32 DropSlot = -1;
+				if (!TryFindViewportSlotAtScreenPos(DropPos, DropSlot))
+				{
+					return std::nullopt;
+				}
+
+				FVector Location(0.0f, 0.0f, 0.0f);
+				if (!TryComputePlacementLocation(DropSlot, DropPos, Location))
+				{
+					return std::nullopt;
+				}
+
+				return Location;
+			};
+
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ObjectContentItem"))
+			{
+				if (Payload->Delivery && Payload->DataSize == sizeof(FContentItem))
+				{
+					const FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+					if (std::optional<FVector> DropLocation = ComputeDropLocation())
+					{
+						AStaticMeshActor* NewActor = Cast<AStaticMeshActor>(FObjectFactory::Get().Create(AStaticMeshActor::StaticClass()->GetName(), Editor->GetWorld()));
+						if (NewActor)
+						{
+							NewActor->InitDefaultComponents(FPaths::ToUtf8(ContentItem.Path));
+							Editor->GetWorld()->AddActor(NewActor);
+							NewActor->SetActorLocation(*DropLocation);
+							Editor->GetWorld()->UpdateActorInOctree(NewActor);
+							if (SelectionManager)
+							{
+								SelectionManager->Select(NewActor);
+							}
+							Editor->GetUndoSystem().RecordActorCreation(
+								Editor->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ NewActor }),
+								"Create Actor");
+						}
+					}
+				}
 			}
+
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("PrefabContentItem"))
+			{
+				if (Payload->Delivery && Payload->DataSize == sizeof(FContentItem))
+				{
+					const FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+					if (std::optional<FVector> DropLocation = ComputeDropLocation())
+					{
+						SpawnPrefabFromViewportDrop(FPaths::ToUtf8(ContentItem.Path.wstring()), *DropLocation);
+					}
+				}
+			}
+
 			ImGui::EndDragDropTarget();
 		}
 	}
@@ -1784,6 +1837,35 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 	ImGui::EndPopup();
 }
 
+bool FLevelViewportLayout::TryFindViewportSlotAtScreenPos(const FPoint& ScreenPos, int32& OutSlotIndex) const
+{
+	OutSlotIndex = -1;
+
+	for (int32 i = 0; i < ActiveSlotCount; ++i)
+	{
+		if (i >= static_cast<int32>(LevelViewportClients.size()) ||
+			i >= MaxViewportSlots ||
+			!ViewportWindows[i])
+		{
+			continue;
+		}
+
+		const FRect& R = ViewportWindows[i]->GetRect();
+		if (R.Width <= 1.0f || R.Height <= 1.0f)
+		{
+			continue;
+		}
+
+		if (ViewportWindows[i]->IsHover(ScreenPos))
+		{
+			OutSlotIndex = i;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool FLevelViewportLayout::TryComputePlacementLocation(int32 SlotIndex, const FPoint& ClientPos, FVector& OutLocation) const
 {
 	if (SlotIndex < 0 ||
@@ -2086,6 +2168,44 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 	{
 		SelectionManager->Select(SpawnedActor);
 	}
+	Editor->GetUndoSystem().RecordActorCreation(
+		Editor->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ SpawnedActor }),
+		"Create Actor");
+
+	return SpawnedActor;
+}
+
+AActor* FLevelViewportLayout::SpawnPrefabFromViewportDrop(const FString& PrefabPath, const FVector& Location)
+{
+	if (!Editor)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = Editor->GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	AActor* SpawnedActor = FPrefabManager::SpawnActorFromPrefab(World, PrefabPath);
+	if (!SpawnedActor)
+	{
+		return nullptr;
+	}
+
+	SpawnedActor->SetActorLocation(Location);
+	World->UpdateActorInOctree(SpawnedActor);
+	World->MarkWorldPrimitivePickingBVHDirty();
+
+	if (SelectionManager)
+	{
+		SelectionManager->Select(SpawnedActor);
+	}
+
+	Editor->GetUndoSystem().RecordActorCreation(
+		Editor->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ SpawnedActor }),
+		"Create Prefab Actor");
 
 	return SpawnedActor;
 }

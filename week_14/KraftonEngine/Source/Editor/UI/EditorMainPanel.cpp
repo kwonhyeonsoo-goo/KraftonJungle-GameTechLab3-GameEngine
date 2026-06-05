@@ -6,6 +6,8 @@
 #include "Render/Types/MinimalViewInfo.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
 #include "Object/Object.h"
 #include "Engine/Platform/Paths.h"
 #include "Engine/Platform/WindowsWindow.h"
@@ -19,6 +21,8 @@
 #include "Lua/LuaDebugManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
+#include "UI/UIManager.h"
+#include "UI/UserWidget.h"
 
 #include "Editor/Slate/SlateApplication.h"
 #include "Editor/UI/Util/ImGuiSetting.h"
@@ -26,17 +30,25 @@
 
 #include "Editor/UI/Asset/Curve/FloatCurveEditorWidget.h"
 #include "Editor/UI/Asset/CameraShake/CameraShakeEditorWidget.h"
+#include "Editor/UI/Asset/ActorSequence/ActorSequenceEditorWidget.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 #include "Editor/UI/Asset/Mesh/StaticMeshEditorWidget.h"
 #include "Editor/UI/Asset/Animation/AnimGraphEditorWidget.h"
 #include "Editor/UI/Asset/LuaBlueprint/LuaBlueprintEditorWidget.h"
 #include "Editor/UI/Asset/Material/MaterialEditorWidget.h"
 #include "Editor/UI/Asset/Physics/PhysicsAssetEditorWidget.h"
+#include "Editor/UI/Asset/RuntimeUI/RuntimeUILayoutEditorWidget.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <random>
+#include <sstream>
+#include <unordered_map>
 #include <utility>
 
 #include "Asset/Particle/ParticleEditorWidget.h"
@@ -95,6 +107,12 @@ FDocumentTabVisual GetDocumentTabVisual(EEditorDocumentTabKind Kind)
 		return { ImVec4(0.84f, 0.38f, 0.30f, 1.0f), "Physics Asset Editor" };
     case EEditorDocumentTabKind::MaterialEditor:
         return { ImVec4(0.92f, 0.44f, 0.24f, 1.0f), "Material Graph Editor" };
+	case EEditorDocumentTabKind::ActorSequencer:
+		return { ImVec4(0.64f, 0.74f, 0.98f, 1.0f), "Actor Sequencer" };
+	case EEditorDocumentTabKind::RuntimeUIPreview:
+		return { ImVec4(0.38f, 0.82f, 0.78f, 1.0f), "Runtime UI Preview" };
+	case EEditorDocumentTabKind::RuntimeUILayoutEditor:
+		return { ImVec4(0.24f, 0.72f, 0.86f, 1.0f), "Runtime UI Layout Editor" };
 	case EEditorDocumentTabKind::Unsupported:
 	default:
 		return { ImVec4(0.58f, 0.62f, 0.70f, 1.0f), "Editor Tab" };
@@ -114,6 +132,12 @@ const char* GetDocumentTabKindName(EEditorDocumentTabKind Kind)
 	case EEditorDocumentTabKind::PhysicsAssetEditor: return "PhysicsAsset";
     case EEditorDocumentTabKind::MaterialEditor:
         return "Material";
+	case EEditorDocumentTabKind::ActorSequencer:
+		return "ActorSequencer";
+	case EEditorDocumentTabKind::RuntimeUIPreview:
+		return "RuntimeUI";
+	case EEditorDocumentTabKind::RuntimeUILayoutEditor:
+		return "RuntimeUILayout";
 	case EEditorDocumentTabKind::Unsupported:
 	default:
 		return "Unsupported";
@@ -140,6 +164,981 @@ FString GetFileStemForDisplay(const FString& Path)
 	}
 
 	return FPaths::ToUtf8(FilePath.filename().wstring());
+}
+
+FString GetFileNameForDisplay(const FString& Path)
+{
+	if (Path.empty())
+	{
+		return FString();
+	}
+
+	std::filesystem::path FilePath(FPaths::ToWide(Path));
+	return FPaths::ToUtf8(FilePath.filename().wstring());
+}
+
+void PushUniqueRuntimeUIValue(TArray<FString>& Values, const FString& Value)
+{
+	if (Value.empty())
+	{
+		return;
+	}
+	if (std::find(Values.begin(), Values.end(), Value) == Values.end())
+	{
+		Values.push_back(Value);
+	}
+}
+
+void CollectRuntimeUIAttributeValues(const FString& Source, const char* AttributeName, TArray<FString>& OutValues)
+{
+	if (!AttributeName || AttributeName[0] == '\0')
+	{
+		return;
+	}
+
+	const FString Needle(AttributeName);
+	size_t SearchPos = 0;
+	while (SearchPos < Source.size())
+	{
+		const size_t AttrPos = Source.find(Needle, SearchPos);
+		if (AttrPos == FString::npos)
+		{
+			break;
+		}
+
+		const size_t Before = AttrPos > 0 ? AttrPos - 1 : AttrPos;
+		if (AttrPos > 0)
+		{
+			const char Prev = Source[Before];
+			if ((Prev >= 'A' && Prev <= 'Z') || (Prev >= 'a' && Prev <= 'z') || Prev == '-' || Prev == '_')
+			{
+				SearchPos = AttrPos + Needle.size();
+				continue;
+			}
+		}
+
+		size_t Cursor = AttrPos + Needle.size();
+		while (Cursor < Source.size() && (Source[Cursor] == ' ' || Source[Cursor] == '\t' || Source[Cursor] == '\r' || Source[Cursor] == '\n'))
+		{
+			++Cursor;
+		}
+		if (Cursor >= Source.size() || Source[Cursor] != '=')
+		{
+			SearchPos = Cursor;
+			continue;
+		}
+		++Cursor;
+		while (Cursor < Source.size() && (Source[Cursor] == ' ' || Source[Cursor] == '\t' || Source[Cursor] == '\r' || Source[Cursor] == '\n'))
+		{
+			++Cursor;
+		}
+		if (Cursor >= Source.size() || (Source[Cursor] != '"' && Source[Cursor] != '\''))
+		{
+			SearchPos = Cursor;
+			continue;
+		}
+
+		const char Quote = Source[Cursor++];
+		const size_t ValueStart = Cursor;
+		while (Cursor < Source.size() && Source[Cursor] != Quote)
+		{
+			++Cursor;
+		}
+		if (Cursor < Source.size())
+		{
+			PushUniqueRuntimeUIValue(OutValues, Source.substr(ValueStart, Cursor - ValueStart));
+		}
+		SearchPos = Cursor < Source.size() ? Cursor + 1 : Cursor;
+	}
+}
+
+FString TrimRuntimeUIPreviewText(const FString& Value)
+{
+	size_t Begin = 0;
+	size_t End = Value.size();
+	while (Begin < End && std::isspace(static_cast<unsigned char>(Value[Begin]))) ++Begin;
+	while (End > Begin && std::isspace(static_cast<unsigned char>(Value[End - 1]))) --End;
+	return Value.substr(Begin, End - Begin);
+}
+
+FString CollapseRuntimeUIPreviewWhitespace(const FString& Value)
+{
+	FString Result;
+	bool bWasSpace = false;
+	for (char Ch : Value)
+	{
+		const bool bIsSpace = std::isspace(static_cast<unsigned char>(Ch)) != 0;
+		if (bIsSpace)
+		{
+			if (!bWasSpace && !Result.empty())
+			{
+				Result.push_back(' ');
+			}
+			bWasSpace = true;
+			continue;
+		}
+		Result.push_back(Ch);
+		bWasSpace = false;
+	}
+	return TrimRuntimeUIPreviewText(Result);
+}
+
+FString ToLowerRuntimeUIPreviewText(FString Value)
+{
+	for (char& Ch : Value)
+	{
+		Ch = static_cast<char>(std::tolower(static_cast<unsigned char>(Ch)));
+	}
+	return Value;
+}
+
+bool RuntimeUIPreviewStartsWith(const FString& Value, const char* Prefix)
+{
+	const size_t PrefixLength = Prefix ? std::strlen(Prefix) : 0;
+	return PrefixLength > 0 && Value.size() >= PrefixLength && Value.compare(0, PrefixLength, Prefix) == 0;
+}
+
+TArray<FString> SplitRuntimeUIPreviewText(const FString& Value, char Separator)
+{
+	TArray<FString> Result;
+	size_t Start = 0;
+	while (Start <= Value.size())
+	{
+		size_t End = Value.find(Separator, Start);
+		if (End == FString::npos)
+		{
+			End = Value.size();
+		}
+
+		FString Token = TrimRuntimeUIPreviewText(Value.substr(Start, End - Start));
+		if (!Token.empty())
+		{
+			Result.push_back(Token);
+		}
+
+		if (End == Value.size())
+		{
+			break;
+		}
+		Start = End + 1;
+	}
+	return Result;
+}
+
+float RuntimeUIPreviewMin(float A, float B)
+{
+	return A < B ? A : B;
+}
+
+float RuntimeUIPreviewMax(float A, float B)
+{
+	return A > B ? A : B;
+}
+
+bool ParseRuntimeUIPreviewFloat(const FString& Value, float& OutValue)
+{
+	FString Trimmed = TrimRuntimeUIPreviewText(Value);
+	if (Trimmed.empty() || Trimmed.find('%') != FString::npos)
+	{
+		return false;
+	}
+
+	char* End = nullptr;
+	const float Parsed = std::strtof(Trimmed.c_str(), &End);
+	if (End == Trimmed.c_str())
+	{
+		return false;
+	}
+
+	OutValue = Parsed;
+	return true;
+}
+
+bool ParseRuntimeUIPreviewColor(const FString& RawValue, ImVec4& OutColor)
+{
+	FString Value = ToLowerRuntimeUIPreviewText(TrimRuntimeUIPreviewText(RawValue));
+	if (Value.empty())
+	{
+		return false;
+	}
+
+	if (Value[0] == '#')
+	{
+		if (Value.size() == 4)
+		{
+			const int R = std::strtol(FString(2, Value[1]).c_str(), nullptr, 16);
+			const int G = std::strtol(FString(2, Value[2]).c_str(), nullptr, 16);
+			const int B = std::strtol(FString(2, Value[3]).c_str(), nullptr, 16);
+			OutColor = ImVec4(R / 255.0f, G / 255.0f, B / 255.0f, 1.0f);
+			return true;
+		}
+		if (Value.size() >= 7)
+		{
+			const int R = std::strtol(Value.substr(1, 2).c_str(), nullptr, 16);
+			const int G = std::strtol(Value.substr(3, 2).c_str(), nullptr, 16);
+			const int B = std::strtol(Value.substr(5, 2).c_str(), nullptr, 16);
+			OutColor = ImVec4(R / 255.0f, G / 255.0f, B / 255.0f, 1.0f);
+			return true;
+		}
+		return false;
+	}
+
+	const bool bRgba = RuntimeUIPreviewStartsWith(Value, "rgba(");
+	const bool bRgb = RuntimeUIPreviewStartsWith(Value, "rgb(");
+	if (!bRgba && !bRgb)
+	{
+		return false;
+	}
+
+	const size_t Open = Value.find('(');
+	const size_t Close = Value.rfind(')');
+	if (Open == FString::npos || Close == FString::npos || Close <= Open)
+	{
+		return false;
+	}
+
+	TArray<FString> Parts = SplitRuntimeUIPreviewText(Value.substr(Open + 1, Close - Open - 1), ',');
+	if (Parts.size() < 3)
+	{
+		return false;
+	}
+
+	float R = 0.0f;
+	float G = 0.0f;
+	float B = 0.0f;
+	float A = 1.0f;
+	if (!ParseRuntimeUIPreviewFloat(Parts[0], R) ||
+		!ParseRuntimeUIPreviewFloat(Parts[1], G) ||
+		!ParseRuntimeUIPreviewFloat(Parts[2], B))
+	{
+		return false;
+	}
+	if (Parts.size() >= 4)
+	{
+		ParseRuntimeUIPreviewFloat(Parts[3], A);
+	}
+
+	if (R > 1.0f || G > 1.0f || B > 1.0f)
+	{
+		R /= 255.0f;
+		G /= 255.0f;
+		B /= 255.0f;
+	}
+	if (A > 1.0f)
+	{
+		A /= 255.0f;
+	}
+
+	OutColor = ImVec4(R, G, B, A);
+	return true;
+}
+
+struct FRuntimeUIPreviewStyle
+{
+	bool bHasLeft = false;
+	bool bHasTop = false;
+	bool bHasWidth = false;
+	bool bHasHeight = false;
+	bool bHasPadding = false;
+	bool bHasMarginTop = false;
+	bool bHasMarginBottom = false;
+	bool bHasMarginRight = false;
+	bool bHasBackgroundColor = false;
+	bool bHasBorderColor = false;
+	bool bHasTextColor = false;
+	bool bHasBorderWidth = false;
+	bool bHasBorderRadius = false;
+	bool bHasFontSize = false;
+
+	float Left = 0.0f;
+	float Top = 0.0f;
+	float Width = 0.0f;
+	float Height = 0.0f;
+	float Padding = 0.0f;
+	float MarginTop = 0.0f;
+	float MarginBottom = 0.0f;
+	float MarginRight = 0.0f;
+	float BorderWidth = 0.0f;
+	float BorderRadius = 0.0f;
+	float FontSize = 14.0f;
+	ImVec4 BackgroundColor = ImVec4(0.13f, 0.15f, 0.18f, 0.94f);
+	ImVec4 BorderColor = ImVec4(0.38f, 0.58f, 0.78f, 0.78f);
+	ImVec4 TextColor = ImVec4(0.88f, 0.92f, 0.96f, 1.0f);
+};
+
+struct FRuntimeUIPreviewStyleSheet
+{
+	std::unordered_map<FString, FRuntimeUIPreviewStyle> IdStyles;
+	std::unordered_map<FString, FRuntimeUIPreviewStyle> ClassStyles;
+	std::unordered_map<FString, FRuntimeUIPreviewStyle> TagStyles;
+};
+
+struct FRuntimeUIPreviewNode
+{
+	FString Id;
+	FString TagName;
+	FString ClassName;
+	FString Text;
+	FString Action;
+	bool bGeneratedId = false;
+	int32 ParentIndex = -1;
+	FRuntimeUIPreviewStyle Style;
+};
+
+struct FRuntimeUIPreviewModel
+{
+	TArray<FRuntimeUIPreviewNode> Nodes;
+	ImVec2 CanvasSize = ImVec2(960.0f, 540.0f);
+};
+
+void MergeRuntimeUIPreviewStyle(FRuntimeUIPreviewStyle& Target, const FRuntimeUIPreviewStyle& Source)
+{
+	if (Source.bHasLeft) { Target.Left = Source.Left; Target.bHasLeft = true; }
+	if (Source.bHasTop) { Target.Top = Source.Top; Target.bHasTop = true; }
+	if (Source.bHasWidth) { Target.Width = Source.Width; Target.bHasWidth = true; }
+	if (Source.bHasHeight) { Target.Height = Source.Height; Target.bHasHeight = true; }
+	if (Source.bHasPadding) { Target.Padding = Source.Padding; Target.bHasPadding = true; }
+	if (Source.bHasMarginTop) { Target.MarginTop = Source.MarginTop; Target.bHasMarginTop = true; }
+	if (Source.bHasMarginBottom) { Target.MarginBottom = Source.MarginBottom; Target.bHasMarginBottom = true; }
+	if (Source.bHasMarginRight) { Target.MarginRight = Source.MarginRight; Target.bHasMarginRight = true; }
+	if (Source.bHasBackgroundColor) { Target.BackgroundColor = Source.BackgroundColor; Target.bHasBackgroundColor = true; }
+	if (Source.bHasBorderColor) { Target.BorderColor = Source.BorderColor; Target.bHasBorderColor = true; }
+	if (Source.bHasTextColor) { Target.TextColor = Source.TextColor; Target.bHasTextColor = true; }
+	if (Source.bHasBorderWidth) { Target.BorderWidth = Source.BorderWidth; Target.bHasBorderWidth = true; }
+	if (Source.bHasBorderRadius) { Target.BorderRadius = Source.BorderRadius; Target.bHasBorderRadius = true; }
+	if (Source.bHasFontSize) { Target.FontSize = Source.FontSize; Target.bHasFontSize = true; }
+}
+
+void ApplyRuntimeUIPreviewStyleProperty(FRuntimeUIPreviewStyle& Style, const FString& RawName, const FString& RawValue)
+{
+	const FString Name = ToLowerRuntimeUIPreviewText(TrimRuntimeUIPreviewText(RawName));
+	const FString Value = TrimRuntimeUIPreviewText(RawValue);
+	float Number = 0.0f;
+	if (Name == "left" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Left = Number;
+		Style.bHasLeft = true;
+	}
+	else if (Name == "top" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Top = Number;
+		Style.bHasTop = true;
+	}
+	else if (Name == "width" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Width = Number;
+		Style.bHasWidth = true;
+	}
+	else if (Name == "height" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Height = Number;
+		Style.bHasHeight = true;
+	}
+	else if (Name == "padding" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Padding = Number;
+		Style.bHasPadding = true;
+	}
+	else if (Name == "margin" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.MarginTop = Number;
+		Style.MarginBottom = Number;
+		Style.MarginRight = Number;
+		Style.bHasMarginTop = true;
+		Style.bHasMarginBottom = true;
+		Style.bHasMarginRight = true;
+	}
+	else if (Name == "margin-top" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.MarginTop = Number;
+		Style.bHasMarginTop = true;
+	}
+	else if (Name == "margin-bottom" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.MarginBottom = Number;
+		Style.bHasMarginBottom = true;
+	}
+	else if (Name == "margin-right" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.MarginRight = Number;
+		Style.bHasMarginRight = true;
+	}
+	else if ((Name == "background" || Name == "background-color") && ParseRuntimeUIPreviewColor(Value, Style.BackgroundColor))
+	{
+		Style.bHasBackgroundColor = true;
+	}
+	else if (Name == "border-color" && ParseRuntimeUIPreviewColor(Value, Style.BorderColor))
+	{
+		Style.bHasBorderColor = true;
+	}
+	else if (Name == "color" && ParseRuntimeUIPreviewColor(Value, Style.TextColor))
+	{
+		Style.bHasTextColor = true;
+	}
+	else if (Name == "border-width" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.BorderWidth = Number;
+		Style.bHasBorderWidth = true;
+	}
+	else if (Name == "border-radius" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.BorderRadius = Number;
+		Style.bHasBorderRadius = true;
+	}
+	else if (Name == "font-size" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.FontSize = Number;
+		Style.bHasFontSize = true;
+	}
+}
+
+FRuntimeUIPreviewStyle ParseRuntimeUIPreviewStyleBlock(const FString& Block)
+{
+	FRuntimeUIPreviewStyle Style;
+	size_t Start = 0;
+	while (Start < Block.size())
+	{
+		size_t End = Block.find(';', Start);
+		if (End == FString::npos)
+		{
+			End = Block.size();
+		}
+
+		const FString Declaration = Block.substr(Start, End - Start);
+		const size_t Colon = Declaration.find(':');
+		if (Colon != FString::npos)
+		{
+			ApplyRuntimeUIPreviewStyleProperty(Style, Declaration.substr(0, Colon), Declaration.substr(Colon + 1));
+		}
+
+		if (End == Block.size())
+		{
+			break;
+		}
+		Start = End + 1;
+	}
+	return Style;
+}
+
+void StoreRuntimeUIPreviewSelectorStyle(
+	FRuntimeUIPreviewStyleSheet& StyleSheet,
+	const FString& RawSelector,
+	const FRuntimeUIPreviewStyle& Style)
+{
+	FString Selector = TrimRuntimeUIPreviewText(RawSelector);
+	if (Selector.empty())
+	{
+		return;
+	}
+
+	const size_t Pseudo = Selector.find(':');
+	if (Pseudo != FString::npos)
+	{
+		Selector = Selector.substr(0, Pseudo);
+	}
+	const size_t LastSpace = Selector.find_last_of(" \t\r\n");
+	if (LastSpace != FString::npos)
+	{
+		Selector = Selector.substr(LastSpace + 1);
+	}
+
+	Selector = ToLowerRuntimeUIPreviewText(TrimRuntimeUIPreviewText(Selector));
+	if (Selector.empty())
+	{
+		return;
+	}
+
+	if (Selector[0] == '#')
+	{
+		FString Id = Selector.substr(1);
+		MergeRuntimeUIPreviewStyle(StyleSheet.IdStyles[Id], Style);
+	}
+	else if (Selector[0] == '.')
+	{
+		FString ClassName = Selector.substr(1);
+		MergeRuntimeUIPreviewStyle(StyleSheet.ClassStyles[ClassName], Style);
+	}
+	else
+	{
+		MergeRuntimeUIPreviewStyle(StyleSheet.TagStyles[Selector], Style);
+	}
+}
+
+FRuntimeUIPreviewStyleSheet ParseRuntimeUIPreviewStyleSheet(const FString& Source)
+{
+	FRuntimeUIPreviewStyleSheet StyleSheet;
+	size_t SearchPos = 0;
+	while (SearchPos < Source.size())
+	{
+		const size_t StyleOpen = Source.find("<style", SearchPos);
+		if (StyleOpen == FString::npos)
+		{
+			break;
+		}
+		const size_t StyleOpenEnd = Source.find('>', StyleOpen);
+		const size_t StyleClose = Source.find("</style>", StyleOpenEnd == FString::npos ? StyleOpen : StyleOpenEnd);
+		if (StyleOpenEnd == FString::npos || StyleClose == FString::npos)
+		{
+			break;
+		}
+
+		const FString StyleSource = Source.substr(StyleOpenEnd + 1, StyleClose - StyleOpenEnd - 1);
+		size_t RuleStart = 0;
+		while (RuleStart < StyleSource.size())
+		{
+			const size_t BraceOpen = StyleSource.find('{', RuleStart);
+			if (BraceOpen == FString::npos)
+			{
+				break;
+			}
+			const size_t BraceClose = StyleSource.find('}', BraceOpen + 1);
+			if (BraceClose == FString::npos)
+			{
+				break;
+			}
+
+			const FString SelectorBlock = StyleSource.substr(RuleStart, BraceOpen - RuleStart);
+			const FRuntimeUIPreviewStyle Style = ParseRuntimeUIPreviewStyleBlock(StyleSource.substr(BraceOpen + 1, BraceClose - BraceOpen - 1));
+			for (const FString& Selector : SplitRuntimeUIPreviewText(SelectorBlock, ','))
+			{
+				StoreRuntimeUIPreviewSelectorStyle(StyleSheet, Selector, Style);
+			}
+			RuleStart = BraceClose + 1;
+		}
+
+		SearchPos = StyleClose + 8;
+	}
+	return StyleSheet;
+}
+
+FString ExtractRuntimeUIPreviewTagName(const FString& TagSource)
+{
+	size_t Cursor = 0;
+	while (Cursor < TagSource.size() && std::isspace(static_cast<unsigned char>(TagSource[Cursor]))) ++Cursor;
+	while (Cursor < TagSource.size() && (TagSource[Cursor] == '/' || TagSource[Cursor] == '<')) ++Cursor;
+	const size_t Start = Cursor;
+	while (Cursor < TagSource.size())
+	{
+		const char Ch = TagSource[Cursor];
+		if (!(std::isalnum(static_cast<unsigned char>(Ch)) || Ch == '-' || Ch == '_'))
+		{
+			break;
+		}
+		++Cursor;
+	}
+	return ToLowerRuntimeUIPreviewText(TagSource.substr(Start, Cursor - Start));
+}
+
+FString ExtractRuntimeUIPreviewAttribute(const FString& TagSource, const char* AttributeName)
+{
+	if (!AttributeName || AttributeName[0] == '\0')
+	{
+		return FString();
+	}
+
+	const FString Needle(AttributeName);
+	size_t SearchPos = 0;
+	while (SearchPos < TagSource.size())
+	{
+		const size_t AttrPos = TagSource.find(Needle, SearchPos);
+		if (AttrPos == FString::npos)
+		{
+			break;
+		}
+
+		if (AttrPos > 0)
+		{
+			const char Prev = TagSource[AttrPos - 1];
+			if (std::isalnum(static_cast<unsigned char>(Prev)) || Prev == '-' || Prev == '_')
+			{
+				SearchPos = AttrPos + Needle.size();
+				continue;
+			}
+		}
+
+		size_t Cursor = AttrPos + Needle.size();
+		if (Cursor < TagSource.size())
+		{
+			const char Next = TagSource[Cursor];
+			if (std::isalnum(static_cast<unsigned char>(Next)) || Next == '-' || Next == '_')
+			{
+				SearchPos = Cursor + 1;
+				continue;
+			}
+		}
+
+		while (Cursor < TagSource.size() && std::isspace(static_cast<unsigned char>(TagSource[Cursor]))) ++Cursor;
+		if (Cursor >= TagSource.size() || TagSource[Cursor] != '=')
+		{
+			SearchPos = Cursor;
+			continue;
+		}
+		++Cursor;
+		while (Cursor < TagSource.size() && std::isspace(static_cast<unsigned char>(TagSource[Cursor]))) ++Cursor;
+		if (Cursor >= TagSource.size() || (TagSource[Cursor] != '"' && TagSource[Cursor] != '\''))
+		{
+			SearchPos = Cursor;
+			continue;
+		}
+
+		const char Quote = TagSource[Cursor++];
+		const size_t ValueStart = Cursor;
+		while (Cursor < TagSource.size() && TagSource[Cursor] != Quote)
+		{
+			++Cursor;
+		}
+		return Cursor < TagSource.size() ? TagSource.substr(ValueStart, Cursor - ValueStart) : FString();
+	}
+	return FString();
+}
+
+bool IsRuntimeUIPreviewSelfClosingTag(const FString& TagName, const FString& TagSource)
+{
+	if (!TagSource.empty() && TagSource[TagSource.size() - 1] == '/')
+	{
+		return true;
+	}
+	return TagName == "input" || TagName == "br" || TagName == "img" || TagName == "hr";
+}
+
+void ApplyRuntimeUIPreviewNodeStyles(
+	FRuntimeUIPreviewNode& Node,
+	const FRuntimeUIPreviewStyleSheet& StyleSheet)
+{
+	auto TagIt = StyleSheet.TagStyles.find(Node.TagName);
+	if (TagIt != StyleSheet.TagStyles.end())
+	{
+		MergeRuntimeUIPreviewStyle(Node.Style, TagIt->second);
+	}
+
+	for (FString ClassName : SplitRuntimeUIPreviewText(Node.ClassName, ' '))
+	{
+		ClassName = ToLowerRuntimeUIPreviewText(ClassName);
+		auto ClassIt = StyleSheet.ClassStyles.find(ClassName);
+		if (ClassIt != StyleSheet.ClassStyles.end())
+		{
+			MergeRuntimeUIPreviewStyle(Node.Style, ClassIt->second);
+		}
+	}
+
+	if (!Node.Id.empty())
+	{
+		auto IdIt = StyleSheet.IdStyles.find(ToLowerRuntimeUIPreviewText(Node.Id));
+		if (IdIt != StyleSheet.IdStyles.end())
+		{
+			MergeRuntimeUIPreviewStyle(Node.Style, IdIt->second);
+		}
+	}
+}
+
+FRuntimeUIPreviewModel ParseRuntimeUIPreviewModel(const FString& Source)
+{
+	FRuntimeUIPreviewModel Model;
+	const FRuntimeUIPreviewStyleSheet StyleSheet = ParseRuntimeUIPreviewStyleSheet(Source);
+
+	struct FStackEntry
+	{
+		FString TagName;
+		int32 NodeIndex = -1;
+	};
+	TArray<FStackEntry> Stack;
+
+	int32 GeneratedId = 0;
+	size_t SearchPos = 0;
+	while (SearchPos < Source.size())
+	{
+		const size_t Open = Source.find('<', SearchPos);
+		if (Open == FString::npos)
+		{
+			break;
+		}
+		const size_t Close = Source.find('>', Open + 1);
+		if (Close == FString::npos)
+		{
+			break;
+		}
+
+		FString TagSource = TrimRuntimeUIPreviewText(Source.substr(Open + 1, Close - Open - 1));
+		if (TagSource.empty())
+		{
+			SearchPos = Close + 1;
+			continue;
+		}
+
+		if (TagSource[0] == '!' || TagSource[0] == '?')
+		{
+			SearchPos = Close + 1;
+			continue;
+		}
+
+		const bool bClosing = TagSource[0] == '/';
+		const FString TagName = ExtractRuntimeUIPreviewTagName(TagSource);
+		if (bClosing)
+		{
+			for (int32 Index = static_cast<int32>(Stack.size()) - 1; Index >= 0; --Index)
+			{
+				if (Stack[Index].TagName == TagName)
+				{
+					Stack.resize(Index);
+					break;
+				}
+			}
+			SearchPos = Close + 1;
+			continue;
+		}
+
+		if (TagName == "style")
+		{
+			const size_t StyleClose = Source.find("</style>", Close + 1);
+			SearchPos = StyleClose == FString::npos ? Close + 1 : StyleClose + 8;
+			continue;
+		}
+		if (TagName == "head" || TagName == "rml")
+		{
+			SearchPos = Close + 1;
+			continue;
+		}
+
+		const bool bSelfClosing = IsRuntimeUIPreviewSelfClosingTag(TagName, TagSource);
+		FString Id = ExtractRuntimeUIPreviewAttribute(TagSource, "id");
+		const FString ClassName = ExtractRuntimeUIPreviewAttribute(TagSource, "class");
+		FString Action = ExtractRuntimeUIPreviewAttribute(TagSource, "data-action");
+		if (Action.empty())
+		{
+			Action = ExtractRuntimeUIPreviewAttribute(TagSource, "action");
+		}
+
+		FString Text;
+		if (TagName == "input")
+		{
+			Text = ExtractRuntimeUIPreviewAttribute(TagSource, "value");
+		}
+		else
+		{
+			const size_t TextEnd = Source.find('<', Close + 1);
+			if (TextEnd != FString::npos && TextEnd > Close + 1)
+			{
+				Text = CollapseRuntimeUIPreviewWhitespace(Source.substr(Close + 1, TextEnd - Close - 1));
+			}
+		}
+
+		const bool bCreateNode =
+			!Id.empty() ||
+			!Action.empty() ||
+			TagName == "button" ||
+			TagName == "input" ||
+			(!Text.empty() && (TagName == "div" || TagName == "span" || TagName == "p"));
+
+		int32 CreatedNodeIndex = -1;
+		if (bCreateNode)
+		{
+			FRuntimeUIPreviewNode Node;
+			Node.TagName = TagName;
+			Node.Id = Id;
+			Node.ClassName = ClassName;
+			Node.Text = Text;
+			Node.Action = Action;
+			Node.ParentIndex = Stack.empty() ? -1 : Stack.back().NodeIndex;
+			if (Node.Id.empty())
+			{
+				Node.Id = TagName + "_" + std::to_string(++GeneratedId);
+				Node.bGeneratedId = true;
+			}
+			ApplyRuntimeUIPreviewNodeStyles(Node, StyleSheet);
+			Model.Nodes.push_back(Node);
+			CreatedNodeIndex = static_cast<int32>(Model.Nodes.size()) - 1;
+		}
+
+		if (!bSelfClosing)
+		{
+			const int32 TransparentParentIndex = Stack.empty() ? -1 : Stack.back().NodeIndex;
+			Stack.push_back({ TagName, CreatedNodeIndex >= 0 ? CreatedNodeIndex : TransparentParentIndex });
+		}
+
+		SearchPos = Close + 1;
+	}
+
+	return Model;
+}
+
+float GetRuntimeUIPreviewDefaultWidth(const FRuntimeUIPreviewNode& Node, float ParentWidth)
+{
+	if (Node.Style.bHasWidth)
+	{
+		return Node.Style.Width;
+	}
+	if (Node.TagName == "button")
+	{
+		return 120.0f;
+	}
+	if (Node.TagName == "input")
+	{
+		return RuntimeUIPreviewMax(180.0f, ParentWidth - 36.0f);
+	}
+	return RuntimeUIPreviewMax(160.0f, ParentWidth - 36.0f);
+}
+
+float GetRuntimeUIPreviewDefaultHeight(const FRuntimeUIPreviewNode& Node)
+{
+	if (Node.Style.bHasHeight)
+	{
+		return Node.Style.Height;
+	}
+	if (Node.TagName == "button")
+	{
+		return 32.0f;
+	}
+	if (Node.TagName == "input")
+	{
+		return 28.0f;
+	}
+	if (Node.TagName == "div" && Node.Text.empty())
+	{
+		return 120.0f;
+	}
+	return RuntimeUIPreviewMax(24.0f, Node.Style.FontSize + 8.0f);
+}
+
+bool RuntimeUIPreviewHasRecentAction(const TArray<FString>& RuntimeEvents, const FString& Action)
+{
+	return !Action.empty() && std::find(RuntimeEvents.begin(), RuntimeEvents.end(), Action) != RuntimeEvents.end();
+}
+
+void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const TArray<FString>& RuntimeEvents)
+{
+	FRuntimeUIPreviewModel Model = ParseRuntimeUIPreviewModel(Source);
+
+	ImVec2 Available = ImGui::GetContentRegionAvail();
+	if (Available.x < 64.0f) Available.x = 64.0f;
+	if (Available.y < 64.0f) Available.y = 64.0f;
+
+	ImGui::BeginChild("RuntimeUIPreviewBoxPreviewCanvas", Available, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	ImVec2 CanvasOrigin = ImGui::GetCursorScreenPos();
+	ImVec2 InnerAvailable = ImGui::GetContentRegionAvail();
+	const float ScaleX = InnerAvailable.x / Model.CanvasSize.x;
+	const float ScaleY = InnerAvailable.y / Model.CanvasSize.y;
+	float Scale = RuntimeUIPreviewMin(ScaleX, ScaleY);
+	if (Scale <= 0.0f)
+	{
+		Scale = 1.0f;
+	}
+	Scale = RuntimeUIPreviewMin(Scale, 1.0f);
+
+	ImVec2 CanvasSize(Model.CanvasSize.x * Scale, Model.CanvasSize.y * Scale);
+	if (CanvasSize.x < 1.0f) CanvasSize.x = 1.0f;
+	if (CanvasSize.y < 1.0f) CanvasSize.y = 1.0f;
+
+	ImGui::InvisibleButton("##RuntimeUIPreviewBoxPreviewSurface", CanvasSize);
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+	const ImVec2 CanvasMin = CanvasOrigin;
+	const ImVec2 CanvasMax(CanvasMin.x + CanvasSize.x, CanvasMin.y + CanvasSize.y);
+	DrawList->AddRectFilled(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.055f, 0.058f, 0.066f, 1.0f)), 4.0f);
+	DrawList->AddRect(CanvasMin, CanvasMax, ImGui::GetColorU32(ImVec4(0.18f, 0.20f, 0.24f, 1.0f)), 4.0f);
+
+	if (Model.Nodes.empty())
+	{
+		DrawList->AddText(ImVec2(CanvasMin.x + 14.0f, CanvasMin.y + 14.0f), ImGui::GetColorU32(ImVec4(0.52f, 0.56f, 0.62f, 1.0f)), "No previewable elements.");
+		ImGui::EndChild();
+		return;
+	}
+
+	TArray<ImVec2> RectMin(Model.Nodes.size(), ImVec2(0.0f, 0.0f));
+	TArray<ImVec2> RectMax(Model.Nodes.size(), ImVec2(0.0f, 0.0f));
+	TArray<float> ChildCursorY(Model.Nodes.size(), 0.0f);
+
+	for (size_t Index = 0; Index < Model.Nodes.size(); ++Index)
+	{
+		const FRuntimeUIPreviewNode& Node = Model.Nodes[Index];
+		const int32 ParentIndex = Node.ParentIndex;
+		const bool bHasParent = ParentIndex >= 0 && ParentIndex < static_cast<int32>(Model.Nodes.size());
+		const FRuntimeUIPreviewStyle* ParentStyle = bHasParent ? &Model.Nodes[ParentIndex].Style : nullptr;
+		const float ParentPadding = ParentStyle && ParentStyle->bHasPadding ? ParentStyle->Padding : 12.0f;
+		const ImVec2 ParentMin = bHasParent ? RectMin[ParentIndex] : ImVec2(0.0f, 0.0f);
+		const ImVec2 ParentMax = bHasParent ? RectMax[ParentIndex] : Model.CanvasSize;
+		const float ParentWidth = RuntimeUIPreviewMax(80.0f, ParentMax.x - ParentMin.x - ParentPadding * 2.0f);
+
+		float X = ParentMin.x + ParentPadding;
+		float Y = ParentMin.y + ParentPadding;
+		if (Node.Style.bHasLeft)
+		{
+			X = ParentMin.x + Node.Style.Left;
+		}
+		if (Node.Style.bHasTop)
+		{
+			Y = ParentMin.y + Node.Style.Top;
+		}
+		else if (bHasParent)
+		{
+			Y = ParentMin.y + ParentPadding + ChildCursorY[ParentIndex] + (Node.Style.bHasMarginTop ? Node.Style.MarginTop : 0.0f);
+		}
+		else
+		{
+			Y += static_cast<float>(Index) * 38.0f;
+		}
+
+		const float Width = GetRuntimeUIPreviewDefaultWidth(Node, ParentWidth);
+		const float Height = GetRuntimeUIPreviewDefaultHeight(Node);
+		RectMin[Index] = ImVec2(X, Y);
+		RectMax[Index] = ImVec2(X + Width, Y + Height);
+
+		if (bHasParent)
+		{
+			const float NextY = (RectMax[Index].y - ParentMin.y - ParentPadding)
+				+ (Node.Style.bHasMarginBottom ? Node.Style.MarginBottom : 6.0f);
+			ChildCursorY[ParentIndex] = RuntimeUIPreviewMax(ChildCursorY[ParentIndex], NextY);
+			if (!Model.Nodes[ParentIndex].Style.bHasHeight)
+			{
+				RectMax[ParentIndex].y = RuntimeUIPreviewMax(RectMax[ParentIndex].y, RectMax[Index].y + ParentPadding);
+			}
+		}
+	}
+
+	for (size_t Index = 0; Index < Model.Nodes.size(); ++Index)
+	{
+		const FRuntimeUIPreviewNode& Node = Model.Nodes[Index];
+		const ImVec2 Min(CanvasMin.x + RectMin[Index].x * Scale, CanvasMin.y + RectMin[Index].y * Scale);
+		const ImVec2 Max(CanvasMin.x + RectMax[Index].x * Scale, CanvasMin.y + RectMax[Index].y * Scale);
+		const bool bFired = RuntimeUIPreviewHasRecentAction(RuntimeEvents, Node.Action);
+		ImVec4 Fill = Node.Style.bHasBackgroundColor ? Node.Style.BackgroundColor : ImVec4(0.11f, 0.13f, 0.16f, Node.TagName == "div" ? 0.42f : 0.86f);
+		if (Node.TagName == "input" && !Node.Style.bHasBackgroundColor)
+		{
+			Fill = ImVec4(0.90f, 0.93f, 0.96f, 1.0f);
+		}
+		if (Node.TagName == "button" && !Node.Style.bHasBackgroundColor)
+		{
+			Fill = ImVec4(0.18f, 0.38f, 0.78f, 1.0f);
+		}
+
+		const float Radius = Node.Style.bHasBorderRadius ? Node.Style.BorderRadius * Scale : 3.0f;
+		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(Fill), Radius);
+
+		ImVec4 Border = bFired
+			? ImVec4(0.36f, 0.92f, 0.56f, 1.0f)
+			: (Node.Style.bHasBorderColor ? Node.Style.BorderColor : ImVec4(0.30f, 0.36f, 0.44f, 0.80f));
+		const float BorderWidth = bFired ? 2.5f : RuntimeUIPreviewMax(1.0f, Node.Style.bHasBorderWidth ? Node.Style.BorderWidth * Scale : 1.0f);
+		DrawList->AddRect(Min, Max, ImGui::GetColorU32(Border), Radius, 0, BorderWidth);
+
+		FString Label = !Node.Text.empty() ? Node.Text : (Node.bGeneratedId ? Node.TagName : Node.Id);
+		if (!Node.Action.empty())
+		{
+			Label += " [" + Node.Action + "]";
+		}
+		ImVec4 TextColor = Node.Style.bHasTextColor ? Node.Style.TextColor : ImVec4(0.88f, 0.92f, 0.96f, 1.0f);
+		if (Node.TagName == "input" && !Node.Style.bHasTextColor)
+		{
+			TextColor = ImVec4(0.08f, 0.11f, 0.16f, 1.0f);
+		}
+		DrawList->PushClipRect(Min, Max, true);
+		DrawList->AddText(ImVec2(Min.x + 8.0f, Min.y + 6.0f), ImGui::GetColorU32(TextColor), Label.c_str());
+		DrawList->PopClipRect();
+	}
+
+	ImGui::EndChild();
+}
+
+FString MakeRuntimeUIPreviewPayloadId()
+{
+	return "__RuntimeUIPreview";
 }
 
 }
@@ -210,16 +1209,19 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 
 	AssetEditorManager.RegisterEditor<FFloatCurveEditorWidget>();
 	AssetEditorManager.RegisterEditor<FCameraShakeEditorWidget>();
+	AssetEditorManager.RegisterEditor<FActorSequenceEditorWidget>();
 	AssetEditorManager.RegisterEditor<FMeshEditorWidget>();
 	AssetEditorManager.RegisterEditor<FStaticMeshEditorWidget>();
 	AssetEditorManager.RegisterEditor<FAnimGraphEditorWidget>();
 	AssetEditorManager.RegisterEditor<FParticleEditorWidget>();
 	AssetEditorManager.RegisterEditor<FLuaBlueprintEditorWidget>();
     AssetEditorManager.RegisterEditor<FMaterialEditorWidget>();
+	AssetEditorManager.RegisterEditor<FRuntimeUILayoutEditorWidget>();
 }
 
 void FEditorMainPanel::Release()
 {
+	UnmountRuntimeUIPreviewFromViewport();
 	AssetEditorManager.CloseAll();
 	ConsoleWidget.Shutdown();
 	ImGui_ImplDX11_Shutdown();
@@ -230,6 +1232,12 @@ void FEditorMainPanel::Release()
 void FEditorMainPanel::SaveToSettings() const
 {
 	ContentBrowserWidget.SaveToSettings();
+}
+
+void FEditorMainPanel::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	AssetEditorManager.AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(static_cast<UObject*>(RuntimeUIPreviewViewportWidget), "RuntimeUIPreviewViewportWidget");
 }
 
 void FEditorMainPanel::TickAssetEditors(float DeltaTime)
@@ -659,12 +1667,270 @@ void FEditorMainPanel::RenderActiveDocument(float ReservedTopHeight, float Reser
 	ImGui::Begin("ActiveDocumentHost", nullptr, HostFlags);
 	ImGui::PopStyleVar(3);
 
-	if (!AssetEditorManager.RenderActiveEditorDocument(DocumentTabs.GetActiveTab(), DeltaTime))
+	const FEditorDocumentTabId& ActiveTab = DocumentTabs.GetActiveTab();
+	if (ActiveTab.Kind == EEditorDocumentTabKind::RuntimeUIPreview)
 	{
-		DocumentTabs.CloseTab(DocumentTabs.GetActiveTab());
+		RenderRuntimeUIPreviewDocument();
+		ImGui::End();
+		return;
+	}
+
+	if (!AssetEditorManager.RenderActiveEditorDocument(ActiveTab, DeltaTime))
+	{
+		DocumentTabs.CloseTab(ActiveTab);
 	}
 
 	ImGui::End();
+}
+
+void FEditorMainPanel::RenderRuntimeUIPreviewDocument()
+{
+	if (RuntimeUIPreviewPath.empty())
+	{
+		ImGui::TextUnformatted("No Runtime UI document.");
+		return;
+	}
+
+	const bool bMounted = IsRuntimeUIPreviewMounted();
+	if (ImGui::Button("Reload"))
+	{
+		ReloadRuntimeUIPreviewDocument();
+		if (bMounted && RuntimeUIPreviewError.empty())
+		{
+			MountRuntimeUIPreviewInViewport(true);
+		}
+	}
+	ImGui::SameLine();
+	if (bMounted)
+	{
+		if (ImGui::Button("Unmount Viewport"))
+		{
+			UnmountRuntimeUIPreviewFromViewport();
+		}
+	}
+	else
+	{
+		if (ImGui::Button("Mount In Level Viewport"))
+		{
+			if (MountRuntimeUIPreviewInViewport(false))
+			{
+				FEditorDocumentTabId LevelTabId;
+				LevelTabId.Kind = EEditorDocumentTabKind::LevelEditor;
+				DocumentTabs.SetActiveTab(LevelTabId);
+			}
+		}
+	}
+	ImGui::SameLine();
+	ImGui::TextUnformatted(GetFileNameForDisplay(RuntimeUIPreviewPath).c_str());
+	if (IsRuntimeUIPreviewMounted())
+	{
+		PollRuntimeUIPreviewEvents();
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(0.38f, 0.82f, 0.54f, 1.0f), "Rml viewport mounted");
+	}
+
+	if (!RuntimeUIPreviewError.empty())
+	{
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.42f, 0.36f, 1.0f));
+		ImGui::TextWrapped("%s", RuntimeUIPreviewError.c_str());
+		ImGui::PopStyleColor();
+		return;
+	}
+
+	ImGui::TextDisabled("%s", RuntimeUIPreviewPath.c_str());
+	ImGui::Separator();
+
+	const float LeftWidth = 260.0f;
+	ImGui::BeginChild("RuntimeUIPreviewInspector", ImVec2(LeftWidth, 0.0f), true);
+	ImGui::TextUnformatted("Actions");
+	if (RuntimeUIPreviewActionEvents.empty())
+	{
+		ImGui::TextDisabled("none");
+	}
+	else
+	{
+		for (const FString& Action : RuntimeUIPreviewActionEvents)
+		{
+			ImGui::BulletText("%s", Action.c_str());
+		}
+	}
+
+	ImGui::Separator();
+	ImGui::TextUnformatted("Runtime Events");
+	ImGui::SameLine();
+	if (ImGui::SmallButton("Clear###RuntimeUIPreviewClearEvents"))
+	{
+		RuntimeUIPreviewRuntimeEvents.clear();
+	}
+	if (RuntimeUIPreviewRuntimeEvents.empty())
+	{
+		ImGui::TextDisabled("none");
+	}
+	else
+	{
+		for (const FString& EventName : RuntimeUIPreviewRuntimeEvents)
+		{
+			ImGui::BulletText("%s", EventName.c_str());
+		}
+	}
+
+	ImGui::Separator();
+	ImGui::TextUnformatted("Element IDs");
+	if (RuntimeUIPreviewElementIds.empty())
+	{
+		ImGui::TextDisabled("none");
+	}
+	else
+	{
+		for (const FString& ElementId : RuntimeUIPreviewElementIds)
+		{
+			ImGui::BulletText("%s", ElementId.c_str());
+		}
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+	ImGui::BeginChild("RuntimeUIPreviewMain", ImVec2(0.0f, 0.0f), true);
+	if (ImGui::BeginTabBar("RuntimeUIPreviewTabs"))
+	{
+		if (ImGui::BeginTabItem("Preview"))
+		{
+			RenderRuntimeUIPreviewBoxPreview(RuntimeUIPreviewSource, RuntimeUIPreviewRuntimeEvents);
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Source"))
+		{
+			ImGui::BeginChild("RuntimeUIPreviewSource", ImVec2(0.0f, 0.0f), false, ImGuiWindowFlags_HorizontalScrollbar);
+			ImGui::TextUnformatted(RuntimeUIPreviewSource.c_str());
+			ImGui::EndChild();
+			ImGui::EndTabItem();
+		}
+		ImGui::EndTabBar();
+	}
+	ImGui::EndChild();
+}
+
+void FEditorMainPanel::ReloadRuntimeUIPreviewDocument()
+{
+	RuntimeUIPreviewSource.clear();
+	RuntimeUIPreviewError.clear();
+	RuntimeUIPreviewActionEvents.clear();
+	RuntimeUIPreviewElementIds.clear();
+
+	if (RuntimeUIPreviewPath.empty())
+	{
+		RuntimeUIPreviewError = "Runtime UI path is empty.";
+		return;
+	}
+
+	std::filesystem::path Path(FPaths::ToWide(RuntimeUIPreviewPath));
+	if (Path.is_relative())
+	{
+		Path = std::filesystem::path(FPaths::RootDir()) / Path;
+	}
+	Path = Path.lexically_normal();
+
+	if (!std::filesystem::exists(Path))
+	{
+		RuntimeUIPreviewError = FString("Runtime UI document not found: ") + RuntimeUIPreviewPath;
+		return;
+	}
+
+	std::ifstream File(Path, std::ios::binary);
+	if (!File)
+	{
+		RuntimeUIPreviewError = FString("Failed to open Runtime UI document: ") + RuntimeUIPreviewPath;
+		return;
+	}
+
+	std::ostringstream Stream;
+	Stream << File.rdbuf();
+	RuntimeUIPreviewSource = Stream.str();
+
+	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "data-action", RuntimeUIPreviewActionEvents);
+	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "action", RuntimeUIPreviewActionEvents);
+	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "id", RuntimeUIPreviewElementIds);
+}
+
+bool FEditorMainPanel::MountRuntimeUIPreviewInViewport(bool bForceReload)
+{
+	if (RuntimeUIPreviewPath.empty() || !RuntimeUIPreviewError.empty())
+	{
+		return false;
+	}
+
+	UUserWidget* Widget = nullptr;
+	if (IsValid(RuntimeUIPreviewViewportWidget) &&
+		RuntimeUIPreviewViewportWidget->GetDocumentPath() == RuntimeUIPreviewPath)
+	{
+		Widget = RuntimeUIPreviewViewportWidget;
+	}
+	else
+	{
+		UnmountRuntimeUIPreviewFromViewport();
+		Widget = UUIManager::Get().CreateWidget(nullptr, RuntimeUIPreviewPath);
+		RuntimeUIPreviewViewportWidget = Widget;
+		RuntimeUIPreviewRuntimeEvents.clear();
+	}
+
+	if (!IsValid(Widget))
+	{
+		RuntimeUIPreviewError = "Failed to create Runtime UI preview widget.";
+		return false;
+	}
+
+	if (bForceReload && Widget->IsInViewport())
+	{
+		Widget->RemoveFromParent();
+	}
+
+	Widget->SetWantsMouse(true);
+	Widget->SetWantsKeyboard(true);
+	Widget->SetWantsTextInput(true);
+	Widget->SetBlocksGameInput(true);
+	Widget->SetBlocksGameKeyboard(true);
+	Widget->SetBlocksGameMouseLook(true);
+	Widget->AddToViewport(10000);
+
+	if (!Widget->IsDocumentLoaded())
+	{
+		Widget->RemoveFromParent();
+		RuntimeUIPreviewError = FString("Failed to mount Runtime UI document in viewport: ") + RuntimeUIPreviewPath;
+		return false;
+	}
+	return true;
+}
+
+void FEditorMainPanel::UnmountRuntimeUIPreviewFromViewport()
+{
+	if (IsValid(RuntimeUIPreviewViewportWidget) && RuntimeUIPreviewViewportWidget->IsInViewport())
+	{
+		RuntimeUIPreviewViewportWidget->RemoveFromParent();
+	}
+	RuntimeUIPreviewViewportWidget = nullptr;
+}
+
+bool FEditorMainPanel::IsRuntimeUIPreviewMounted() const
+{
+	return IsValid(RuntimeUIPreviewViewportWidget) && RuntimeUIPreviewViewportWidget->IsInViewport();
+}
+
+void FEditorMainPanel::PollRuntimeUIPreviewEvents()
+{
+	if (!IsRuntimeUIPreviewMounted())
+	{
+		return;
+	}
+
+	const TArray<FString> Events = RuntimeUIPreviewViewportWidget->PollActionEvents();
+	for (const FString& EventName : Events)
+	{
+		RuntimeUIPreviewRuntimeEvents.push_back(EventName);
+	}
+	while (RuntimeUIPreviewRuntimeEvents.size() > 32)
+	{
+		RuntimeUIPreviewRuntimeEvents.erase(RuntimeUIPreviewRuntimeEvents.begin());
+	}
 }
 
 void FEditorMainPanel::RenderShortcutOverlay()
@@ -722,6 +1988,60 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 	{
 		ImGui::End();
 		return;
+	}
+
+	if (ImGui::CollapsingHeader("Scope Lens", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		static bool bDebugScopeLensEnabled = false;
+		static float DebugScopeLensRadius = 0.42f;
+		static float DebugScopeLensFeather = 0.08f;
+		static float DebugScopeLensOuterBlur = 3.0f;
+		static float DebugScopeLensEdgeBlur = 1.25f;
+		static float DebugScopeLensZoomFOV = 0.39269908f;
+		static float DebugScopeLensIntensity = 1.0f;
+		static float DebugScopeLensLookScale = 0.275f;
+		static float DebugScopeLensBlendTime = 0.08f;
+
+		APlayerController* PC = EditorEngine->GetWorld() ? EditorEngine->GetWorld()->GetFirstPlayerController() : nullptr;
+		APlayerCameraManager* CameraManager = PC ? PC->GetPlayerCameraManager() : nullptr;
+		if (CameraManager)
+		{
+			const FCameraScopeLensState& ScopeLens = CameraManager->GetScopeLensProfile();
+			bDebugScopeLensEnabled = CameraManager->IsScopeZoomEnabled();
+			DebugScopeLensRadius = ScopeLens.Radius;
+			DebugScopeLensFeather = ScopeLens.Feather;
+			DebugScopeLensOuterBlur = ScopeLens.OuterBlurRadius;
+			DebugScopeLensEdgeBlur = ScopeLens.EdgeBlurRadius;
+			DebugScopeLensZoomFOV = ScopeLens.ZoomFOV;
+			DebugScopeLensIntensity = ScopeLens.Intensity;
+			DebugScopeLensLookScale = ScopeLens.LookSensitivityScale;
+			DebugScopeLensBlendTime = ScopeLens.BlendTime;
+		}
+
+		bool bChanged = false;
+		bChanged |= ImGui::Checkbox("Enabled", &bDebugScopeLensEnabled);
+		bChanged |= ImGui::SliderFloat("Radius", &DebugScopeLensRadius, 0.05f, 0.95f, "%.3f");
+		bChanged |= ImGui::SliderFloat("Feather", &DebugScopeLensFeather, 0.001f, 0.35f, "%.3f");
+		bChanged |= ImGui::SliderFloat("Outer Blur", &DebugScopeLensOuterBlur, 0.0f, 12.0f, "%.2f");
+		bChanged |= ImGui::SliderFloat("Edge Blur", &DebugScopeLensEdgeBlur, 0.0f, 8.0f, "%.2f");
+		bChanged |= ImGui::SliderFloat("Zoom FOV (rad)", &DebugScopeLensZoomFOV, 0.05f, 1.2f, "%.3f");
+		bChanged |= ImGui::SliderFloat("Intensity", &DebugScopeLensIntensity, 0.0f, 1.0f, "%.2f");
+		bChanged |= ImGui::SliderFloat("Look Sensitivity Scale", &DebugScopeLensLookScale, 0.05f, 1.0f, "%.3f");
+		bChanged |= ImGui::SliderFloat("Blend Time", &DebugScopeLensBlendTime, 0.0f, 0.5f, "%.3f");
+
+		if (CameraManager && bChanged)
+		{
+			CameraManager->SetScopeLensProfile(
+				DebugScopeLensRadius,
+				DebugScopeLensOuterBlur,
+				DebugScopeLensZoomFOV,
+				DebugScopeLensFeather,
+				DebugScopeLensEdgeBlur,
+				DebugScopeLensIntensity,
+				DebugScopeLensLookScale,
+				DebugScopeLensBlendTime);
+			CameraManager->SetScopeZoomEnabled(bDebugScopeLensEnabled);
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Place Actors (Grid)", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1380,6 +2700,23 @@ void FEditorMainPanel::OpenAssetEditorForObject(UObject* Object)
 	{
 		DocumentTabs.OpenOrFocusTab(Result.TabId, Result.Label, true);
 	}
+}
+
+void FEditorMainPanel::OpenRuntimeUIPreviewDocument(const FString& DocumentPath)
+{
+	RuntimeUIPreviewPath = DocumentPath;
+	ReloadRuntimeUIPreviewDocument();
+
+	FEditorDocumentTabId TabId;
+	TabId.Kind = EEditorDocumentTabKind::RuntimeUIPreview;
+	TabId.PayloadId = MakeRuntimeUIPreviewPayloadId();
+
+	FString Label = GetFileStemForDisplay(DocumentPath);
+	if (Label.empty())
+	{
+		Label = "Runtime UI";
+	}
+	DocumentTabs.OpenOrFocusTab(TabId, Label, true);
 }
 
 void FEditorMainPanel::CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const

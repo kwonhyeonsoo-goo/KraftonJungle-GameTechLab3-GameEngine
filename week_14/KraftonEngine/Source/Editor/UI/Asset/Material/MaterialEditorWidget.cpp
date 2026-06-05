@@ -1,5 +1,7 @@
 #include "Editor/UI/Asset/Material/MaterialEditorWidget.h"
 
+#include "Editor/EditorEngine.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "Editor/UI/Util/EditorFileUtils.h"
 
@@ -1005,11 +1007,11 @@ void FMaterialEditorWidget::RenderToolbar(UMaterial* Material)
     ImGui::TextDisabled("|");
     ImGui::SameLine();
 
-    ImGui::BeginDisabled(UndoStack.size() <= 1);
+    ImGui::BeginDisabled(!EditorEngine || !EditorEngine->GetUndoSystem().CanUndo());
     if (ToolbarButton("Undo")) UndoGraphEdit();
     ImGui::EndDisabled();
     ImGui::SameLine();
-    ImGui::BeginDisabled(RedoStack.empty());
+    ImGui::BeginDisabled(!EditorEngine || !EditorEngine->GetUndoSystem().CanRedo());
     if (ToolbarButton("Redo")) RedoGraphEdit();
     ImGui::EndDisabled();
 
@@ -1298,8 +1300,46 @@ void FMaterialEditorWidget::MarkMaterialSourceEdited(bool bAutoPreview)
 {
     if (!bRestoringSnapshot)
     {
-        UndoStack.push_back(MakeGraphSnapshot());
-        if (UndoStack.size() > 128) UndoStack.erase(UndoStack.begin());
+        TArray<uint8> BeforeSnapshot = UndoStack.empty() ? TArray<uint8>() : UndoStack.back();
+        TArray<uint8> AfterSnapshot = MakeGraphSnapshot();
+        if (!BeforeSnapshot.empty() && !AfterSnapshot.empty() && BeforeSnapshot != AfterSnapshot && EditorEngine)
+        {
+            std::shared_ptr<bool> UndoLifetime = GetEditorLifetimeToken();
+            FEditorUndoSystem& UndoSystem = EditorEngine->GetUndoSystem();
+            UndoSystem.BeginTransaction("Edit Material Source");
+            UndoSystem.AddCommand(std::make_unique<FLambdaEditorUndoCommand>(
+                "Edit Material Source",
+                BeforeSnapshot,
+                AfterSnapshot,
+                [this, UndoLifetime](FEditorUndoContext&, const TArray<uint8>& Snapshot)
+                {
+                    if (!UndoLifetime || !*UndoLifetime)
+                    {
+                        return false;
+                    }
+
+                    UMaterial* Material = GetMaterial();
+                    if (!IsOpen() || !IsValid(Material) || Snapshot.empty())
+                    {
+                        return false;
+                    }
+
+                    const bool bRestored = RestoreGraphSnapshot(Snapshot);
+                    if (bRestored)
+                    {
+                        UndoStack.clear();
+                        UndoStack.push_back(Snapshot);
+                        RedoStack.clear();
+                    }
+                    return bRestored;
+                }));
+            UndoSystem.EndTransaction();
+        }
+        UndoStack.clear();
+        if (!AfterSnapshot.empty())
+        {
+            UndoStack.push_back(std::move(AfterSnapshot));
+        }
         RedoStack.clear();
     }
 
@@ -2628,8 +2668,46 @@ void FMaterialEditorWidget::CaptureInitialUndoSnapshot()
 void FMaterialEditorWidget::CommitGraphEdit()
 {
     if (bRestoringSnapshot) return;
-    UndoStack.push_back(MakeGraphSnapshot());
-    if (UndoStack.size() > 128) UndoStack.erase(UndoStack.begin());
+    TArray<uint8> BeforeSnapshot = UndoStack.empty() ? TArray<uint8>() : UndoStack.back();
+    TArray<uint8> AfterSnapshot = MakeGraphSnapshot();
+    if (!BeforeSnapshot.empty() && !AfterSnapshot.empty() && BeforeSnapshot != AfterSnapshot && EditorEngine)
+    {
+        std::shared_ptr<bool> UndoLifetime = GetEditorLifetimeToken();
+        FEditorUndoSystem& UndoSystem = EditorEngine->GetUndoSystem();
+        UndoSystem.BeginTransaction("Edit Material Graph");
+        UndoSystem.AddCommand(std::make_unique<FLambdaEditorUndoCommand>(
+            "Edit Material Graph",
+            BeforeSnapshot,
+            AfterSnapshot,
+            [this, UndoLifetime](FEditorUndoContext&, const TArray<uint8>& Snapshot)
+            {
+                if (!UndoLifetime || !*UndoLifetime)
+                {
+                    return false;
+                }
+
+                UMaterial* Material = GetMaterial();
+                if (!IsOpen() || !IsValid(Material) || Snapshot.empty())
+                {
+                    return false;
+                }
+
+                const bool bRestored = RestoreGraphSnapshot(Snapshot);
+                if (bRestored)
+                {
+                    UndoStack.clear();
+                    UndoStack.push_back(Snapshot);
+                    RedoStack.clear();
+                }
+                return bRestored;
+            }));
+        UndoSystem.EndTransaction();
+    }
+    UndoStack.clear();
+    if (!AfterSnapshot.empty())
+    {
+        UndoStack.push_back(std::move(AfterSnapshot));
+    }
     RedoStack.clear();
     bPositionsPushed = false;
     MarkDirty();
@@ -2646,20 +2724,18 @@ void FMaterialEditorWidget::CommitGraphEdit()
 
 void FMaterialEditorWidget::UndoGraphEdit()
 {
-    if (UndoStack.size() <= 1) return;
-    TArray<uint8> Current = UndoStack.back();
-    UndoStack.pop_back();
-    RedoStack.push_back(Current);
-    RestoreGraphSnapshot(UndoStack.back());
+    if (EditorEngine)
+    {
+        EditorEngine->GetUndoSystem().Undo();
+    }
 }
 
 void FMaterialEditorWidget::RedoGraphEdit()
 {
-    if (RedoStack.empty()) return;
-    TArray<uint8> Snapshot = RedoStack.back();
-    RedoStack.pop_back();
-    UndoStack.push_back(Snapshot);
-    RestoreGraphSnapshot(Snapshot);
+    if (EditorEngine)
+    {
+        EditorEngine->GetUndoSystem().Redo();
+    }
 }
 
 TArray<uint8> FMaterialEditorWidget::MakeGraphSnapshot() const

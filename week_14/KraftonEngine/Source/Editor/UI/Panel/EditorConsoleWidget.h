@@ -120,6 +120,11 @@ private:
 	void HandleStatPhysics(const TArray<FString>& Args);
 	void HandleStatClothCollision(const TArray<FString>& Args);
 	void HandleStatNone(const TArray<FString>& Args);
+	void HandleActorSequenceDiagnostics(const TArray<FString>& Args);
+	void HandleCameraEditorMeshDiagnostics(const TArray<FString>& Args);
+	void HandleGameViewportInputDiagnostics(const TArray<FString>& Args);
+	void HandleRuntimeUILayoutDiagnostics(const TArray<FString>& Args);
+	void HandleGameJamDiagnostics(const TArray<FString>& Args);
 	void HandleCauseCrash(const TArray<FString>& Args);
 	void HandleCSMResolution(const TArray<FString>& Args);
 	void HandleCSMSplit(const TArray<FString>& Args);

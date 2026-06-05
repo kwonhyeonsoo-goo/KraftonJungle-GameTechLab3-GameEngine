@@ -1,14 +1,17 @@
-#include "Editor/UI/Panel/EditorPropertyWidget.h"
+﻿#include "Editor/UI/Panel/EditorPropertyWidget.h"
 #include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
+#include "Animation/ActorSequence.h"
 #include "Component/ActorComponent.h"
+#include "Component/ActorSequenceComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
 #include "Component/MeshComponent.h"
 #include "Component/Movement/MovementComponent.h"
 #include "Component/Movement/WheeledVehicleMovementComponent.h"
 #include "Component/Debug/GizmoComponent.h"
+#include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/Primitive/TextRenderComponent.h"
@@ -31,6 +34,7 @@
 #include "Core/Property/StructProperty.h"
 #include "Core/Property/SoftObjectProperty.h"
 #include "Core/Types/ClassTypes.h"
+#include "FloatCurve/FloatCurveAsset.h"
 #include "Math/FloatCurve.h"
 #include "Lua/LuaScriptManager.h"
 #include "Resource/ResourceManager.h"
@@ -47,6 +51,8 @@
 #include "Particle/Distributions/Distribution.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
+#include "Editor/UI/Util/EditorFileUtils.h"
+#include "Editor/Undo/EditorUndoSystem.h"
 #include "Platform/Paths.h"
 #include "Serialization/PrefabManager.h"
 #include "Serialization/MemoryArchive.h"
@@ -56,18 +62,73 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cfloat>
 #include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <cstdio>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Materials/MaterialManager.h"
 
+#ifdef GetCurrentTime
+#undef GetCurrentTime
+#endif
+
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
+
+namespace
+{
+	class FScopedDetailsActorSequenceUndo
+	{
+	public:
+		FScopedDetailsActorSequenceUndo(UEditorEngine* InEditor, UActorSequenceComponent* InSequenceComp, const char* InLabel)
+			: Editor(InEditor)
+			, SequenceComp(InSequenceComp)
+			, Label(InLabel ? InLabel : "Edit Actor Sequence")
+		{
+			AActor* Owner = ResolveOwner();
+			if (Editor && Owner)
+			{
+				BeforeStates = Editor->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Owner });
+			}
+		}
+
+		~FScopedDetailsActorSequenceUndo()
+		{
+			AActor* Owner = ResolveOwner();
+			if (!Editor || !Owner || BeforeStates.empty())
+			{
+				return;
+			}
+
+			Editor->GetUndoSystem().RecordActorStateChange(
+				BeforeStates,
+				Editor->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Owner }),
+				Label);
+		}
+
+	private:
+		AActor* ResolveOwner() const
+		{
+			return IsValid(SequenceComp) ? SequenceComp->GetOwner() : nullptr;
+		}
+
+		UEditorEngine* Editor = nullptr;
+		UActorSequenceComponent* SequenceComp = nullptr;
+		FString Label;
+		TArray<FEditorSerializedActorState> BeforeStates;
+	};
+}
+
+#define DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorPtr, SequencePtr, LabelText) \
+	FScopedDetailsActorSequenceUndo DETAILS_ACTOR_SEQUENCE_UNDO_JOIN(DetailsActorSequenceUndoScope, __LINE__)(EditorPtr, SequencePtr, LabelText)
+#define DETAILS_ACTOR_SEQUENCE_UNDO_JOIN_IMPL(A, B) A##B
+#define DETAILS_ACTOR_SEQUENCE_UNDO_JOIN(A, B) DETAILS_ACTOR_SEQUENCE_UNDO_JOIN_IMPL(A, B)
 
 namespace
 {
@@ -98,6 +159,15 @@ namespace
 
 		return Component->IsHiddenInComponentTree()
 			&& !(bShowEditorOnlyComponents && Component->IsEditorOnlyComponent());
+	}
+
+	bool ShouldHideComponentPropertyCategory(const UActorComponent* Component, const std::string& Category)
+	{
+		if (Component && Component->IsA<UCombatCoverAgentComponent>())
+		{
+			return Category == "CombatAgent|Combat" || Category == "CombatAgent|Debug";
+		}
+		return false;
 	}
 
 	struct FComponentClassGroup
@@ -191,6 +261,275 @@ namespace
 	bool IsSamePropertyName(const FPropertyValue& Prop, const char* Name)
 	{
 		return Name && std::strcmp(Prop.GetName(), Name) == 0;
+	}
+
+	void CollectActorSequenceScalarProperties(UObject* Object, TArray<const FProperty*>& OutProps)
+	{
+		OutProps.clear();
+		if (!IsValid(Object) || !Object->GetClass())
+		{
+			return;
+		}
+
+		TArray<const FProperty*> Properties;
+		Object->GetClass()->GetPropertyRefs(Properties);
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && Property->IsSequencerScalar())
+			{
+				OutProps.push_back(Property);
+			}
+		}
+	}
+
+	bool HasActorSequenceScalarProperties(UObject* Object)
+	{
+		TArray<const FProperty*> Properties;
+		CollectActorSequenceScalarProperties(Object, Properties);
+		return !Properties.empty();
+	}
+
+	FString MakeActorSequenceTargetLabel(AActor* Owner, UObject* Object)
+	{
+		if (!IsValid(Object))
+		{
+			return "None";
+		}
+
+		if (Object == Owner)
+		{
+			return "Owner (" + Owner->GetFName().ToString() + ")";
+		}
+
+		if (UActorComponent* Component = Cast<UActorComponent>(Object))
+		{
+			FString Label = Component->GetFName().ToString();
+			if (Label.empty())
+			{
+				Label = Component->GetClass() ? Component->GetClass()->GetName() : "Component";
+			}
+			return Label;
+		}
+
+		return Object->GetName();
+	}
+
+	void CollectActorSequenceTargets(AActor* Owner, UActorSequenceComponent* SequenceComp, TArray<UObject*>& OutTargets)
+	{
+		OutTargets.clear();
+		if (!IsValid(Owner))
+		{
+			return;
+		}
+
+		if (HasActorSequenceScalarProperties(Owner))
+		{
+			OutTargets.push_back(Owner);
+		}
+
+		for (UActorComponent* Component : Owner->GetComponents())
+		{
+			if (!IsValid(Component) || Component == SequenceComp)
+			{
+				continue;
+			}
+
+			if (HasActorSequenceScalarProperties(Component))
+			{
+				OutTargets.push_back(Component);
+			}
+		}
+	}
+
+	void GetActorSequenceChannelNames(const FProperty& Property, TArray<const char*>& OutChannels)
+	{
+		OutChannels.clear();
+		switch (Property.GetType())
+		{
+		case EPropertyType::Vec3:
+			OutChannels = { "x", "y", "z" };
+			break;
+		case EPropertyType::Rotator:
+			OutChannels = { "pitch", "yaw", "roll" };
+			break;
+		case EPropertyType::Vec4:
+			OutChannels = { "x", "y", "z", "w" };
+			break;
+		case EPropertyType::Color4:
+			OutChannels = { "r", "g", "b", "a" };
+			break;
+		default:
+			OutChannels = { "Value" };
+			break;
+		}
+	}
+
+	const char* GetActorSequenceTrackTypeLabel(EActorSequenceTrackType TrackType)
+	{
+		switch (TrackType)
+		{
+		case EActorSequenceTrackType::Vector3:
+			return "Vec3";
+		case EActorSequenceTrackType::Rotator:
+			return "Rotator";
+		case EActorSequenceTrackType::Vector4:
+			return "Vec4";
+		case EActorSequenceTrackType::Scalar:
+		default:
+			return "Scalar";
+		}
+	}
+
+	UObject* ResolveActorSequenceBindingObject(AActor* Owner, const FSequenceObjectBinding& Binding)
+	{
+		if (!IsValid(Owner))
+		{
+			return nullptr;
+		}
+
+		if (Binding.TargetType == EActorSequenceBindingTarget::OwnerActor)
+		{
+			if (Binding.TargetObjectName.empty() || Binding.TargetObjectName == Owner->GetFName().ToString())
+			{
+				return Owner;
+			}
+			return nullptr;
+		}
+
+		for (UActorComponent* Component : Owner->GetComponents())
+		{
+			if (!IsValid(Component))
+			{
+				continue;
+			}
+
+			if (!Binding.TargetComponentGuid.empty()
+				&& Component->GetPersistentGuid() == Binding.TargetComponentGuid)
+			{
+				return Component;
+			}
+		}
+
+		for (UActorComponent* Component : Owner->GetComponents())
+		{
+			if (IsValid(Component) && Component->GetFName().ToString() == Binding.TargetObjectName)
+			{
+				return Component;
+			}
+		}
+
+		return nullptr;
+	}
+
+	const FProperty* ResolveActorSequenceTrackProperty(
+		UObject* Object,
+		const FActorSequenceTrack& Track,
+		const FActorSequenceChannel& Channel)
+	{
+		if (!IsValid(Object) || !Object->GetClass())
+		{
+			return nullptr;
+		}
+
+		TArray<const FProperty*> Properties;
+		Object->GetClass()->GetPropertyRefs(Properties);
+		for (const FProperty* Property : Properties)
+		{
+			if (!Property || !Property->Name || Track.PropertyName != Property->Name)
+			{
+				continue;
+			}
+
+			float TestValue = 0.0f;
+			if (Property->ReadScalarChannelValue(Object, Channel.ChannelName, TestValue))
+			{
+				return Property;
+			}
+		}
+		return nullptr;
+	}
+
+	float ComputeActorSequenceCurveTime(const FActorSequenceSection& Section, const FActorSequenceChannel& Channel, float SequenceTime)
+	{
+		const float LocalTime = (std::max)(0.0f, SequenceTime - Section.StartTime) * (std::max)(0.0f, Section.PlayRate);
+		if (Channel.Playback.TimeMappingMode == ECurveTimeMappingMode::NormalizedTime)
+		{
+			return Section.Duration > 0.0001f ? LocalTime / Section.Duration : 0.0f;
+		}
+		return LocalTime;
+	}
+
+	bool AddActorSequenceKeyAtCurrentValue(
+		UActorSequenceComponent* SequenceComp,
+		FActorSequenceBinding& Binding,
+		FActorSequenceTrack& Track,
+		FActorSequenceSection& Section,
+		FActorSequenceChannel& Channel,
+		float SequenceTime)
+	{
+		if (!IsValid(SequenceComp))
+		{
+			return false;
+		}
+
+		AActor* Owner = SequenceComp->GetOwner();
+		UObject* TargetObject = ResolveActorSequenceBindingObject(Owner, Binding.Binding);
+		const FProperty* Property = ResolveActorSequenceTrackProperty(TargetObject, Track, Channel);
+		if (!Property)
+		{
+			return false;
+		}
+
+		float CurrentValue = 0.0f;
+		if (!Property->ReadScalarChannelValue(TargetObject, Channel.ChannelName, CurrentValue))
+		{
+			return false;
+		}
+
+		UActorSequence* Sequence = SequenceComp->GetSequence();
+		if (!Sequence)
+		{
+			return false;
+		}
+
+		UFloatCurveAsset* Curve = Channel.Playback.Curve;
+		if (!Curve)
+		{
+			Curve = Sequence->CreateInlineCurve();
+			Channel.Playback.Curve = Curve;
+			Channel.Playback.CurveAssetPath.clear();
+		}
+		if (!Curve)
+		{
+			return false;
+		}
+
+		FFloatCurve& FloatCurve = Curve->GetCurve();
+		const float CurveTime = ComputeActorSequenceCurveTime(Section, Channel, SequenceTime);
+		bool bUpdatedExisting = false;
+		for (FCurveKey& Key : FloatCurve.Keys)
+		{
+			if (std::fabs(Key.Time - CurveTime) <= 0.0001f)
+			{
+				Key.Value = CurrentValue;
+				bUpdatedExisting = true;
+				break;
+			}
+		}
+
+		if (!bUpdatedExisting)
+		{
+			FCurveKey Key;
+			Key.Time = CurveTime;
+			Key.Value = CurrentValue;
+			Key.InterpMode = ECurveInterpMode::Cubic;
+			Key.TangentMode = ECurveTangentMode::Auto;
+			FloatCurve.Keys.push_back(Key);
+		}
+
+		FloatCurve.SortKeys();
+		FloatCurve.AutoSetTangents();
+		return true;
 	}
 
 	FString TrimTagToken(const FString& Value)
@@ -1129,7 +1468,31 @@ static FString MakeProjectRelativePathOrAbsolute(const std::filesystem::path& Pa
 	return FPaths::ToUtf8(RelPath.generic_wstring());
 }
 
-FString FEditorPropertyWidget::OpenPrefabSaveFileDialog(AActor* Actor)
+static std::filesystem::path MakeUniquePrefabPath(
+	const std::filesystem::path& Directory,
+	const std::wstring& FileName)
+{
+	std::filesystem::path Candidate = Directory / FileName;
+	if (!std::filesystem::exists(Candidate))
+	{
+		return Candidate;
+	}
+
+	const std::wstring Stem = Candidate.stem().wstring();
+	const std::wstring Extension = Candidate.extension().wstring();
+	for (int32 Suffix = 1; Suffix < 10000; ++Suffix)
+	{
+		Candidate = Directory / (Stem + L"_" + std::to_wstring(Suffix) + Extension);
+		if (!std::filesystem::exists(Candidate))
+		{
+			return Candidate;
+		}
+	}
+
+	return Directory / (Stem + L"_9999" + Extension);
+}
+
+FString FEditorPropertyWidget::OpenPrefabSaveDirectoryDialog(AActor* Actor)
 {
 	if (!IsValid(Actor))
 	{
@@ -1140,34 +1503,27 @@ FString FEditorPropertyWidget::OpenPrefabSaveFileDialog(AActor* Actor)
 	std::error_code DirError;
 	std::filesystem::create_directories(InitialDir, DirError);
 
-	wchar_t FilePath[MAX_PATH] = {};
-	const std::wstring DefaultFileName = MakeSafePrefabFileName(Actor);
-	wcsncpy_s(FilePath, DefaultFileName.c_str(), _TRUNCATE);
-
 	const std::wstring InitialDirText = InitialDir.wstring();
+	FEditorFileDialogOptions Options;
+	Options.Title = L"Select Prefab Save Directory";
+	Options.InitialDirectory = InitialDirText.c_str();
+	Options.bFileMustExist = false;
+	Options.bPathMustExist = true;
+	Options.bReturnRelativeToProjectRoot = false;
 
-	OPENFILENAMEW Ofn = {};
-	Ofn.lStructSize = sizeof(Ofn);
-	Ofn.hwndOwner = nullptr;
-	Ofn.lpstrFilter = L"Prefab Files (*.prefab)\0*.prefab\0All Files (*.*)\0*.*\0";
-	Ofn.lpstrFile = FilePath;
-	Ofn.nMaxFile = MAX_PATH;
-	Ofn.lpstrInitialDir = InitialDirText.c_str();
-	Ofn.lpstrTitle = L"Save Actor Prefab";
-	Ofn.lpstrDefExt = L"prefab";
-	Ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
-
-	if (!GetSaveFileNameW(&Ofn))
+	const FString SelectedDirectoryText = FEditorFileUtils::OpenFolderDialog(Options);
+	if (SelectedDirectoryText.empty())
 	{
 		return FString();
 	}
 
-	std::filesystem::path SavePath = std::filesystem::path(FilePath).lexically_normal();
-	if (SavePath.extension().empty())
+	std::filesystem::path SelectedDirectory = std::filesystem::path(FPaths::ToWide(SelectedDirectoryText)).lexically_normal();
+	if (!std::filesystem::exists(SelectedDirectory) || !std::filesystem::is_directory(SelectedDirectory))
 	{
-		SavePath += FPrefabManager::PrefabExtension;
+		return FString();
 	}
 
+	const std::filesystem::path SavePath = MakeUniquePrefabPath(SelectedDirectory, MakeSafePrefabFileName(Actor));
 	return MakeProjectRelativePathOrAbsolute(SavePath);
 }
 
@@ -1263,7 +1619,7 @@ void FEditorPropertyWidget::SaveActorAsPrefab(AActor* Actor)
 		return;
 	}
 
-	const FString PrefabPath = OpenPrefabSaveFileDialog(Actor);
+	const FString PrefabPath = OpenPrefabSaveDirectoryDialog(Actor);
 	if (PrefabPath.empty())
 	{
 		return;
@@ -1292,6 +1648,7 @@ void FEditorPropertyWidget::SaveActorAsPrefab(AActor* Actor)
 void FEditorPropertyWidget::Render(float DeltaTime)
 {
 	(void)DeltaTime;
+	bDetailsEditUndoSnapshotCapturedThisFrame = false;
 
 	ImGui::SetNextWindowSize(ImVec2(350.0f, 500.0f), ImGuiCond_Once);
 
@@ -1393,6 +1750,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		snprintf(RemoveLabel, sizeof(RemoveLabel), "Remove %d Objects", SelectionCount);
 		if (ImGui::Button(RemoveLabel))
 		{
+			TArray<FEditorSerializedActorState> DeletedStates =
+				EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>(SelectedActors.begin(), SelectedActors.end()));
 			// 선택 해제를 먼저 수행 (dangling pointer로 Proxy 접근 방지)
 			TArray<AActor*> ToDelete(SelectedActors.begin(), SelectedActors.end());
 			Selection.ClearSelection();
@@ -1409,6 +1768,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 			LastSelectedActor = nullptr;
 			PendingDetailsScrollY = -1.0f;
 			bRestoreDetailsScrollY = false;
+			EditorEngine->GetUndoSystem().RecordActorDeletion(DeletedStates, "Delete Actors");
 			ImGui::End();
 			return;
 		}
@@ -1503,7 +1863,13 @@ void FEditorPropertyWidget::RenameActor(AActor* PrimaryActor)
 
 	if (!bShowDuplicateWarning)
 	{
+		TArray<FEditorSerializedActorState> BeforeStates =
+			EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ PrimaryActor });
 		PrimaryActor->SetFName(FName(NewName));
+		EditorEngine->GetUndoSystem().RecordActorStateChange(
+			BeforeStates,
+			EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ PrimaryActor }),
+			"Rename Actor");
 		strncpy_s(RenameBuffer, sizeof(RenameBuffer),
 			NewName.c_str(), _TRUNCATE);
 	}
@@ -1700,13 +2066,13 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 	}
 
 	ImGui::SameLine();
-	if (ImGui::Button("Save Prefab"))
+	if (ImGui::Button("Save Prefab..."))
 	{
 		SaveActorAsPrefab(Actor);
 	}
 	if (ImGui::IsItemHovered())
 	{
-		ImGui::SetTooltip("Save the selected actor and its components as a .prefab file.");
+		ImGui::SetTooltip("Choose a directory and save the selected actor as a .prefab file.");
 	}
 
 	if (ImGui::BeginPopup("##AddComponentPopup"))
@@ -1934,9 +2300,15 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 					Check = Check->GetParent();
 				}
 
-				if (!bIsChildOfDragged)
-				{
+	if (!bIsChildOfDragged)
+	{
+					TArray<FEditorSerializedActorState> BeforeStates =
+						EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ DraggedComp->GetOwner() });
 					DraggedComp->SetParent(Comp);
+					EditorEngine->GetUndoSystem().RecordActorStateChange(
+						BeforeStates,
+						EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ DraggedComp->GetOwner() }),
+						"Reparent Component");
 					if (EditorEngine && EditorEngine->GetGizmo())
 					{
 						EditorEngine->GetGizmo()->UpdateGizmoTransform();
@@ -1957,6 +2329,571 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 	}
 }
 
+void FEditorPropertyWidget::RenderActorSequenceComponentTools(UActorSequenceComponent* SequenceComp)
+{
+	if (!IsValid(SequenceComp))
+	{
+		return;
+	}
+
+	UActorSequence* Sequence = SequenceComp->GetSequence();
+	if (!Sequence)
+	{
+		return;
+	}
+
+	if (LastActorSequenceComponent.Get() != SequenceComp)
+	{
+		LastActorSequenceComponent = SequenceComp;
+		ActorSequenceTrackTarget = nullptr;
+		ActorSequenceTrackPropertyName.clear();
+		ActorSequenceTrackChannelIndex = 0;
+		ActorSequenceTrackStartTime = 0.0f;
+		ActorSequenceTrackDuration = (std::max)(1.0f, Sequence->GetDuration());
+		ActorSequenceCurveAssetPathBuffer[0] = '\0';
+	}
+
+	AActor* Owner = SequenceComp->GetOwner();
+	UActorSequencePlayer* PreviewPlayer = SequenceComp->GetPreviewSequencePlayer();
+	if (!IsValid(Owner) || !PreviewPlayer)
+	{
+		return;
+	}
+
+	ImGui::Spacing();
+	ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.24f, 0.28f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.22f, 0.29f, 0.34f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.24f, 0.32f, 0.38f, 1.0f));
+	const bool bOpen = ImGui::CollapsingHeader("Actor Sequence", ImGuiTreeNodeFlags_DefaultOpen);
+	ImGui::PopStyleColor(3);
+	if (!bOpen)
+	{
+		return;
+	}
+
+	ImGui::PushID("ActorSequenceTools");
+
+	int32 BindingCount = 0;
+	int32 TrackCount = 0;
+	int32 ChannelCount = 0;
+	int32 KeyCount = 0;
+	for (const FActorSequenceBinding& Binding : Sequence->GetBindings())
+	{
+		++BindingCount;
+		for (const FActorSequenceTrack& Track : Binding.Tracks)
+		{
+			++TrackCount;
+			for (const FActorSequenceSection& Section : Track.Sections)
+			{
+				for (const FActorSequenceChannel& Channel : Section.Channels)
+				{
+					++ChannelCount;
+					if (Channel.Playback.Curve)
+					{
+						KeyCount += static_cast<int32>(Channel.Playback.Curve->GetCurve().Keys.size());
+					}
+				}
+			}
+		}
+	}
+
+	float SequenceStartTime = Sequence->GetStartTime();
+	float SequenceDuration = Sequence->GetDuration();
+	ImGui::Text("Bindings %d  Tracks %d  Channels %d  Keys %d", BindingCount, TrackCount, ChannelCount, KeyCount);
+	if (ImGui::Button("Open Sequencer"))
+	{
+		if (EditorEngine)
+		{
+			EditorEngine->OpenAssetEditorForObject(Sequence);
+		}
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Open this Actor Sequence in a dedicated timeline tab.");
+	}
+
+	ImGui::SetNextItemWidth(160.0f);
+	if (ImGui::DragFloat("Playback Start", &SequenceStartTime, 0.01f, 0.0f, 600.0f, "%.3f"))
+	{
+		DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Playback Range");
+		const float OldEndTime = Sequence->GetEndTime();
+		Sequence->SetPlaybackRange(SequenceStartTime, OldEndTime);
+		SequenceComp->CommitSequenceEditsForSerialization();
+	}
+	ImGui::SetNextItemWidth(160.0f);
+	if (ImGui::DragFloat("Duration", &SequenceDuration, 0.01f, 0.001f, 600.0f, "%.3f"))
+	{
+		DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Duration");
+		Sequence->SetDuration(SequenceDuration);
+		SequenceComp->CommitSequenceEditsForSerialization();
+	}
+
+	if (ImGui::Button("Preview Play"))
+	{
+		SequenceComp->PreviewPlay();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Pause"))
+	{
+		SequenceComp->PreviewPause();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Stop"))
+	{
+		SequenceComp->PreviewStop();
+	}
+
+	float PreviewTime = SequenceComp->GetPreviewTime();
+	const float PreviewStartTime = Sequence->GetStartTime();
+	const float PreviewEndTime = Sequence->GetEndTime();
+	ImGui::SetNextItemWidth(-1.0f);
+	if (ImGui::SliderFloat("Preview Time", &PreviewTime, PreviewStartTime, PreviewEndTime, "%.3f"))
+	{
+		SequenceComp->SetPreviewTime(PreviewTime);
+	}
+
+	if (ImGui::Button("Clear Sequence"))
+	{
+		DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Clear Actor Sequence");
+		SequenceComp->PreviewStop();
+		Sequence->Clear();
+		SequenceComp->CommitSequenceEditsForSerialization();
+		ImGui::PopID();
+		return;
+	}
+
+	ImGui::Spacing();
+	if (ImGui::TreeNodeEx("Add Float Track", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		TArray<UObject*> Targets;
+		CollectActorSequenceTargets(Owner, SequenceComp, Targets);
+		UObject* CurrentTarget = ActorSequenceTrackTarget.Get();
+		bool bCurrentTargetFound = false;
+		for (UObject* Target : Targets)
+		{
+			if (Target == CurrentTarget)
+			{
+				bCurrentTargetFound = true;
+				break;
+			}
+		}
+		if (!bCurrentTargetFound)
+		{
+			CurrentTarget = Targets.empty() ? nullptr : Targets.front();
+			ActorSequenceTrackTarget = CurrentTarget;
+			ActorSequenceTrackPropertyName.clear();
+			ActorSequenceTrackChannelIndex = 0;
+		}
+
+		if (Targets.empty())
+		{
+			ImGui::TextDisabled("No animatable properties on this actor.");
+		}
+		else
+		{
+			const FString TargetPreview = MakeActorSequenceTargetLabel(Owner, CurrentTarget);
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::BeginCombo("Target", TargetPreview.c_str()))
+			{
+				for (UObject* Target : Targets)
+				{
+					const bool bSelected = Target == CurrentTarget;
+					const FString Label = MakeActorSequenceTargetLabel(Owner, Target);
+					if (ImGui::Selectable(Label.c_str(), bSelected))
+					{
+						CurrentTarget = Target;
+						ActorSequenceTrackTarget = Target;
+						ActorSequenceTrackPropertyName.clear();
+						ActorSequenceTrackChannelIndex = 0;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			TArray<const FProperty*> Properties;
+			CollectActorSequenceScalarProperties(CurrentTarget, Properties);
+			const FProperty* CurrentProperty = nullptr;
+			for (const FProperty* Property : Properties)
+			{
+				if (Property && Property->Name && ActorSequenceTrackPropertyName == Property->Name)
+				{
+					CurrentProperty = Property;
+					break;
+				}
+			}
+			if (!CurrentProperty && !Properties.empty())
+			{
+				CurrentProperty = Properties.front();
+				ActorSequenceTrackPropertyName = CurrentProperty->Name;
+				ActorSequenceTrackChannelIndex = 0;
+			}
+
+			const char* PropertyPreview = CurrentProperty
+				? (CurrentProperty->DisplayName ? CurrentProperty->DisplayName : CurrentProperty->Name)
+				: "None";
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::BeginCombo("Property", PropertyPreview))
+			{
+				for (const FProperty* Property : Properties)
+				{
+					if (!Property || !Property->Name)
+					{
+						continue;
+					}
+
+					const bool bSelected = CurrentProperty == Property;
+					const char* Label = Property->DisplayName ? Property->DisplayName : Property->Name;
+					if (ImGui::Selectable(Label, bSelected))
+					{
+						CurrentProperty = Property;
+						ActorSequenceTrackPropertyName = Property->Name;
+						ActorSequenceTrackChannelIndex = 0;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			TArray<const char*> Channels;
+			if (CurrentProperty)
+			{
+				GetActorSequenceChannelNames(*CurrentProperty, Channels);
+			}
+			if (ActorSequenceTrackChannelIndex < 0
+				|| ActorSequenceTrackChannelIndex >= static_cast<int32>(Channels.size()))
+			{
+				ActorSequenceTrackChannelIndex = 0;
+			}
+
+			const char* ChannelPreview = !Channels.empty() ? Channels[ActorSequenceTrackChannelIndex] : "Value";
+			ImGui::SetNextItemWidth(140.0f);
+			if (ImGui::BeginCombo("Channel", ChannelPreview))
+			{
+				for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(Channels.size()); ++ChannelIndex)
+				{
+					const bool bSelected = ChannelIndex == ActorSequenceTrackChannelIndex;
+					if (ImGui::Selectable(Channels[ChannelIndex], bSelected))
+					{
+						ActorSequenceTrackChannelIndex = ChannelIndex;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			float CurrentValue = 0.0f;
+			const bool bCanReadCurrentValue = CurrentProperty
+				&& CurrentProperty->ReadScalarChannelValue(CurrentTarget, ChannelPreview, CurrentValue);
+			if (bCanReadCurrentValue)
+			{
+				ImGui::Text("Current Value: %.4f", CurrentValue);
+			}
+			else
+			{
+				ImGui::TextDisabled("Current Value: unavailable");
+			}
+
+			ImGui::SetNextItemWidth(120.0f);
+			ImGui::DragFloat("Start", &ActorSequenceTrackStartTime, 0.01f, 0.0f, 600.0f, "%.3f");
+			ImGui::SetNextItemWidth(120.0f);
+			ImGui::DragFloat("Length", &ActorSequenceTrackDuration, 0.01f, 0.001f, 600.0f, "%.3f");
+			ImGui::SetNextItemWidth(-1.0f);
+			ImGui::InputText("Curve Asset Path", ActorSequenceCurveAssetPathBuffer, sizeof(ActorSequenceCurveAssetPathBuffer));
+
+			const bool bCanAddTrack = CurrentTarget && CurrentProperty && !Channels.empty() && bCanReadCurrentValue;
+			if (!bCanAddTrack)
+			{
+				ImGui::BeginDisabled();
+			}
+			if (ImGui::Button("Add Track"))
+			{
+				const FString TargetName = CurrentTarget == Owner
+					? FString("Owner")
+					: CurrentTarget->GetFName().ToString();
+				const FString CurveAssetPath = ActorSequenceCurveAssetPathBuffer;
+				DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Add Actor Sequence Track");
+				if (SequenceComp->AddFloatTrack(
+					TargetName,
+					CurrentProperty->Name,
+					ChannelPreview,
+					(std::max)(0.0f, ActorSequenceTrackStartTime),
+					(std::max)(0.001f, ActorSequenceTrackDuration),
+					CurveAssetPath))
+				{
+					SequenceComp->CommitSequenceEditsForSerialization();
+					SequenceComp->SetPreviewTime(SequenceComp->GetPreviewTime());
+				}
+			}
+			if (!bCanAddTrack)
+			{
+				ImGui::EndDisabled();
+			}
+		}
+
+		ImGui::TreePop();
+	}
+
+	ImGui::Spacing();
+	if (ImGui::TreeNodeEx("Tracks", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		TArray<FActorSequenceBinding>& Bindings = Sequence->GetBindings();
+		if (Bindings.empty())
+		{
+			ImGui::TextDisabled("No tracks yet.");
+		}
+
+		for (int32 BindingIndex = 0; BindingIndex < static_cast<int32>(Bindings.size()); ++BindingIndex)
+		{
+			FActorSequenceBinding& Binding = Bindings[BindingIndex];
+			UObject* TargetObject = ResolveActorSequenceBindingObject(Owner, Binding.Binding);
+			const FString TargetLabel = MakeActorSequenceTargetLabel(Owner, TargetObject);
+			for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(Binding.Tracks.size()); ++TrackIndex)
+			{
+				FActorSequenceTrack& Track = Binding.Tracks[TrackIndex];
+				for (int32 SectionIndex = 0; SectionIndex < static_cast<int32>(Track.Sections.size()); ++SectionIndex)
+				{
+					FActorSequenceSection& Section = Track.Sections[SectionIndex];
+					for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(Section.Channels.size()); ++ChannelIndex)
+					{
+						FActorSequenceChannel& Channel = Section.Channels[ChannelIndex];
+						char Label[256] = {};
+						std::snprintf(
+							Label,
+							sizeof(Label),
+							"%s.%s.%s [%s]##%d_%d_%d_%d",
+							TargetLabel.c_str(),
+							Track.PropertyName.c_str(),
+							Channel.ChannelName.c_str(),
+							GetActorSequenceTrackTypeLabel(Track.TrackType),
+							BindingIndex,
+							TrackIndex,
+							SectionIndex,
+							ChannelIndex);
+
+						if (ImGui::TreeNodeEx(Label, ImGuiTreeNodeFlags_DefaultOpen))
+						{
+							float SectionStart = Section.StartTime;
+							float SectionDuration = Section.Duration;
+							float SectionPlayRate = Section.PlayRate;
+							bool bSectionLoop = Section.bLoop;
+							bool bSectionChanged = false;
+
+							ImGui::SetNextItemWidth(120.0f);
+							if (ImGui::DragFloat("Start", &SectionStart, 0.01f, 0.0f, 600.0f, "%.3f"))
+							{
+								bSectionChanged = true;
+							}
+							ImGui::SameLine();
+							ImGui::SetNextItemWidth(120.0f);
+							if (ImGui::DragFloat("Length", &SectionDuration, 0.01f, 0.001f, 600.0f, "%.3f"))
+							{
+								bSectionChanged = true;
+							}
+							ImGui::SetNextItemWidth(120.0f);
+							if (ImGui::DragFloat("Rate", &SectionPlayRate, 0.01f, 0.001f, 100.0f, "%.3f"))
+							{
+								bSectionChanged = true;
+							}
+							ImGui::SameLine();
+							if (ImGui::Checkbox("Loop Section", &bSectionLoop))
+							{
+								bSectionChanged = true;
+							}
+
+							if (bSectionChanged)
+							{
+								DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Section");
+								Section.StartTime = (std::max)(0.0f, SectionStart);
+								Section.Duration = (std::max)(0.001f, SectionDuration);
+								Section.PlayRate = (std::max)(0.001f, SectionPlayRate);
+								Section.bLoop = bSectionLoop;
+								Sequence->SetDuration((std::max)(Sequence->GetDuration(), Section.StartTime + Section.Duration - Sequence->GetStartTime()));
+								SequenceComp->CommitSequenceEditsForSerialization();
+							}
+
+							const char* ApplyModeLabels[] = { "Absolute", "Additive" };
+							int32 ApplyModeIndex = Channel.Playback.ApplyMode == ECurveApplyMode::Additive ? 1 : 0;
+							ImGui::SetNextItemWidth(140.0f);
+							if (ImGui::BeginCombo("Apply Mode", ApplyModeLabels[ApplyModeIndex]))
+							{
+								for (int32 ModeIndex = 0; ModeIndex < 2; ++ModeIndex)
+								{
+									const bool bSelected = ApplyModeIndex == ModeIndex;
+									if (ImGui::Selectable(ApplyModeLabels[ModeIndex], bSelected))
+									{
+										DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Apply Mode");
+										Channel.Playback.ApplyMode = ModeIndex == 1
+											? ECurveApplyMode::Additive
+											: ECurveApplyMode::Absolute;
+										SequenceComp->CommitSequenceEditsForSerialization();
+									}
+									if (bSelected)
+									{
+										ImGui::SetItemDefaultFocus();
+									}
+								}
+								ImGui::EndCombo();
+							}
+							ImGui::SameLine();
+							const char* TimeMappingLabels[] = { "Seconds", "Normalized" };
+							int32 TimeMappingIndex = Channel.Playback.TimeMappingMode == ECurveTimeMappingMode::NormalizedTime ? 1 : 0;
+							ImGui::SetNextItemWidth(150.0f);
+							if (ImGui::BeginCombo("Time Mapping", TimeMappingLabels[TimeMappingIndex]))
+							{
+								for (int32 ModeIndex = 0; ModeIndex < 2; ++ModeIndex)
+								{
+									const bool bSelected = TimeMappingIndex == ModeIndex;
+									if (ImGui::Selectable(TimeMappingLabels[ModeIndex], bSelected))
+									{
+										DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Time Mapping");
+										Channel.Playback.TimeMappingMode = ModeIndex == 1
+											? ECurveTimeMappingMode::NormalizedTime
+											: ECurveTimeMappingMode::Seconds;
+										SequenceComp->CommitSequenceEditsForSerialization();
+									}
+									if (bSelected)
+									{
+										ImGui::SetItemDefaultFocus();
+									}
+								}
+								ImGui::EndCombo();
+							}
+
+							if (ImGui::Button("Add Key At Preview Time"))
+							{
+								DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Add Actor Sequence Key");
+								if (AddActorSequenceKeyAtCurrentValue(
+									SequenceComp,
+									Binding,
+									Track,
+									Section,
+									Channel,
+									SequenceComp->GetPreviewTime()))
+								{
+									SequenceComp->CommitSequenceEditsForSerialization();
+								}
+							}
+							ImGui::SameLine();
+							if (ImGui::Button("Remove Track"))
+							{
+								DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Remove Actor Sequence Track");
+								Section.Channels.erase(Section.Channels.begin() + ChannelIndex);
+								if (Section.Channels.empty())
+								{
+									Binding.Tracks[TrackIndex].Sections.erase(Binding.Tracks[TrackIndex].Sections.begin() + SectionIndex);
+								}
+								if (Binding.Tracks[TrackIndex].Sections.empty())
+								{
+									Binding.Tracks.erase(Binding.Tracks.begin() + TrackIndex);
+								}
+								if (Binding.Tracks.empty())
+								{
+									Bindings.erase(Bindings.begin() + BindingIndex);
+								}
+								SequenceComp->CommitSequenceEditsForSerialization();
+								ImGui::TreePop();
+								ImGui::TreePop();
+								ImGui::PopID();
+								return;
+							}
+
+							UFloatCurveAsset* Curve = Channel.Playback.Curve;
+							if (!Curve)
+							{
+								ImGui::TextDisabled("No inline curve is loaded for this channel.");
+							}
+							else
+							{
+								FFloatCurve& FloatCurve = Curve->GetCurve();
+								if (ImGui::BeginTable("##ActorSequenceKeys", 4,
+									ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg))
+								{
+									ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 28.0f);
+									ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthStretch);
+									ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+									ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 58.0f);
+
+									for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(FloatCurve.Keys.size()); ++KeyIndex)
+									{
+										FCurveKey& Key = FloatCurve.Keys[KeyIndex];
+										ImGui::TableNextRow();
+										ImGui::TableSetColumnIndex(0);
+										ImGui::Text("%d", KeyIndex);
+
+										ImGui::TableSetColumnIndex(1);
+										ImGui::PushID(KeyIndex);
+										float KeyTime = Key.Time;
+										ImGui::SetNextItemWidth(-1.0f);
+										if (ImGui::DragFloat("##Time", &KeyTime, 0.01f, 0.0f, 600.0f, "%.3f"))
+										{
+											DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Key");
+											Key.Time = (std::max)(0.0f, KeyTime);
+											FloatCurve.SortKeys();
+											FloatCurve.AutoSetTangents();
+											SequenceComp->CommitSequenceEditsForSerialization();
+											ImGui::PopID();
+											ImGui::EndTable();
+											ImGui::TreePop();
+											ImGui::TreePop();
+											ImGui::PopID();
+											return;
+										}
+
+										ImGui::TableSetColumnIndex(2);
+										float KeyValue = Key.Value;
+										ImGui::SetNextItemWidth(-1.0f);
+										if (ImGui::DragFloat("##Value", &KeyValue, 0.01f, -100000.0f, 100000.0f, "%.4f"))
+										{
+											DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Edit Actor Sequence Key");
+											Key.Value = KeyValue;
+											FloatCurve.AutoSetTangents();
+											SequenceComp->CommitSequenceEditsForSerialization();
+										}
+
+										ImGui::TableSetColumnIndex(3);
+										if (ImGui::Button("Delete"))
+										{
+											DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Delete Actor Sequence Key");
+											FloatCurve.Keys.erase(FloatCurve.Keys.begin() + KeyIndex);
+											FloatCurve.AutoSetTangents();
+											SequenceComp->CommitSequenceEditsForSerialization();
+											ImGui::PopID();
+											ImGui::EndTable();
+											ImGui::TreePop();
+											ImGui::TreePop();
+											ImGui::PopID();
+											return;
+										}
+										ImGui::PopID();
+									}
+
+									ImGui::EndTable();
+								}
+							}
+
+							ImGui::TreePop();
+						}
+					}
+				}
+			}
+		}
+
+		ImGui::TreePop();
+	}
+
+	ImGui::PopID();
+}
+
 void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArray<AActor*>& SelectedActors)
 {
 	(void)Actor;
@@ -1967,6 +2904,11 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	TArray<FPropertyValue> Props;
 	SelectedComponent->GetEditableProperties(Props);
 	ImGui::PushID(SelectedComponent.Get());
+
+	if (UActorSequenceComponent* SequenceComp = Cast<UActorSequenceComponent>(SelectedComponent.Get()))
+	{
+		RenderActorSequenceComponentTools(SequenceComp);
+	}
 
 	bool bIsRoot = false;
 	if (SelectedComponent->IsA<USceneComponent>())
@@ -1985,7 +2927,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 		{
 			if (C == PropertyCategory) { bFound = true; break; }
 		}
-		if (!bFound) CategoryOrder.push_back(PropertyCategory);
+		if (!bFound && !ShouldHideComponentPropertyCategory(SelectedComponent.Get(), PropertyCategory)) CategoryOrder.push_back(PropertyCategory);
 	}
 
 	bool bAnyChanged = false;
@@ -1998,6 +2940,9 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	for (const auto& Cat : CategoryOrder)
 	{
 		if (bPropsInvalidated) break;
+
+		if (ShouldHideComponentPropertyCategory(SelectedComponent.Get(), Cat))
+			continue;
 
 		// Root 컴포넌트는 Transform 카테고리 스킵
 		if (bIsRoot && Cat == "Transform")
@@ -2155,7 +3100,13 @@ bool FEditorPropertyWidget::RemoveSelectedComponent(AActor* Actor)
 	}
 
 	UActorComponent* Component = SelectedComponent.Get();
+	TArray<FEditorSerializedActorState> BeforeStates =
+		EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Actor });
 	Actor->RemoveComponent(Component);
+	EditorEngine->GetUndoSystem().RecordActorStateChange(
+		BeforeStates,
+		EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Actor }),
+		"Remove Component");
 	CancelActiveDetailsEdit();
 	SelectedComponent = nullptr;
 	PendingDetailsScrollY = -1.0f;
@@ -2167,6 +3118,8 @@ void FEditorPropertyWidget::AddComponentToActor(AActor* Actor, UClass* Component
 {
 	if (!Actor || !ComponentClass) return;
 
+	TArray<FEditorSerializedActorState> BeforeStates =
+		EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Actor });
 	UActorComponent* Comp = Actor->AddComponentByClass(ComponentClass);
 	if (!Comp) return;
 
@@ -2203,6 +3156,10 @@ void FEditorPropertyWidget::AddComponentToActor(AActor* Actor, UClass* Component
 	CancelActiveDetailsEdit();
 	PendingDetailsScrollY = -1.0f;
 	bRestoreDetailsScrollY = false;
+	EditorEngine->GetUndoSystem().RecordActorStateChange(
+		BeforeStates,
+		EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Actor }),
+		"Add Component");
 }
 
 bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
@@ -3392,6 +4349,11 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 	bool bChanged = false;
 	const FString EffectivePropertyPath = PropertyPath.empty() ? FString(Prop.GetName()) : PropertyPath;
 	const bool bReadOnly = Prop.Property && (Prop.Property->Flags & PF_ReadOnly) != 0;
+	FEditorReflectedPropertyState UndoBeforeState;
+	if (!bReadOnly && bDispatchChange && EditorEngine && Prop.Object && Prop.Property)
+	{
+		UndoBeforeState = EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property);
+	}
 	if (bReadOnly)
 	{
 		ImGui::BeginDisabled();
@@ -3886,6 +4848,13 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 	if (bDispatchChange && bChanged)
 	{
 		DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, EffectivePropertyPath);
+		if (UndoBeforeState.IsValid() && EditorEngine && Prop.Object && Prop.Property)
+		{
+			EditorEngine->GetUndoSystem().RecordReflectedProperty(
+				UndoBeforeState,
+				EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property),
+				"Edit Property");
+		}
 	}
 
 	ImGui::PopID();
@@ -4043,7 +5012,16 @@ bool FEditorPropertyWidget::TryRenameActor(AActor* TargetActor, const FString& N
 		}
 	}
 
+	TArray<FEditorSerializedActorState> BeforeStates =
+		EditorEngine ? EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ TargetActor }) : TArray<FEditorSerializedActorState>();
 	TargetActor->SetFName(FName(NewName));
+	if (EditorEngine)
+	{
+		EditorEngine->GetUndoSystem().RecordActorStateChange(
+			BeforeStates,
+			EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ TargetActor }),
+			"Rename Actor");
+	}
 	return true;
 }
 
@@ -4079,6 +5057,15 @@ bool FEditorPropertyWidget::TryRenameComponent(UActorComponent* TargetComponent,
 		}
 	}
 
+	TArray<FEditorSerializedActorState> BeforeStates =
+		(EditorEngine && Owner) ? EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Owner }) : TArray<FEditorSerializedActorState>();
 	TargetComponent->SetFName(FName(NewName));
+	if (EditorEngine && Owner)
+	{
+		EditorEngine->GetUndoSystem().RecordActorStateChange(
+			BeforeStates,
+			EditorEngine->GetUndoSystem().CaptureActorStates(TArray<AActor*>{ Owner }),
+			"Rename Component");
+	}
 	return true;
 }

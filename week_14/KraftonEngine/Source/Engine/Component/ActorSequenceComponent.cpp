@@ -39,6 +39,7 @@ void UActorSequenceComponent::EndPlay()
 	{
 		PreviewSequencePlayer->Stop(true);
 	}
+	UActorComponent::EndPlay();
 }
 
 void UActorSequenceComponent::AddReferencedObjects(FReferenceCollector& Collector)
@@ -92,7 +93,8 @@ void UActorSequenceComponent::Play()
 
 	InitializeRuntimePlayer();
 	SequencePlayer->SetPlaybackOptions(bLoop, bPauseAtEnd);
-	SequencePlayer->SetCurrentTime(StartOffsetSeconds);
+	const float PlaybackStart = Sequence ? Sequence->GetStartTime() : 0.0f;
+	SequencePlayer->SetCurrentTime(PlaybackStart + StartOffsetSeconds);
 	SequencePlayer->Play(false);
 }
 
@@ -169,6 +171,7 @@ void UActorSequenceComponent::PreviewPlay()
 		return;
 	}
 
+	StopRuntimePlayerForPreview();
 	InitializePreviewPlayer();
 	PreviewSequencePlayer->SetPlaybackOptions(bLoop, true);
 	PreviewSequencePlayer->Play(false);
@@ -190,11 +193,17 @@ void UActorSequenceComponent::PreviewStop()
 	}
 }
 
+float UActorSequenceComponent::GetPreviewTime() const
+{
+	return PreviewSequencePlayer ? PreviewSequencePlayer->GetCurrentTime() : 0.0f;
+}
+
 void UActorSequenceComponent::SetPreviewTime(float Time)
 {
 	EnsurePlayers();
 	if (PreviewSequencePlayer)
 	{
+		StopRuntimePlayerForPreview();
 		InitializePreviewPlayer();
 		PreviewSequencePlayer->SetCurrentTime(Time);
 	}
@@ -211,6 +220,10 @@ void UActorSequenceComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	if (SequencePlayer && SequencePlayer->IsPlaying())
 	{
 		SequencePlayer->Tick(DeltaTime * std::max(0.0f, PlayRate));
+	}
+	if (PreviewSequencePlayer && PreviewSequencePlayer->IsPlaying())
+	{
+		PreviewSequencePlayer->Tick(DeltaTime * std::max(0.0f, PlayRate));
 	}
 }
 
@@ -267,6 +280,14 @@ void UActorSequenceComponent::InitializePlayers()
 {
 	InitializeRuntimePlayer();
 	InitializePreviewPlayer();
+}
+
+void UActorSequenceComponent::StopRuntimePlayerForPreview()
+{
+	if (SequencePlayer)
+	{
+		SequencePlayer->Stop(true);
+	}
 }
 
 UObject* UActorSequenceComponent::ResolveTargetByName(const FString& TargetObjectName) const
