@@ -21,6 +21,12 @@ struct FCombatNodeRuntimeState
     TMap<int32, FCombatSlotRuntimeState> Slots;
 };
 
+struct FCombatAttackRuntimeState
+{
+    TWeakObjectPtr<UCombatCoverAgentComponent> Target;
+    float TimeUntilNextAttack = 0.0f;
+};
+
 struct FCombatCoverGraphValidationResult
 {
     int32 NodeCount = 0;
@@ -76,6 +82,40 @@ public:
     bool IsNodeOccupiedOrReserved(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* RequestingAgent = nullptr) const;
 
     void DrawAllDebugVisuals(bool bIncludeUnselected = true) const;
+    void DrawCombatDebugVisuals(float Duration = 0.0f) const;
+
+    UFUNCTION(Callable, Category="CombatFlow|Combat")
+    void UpdateCombatSimulation(float DeltaTime);
+
+    UFUNCTION(Pure, Category="CombatFlow|Combat")
+    bool GetEnableCombatSimulation() const { return bEnableCombatSimulation; }
+
+    UFUNCTION(Callable, Category="CombatFlow|Combat")
+    void SetEnableCombatSimulation(bool bEnabled) { bEnableCombatSimulation = bEnabled; }
+
+    UFUNCTION(Pure, Category="CombatFlow|Combat")
+    bool GetRequireMutualFireRange() const { return bRequireMutualFireRange; }
+
+    UFUNCTION(Callable, Category="CombatFlow|Combat")
+    void SetRequireMutualFireRange(bool bRequired) { bRequireMutualFireRange = bRequired; }
+
+    UFUNCTION(Pure, Category="CombatFlow")
+    bool GetRequireSlotTagMatch() const { return bRequireSlotTagMatch; }
+
+    UFUNCTION(Callable, Category="CombatFlow")
+    void SetRequireSlotTagMatch(bool bRequired) { bRequireSlotTagMatch = bRequired; }
+
+    UFUNCTION(Pure, Category="CombatFlow|Debug")
+    bool GetDrawFireDebugLines() const { return bDrawFireDebugLines; }
+
+    UFUNCTION(Callable, Category="CombatFlow|Debug")
+    void SetDrawFireDebugLines(bool bEnabled) { bDrawFireDebugLines = bEnabled; }
+
+    UFUNCTION(Pure, Category="CombatFlow|Debug")
+    bool GetDrawFireRanges() const { return bDrawFireRanges; }
+
+    UFUNCTION(Callable, Category="CombatFlow|Debug")
+    void SetDrawFireRanges(bool bEnabled) { bDrawFireRanges = bEnabled; }
 
     static UCombatFlowManagerComponent* FindInWorld(UWorld* World);
 
@@ -86,6 +126,13 @@ private:
     void ReleaseAgentExcept(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& KeepSlotHandle);
     int32 CountNodeClaims(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* IgnoreAgent) const;
     bool SlotTagsMatchTeam(const FCombatCoverSlot& Slot, const FString& TeamTag) const;
+    void GatherAdvanceCandidateNodes(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* CurrentNode, TArray<UCombatCoverNodeComponent*>& OutNodes) const;
+    UCombatCoverAgentComponent* FindBestTargetFor(UCombatCoverAgentComponent* Agent) const;
+    bool CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const;
+    void DrawFireDebugLine(UCombatCoverAgentComponent* Shooter, UCombatCoverAgentComponent* Target, float Duration) const;
+    void DrawFireRanges(float Duration) const;
+    float PickAttackInterval(const UCombatCoverAgentComponent* Agent) const;
+    void RemoveStaleAttackState();
     void EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node);
     void RemoveStaleRuntimeState();
     void AddValidationMessage(FCombatCoverGraphValidationResult& Result, bool bError, const FString& Message) const;
@@ -97,6 +144,18 @@ private:
     UPROPERTY(Edit, Save, Category="CombatFlow", DisplayName="Use Node Occupancy Limit")
     bool bUseNodeOccupancyLimit = true;
 
+    UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Enable Combat Simulation")
+    bool bEnableCombatSimulation = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Require Mutual Fire Range")
+    bool bRequireMutualFireRange = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw Fire Debug Lines")
+    bool bDrawFireDebugLines = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw Fire Ranges")
+    bool bDrawFireRanges = false;
+
     UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw Debug During Tick")
     bool bDrawDebugDuringTick = false;
 
@@ -107,6 +166,7 @@ private:
     TArray<UCombatCoverAgentComponent*> CachedAgents;
     TMap<FString, UCombatCoverNodeComponent*> NodeById;
     TMap<FString, FCombatNodeRuntimeState> RuntimeStateByNodeId;
+    TMap<UCombatCoverAgentComponent*, FCombatAttackRuntimeState> AttackStateByAgent;
     float DebugDrawTimer = 0.0f;
 
 protected:

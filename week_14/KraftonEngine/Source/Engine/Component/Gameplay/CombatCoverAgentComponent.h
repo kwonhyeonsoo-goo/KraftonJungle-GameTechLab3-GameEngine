@@ -15,8 +15,17 @@ enum class ECombatCoverAgentState : uint8
     MovingToInitialSlot,
     InCover,
     MovingToLinkedNode,
+    Engaging,
     Blocked,
     Dead
+};
+
+UENUM()
+enum class ECombatAdvanceLinkMode : uint8
+{
+    OutgoingLinks,
+    IncomingLinks,
+    Both
 };
 
 UCLASS()
@@ -60,7 +69,52 @@ public:
     UFUNCTION(Pure, Category="CombatAgent")
     ECombatCoverAgentState GetState() const { return State; }
 
+    UFUNCTION(Pure, Category="CombatAgent")
+    ECombatAdvanceLinkMode GetAdvanceLinkMode() const { return AdvanceLinkMode; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetMaxHealth() const { return MaxHealth; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetHealth() const { return Health; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetFireRange() const { return FireRange; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetAttackDamage() const { return AttackDamage; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetAttackIntervalMin() const { return AttackIntervalMin; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetAttackIntervalMax() const { return AttackIntervalMax; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    int32 GetIncomingFireCount() const { return IncomingFireCount; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetIncomingAttackDamage() const { return IncomingAttackDamage; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    UCombatCoverAgentComponent* GetCurrentTarget() const { return CurrentTarget.Get(); }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool CanFireWhileMoving() const { return bCanFireWhileMoving; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool IsAlive() const { return State != ECombatCoverAgentState::Dead && Health > 0.0f; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool IsEngaging() const { return State == ECombatCoverAgentState::Engaging || CurrentTarget.Get() != nullptr; }
+
     const char* GetStateName() const;
+    const char* GetAdvanceLinkModeName() const;
+
+    void SetEngagementTarget(UCombatCoverAgentComponent* Target);
+    void ClearEngagementTarget();
+    void ApplyDamage(float Damage);
+    void SetIncomingFireStats(int32 Count, float AttackDamage);
 
 private:
     UCombatFlowManagerComponent* ResolveManager();
@@ -70,6 +124,9 @@ private:
 private:
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Team Tag")
     FString TeamTag = "Enemy";
+
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Link Mode", Enum=ECombatAdvanceLinkMode)
+    ECombatAdvanceLinkMode AdvanceLinkMode = ECombatAdvanceLinkMode::OutgoingLinks;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
     float MoveSpeed = 10.0f;
@@ -89,6 +146,30 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Use Character Movement")
     bool bUseCharacterMovement = true;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Max Health", Min=1.0f, Max=100000.0f, Speed=1.0f)
+    float MaxHealth = 100.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Health", Min=0.0f, Max=100000.0f, Speed=1.0f)
+    float Health = 100.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Fire Range", Min=0.0f, Max=100000.0f, Speed=10.0f)
+    float FireRange = 1200.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Damage", Min=0.0f, Max=100000.0f, Speed=1.0f)
+    float AttackDamage = 5.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Interval Min", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float AttackIntervalMin = 1.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Attack Interval Max", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float AttackIntervalMax = 2.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Target Scan Interval", Min=0.01f, Max=10.0f, Speed=0.01f)
+    float TargetScanInterval = 0.2f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Can Fire While Moving")
+    bool bCanFireWhileMoving = false;
+
     ECombatCoverAgentState State = ECombatCoverAgentState::Idle;
     FString CurrentNodeId;
     int32 CurrentSlotId = -1;
@@ -96,6 +177,11 @@ private:
     int32 TargetSlotId = -1;
     float AdvanceTimer = 0.0f;
     float RetryTimer = 0.0f;
+    float TargetScanTimer = 0.0f;
+    int32 IncomingFireCount = 0;
+    float IncomingAttackDamage = 0.0f;
+    ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
+    TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
     TWeakObjectPtr<UCombatFlowManagerComponent> CachedManager;
 
 protected:

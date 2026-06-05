@@ -1,0 +1,83 @@
+{
+  "Actor" : {
+    "ClassName" : "AStaticMeshActor",
+    "Name" : "agent1",
+    "NonSceneComponents" : [{
+        "ClassName" : "UCombatCoverAgentComponent",
+        "ObjectId" : 3,
+        "Properties" : {
+          "AcceptanceRadius" : 2.500000,
+          "AdvanceInterval" : 3.000000,
+          "AdvanceLinkMode" : 0,
+          "DamagePerSecond" : 10.000000,
+          "FireRange" : 50.000000,
+          "Health" : 100.000000,
+          "MaxHealth" : 100.000000,
+          "MoveSpeed" : 10.000000,
+          "PendingTagsString" : "",
+          "PersistentGuid" : "Component_333",
+          "RetryInterval" : 1.000000,
+          "TargetScanInterval" : 0.200000,
+          "TeamTag" : "Ally",
+          "bAutoActivate" : true,
+          "bAutoStart" : true,
+          "bCanFireWhileMoving" : false,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true,
+          "bUseCharacterMovement" : true
+        }
+      }],
+    "ObjectId" : 1,
+    "Properties" : {
+      "PendingActorLocation" : [-48.873283, 16.728001, 0.000000],
+      "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+      "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+      "PendingActorVisible" : true,
+      "PendingTagsString" : "",
+      "bNeedsTick" : true
+    },
+    "RootComponent" : {
+      "Children" : [],
+      "ClassName" : "UStaticMeshComponent",
+      "ObjectId" : 2,
+      "Properties" : {
+        "AttachSocketName" : "Name_None",
+        "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+        "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+        "CollisionEnabled" : 0,
+        "Mass" : 1.000000,
+        "MaterialSlots" : ["Content/Material/Auto/BasicShapeMaterial.uasset"],
+        "ObjectType" : 0,
+        "PendingTagsString" : "",
+        "PersistentGuid" : "Component_332",
+        "RelativeTransform.Location" : [-48.873283, 16.728001, 0.000000],
+        "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+        "ResponseContainer" : {
+          "Responses[0]" : 2,
+          "Responses[1]" : 2,
+          "Responses[2]" : 2,
+          "Responses[3]" : 2,
+          "Responses[4]" : 2
+        },
+        "StaticMeshPath" : "Content/Data/BasicShape/Cylinder_StaticMesh.uasset",
+        "bAutoActivate" : true,
+        "bCastShadow" : true,
+        "bCastShadowAsTwoSided" : false,
+        "bEditorOnly" : false,
+        "bEnableCCD" : false,
+        "bGenerateOverlapEvents" : false,
+        "bHiddenInComponentTree" : false,
+        "bIsActive" : true,
+        "bIsVisible" : true,
+        "bKinematic" : false,
+        "bSimulatePhysics" : false,
+        "bTickEnable" : true
+      }
+    }
+  },
+  "SourceActorName" : "agent1",
+  "Type" : "KraftonPrefab",
+  "Version" : 1
+}
