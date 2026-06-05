@@ -205,6 +205,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ContentBrowserWidget.Initialize(InEditorEngine, InRenderer.GetFD3DDevice().GetDevice());
 	ShadowMapDebugWidget.Initialize(InEditorEngine);
 	AnimationDebugWidget.Initialize(InEditorEngine);
+	CombatMapEditorWidget.Initialize(InEditorEngine);
 	AssetEditorManager.Initialize(InEditorEngine);
 
 	AssetEditorManager.RegisterEditor<FFloatCurveEditorWidget>();
@@ -303,6 +304,12 @@ void FEditorMainPanel::Render(float DeltaTime)
 		AnimationDebugWidget.Render(DeltaTime);
 	}
 
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bCombatMapEditor)
+	{
+		SCOPE_STAT_CAT("CombatMapEditorWidget.Render", "5_UI");
+		CombatMapEditorWidget.Render(DeltaTime);
+	}
+
 	ProjectSettingsWidget.Render();
 	WorldSettingsWidget.Render();
 
@@ -397,6 +404,7 @@ void FEditorMainPanel::RenderMainMenuBar()
 		ImGui::Checkbox("Editor Debug", &Settings.UI.bEditorDebug);
 		ImGui::Checkbox("Shadow Map Debug", &Settings.UI.bShadowMapDebug);
 		ImGui::Checkbox("Animation Debug", &Settings.UI.bAnimationDebug);
+		ImGui::Checkbox("Combat Map Editor", &Settings.UI.bCombatMapEditor);
 		ImGui::Separator();
 		ImGui::Checkbox("IMGUI_Setting", &Settings.UI.bImGUISettings);
 		ImGui::EndPopup();

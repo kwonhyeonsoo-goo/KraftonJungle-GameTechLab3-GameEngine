@@ -11,6 +11,7 @@
 #include "Editor/UI/Debug/EditorAnimationDebugWidget.h"
 #include "Editor/UI/Panel/EditorProjectSettingsWidget.h"
 #include "Editor/UI/Panel/EditorWorldSettingsWidget.h"
+#include "Editor/UI/Panel/CombatMapEditorWidget.h"
 #include "Editor/UI/ContentBrowser/ContentBrowser.h"
 #include "Editor/UI/Asset/AssetEditorManager.h"
 #include "Editor/UI/EditorDocumentTabManager.h"
@@ -76,6 +77,7 @@ private:
 	FEditorAnimationDebugWidget AnimationDebugWidget;
 	EditorProjectSettingsWidget ProjectSettingsWidget;
 	EditorWorldSettingsWidget WorldSettingsWidget;
+	FCombatMapEditorWidget CombatMapEditorWidget;
 	FAssetEditorManager AssetEditorManager;
 	FEditorDocumentTabManager DocumentTabs;
 

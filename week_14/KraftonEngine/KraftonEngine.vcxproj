@@ -454,6 +454,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Editor\UI\Panel\EditorStatWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Panel\EditorViewportWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Panel\EditorWorldSettingsWidget.cpp" />
+    <ClCompile Include="Source\Editor\UI\Panel\CombatMapEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Toolbar\ViewportToolbar.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\EditorDragSource.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\EditorFileUtils.cpp" />
@@ -533,6 +534,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\InputComponent.cpp" />
@@ -897,6 +901,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Editor\UI\Panel\EditorStatWidget.h" />
     <ClInclude Include="Source\Editor\UI\Panel\EditorViewportWidget.h" />
     <ClInclude Include="Source\Editor\UI\Panel\EditorWorldSettingsWidget.h" />
+    <ClInclude Include="Source\Editor\UI\Panel\CombatMapEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Toolbar\ViewportToolbar.h" />
     <ClInclude Include="Source\Editor\UI\Util\EditorDragSource.h" />
     <ClInclude Include="Source\Editor\UI\Util\EditorFileUtils.h" />
@@ -992,6 +997,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\SniperTypes.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.h" />
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h" />
