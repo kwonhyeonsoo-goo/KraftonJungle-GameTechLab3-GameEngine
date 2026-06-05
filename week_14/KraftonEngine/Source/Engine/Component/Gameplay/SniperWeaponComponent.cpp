@@ -2,6 +2,77 @@
 
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
+
+#include <cmath>
+
+namespace
+{
+	constexpr float SniperZeroingMinRangeMeters = 1.0f;
+	constexpr float SniperZeroingMaxPitchDegrees = 12.0f;
+	constexpr float SniperZeroingSimulationStepSeconds = 1.0f / 240.0f;
+	constexpr int32 SniperZeroingSimulationMaxSteps = 2400;
+	constexpr int32 SniperZeroingBinarySearchSteps = 16;
+
+	FVector RotateAroundAxis(const FVector& Vector, const FVector& Axis, float AngleRadians)
+	{
+		const FVector NormalizedAxis = Axis.Normalized();
+		const float CosTheta = std::cos(AngleRadians);
+		const float SinTheta = std::sin(AngleRadians);
+		return Vector * CosTheta
+			+ FVector::Cross(NormalizedAxis, Vector) * SinTheta
+			+ NormalizedAxis * (NormalizedAxis.Dot(Vector) * (1.0f - CosTheta));
+	}
+
+	float SampleZeroingVerticalOffset(
+		const FVector& BaseDirection,
+		const FVector& PlaneUp,
+		const FVector& RightAxis,
+		float PitchOffsetDegrees,
+		float TargetForwardDistance,
+		const FAmmoBallisticData& AmmoData,
+		const FVector& WorldGravity)
+	{
+		// In this engine, negative pitch aims upward, so invert the usual sign here.
+		const float PitchOffsetRadians = -PitchOffsetDegrees * (3.14159265358979323846f / 180.0f);
+		const FVector SimulatedDirection = RotateAroundAxis(BaseDirection, RightAxis, PitchOffsetRadians).Normalized();
+		FVector Position = FVector::ZeroVector;
+		FVector Velocity = SimulatedDirection * AmmoData.InitialSpeed;
+
+		float PreviousForwardDistance = 0.0f;
+		float PreviousVerticalOffset = 0.0f;
+
+		for (int32 StepIndex = 0; StepIndex < SniperZeroingSimulationMaxSteps; ++StepIndex)
+		{
+			const FVector DragAcceleration = Velocity.IsNearlyZero()
+				? FVector::ZeroVector
+				: Velocity * (-AmmoData.DragCoefficient);
+			const FVector TotalAcceleration = WorldGravity * AmmoData.GravityScale + DragAcceleration;
+			Position += Velocity * SniperZeroingSimulationStepSeconds
+				+ TotalAcceleration * (0.5f * SniperZeroingSimulationStepSeconds * SniperZeroingSimulationStepSeconds);
+			Velocity += TotalAcceleration * SniperZeroingSimulationStepSeconds;
+
+			const float ForwardDistance = Position.Dot(BaseDirection);
+			const float VerticalOffset = Position.Dot(PlaneUp);
+			if (ForwardDistance >= TargetForwardDistance)
+			{
+				const float DistanceSpan = ForwardDistance - PreviousForwardDistance;
+				if (DistanceSpan <= 1.0e-6f)
+				{
+					return VerticalOffset;
+				}
+
+				const float Alpha = (TargetForwardDistance - PreviousForwardDistance) / DistanceSpan;
+				return PreviousVerticalOffset + (VerticalOffset - PreviousVerticalOffset) * Alpha;
+			}
+
+			PreviousForwardDistance = ForwardDistance;
+			PreviousVerticalOffset = VerticalOffset;
+		}
+
+		return PreviousVerticalOffset;
+	}
+}
 
 USniperWeaponComponent::USniperWeaponComponent()
 {
@@ -30,6 +101,11 @@ bool USniperWeaponComponent::SetCurrentAmmoType(ESniperAmmoType InAmmoType)
 
 	CurrentAmmoType = InAmmoType;
 	return true;
+}
+
+void USniperWeaponComponent::SetZeroRangeMeters(float InZeroRangeMeters)
+{
+	ZeroRangeMeters = InZeroRangeMeters < 0.0f ? 0.0f : InZeroRangeMeters;
 }
 
 const FAmmoBallisticData* USniperWeaponComponent::GetCurrentAmmoData() const
@@ -73,10 +149,16 @@ bool USniperWeaponComponent::RequestFire(
 		return false;
 	}
 
+	const FVector ZeroedShotDirection = BuildZeroedShotDirection(ShotDirection, *AmmoData);
+	if (ZeroedShotDirection.IsNearlyZero())
+	{
+		return false;
+	}
+
 	FBallisticBullet Bullet;
 	Bullet.Position = MuzzlePosition;
 	Bullet.PreviousPosition = MuzzlePosition;
-	Bullet.Velocity = ShotDirection.Normalized() * AmmoData->InitialSpeed;
+	Bullet.Velocity = ZeroedShotDirection * AmmoData->InitialSpeed;
 	Bullet.Damage = AmmoData->Damage;
 	Bullet.Radius = AmmoData->BulletRadius;
 	Bullet.LifeTime = AmmoData->LifeTime;
@@ -120,6 +202,89 @@ void USniperWeaponComponent::TickComponent(
 			FireCooldownRemaining = 0.0f;
 		}
 	}
+}
+
+FVector USniperWeaponComponent::BuildZeroedShotDirection(const FVector& ShotDirection, const FAmmoBallisticData& AmmoData) const
+{
+	const FVector BaseDirection = ShotDirection.Normalized();
+	if (!bEnableZeroing || ZeroRangeMeters < SniperZeroingMinRangeMeters || BaseDirection.IsNearlyZero())
+	{
+		return BaseDirection;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	const FVector WorldGravity = World ? World->GetWorldSettings().Gravity : FVector(0.0f, 0.0f, -9.81f);
+	const FVector WorldUp = FVector::UpVector;
+	FVector RightAxis = FVector::Cross(WorldUp, BaseDirection);
+	if (RightAxis.IsNearlyZero())
+	{
+		RightAxis = FVector::RightVector;
+	}
+	else
+	{
+		RightAxis = RightAxis.Normalized();
+	}
+
+	FVector PlaneUp = FVector::Cross(BaseDirection, RightAxis);
+	if (PlaneUp.IsNearlyZero())
+	{
+		return BaseDirection;
+	}
+	PlaneUp = PlaneUp.Normalized();
+
+	const float UnzeroedOffset = SampleZeroingVerticalOffset(
+		BaseDirection,
+		PlaneUp,
+		RightAxis,
+		0.0f,
+		ZeroRangeMeters,
+		AmmoData,
+		WorldGravity);
+	if (UnzeroedOffset >= 0.0f)
+	{
+		return BaseDirection;
+	}
+
+	float LowPitch = 0.0f;
+	float HighPitch = SniperZeroingMaxPitchDegrees;
+	float HighOffset = SampleZeroingVerticalOffset(
+		BaseDirection,
+		PlaneUp,
+		RightAxis,
+		HighPitch,
+		ZeroRangeMeters,
+		AmmoData,
+		WorldGravity);
+
+	if (HighOffset < 0.0f)
+	{
+		return RotateAroundAxis(BaseDirection, RightAxis, -HighPitch * (3.14159265358979323846f / 180.0f)).Normalized();
+	}
+
+	for (int32 SearchIndex = 0; SearchIndex < SniperZeroingBinarySearchSteps; ++SearchIndex)
+	{
+		const float MidPitch = (LowPitch + HighPitch) * 0.5f;
+		const float MidOffset = SampleZeroingVerticalOffset(
+			BaseDirection,
+			PlaneUp,
+			RightAxis,
+			MidPitch,
+			ZeroRangeMeters,
+			AmmoData,
+			WorldGravity);
+
+		if (MidOffset >= 0.0f)
+		{
+			HighPitch = MidPitch;
+		}
+		else
+		{
+			LowPitch = MidPitch;
+		}
+	}
+
+	return RotateAroundAxis(BaseDirection, RightAxis, -HighPitch * (3.14159265358979323846f / 180.0f)).Normalized();
 }
 
 void USniperWeaponComponent::InitializeDefaultAmmoData()

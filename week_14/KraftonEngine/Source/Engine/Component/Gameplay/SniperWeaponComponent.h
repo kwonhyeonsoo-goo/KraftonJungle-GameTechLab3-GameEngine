@@ -23,6 +23,14 @@ public:
 	ESniperAmmoType GetCurrentAmmoType() const { return CurrentAmmoType; }
 	UFUNCTION(Callable, Category="Sniper|Weapon")
 	bool SetCurrentAmmoType(ESniperAmmoType InAmmoType);
+	UFUNCTION(Pure, Category="Sniper|Weapon")
+	bool IsZeroingEnabled() const { return bEnableZeroing; }
+	UFUNCTION(Callable, Category="Sniper|Weapon")
+	void SetZeroingEnabled(bool bInEnableZeroing) { bEnableZeroing = bInEnableZeroing; }
+	UFUNCTION(Pure, Category="Sniper|Weapon")
+	float GetZeroRangeMeters() const { return ZeroRangeMeters; }
+	UFUNCTION(Callable, Category="Sniper|Weapon")
+	void SetZeroRangeMeters(float InZeroRangeMeters);
 	const FAmmoBallisticData* GetCurrentAmmoData() const;
 	const FAmmoBallisticData* GetAmmoData(ESniperAmmoType InAmmoType) const;
 	UFUNCTION(Pure, Category="Sniper|Weapon")
@@ -42,9 +50,14 @@ protected:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
+	FVector BuildZeroedShotDirection(const FVector& ShotDirection, const FAmmoBallisticData& AmmoData) const;
 	void InitializeDefaultAmmoData();
 	void ResolveBulletManagerComponent();
 
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon")
+	bool bEnableZeroing = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon")
+	float ZeroRangeMeters = 200.0f;
 	ESniperAmmoType CurrentAmmoType = ESniperAmmoType::Normal;
 	float FireCooldownRemaining = 0.0f;
 	TArray<FAmmoBallisticData> AmmoBallisticTable;
