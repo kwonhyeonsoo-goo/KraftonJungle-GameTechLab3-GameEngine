@@ -639,6 +639,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaDebugManager.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp" />
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ActorBindings.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Core.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Math.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ReflectionActor.cpp" />

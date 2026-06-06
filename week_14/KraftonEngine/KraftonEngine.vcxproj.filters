@@ -1553,6 +1553,9 @@
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ActorBindings.cpp">
+      <Filter>Source\Engine\Lua</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Core.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
