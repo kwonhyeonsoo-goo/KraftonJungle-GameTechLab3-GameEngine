@@ -6,6 +6,8 @@
 #include "Core/Types/CollisionTypes.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/World.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"

@@ -3,6 +3,7 @@
 #include "Core/Types/CoreTypes.h"
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
+#include "Render/Types/RenderTypes.h"
 #include "Render/Types/ViewTypes.h"
 #include "Render/Types/LODContext.h"
 #include "Collision/Math/ConvexVolume.h"

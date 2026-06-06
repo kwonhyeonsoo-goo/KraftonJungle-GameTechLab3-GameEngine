@@ -295,6 +295,7 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 			CameraManager->SetScopeZoomEnabled(ScopeState.bIsScoped);
 		}
 	}
+
 }
 
 void ASniperPawn::UpdateHoldBreathState(float DeltaTime)

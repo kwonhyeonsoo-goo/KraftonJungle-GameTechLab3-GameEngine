@@ -1553,6 +1553,12 @@
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Math.cpp">
+      <Filter>Source\Engine\Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.UI.cpp">
+      <Filter>Source\Engine\Lua</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\LuaBlueprint\LuaBlueprintAsset.cpp">
       <Filter>Source\Engine\LuaBlueprint</Filter>
     </ClCompile>

@@ -2,7 +2,6 @@
 
 #include "Object/Reflection/ObjectFactory.h"
 #include "Component/SceneComponent.h"
-#include "Render/Types/RenderTypes.h"
 #include "Core/Types/RayTypes.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Core/Types/EngineTypes.h"
