@@ -623,6 +623,37 @@ void FCombatMapEditorWidget::RenderSlotPanel(UCombatCoverNodeComponent* Node)
             ImGui::DragInt("SlotId", &Slot.SlotId, 1.0f, 0, 100000);
             ImGui::DragFloat3("Local Position", Slot.LocalPosition.Data, 1.0f);
             ImGui::DragFloat3("Local Forward", Slot.LocalForward.Data, 0.05f);
+            ImGui::Checkbox("Use Approach On Exit", &Slot.bUseApproachOnExit);
+            ImGui::SameLine();
+            ImGui::Checkbox("Use Approach On Entry", &Slot.bUseApproachOnEntry);
+            ImGui::DragFloat3("Local Approach Offset", Slot.LocalApproachOffset.Data, 1.0f);
+            if (ImGui::Button("Exit +Y"))
+            {
+                Slot.bUseApproachOnExit = true;
+                Slot.bUseApproachOnEntry = false;
+                Slot.LocalApproachOffset = FVector(0.0f, 120.0f, 0.0f);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Exit -Y"))
+            {
+                Slot.bUseApproachOnExit = true;
+                Slot.bUseApproachOnEntry = false;
+                Slot.LocalApproachOffset = FVector(0.0f, -120.0f, 0.0f);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Exit Back"))
+            {
+                Slot.bUseApproachOnExit = true;
+                Slot.bUseApproachOnEntry = false;
+                Slot.LocalApproachOffset = FVector(-120.0f, 0.0f, 0.0f);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Clear Approach"))
+            {
+                Slot.bUseApproachOnExit = false;
+                Slot.bUseApproachOnEntry = false;
+                Slot.LocalApproachOffset = FVector::ZeroVector;
+            }
             ImGui::DragFloat("Radius", &Slot.Radius, 1.0f, 1.0f, 10000.0f);
             InputTextString("Tags", Slot.Tags);
             ImGui::DragFloat("Weight", &Slot.Weight, 0.1f, 0.0f, 1000.0f);

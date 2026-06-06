@@ -23,6 +23,15 @@ struct FCombatCoverSlot
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Local Forward", Type=Vec3, Speed=0.05f)
     FVector LocalForward = FVector::ForwardVector;
 
+    UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Use Approach On Exit")
+    bool bUseApproachOnExit = false;
+
+    UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Use Approach On Entry")
+    bool bUseApproachOnEntry = false;
+
+    UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Local Approach Offset", Type=Vec3, Speed=1.0f)
+    FVector LocalApproachOffset = FVector::ZeroVector;
+
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
     float Radius = 2.0f;
 
@@ -115,6 +124,9 @@ public:
 
     UFUNCTION(Pure, Category="CombatCover")
     FVector GetSlotWorldForward(int32 SlotIndex) const;
+
+    UFUNCTION(Pure, Category="CombatCover")
+    FVector GetSlotWorldApproachPosition(int32 SlotIndex) const;
 
     UFUNCTION(Callable, Category="CombatCover")
     int32 AddSlotAtLocalPosition(const FVector& LocalPosition);

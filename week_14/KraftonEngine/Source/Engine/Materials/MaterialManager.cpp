@@ -72,7 +72,7 @@ namespace
 		}
 	}
 
-	void ApplyDefaultEmissiveParameters(UMaterial* Material)
+	void ApplyDefaultImportedMaterialParameters(UMaterial* Material)
 	{
 		if (!Material)
 		{
@@ -87,6 +87,14 @@ namespace
 		if (HasMaterialParameter(Material, "EmissiveIntensity") && !Store.FindByName("EmissiveIntensity"))
 		{
 			Material->SetScalarParameter("EmissiveIntensity", 0.0f);
+		}
+		if (HasMaterialParameter(Material, "SpecularColor") && !Store.FindByName("SpecularColor"))
+		{
+			Material->SetVector3Parameter("SpecularColor", FVector(1.0f, 1.0f, 1.0f));
+		}
+		if (HasMaterialParameter(Material, "Shininess") && !Store.FindByName("Shininess"))
+		{
+			Material->SetScalarParameter("Shininess", 32.0f);
 		}
 	}
 }
@@ -211,7 +219,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	DefaultMaterial->Create(UassetPath, Template, EMaterialDomain::Surface, EBlendMode::Opaque, std::move(Buffers));
 	DefaultMaterial->SetShaderPathForSerialize(DefaultShaderPath);
 	DefaultMaterial->SetVector4Parameter("SectionColor", FVector4(1.0f, 0.0f, 1.0f, 1.0f));
-	ApplyDefaultEmissiveParameters(DefaultMaterial);
+	ApplyDefaultImportedMaterialParameters(DefaultMaterial);
 	MaterialCache.emplace(UassetPath, DefaultMaterial);
 	return DefaultMaterial;
 }
@@ -282,7 +290,7 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
         MI->InitializeFromParent(ParentMat, UassetPath); // Template/CB 를 Parent 에서 복제. id=로드 경로(rename 안전)
         MI->Serialize(Ar, Header.Version);               // 복제된 CB 에 override/CPUData/텍스처 기록
 		if (!Ar.IsValid()) { UObjectManager::Get().DestroyObject(MI); return nullptr; }
-		ApplyDefaultEmissiveParameters(MI);
+		ApplyDefaultImportedMaterialParameters(MI);
 		return MI;
 	}
 
@@ -314,13 +322,13 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
         }
     }
 
-	ApplyDefaultEmissiveParameters(Material);
+	ApplyDefaultImportedMaterialParameters(Material);
 	return Material;
 }
 
 // 임포터용 — JSON 없이 머티리얼을 직접 만들고 .uasset 으로 저장한다.
 UMaterial* FMaterialManager::CreateImportedMaterialAsset(const FString& UassetPath, const FVector4& SectionColor,
-	const FString& DiffuseTexturePath, const FString& NormalTexturePath)
+	const FString& DiffuseTexturePath, const FString& NormalTexturePath, const FVector& SpecularColor, float Shininess)
 {
 	MaterialCache.erase(UassetPath);
 
@@ -334,7 +342,9 @@ UMaterial* FMaterialManager::CreateImportedMaterialAsset(const FString& UassetPa
 	Material->SetVector4Parameter("SectionColor", SectionColor);
 	Material->SetScalarParameter("HasNormalMap", NormalTexturePath.empty() ? 0.0f : 1.0f);
 	Material->SetScalarParameter("Opacity", 1.0f); // CB zero-init=0(투명) 방지 — 신규 머티리얼 기본 불투명
-	ApplyDefaultEmissiveParameters(Material);
+	Material->SetVector3Parameter("SpecularColor", SpecularColor);
+	Material->SetScalarParameter("Shininess", Shininess);
+	ApplyDefaultImportedMaterialParameters(Material);
 
 	if (!DiffuseTexturePath.empty())
 		if (UTexture2D* Tex = UTexture2D::LoadFromFile(DiffuseTexturePath, Device, ETextureColorSpace::SRGB))
@@ -372,7 +382,7 @@ bool FMaterialManager::SetMaterialShader(UMaterial* Material, const FString& Sha
 		Material->GetDomain(), Material->GetBlendMode(), std::move(Buffers));
 	Material->SetShaderPathForSerialize(ShaderPath);
 	ApplyRuntimeParameterStoreToBuffers(Material);
-	ApplyDefaultEmissiveParameters(Material);
+	ApplyDefaultImportedMaterialParameters(Material);
 
 	// 기본 UberLit 은 엔진이 (ViewMode×VertexFactory) 퍼뮤테이션으로 도출 가능 → custom 해제.
 	// 그 외(非UberLit) 셰이더는 도출 불가 → custom 강제(인스펙터 레이아웃 = 실제 렌더 셰이더 일치 보장).
@@ -503,7 +513,7 @@ UMaterial* FMaterialManager::CreatePreviewMaterialClone(UMaterial* SourceMateria
             break;
         }
     }
-    ApplyDefaultEmissiveParameters(PreviewMaterial);
+    ApplyDefaultImportedMaterialParameters(PreviewMaterial);
     PreviewMaterial->RebuildCachedSRVs();
     return PreviewMaterial;
 }
