@@ -256,6 +256,15 @@ bool UAnimGraphInstance::SetGraphVariableInt(FName VariableName, int32 Value)
 	return true;
 }
 
+bool UAnimGraphInstance::SetGraphVariableTrigger(FName VariableName)
+{
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/false);
+	FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
+	if (!V || V->Type != EAnimGraphPinType::Trigger) return false;
+	V->Value = 1.0f;
+	return true;
+}
+
 bool UAnimGraphInstance::GetGraphVariableAsFloat(FName VariableName, float& OutValue) const
 {
 	const FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
@@ -283,6 +292,19 @@ bool UAnimGraphInstance::GetGraphVariableInt(FName VariableName, int32& OutValue
 	if (!GetGraphVariableAsFloat(VariableName, V)) return false;
 	OutValue = static_cast<int32>(std::floor(V + 0.5f));
 	return true;
+}
+
+bool UAnimGraphInstance::ConsumeGraphVariableTrigger(FName VariableName)
+{
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/false);
+	FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
+	if (!V || V->Type != EAnimGraphPinType::Trigger) return false;
+	const bool bFired = V->Value >= 0.5f;
+	if (bFired)
+	{
+		V->Value = 0.0f;
+	}
+	return bFired;
 }
 
 void UAnimGraphInstance::AddReferencedObjects(FReferenceCollector& Collector)

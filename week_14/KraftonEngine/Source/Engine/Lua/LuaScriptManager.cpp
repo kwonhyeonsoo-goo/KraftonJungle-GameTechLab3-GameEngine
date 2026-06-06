@@ -5813,6 +5813,15 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             }
             return false;
         },
+        "SetGraphVariableTrigger",
+        [](UAnimInstance& I, const FString& VariableName)
+        {
+            if (UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->SetGraphVariableTrigger(FName(VariableName));
+            }
+            return false;
+        },
         "HasGraphVariableFloat",
         [](UAnimInstance& I, const FString& VariableName)
         {
@@ -5840,6 +5849,16 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
             {
                 return Graph->GetGraphVariableInt(FName(VariableName), Value);
+            }
+            return false;
+        },
+        "HasGraphVariableTrigger",
+        [](UAnimInstance& I, const FString& VariableName)
+        {
+            bool bValue = false;
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->GetGraphVariableBool(FName(VariableName), bValue);
             }
             return false;
         },

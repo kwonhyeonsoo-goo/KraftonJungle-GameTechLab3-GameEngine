@@ -53,6 +53,8 @@ public:
 	bool SetGraphVariableBool(FName VariableName, bool bValue);
 	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
 	bool SetGraphVariableInt(FName VariableName, int32 Value);
+	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
+	bool SetGraphVariableTrigger(FName VariableName);
 	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
 	bool GetGraphVariableFloat(FName VariableName, float& OutValue) const;
 	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
@@ -61,6 +63,8 @@ public:
 	bool GetGraphVariableInt(FName VariableName, int32& OutValue) const;
 	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
 	bool GetGraphVariableAsFloat(FName VariableName, float& OutValue) const;
+	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
+	bool ConsumeGraphVariableTrigger(FName VariableName);
 	const TArray<FAnimGraphRuntimeVariable>& GetRuntimeVariables() const { return RuntimeVariables; }
 
 	// Editor PropertyWidget 의 자산 콤보로 노출 (AssetType meta). NativeInitialize 에서 LoadAnimation.

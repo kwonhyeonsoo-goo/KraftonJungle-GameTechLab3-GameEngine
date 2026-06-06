@@ -45,6 +45,9 @@ private:
 	void RedoGraphEdit(class UAnimGraphAsset* Asset);
 	TArray<uint8> MakeGraphSnapshot(class UAnimGraphAsset* Asset) const;
 	bool RestoreGraphSnapshot(class UAnimGraphAsset* Asset, const TArray<uint8>& Snapshot);
+	void SyncRootGraphPositions(class UAnimGraphAsset* Asset);
+	void SyncOpenStateMachinePositions(class UAnimGraphAsset* Asset);
+	void SyncCanvasPositionsToAsset(class UAnimGraphAsset* Asset);
 
 	bool GatherSelectedNodes(class UAnimGraphAsset* Asset, TArray<struct FAnimGraphNode>& OutNodes, TArray<struct FAnimGraphLink>& OutLinks) const;
 	bool CloneNodeFragment(class UAnimGraphAsset* Asset, const TArray<struct FAnimGraphNode>& SourceNodes, const TArray<struct FAnimGraphLink>& SourceLinks, const ImVec2& TargetAnchor, TArray<uint32>* OutNewNodeIds = nullptr);

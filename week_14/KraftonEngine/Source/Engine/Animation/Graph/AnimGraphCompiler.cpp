@@ -173,6 +173,16 @@ namespace
 					return bValue == bExpected;
 				}
 
+				case ETransitionRuleKind::Trigger:
+				{
+					if (T.VariableName == FName::None) return false;
+					if (UAnimGraphInstance* GraphAI = Cast<UAnimGraphInstance>(AI))
+					{
+						return GraphAI->ConsumeGraphVariableTrigger(T.VariableName);
+					}
+					return false;
+				}
+
 				case ETransitionRuleKind::TimeRemaining:
 					return GetCurrentStateLengthSeconds(SM) > 0.0f && GetCurrentStateRemainingSeconds(SM) <= std::max(0.0f, T.Threshold);
 
