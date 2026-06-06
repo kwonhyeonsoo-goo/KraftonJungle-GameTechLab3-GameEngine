@@ -6,7 +6,7 @@
         "ClassName" : "UCombatCoverAgentComponent",
         "ObjectId" : 3,
         "Properties" : {
-          "AcceptanceRadius" : 2.500000,
+          "AcceptanceRadius" : 0.000000,
           "AdvanceInterval" : 3.000000,
           "AdvanceLinkMode" : 0,
           "AttackDamage" : 5.000000,
@@ -30,7 +30,7 @@
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
-          "bShrinkActorOnDeath" : true,
+          "bShrinkActorOnDeath" : false,
           "bTickEnable" : true,
           "bUseCharacterMovement" : true,
           "bUseMovingFireRange" : true,

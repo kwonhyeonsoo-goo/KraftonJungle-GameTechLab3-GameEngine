@@ -229,7 +229,7 @@ private:
     bool bUseMovingFireRange = true;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Debug", DisplayName="Shrink Actor On Death")
-    bool bShrinkActorOnDeath = true;
+    bool bShrinkActorOnDeath = false;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Debug", DisplayName="Death Debug Scale Multiplier", Min=0.01f, Max=1.0f, Speed=0.01f)
     float DeathDebugScaleMultiplier = 0.1f;
@@ -265,9 +265,6 @@ private:
     float SuppressionTimer = 0.0f;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
     ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
-    FVector InitialActorScale = FVector(1.0f, 1.0f, 1.0f);
-    bool bHasInitialActorScale = false;
-    bool bDeathDebugScaleApplied = false;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
     TWeakObjectPtr<UCombatFlowManagerComponent> CachedManager;
 

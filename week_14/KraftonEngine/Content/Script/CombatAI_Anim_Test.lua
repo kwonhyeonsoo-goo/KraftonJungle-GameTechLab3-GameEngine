@@ -3,6 +3,7 @@ local combatAgent = nil
 local fireElapsed = 0.0
 local lastMoveState = -1.0
 local lastDeath = false
+local lastEngaging = false
 
 local FIRE_TRIGGER_INTERVAL = 0.45
 
@@ -95,6 +96,7 @@ function BeginPlay()
     fireElapsed = 0.0
     lastMoveState = -1.0
     lastDeath = false
+    lastEngaging = false
     set_initial_variables()
 end
 
@@ -106,6 +108,7 @@ function Tick(dt)
 
     local agent = get_combat_agent()
     local isDead = agent ~= nil and not agent:IsAlive()
+    local isEngaging = agent ~= nil and agent:IsEngaging()
     local moveState = current_move_state(agent)
 
     anim:SetGraphVariableFloat("MoveState", moveState)
@@ -117,11 +120,16 @@ function Tick(dt)
         lastDeath = isDead
     end
 
+    if isEngaging and not lastEngaging then
+        fireElapsed = FIRE_TRIGGER_INTERVAL
+    end
+    lastEngaging = isEngaging
+
     if isDead then
         return
     end
 
-    if agent ~= nil and agent:IsEngaging() then
+    if isEngaging then
         fireElapsed = fireElapsed + dt
         while fireElapsed >= FIRE_TRIGGER_INTERVAL do
             fireElapsed = fireElapsed - FIRE_TRIGGER_INTERVAL

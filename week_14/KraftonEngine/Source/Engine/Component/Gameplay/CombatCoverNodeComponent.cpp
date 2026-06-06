@@ -1,4 +1,4 @@
-#include "CombatCoverNodeComponent.h"
+﻿#include "CombatCoverNodeComponent.h"
 
 #include "Core/Logging/Log.h"
 #include "Core/Types/EngineTypes.h"

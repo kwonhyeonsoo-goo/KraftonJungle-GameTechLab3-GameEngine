@@ -56,17 +56,6 @@ void UCombatCoverAgentComponent::BeginPlay()
     FacingYawRate = (std::max)(0.0f, FacingYawRate);
     FacingYawOffset = NormalizeYawDelta(FacingYawOffset);
     DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
-    if (AActor* Owner = GetOwner())
-    {
-        InitialActorScale = Owner->GetActorScale();
-        bHasInitialActorScale = true;
-    }
-    else
-    {
-        InitialActorScale = FVector(1.0f, 1.0f, 1.0f);
-        bHasInitialActorScale = false;
-    }
-    bDeathDebugScaleApplied = false;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     TargetScanTimer = 0.0f;
@@ -155,7 +144,7 @@ void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatMovePath& MoveP
 
 void UCombatCoverAgentComponent::MarkDead()
 {
-    if (State == ECombatCoverAgentState::Dead && bDeathDebugScaleApplied)
+    if (State == ECombatCoverAgentState::Dead)
     {
         if (UCombatFlowManagerComponent* Manager = ResolveManager())
         {
@@ -173,16 +162,6 @@ void UCombatCoverAgentComponent::MarkDead()
     if (UCombatFlowManagerComponent* Manager = ResolveManager())
     {
         Manager->ReleaseAgent(this);
-    }
-
-    if (bShrinkActorOnDeath && !bDeathDebugScaleApplied)
-    {
-        if (AActor* Owner = GetOwner())
-        {
-            const FVector BaseScale = bHasInitialActorScale ? InitialActorScale : Owner->GetActorScale();
-            Owner->SetActorScale(BaseScale * DeathDebugScaleMultiplier);
-            bDeathDebugScaleApplied = true;
-        }
     }
 
     State = ECombatCoverAgentState::Dead;
