@@ -50,17 +50,16 @@ public:
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetMaxHoldBreathGauge() const { return AimSwayState.MaxHoldBreathGauge; }
 
-	bool IsScoped() const { return ScopeState.bIsScoped; }
+	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathInputHeld() const { return InputState.bHoldBreathHeld; }
-	bool IsHoldBreathActive() const { return InputState.bHoldBreathHeld && ScopeState.bIsScoped && AimSwayState.HoldBreathGauge > 0.0f; }
-	float GetHoldBreathGauge() const { return AimSwayState.HoldBreathGauge; }
-	float GetMaxHoldBreathGauge() const { return AimSwayState.MaxHoldBreathGauge; }
+	UFUNCTION(Pure, Category="Sniper|State")
 	float GetHoldBreathDuration() const
 	{
 		return AimSwayState.HoldBreathConsumeSpeed > 0.0f
 			? AimSwayState.MaxHoldBreathGauge / AimSwayState.HoldBreathConsumeSpeed
 			: 0.0f;
 	}
+	UFUNCTION(Pure, Category="Sniper|State")
 	float GetHoldBreathGaugeRatio() const
 	{
 		if (AimSwayState.MaxHoldBreathGauge <= 0.0f)
