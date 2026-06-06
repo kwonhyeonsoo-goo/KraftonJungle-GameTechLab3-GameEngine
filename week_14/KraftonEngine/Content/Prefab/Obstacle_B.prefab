@@ -9,7 +9,7 @@
           "DebugSlotRadius" : 1.500000,
           "DisplayName" : "",
           "Links" : [],
-          "MaxOccupants" : 1,
+          "MaxOccupants" : 2,
           "NodeId" : "",
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
