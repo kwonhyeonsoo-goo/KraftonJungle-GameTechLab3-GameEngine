@@ -76,13 +76,25 @@ private:
 	{
 		FString CommandName;
 		FString DisplayText;
+		FString LowerDisplayText;
+	};
+
+	struct FCompletionSourceEntry
+	{
+		FString CommandName;
+		FString DisplayText;
+		FString LowerDisplayText;
 	};
 
 	TMap<FString, FConsoleCommand> Commands;
+	TArray<FCompletionSourceEntry> CompletionSourceEntries;
 	TArray<FCompletionCandidate> CompletionCandidates;
 	int32 CompletionSelectionIndex = -1;
 	bool bCompletionNavigationActive = false;
 	FString CompletionNavigationValue;
+	FString LastCompletionInput;
+	FString CompletionDisplayPrefix;
+	bool bCompletionCacheValid = false;
 
 	void RegisterCommand(const FString& Name, CommandFn Fn, const FString& Category, const FString& Usage, const FString& Description);
 	void RegisterDefaultCommands();
@@ -92,8 +104,11 @@ private:
 	void RegisterRenderCommands();
 
 	void RenderCompletionCandidates();
+	void ResetCompletionState();
+	void InvalidateCompletionCache();
 	void UpdateCompletionCandidates();
-	TArray<FCompletionCandidate> GetCompletionCandidates(const FString& Input) const;
+	const TArray<FCompletionCandidate>& EnsureCompletionCandidatesForInput(const FString& Input);
+	TArray<FCompletionCandidate> GetCompletionCandidatesForPrefix(const FString& LowerInput) const;
 	void ApplyCompletionCandidate(ImGuiInputTextCallbackData* Data, int32 CandidateIndex);
 	bool PrintCompactHelp(const FString& CategoryFilter = "");
 	bool TryFindCommand(const TArray<FString>& Tokens, FString& OutCommandName, const FConsoleCommand*& OutCommand, int32& OutConsumedTokens) const;
