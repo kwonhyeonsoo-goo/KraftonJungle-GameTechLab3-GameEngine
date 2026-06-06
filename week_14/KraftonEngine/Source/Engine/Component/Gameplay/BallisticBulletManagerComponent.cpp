@@ -1,5 +1,6 @@
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 
+#include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Debug/DrawDebugHelpers.h"
@@ -27,6 +28,7 @@ namespace
 	constexpr float SniperWindDebugArrowHeadSize = 0.35f;
 	constexpr float SniperWindDebugArrowDuration = 0.0f;
 	constexpr float SniperWindDebugMinMagnitude = 0.01f;
+	constexpr float SniperRagdollImpactSpeedThreshold = 300.0f;
 }
 
 UBallisticBulletManagerComponent::UBallisticBulletManagerComponent()
@@ -121,11 +123,16 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	Bullet.Position += Bullet.Velocity * DeltaTime + TotalAcceleration * (0.5f * DeltaTime * DeltaTime);
 	Bullet.Velocity += TotalAcceleration * DeltaTime;
 	Bullet.LifeTime -= DeltaTime;
+	const float SegmentDistance = (Bullet.Position - Bullet.PreviousPosition).Length();
 
 	FHitResult Hit;
 	if (World && QueryBulletHit(Bullet, World, Hit))
 	{
 		HandleBulletHit(Bullet, Hit, World);
+	}
+	else
+	{
+		Bullet.TraveledDistance += SegmentDistance;
 	}
 
 	if (World)
@@ -243,9 +250,19 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			SniperDebugTrailDuration);
 	}
 
+	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);
+	if (AActor* HitActor = HitInfo.HitActor)
+	{
+		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
+		{
+			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);
+			DamageReceiver->ApplyResolvedSniperHit(HitInfo);
+		}
+	}
+
 	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
 	{
-		SniperWeapon->NotifySniperHit(BuildSniperHitInfo(Bullet, Hit));
+		SniperWeapon->NotifySniperHit(HitInfo);
 	}
 }
 
@@ -257,10 +274,16 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.HitNormal = !Hit.ImpactNormal.IsNearlyZero() ? Hit.ImpactNormal : Hit.WorldNormal;
 	HitInfo.ShotDirection = Bullet.Velocity.IsNearlyZero() ? FVector::ZeroVector : Bullet.Velocity.Normalized();
 	HitInfo.Damage = Bullet.Damage;
+	const float HitSegmentDistance = (Hit.WorldHitLocation - Bullet.PreviousPosition).Length();
+	HitInfo.TravelDistance = Bullet.TraveledDistance + HitSegmentDistance;
+	HitInfo.ImpactSpeed = Bullet.Velocity.Length();
+	HitInfo.RagdollImpulseStrength = Bullet.Damage + HitInfo.ImpactSpeed * 0.1f;
 	HitInfo.AmmoType = Bullet.AmmoType;
+	HitInfo.HitOutcome = ESniperHitOutcome::Normal;
 	HitInfo.bIsScopedShot = Bullet.bWasScopedShot;
 	HitInfo.bIsHeadshot = false;
 	HitInfo.bIsArmorPiercing = Bullet.bCanDamageArmor;
+	HitInfo.bShouldRagdoll = HitInfo.ImpactSpeed >= SniperRagdollImpactSpeedThreshold;
 	HitInfo.Shooter = Bullet.Owner;
 	return HitInfo;
 }

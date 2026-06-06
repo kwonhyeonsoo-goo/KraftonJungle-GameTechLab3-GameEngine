@@ -35,6 +35,20 @@ public:
 	USniperWeaponComponent* GetSniperWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
 	UBallisticBulletManagerComponent* GetBallisticBulletManagerComponent() const { return BulletManagerComponent.Get(); }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsScoped() const { return ScopeState.bIsScoped; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetScopeBlendAlpha() const;
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetCurrentScopeFOV() const { return ScopeState.CurrentFOV; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetCurrentScopeSensitivity() const { return ScopeState.CurrentSensitivity; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsHoldBreathActive() const;
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetHoldBreathGauge() const { return AimSwayState.HoldBreathGauge; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetMaxHoldBreathGauge() const { return AimSwayState.MaxHoldBreathGauge; }
 
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float MouseSensitivity = 0.2f;

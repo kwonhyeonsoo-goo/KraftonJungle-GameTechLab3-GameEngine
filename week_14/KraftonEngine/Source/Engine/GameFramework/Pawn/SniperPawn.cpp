@@ -378,6 +378,19 @@ void ASniperPawn::ApplySniperControlRotation()
 	Root->SetRelativeRotation(AppliedRotation);
 }
 
+float ASniperPawn::GetScopeBlendAlpha() const
+{
+	return ComputeScopeAlpha(ScopeState);
+}
+
+bool ASniperPawn::IsHoldBreathActive() const
+{
+	return ScopeState.bIsScoped
+		&& InputState.bHoldBreathHeld
+		&& AimSwayState.HoldBreathGauge > 0.0f
+		&& AimSwayState.BreathMultiplier < 1.0f;
+}
+
 FRotator ASniperPawn::BuildEffectiveAimRotation() const
 {
 	FRotator EffectiveRotation = GetControlRotation();

@@ -30,6 +30,7 @@
 #include "Component/ActorComponent.h"
 #include "Component/ActorSequenceComponent.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
+#include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Gameplay/SniperTypes.h"
 #include "Component/PrimitiveComponent.h"
@@ -4803,6 +4804,38 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &UBallisticBulletManagerComponent::GetWeaponComponent
     );
 
+    Lua.new_usertype<USniperDamageReceiverComponent>(
+        "SniperDamageReceiverComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetMaxHP",
+        &USniperDamageReceiverComponent::GetMaxHP,
+        "GetCurrentHP",
+        &USniperDamageReceiverComponent::GetCurrentHP,
+        "IsFriendly",
+        &USniperDamageReceiverComponent::IsFriendly,
+        "HasArmor",
+        &USniperDamageReceiverComponent::HasArmor,
+        "GetArmorStrength",
+        &USniperDamageReceiverComponent::GetArmorStrength,
+        "AllowsRicochet",
+        &USniperDamageReceiverComponent::AllowsRicochet,
+        "CanRagdoll",
+        &USniperDamageReceiverComponent::CanRagdoll,
+        "IsDead",
+        &USniperDamageReceiverComponent::IsDead,
+        "CanReceiveSniperHit",
+        &USniperDamageReceiverComponent::CanReceiveSniperHit,
+        "ResolveSniperHit",
+        &USniperDamageReceiverComponent::ResolveSniperHit,
+        "ResetHealth",
+        &USniperDamageReceiverComponent::ResetHealth,
+        "ApplySniperHit",
+        &USniperDamageReceiverComponent::ApplySniperHit,
+        "ApplyResolvedSniperHit",
+        &USniperDamageReceiverComponent::ApplyResolvedSniperHit
+    );
+
     Lua.new_usertype<FSniperHitInfo>(
         "SniperHitInfo",
         "HitActor",
@@ -4827,14 +4860,24 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &FSniperHitInfo::ShotDirection,
         "Damage",
         &FSniperHitInfo::Damage,
+        "TravelDistance",
+        &FSniperHitInfo::TravelDistance,
+        "ImpactSpeed",
+        &FSniperHitInfo::ImpactSpeed,
+        "RagdollImpulseStrength",
+        &FSniperHitInfo::RagdollImpulseStrength,
         "AmmoType",
         &FSniperHitInfo::AmmoType,
+        "HitOutcome",
+        &FSniperHitInfo::HitOutcome,
         "bIsScopedShot",
         &FSniperHitInfo::bIsScopedShot,
         "bIsHeadshot",
         &FSniperHitInfo::bIsHeadshot,
         "bIsArmorPiercing",
         &FSniperHitInfo::bIsArmorPiercing,
+        "bShouldRagdoll",
+        &FSniperHitInfo::bShouldRagdoll,
         "HitBoneName",
         &FSniperHitInfo::HitBoneName
     );
@@ -4842,6 +4885,12 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
     sol::table SniperAmmoType = Lua.create_named_table("SniperAmmoType");
     SniperAmmoType["Normal"] = ESniperAmmoType::Normal;
     SniperAmmoType["AntiMaterial"] = ESniperAmmoType::AntiMaterial;
+
+    sol::table SniperHitOutcome = Lua.create_named_table("SniperHitOutcome");
+    SniperHitOutcome["Normal"] = ESniperHitOutcome::Normal;
+    SniperHitOutcome["Blocked"] = ESniperHitOutcome::Blocked;
+    SniperHitOutcome["Ricochet"] = ESniperHitOutcome::Ricochet;
+    SniperHitOutcome["Penetrated"] = ESniperHitOutcome::Penetrated;
 
     sol::table Reflection = Lua.create_named_table("Reflection");
     Reflection.set_function(
@@ -6868,6 +6917,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             return Actor.GetComponentByClass<UBallisticBulletManagerComponent>();
         },
 
+        "GetSniperDamageReceiverComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USniperDamageReceiverComponent>();
+        },
+
         "GetActorSequenceComponent",
         [](AActor& Actor)
         {
@@ -7062,7 +7117,21 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetSniperWeaponComponent",
         &ASniperPawn::GetSniperWeaponComponent,
         "GetBallisticBulletManagerComponent",
-        &ASniperPawn::GetBallisticBulletManagerComponent
+        &ASniperPawn::GetBallisticBulletManagerComponent,
+        "IsScoped",
+        &ASniperPawn::IsScoped,
+        "GetScopeBlendAlpha",
+        &ASniperPawn::GetScopeBlendAlpha,
+        "GetCurrentScopeFOV",
+        &ASniperPawn::GetCurrentScopeFOV,
+        "GetCurrentScopeSensitivity",
+        &ASniperPawn::GetCurrentScopeSensitivity,
+        "IsHoldBreathActive",
+        &ASniperPawn::IsHoldBreathActive,
+        "GetHoldBreathGauge",
+        &ASniperPawn::GetHoldBreathGauge,
+        "GetMaxHoldBreathGauge",
+        &ASniperPawn::GetMaxHoldBreathGauge
     );
 
     Lua.new_usertype<AWheeledVehiclePawn>(
