@@ -4827,14 +4827,24 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &FSniperHitInfo::ShotDirection,
         "Damage",
         &FSniperHitInfo::Damage,
+        "TravelDistance",
+        &FSniperHitInfo::TravelDistance,
+        "ImpactSpeed",
+        &FSniperHitInfo::ImpactSpeed,
+        "RagdollImpulseStrength",
+        &FSniperHitInfo::RagdollImpulseStrength,
         "AmmoType",
         &FSniperHitInfo::AmmoType,
+        "HitOutcome",
+        &FSniperHitInfo::HitOutcome,
         "bIsScopedShot",
         &FSniperHitInfo::bIsScopedShot,
         "bIsHeadshot",
         &FSniperHitInfo::bIsHeadshot,
         "bIsArmorPiercing",
         &FSniperHitInfo::bIsArmorPiercing,
+        "bShouldRagdoll",
+        &FSniperHitInfo::bShouldRagdoll,
         "HitBoneName",
         &FSniperHitInfo::HitBoneName
     );
@@ -4842,6 +4852,12 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
     sol::table SniperAmmoType = Lua.create_named_table("SniperAmmoType");
     SniperAmmoType["Normal"] = ESniperAmmoType::Normal;
     SniperAmmoType["AntiMaterial"] = ESniperAmmoType::AntiMaterial;
+
+    sol::table SniperHitOutcome = Lua.create_named_table("SniperHitOutcome");
+    SniperHitOutcome["Normal"] = ESniperHitOutcome::Normal;
+    SniperHitOutcome["Blocked"] = ESniperHitOutcome::Blocked;
+    SniperHitOutcome["Ricochet"] = ESniperHitOutcome::Ricochet;
+    SniperHitOutcome["Penetrated"] = ESniperHitOutcome::Penetrated;
 
     sol::table Reflection = Lua.create_named_table("Reflection");
     Reflection.set_function(

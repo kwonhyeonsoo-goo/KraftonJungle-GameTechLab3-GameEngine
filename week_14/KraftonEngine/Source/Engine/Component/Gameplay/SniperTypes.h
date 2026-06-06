@@ -20,6 +20,17 @@ enum class ESniperAmmoType : uint8
 	COUNT
 };
 
+UENUM()
+enum class ESniperHitOutcome : uint8
+{
+	Normal = 0,
+	Blocked = 1,
+	Ricochet = 2,
+	Penetrated = 3,
+
+	COUNT
+};
+
 USTRUCT()
 struct FSniperInputState
 {
@@ -113,6 +124,7 @@ struct FBallisticBullet
 	float GravityScale = 1.0f;
 	float DragCoefficient = 0.0f;
 	float WindInfluenceScale = 1.0f;
+	float TraveledDistance = 0.0f;
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
 	AActor* Owner = nullptr;
 	bool bIsAlive = false;
@@ -130,10 +142,15 @@ struct FSniperHitInfo
 	FVector HitNormal = FVector::ZeroVector;
 	FVector ShotDirection = FVector::ZeroVector;
 	float Damage = 0.0f;
+	float TravelDistance = 0.0f;
+	float ImpactSpeed = 0.0f;
+	float RagdollImpulseStrength = 0.0f;
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
+	ESniperHitOutcome HitOutcome = ESniperHitOutcome::Normal;
 	bool bIsScopedShot = false;
 	bool bIsHeadshot = false;
 	bool bIsArmorPiercing = false;
+	bool bShouldRagdoll = false;
 	AActor* Shooter = nullptr;
 	FName HitBoneName = FName::None;
 };
