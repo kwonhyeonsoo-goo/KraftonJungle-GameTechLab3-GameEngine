@@ -34,6 +34,8 @@ namespace
 	constexpr float SniperRagdollImpactSpeedThreshold = 300.0f;
 	constexpr const char* SniperDefaultBulletVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
 	constexpr float SniperBulletVisualMinScale = 0.04f;
+	constexpr float SniperBulletTracerMinWidth = 0.01f;
+	constexpr float SniperBulletTracerDefaultThickness = 1.0f;
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
 
@@ -63,7 +65,7 @@ namespace
 		}
 
 		const FVector Direction = Bullet.Velocity / Speed;
-		const float SafeBallisticCoefficient = FMath::Max(Bullet.BallisticCoefficient, 0.01f);
+		const float SafeBallisticCoefficient = (std::max)(Bullet.BallisticCoefficient, 0.01f);
 		const float MachFactor = ComputeMachDragMultiplier(Speed);
 
 		return Direction * -1.0f
@@ -251,22 +253,47 @@ void UBallisticBulletManagerComponent::SyncBulletVisuals()
 
 	for (int32 BulletIndex = 0; BulletIndex < static_cast<int32>(ActiveBullets.size()); ++BulletIndex)
 	{
-		UBillboardComponent* Visual = GetOrCreateBulletVisual(BulletIndex);
-		if (!Visual)
+		UBillboardComponent* HeadVisual = GetOrCreateBulletHeadVisual(BulletIndex);
+		UBillboardComponent* TracerVisual = GetOrCreateBulletTracerVisual(BulletIndex);
+		if (!HeadVisual || !TracerVisual)
 		{
 			continue;
 		}
 
 		const FBallisticBullet& Bullet = ActiveBullets[BulletIndex];
-		Visual->SetWorldLocation(Bullet.Position);
-		const float VisualScale = (std::max)(Bullet.VisualScale, SniperBulletVisualMinScale);
-		Visual->SetRelativeScale(FVector(VisualScale, VisualScale, VisualScale));
-		Visual->SetVisibility(Bullet.bIsAlive);
+		const float HeadScale = (std::max)(Bullet.VisualScale, SniperBulletVisualMinScale);
+		HeadVisual->SetWorldLocation(Bullet.Position);
+		HeadVisual->SetRelativeScale(FVector(1.0f, HeadScale, HeadScale));
+		HeadVisual->SetVisibility(Bullet.bIsAlive);
+
+		const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
+		const float SegmentDistance = Segment.Length();
+		const FVector TracerLocation = Bullet.PreviousPosition + Segment * 0.5f;
+		const float TracerWidth = (std::max)(Bullet.VisualTracerWidth, SniperBulletTracerMinWidth);
+		float TracerLength = SegmentDistance * Bullet.VisualTracerLengthScale;
+		TracerLength = (std::max)(TracerLength, Bullet.VisualTracerMinLength);
+		TracerLength = (std::min)(TracerLength, Bullet.VisualTracerMaxLength);
+		TracerLength = (std::max)(TracerLength, TracerWidth);
+
+		TracerVisual->SetWorldLocation(TracerLocation);
+		TracerVisual->SetRelativeScale(FVector(
+			SniperBulletTracerDefaultThickness,
+			TracerWidth,
+			TracerLength));
+		TracerVisual->SetVisibility(Bullet.bIsAlive);
 	}
 
-	for (int32 VisualIndex = static_cast<int32>(ActiveBullets.size()); VisualIndex < static_cast<int32>(BulletVisualPool.size()); ++VisualIndex)
+	for (int32 VisualIndex = static_cast<int32>(ActiveBullets.size()); VisualIndex < static_cast<int32>(BulletHeadVisualPool.size()); ++VisualIndex)
 	{
-		if (UBillboardComponent* Visual = BulletVisualPool[VisualIndex].Get())
+		if (UBillboardComponent* Visual = BulletHeadVisualPool[VisualIndex].Get())
+		{
+			Visual->SetVisibility(false);
+		}
+	}
+
+	for (int32 VisualIndex = static_cast<int32>(ActiveBullets.size()); VisualIndex < static_cast<int32>(BulletTracerVisualPool.size()); ++VisualIndex)
+	{
+		if (UBillboardComponent* Visual = BulletTracerVisualPool[VisualIndex].Get())
 		{
 			Visual->SetVisibility(false);
 		}
@@ -275,7 +302,15 @@ void UBallisticBulletManagerComponent::SyncBulletVisuals()
 
 void UBallisticBulletManagerComponent::HideAllBulletVisuals()
 {
-	for (TWeakObjectPtr<UBillboardComponent>& VisualEntry : BulletVisualPool)
+	for (TWeakObjectPtr<UBillboardComponent>& VisualEntry : BulletHeadVisualPool)
+	{
+		if (UBillboardComponent* Visual = VisualEntry.Get())
+		{
+			Visual->SetVisibility(false);
+		}
+	}
+
+	for (TWeakObjectPtr<UBillboardComponent>& VisualEntry : BulletTracerVisualPool)
 	{
 		if (UBillboardComponent* Visual = VisualEntry.Get())
 		{
@@ -284,16 +319,16 @@ void UBallisticBulletManagerComponent::HideAllBulletVisuals()
 	}
 }
 
-UBillboardComponent* UBallisticBulletManagerComponent::GetOrCreateBulletVisual(int32 VisualIndex)
+UBillboardComponent* UBallisticBulletManagerComponent::GetOrCreateBulletHeadVisual(int32 VisualIndex)
 {
 	if (VisualIndex < 0)
 	{
 		return nullptr;
 	}
 
-	if (VisualIndex < static_cast<int32>(BulletVisualPool.size()))
+	if (VisualIndex < static_cast<int32>(BulletHeadVisualPool.size()))
 	{
-		if (UBillboardComponent* Existing = BulletVisualPool[VisualIndex].Get())
+		if (UBillboardComponent* Existing = BulletHeadVisualPool[VisualIndex].Get())
 		{
 			return Existing;
 		}
@@ -320,34 +355,101 @@ UBillboardComponent* UBallisticBulletManagerComponent::GetOrCreateBulletVisual(i
 	Visual->SetHiddenInComponentTree(true);
 	Visual->SetVisibility(false);
 
-	if (UMaterial* VisualMaterial = ResolveBulletVisualMaterial())
+	if (UMaterial* VisualMaterial = ResolveBulletHeadVisualMaterial())
 	{
 		Visual->SetMaterial(VisualMaterial);
 	}
 
-	if (VisualIndex >= static_cast<int32>(BulletVisualPool.size()))
+	if (VisualIndex >= static_cast<int32>(BulletHeadVisualPool.size()))
 	{
-		BulletVisualPool.resize(VisualIndex + 1);
+		BulletHeadVisualPool.resize(VisualIndex + 1);
 	}
 
-	BulletVisualPool[VisualIndex] = Visual;
+	BulletHeadVisualPool[VisualIndex] = Visual;
 	return Visual;
 }
 
-UMaterial* UBallisticBulletManagerComponent::ResolveBulletVisualMaterial()
+UBillboardComponent* UBallisticBulletManagerComponent::GetOrCreateBulletTracerVisual(int32 VisualIndex)
 {
-	if (UMaterial* Existing = BulletVisualMaterial.Get())
+	if (VisualIndex < 0)
+	{
+		return nullptr;
+	}
+
+	if (VisualIndex < static_cast<int32>(BulletTracerVisualPool.size()))
+	{
+		if (UBillboardComponent* Existing = BulletTracerVisualPool[VisualIndex].Get())
+		{
+			return Existing;
+		}
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return nullptr;
+	}
+
+	UBillboardComponent* Visual = OwnerActor->AddComponent<UBillboardComponent>();
+	if (!Visual)
+	{
+		return nullptr;
+	}
+
+	if (USceneComponent* RootComponent = OwnerActor->GetRootComponent())
+	{
+		Visual->AttachToComponent(RootComponent);
+	}
+
+	Visual->SetAbsoluteScale(true);
+	Visual->SetHiddenInComponentTree(true);
+	Visual->SetVisibility(false);
+
+	if (UMaterial* VisualMaterial = ResolveBulletTracerVisualMaterial())
+	{
+		Visual->SetMaterial(VisualMaterial);
+	}
+
+	if (VisualIndex >= static_cast<int32>(BulletTracerVisualPool.size()))
+	{
+		BulletTracerVisualPool.resize(VisualIndex + 1);
+	}
+
+	BulletTracerVisualPool[VisualIndex] = Visual;
+	return Visual;
+}
+
+UMaterial* UBallisticBulletManagerComponent::ResolveBulletHeadVisualMaterial()
+{
+	if (UMaterial* Existing = BulletHeadVisualMaterial.Get())
 	{
 		return Existing;
 	}
 
 	const FString MaterialPath =
-		(!BulletVisualMaterialPath.empty() && BulletVisualMaterialPath != "None")
-		? static_cast<FString>(BulletVisualMaterialPath)
+		(!BulletHeadVisualMaterialPath.empty() && BulletHeadVisualMaterialPath != "None")
+		? static_cast<FString>(BulletHeadVisualMaterialPath)
 		: FString(SniperDefaultBulletVisualMaterialPath);
 
 	UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
-	BulletVisualMaterial = LoadedMaterial;
+	BulletHeadVisualMaterial = LoadedMaterial;
+	return LoadedMaterial;
+}
+
+UMaterial* UBallisticBulletManagerComponent::ResolveBulletTracerVisualMaterial()
+{
+	if (UMaterial* Existing = BulletTracerVisualMaterial.Get())
+	{
+		return Existing;
+	}
+
+	const FString MaterialPath =
+		(!BulletTracerVisualMaterialPath.empty() && BulletTracerVisualMaterialPath != "None")
+		? static_cast<FString>(BulletTracerVisualMaterialPath)
+		: FString(SniperDefaultBulletVisualMaterialPath);
+
+	UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+	BulletTracerVisualMaterial = LoadedMaterial;
 	return LoadedMaterial;
 }
 

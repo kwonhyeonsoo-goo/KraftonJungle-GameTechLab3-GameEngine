@@ -1,9 +1,10 @@
-#include "Component/Gameplay/SniperWeaponComponent.h"
+﻿#include "Component/Gameplay/SniperWeaponComponent.h"
 
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cmath>
 
@@ -59,7 +60,7 @@ namespace
 		}
 
 		const FVector Direction = Velocity / Speed;
-		const float SafeBallisticCoefficient = FMath::Max(AmmoData.BallisticCoefficient, 0.01f);
+		const float SafeBallisticCoefficient = (std::max)(AmmoData.BallisticCoefficient, 0.01f);
 		const float MachFactor = ComputeMachDragMultiplier(Speed);
 
 		return Direction * -1.0f
@@ -211,6 +212,10 @@ bool USniperWeaponComponent::RequestFire(
 	Bullet.Damage = AmmoData->Damage;
 	Bullet.Radius = AmmoData->BulletRadius;
 	Bullet.VisualScale = AmmoData->VisualScale;
+	Bullet.VisualTracerWidth = AmmoData->VisualTracerWidth;
+	Bullet.VisualTracerLengthScale = AmmoData->VisualTracerLengthScale;
+	Bullet.VisualTracerMinLength = AmmoData->VisualTracerMinLength;
+	Bullet.VisualTracerMaxLength = AmmoData->VisualTracerMaxLength;
 	Bullet.LifeTime = AmmoData->LifeTime;
 	Bullet.GravityScale = AmmoData->GravityScale;
 	Bullet.BallisticCoefficient = AmmoData->BallisticCoefficient;
@@ -351,7 +356,11 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	NormalAmmo.DragScale = 1.0f;
 	NormalAmmo.Damage = 100.0f;
 	NormalAmmo.BulletRadius = 0.03f;
-	NormalAmmo.VisualScale = 0.055f;
+	NormalAmmo.VisualScale = 0.040f;
+	NormalAmmo.VisualTracerWidth = 0.018f;
+	NormalAmmo.VisualTracerLengthScale = 1.35f;
+	NormalAmmo.VisualTracerMinLength = 0.10f;
+	NormalAmmo.VisualTracerMaxLength = 0.75f;
 	NormalAmmo.LifeTime = 5.0f;
 	NormalAmmo.FireInterval = 1.0f;
 	NormalAmmo.WindInfluenceScale = 1.0f;
@@ -369,7 +378,11 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 	AntiMaterialAmmo.DragScale = 0.9f;
 	AntiMaterialAmmo.Damage = 300.0f;
 	AntiMaterialAmmo.BulletRadius = 0.05f;
-	AntiMaterialAmmo.VisualScale = 0.075f;
+	AntiMaterialAmmo.VisualScale = 0.055f;
+	AntiMaterialAmmo.VisualTracerWidth = 0.028f;
+	AntiMaterialAmmo.VisualTracerLengthScale = 1.55f;
+	AntiMaterialAmmo.VisualTracerMinLength = 0.14f;
+	AntiMaterialAmmo.VisualTracerMaxLength = 1.10f;
 	AntiMaterialAmmo.LifeTime = 5.0f;
 	AntiMaterialAmmo.FireInterval = 1.5f;
 	AntiMaterialAmmo.WindInfluenceScale = 0.7f;

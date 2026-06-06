@@ -50,8 +50,10 @@ private:
 	void DrawWindDebug(class UWorld* World) const;
 	void SyncBulletVisuals();
 	void HideAllBulletVisuals();
-	UBillboardComponent* GetOrCreateBulletVisual(int32 VisualIndex);
-	UMaterial* ResolveBulletVisualMaterial();
+	UBillboardComponent* GetOrCreateBulletHeadVisual(int32 VisualIndex);
+	UBillboardComponent* GetOrCreateBulletTracerVisual(int32 VisualIndex);
+	UMaterial* ResolveBulletHeadVisualMaterial();
+	UMaterial* ResolveBulletTracerVisualMaterial();
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
@@ -64,15 +66,19 @@ private:
 	FVector WindAcceleration = FVector(0.0f, 1.5f, 0.0f);
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bEnableBulletVisuals = true;
-	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Visual Material", AssetType="Material")
-	FSoftObjectPtr BulletVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Head Visual Material", AssetType="Material")
+	FSoftObjectPtr BulletHeadVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Tracer Visual Material", AssetType="Material")
+	FSoftObjectPtr BulletTracerVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bDrawDebugBallistics = false;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bDrawDebugImpactMarker = false;
 
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
-	TArray<TWeakObjectPtr<UBillboardComponent>> BulletVisualPool;
-	TWeakObjectPtr<UMaterial> BulletVisualMaterial;
+	TArray<TWeakObjectPtr<UBillboardComponent>> BulletHeadVisualPool;
+	TArray<TWeakObjectPtr<UBillboardComponent>> BulletTracerVisualPool;
+	TWeakObjectPtr<UMaterial> BulletHeadVisualMaterial;
+	TWeakObjectPtr<UMaterial> BulletTracerVisualMaterial;
 	TArray<FBallisticBullet> ActiveBullets;
 };

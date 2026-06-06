@@ -104,6 +104,10 @@ struct FAmmoBallisticData
 	float Damage = 100.0f;
 	float BulletRadius = 0.03f;
 	float VisualScale = 0.06f;
+	float VisualTracerWidth = 0.02f;
+	float VisualTracerLengthScale = 1.35f;
+	float VisualTracerMinLength = 0.10f;
+	float VisualTracerMaxLength = 0.75f;
 	float LifeTime = 5.0f;
 	float FireInterval = 1.0f;
 	float WindInfluenceScale = 1.0f;
@@ -123,6 +127,10 @@ struct FBallisticBullet
 	float Damage = 0.0f;
 	float Radius = 0.0f;
 	float VisualScale = 0.06f;
+	float VisualTracerWidth = 0.02f;
+	float VisualTracerLengthScale = 1.35f;
+	float VisualTracerMinLength = 0.10f;
+	float VisualTracerMaxLength = 0.75f;
 	float LifeTime = 0.0f;
 	float GravityScale = 1.0f;
 	float BallisticCoefficient = 0.30f;
