@@ -3377,19 +3377,8 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
     Options.MinBoneSize = (std::max)(RegenerateMinBoneSize, 0.0f);
     Options.MinWeldSize = (std::max)(RegenerateMinWeldSize, 0.0f);
 
-    TArray<FMatrix> CurrentBoneGlobalMatrices;
-    const TArray<FMatrix>* OverrideBoneGlobalMatrices = nullptr;
-    if (PreviewSkeletalMeshComponent && PreviewSkeletalMeshComponent->GetSkeletalMesh() == PreviewMesh)
-    {
-        PreviewSkeletalMeshComponent->GetCurrentBoneGlobalMatrices(CurrentBoneGlobalMatrices);
-        if (!CurrentBoneGlobalMatrices.empty())
-        {
-            OverrideBoneGlobalMatrices = &CurrentBoneGlobalMatrices;
-        }
-    }
-
     FPhysicsAssetAutoBodyGeneratorResult Result;
-    if (!FPhysicsAssetAutoBodyGenerator::Regenerate(PhysicsAsset, PreviewMesh, Options, &Result, OverrideBoneGlobalMatrices))
+    if (!FPhysicsAssetAutoBodyGenerator::Regenerate(PhysicsAsset, PreviewMesh, Options, &Result))
     {
         return false;
     }
