@@ -22,6 +22,39 @@ local CORE_ORDER = {
     "Scene"
 }
 
+local SCENE_START_STATES = {
+    ["main.scene"] = GameState.Main,
+    ["preingame.scene"] = GameState.PreInGame,
+    ["loading.scene"] = GameState.Loading,
+    ["scopetest.scene"] = GameState.InGame
+}
+
+local function log(message)
+    if Debug and Debug.Log then
+        Debug.Log("[GeneralManager] " .. message)
+    else
+        print("[GeneralManager] " .. message)
+    end
+end
+
+local function get_scene_file_name()
+    if Scene == nil or Scene.GetCurrentPath == nil then
+        return nil
+    end
+
+    local current_path = tostring(Scene.GetCurrentPath())
+    local normalized = string.lower(string.gsub(current_path, "\\", "/"))
+    return string.match(normalized, "([^/]+)$")
+end
+
+local function get_initial_state_from_scene()
+    local scene_file = get_scene_file_name()
+    if scene_file == nil then
+        return nil
+    end
+    return SCENE_START_STATES[scene_file]
+end
+
 function GeneralManager.Get()
     if GeneralManager._instance == nil then
         GeneralManager._instance = setmetatable({
@@ -258,8 +291,23 @@ local RuntimeGeneralManager = GeneralManager.Get()
 
 local function get_initial_state()
     if this ~= nil and this.GetInitialGameStateName ~= nil then
-        return this:GetInitialGameStateName()
+        local ok, state = pcall(function()
+            return this:GetInitialGameStateName()
+        end)
+        if ok and GameState.IsValid(state) then
+            log("initial state from component=" .. tostring(state))
+            return state
+        end
+        log("component initial state unavailable value=" .. tostring(state))
     end
+
+    local scene_state = get_initial_state_from_scene()
+    if GameState.IsValid(scene_state) then
+        log("initial state from scene=" .. tostring(scene_state))
+        return scene_state
+    end
+
+    log("initial state unavailable; SceneManager will use its default")
     return nil
 end
 

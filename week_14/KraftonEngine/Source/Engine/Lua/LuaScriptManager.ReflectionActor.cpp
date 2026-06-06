@@ -4058,7 +4058,9 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         "GetScriptFile",
         &ULuaScriptComponent::GetScriptFile,
         "SetScriptFile",
-        &ULuaScriptComponent::SetScriptFile
+        &ULuaScriptComponent::SetScriptFile,
+        "GetInitialGameStateName",
+        &ULuaScriptComponent::GetInitialGameStateName
     );
 
     Lua.new_usertype<USniperWeaponComponent>(
