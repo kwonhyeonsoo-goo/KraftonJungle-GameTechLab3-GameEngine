@@ -4,6 +4,7 @@
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Pawn/Character.h"
+#include "Component/Movement/CharacterMovementComponent.h"
 
 #include <algorithm>
 #include <cmath>
@@ -52,19 +53,14 @@ void UCombatCoverAgentComponent::BeginPlay()
     CurrentMovePathIndex = 0;
     FinalReservedSlot.Reset();
     ApplyCombatRoleDefaults();
-    MaxHealth = (std::max)(1.0f, MaxHealth);
-    Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
-    FireRange = (std::max)(0.0f, FireRange);
-    MovingFireRange = (std::max)(0.0f, MovingFireRange);
-    FacingYawRate = (std::max)(0.0f, FacingYawRate);
-    FacingYawOffset = NormalizeYawDelta(FacingYawOffset);
-    DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
+    ClampRuntimeEditableValues();
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     TargetScanTimer = 0.0f;
     IncomingFireCount = 0;
     IncomingAttackDamage = 0.0f;
     SuppressionTimer = 0.0f;
+    CombatDecisionCooldownRemaining = 0.0f;
     StateBeforeEngage = ECombatCoverAgentState::Idle;
     StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     CurrentTarget.Reset();
@@ -87,16 +83,7 @@ void UCombatCoverAgentComponent::PostEditProperty(const char* PropertyName)
 
     (void)PropertyName;
     ApplyCombatRoleDefaults();
-    MaxHealth = (std::max)(1.0f, MaxHealth);
-    Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
-    FireRange = (std::max)(0.0f, FireRange);
-    MovingFireRange = (std::max)(0.0f, MovingFireRange);
-    FacingYawRate = (std::max)(0.0f, FacingYawRate);
-    FacingYawOffset = NormalizeYawDelta(FacingYawOffset);
-    AttackDamage = (std::max)(0.0f, AttackDamage);
-    AttackIntervalMin = (std::max)(0.0f, AttackIntervalMin);
-    AttackIntervalMax = (std::max)(AttackIntervalMin, AttackIntervalMax);
-    DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
+    ClampRuntimeEditableValues();
 }
 
 void UCombatCoverAgentComponent::RequestInitialSlot()
@@ -214,6 +201,8 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 1.0f;
         AttackIntervalMax = 2.0f;
+        RepositionChanceWhenInRange = 0.0f;
+        CombatDecisionCooldown = 2.0f;
         break;
 
     case ECombatAgentRole::EnemyLongRangeSlow:
@@ -224,6 +213,8 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 7.0f;
         AttackIntervalMin = 2.4f;
         AttackIntervalMax = 3.6f;
+        RepositionChanceWhenInRange = 0.15f;
+        CombatDecisionCooldown = 2.5f;
         break;
 
     case ECombatAgentRole::EnemyShortRange:
@@ -236,11 +227,59 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 0.8f;
         AttackIntervalMax = 1.4f;
+        RepositionChanceWhenInRange = 0.30f;
+        CombatDecisionCooldown = 2.0f;
         break;
     }
 
     bUseMovingFireRange = true;
     bCanFireWhileMoving = false;
+}
+
+float UCombatCoverAgentComponent::GetHealthRatio() const
+{
+    if (MaxHealth <= 0.0f)
+    {
+        return 0.0f;
+    }
+
+    return (std::min)((std::max)(Health / MaxHealth, 0.0f), 1.0f);
+}
+
+void UCombatCoverAgentComponent::MarkCombatDecisionMade()
+{
+    CombatDecisionCooldownRemaining = (std::max)(0.0f, CombatDecisionCooldown);
+}
+
+void UCombatCoverAgentComponent::TickCombatDecisionCooldown(float DeltaTime)
+{
+    if (CombatDecisionCooldownRemaining <= 0.0f || DeltaTime <= 0.0f)
+    {
+        return;
+    }
+
+    CombatDecisionCooldownRemaining = (std::max)(0.0f, CombatDecisionCooldownRemaining - DeltaTime);
+}
+
+void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
+{
+    MoveSpeed = (std::max)(0.0f, MoveSpeed);
+    AcceptanceRadius = (std::min)(1.0f, AcceptanceRadius); //너무 커지면 슬롯에서 멀어지다 겹침
+    AdvanceInterval = (std::max)(0.0f, AdvanceInterval);
+    RetryInterval = (std::max)(0.1f, RetryInterval);
+    MaxHealth = (std::max)(1.0f, MaxHealth);
+    Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
+    FireRange = (std::max)(0.0f, FireRange);
+    MovingFireRange = (std::max)(0.0f, MovingFireRange);
+    FacingYawRate = (std::max)(0.0f, FacingYawRate);
+    FacingYawOffset = NormalizeYawDelta(FacingYawOffset);
+    AttackDamage = (std::max)(0.0f, AttackDamage);
+    AttackIntervalMin = (std::max)(0.0f, AttackIntervalMin);
+    AttackIntervalMax = (std::max)(AttackIntervalMin, AttackIntervalMax);
+    TargetScanInterval = (std::max)(0.01f, TargetScanInterval);
+    RepositionChanceWhenInRange = (std::min)((std::max)(0.0f, RepositionChanceWhenInRange), 1.0f);
+    CombatDecisionCooldown = (std::max)(0.0f, CombatDecisionCooldown);
+    DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
 }
 
 bool UCombatCoverAgentComponent::IsMovingForCombatRange() const
@@ -588,6 +627,10 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
     {
         if (ACharacter* Character = Cast<ACharacter>(Owner))
         {
+            if (UCharacterMovementComponent* CharacterMovement = Character->GetCharacterMovement())
+            {
+                CharacterMovement->MaxWalkSpeed = (std::max)(0.0f, MoveSpeed);
+            }
             Character->AddMovementInput(Direction, 1.0f);
             return;
         }
@@ -696,6 +739,8 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
         MarkDead();
         return;
     }
+
+    TickCombatDecisionCooldown(DeltaTime);
 
     if (State != ECombatCoverAgentState::Dead)
     {
