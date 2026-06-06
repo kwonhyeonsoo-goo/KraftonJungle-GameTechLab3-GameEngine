@@ -15,10 +15,6 @@
 
 namespace
 {
-	constexpr float SniperSwayPitchFrequency = 1.85f;
-	constexpr float SniperSwayYawFrequency = 1.43f;
-	constexpr float SniperHoldBreathMultiplier = 0.35f;
-
 	float ClampSniperPitch(float Value, float MinPitch, float MaxPitch)
 	{
 		if (MinPitch > MaxPitch)
@@ -230,7 +226,11 @@ void ASniperPawn::SyncSniperRuntimeState()
 	ScopeState.TargetFOV = ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ScopeState.NormalFOV;
 	ScopeState.CurrentSensitivity = ScopeState.NormalSensitivity;
-	AimSwayState = FAimSwayState{};
+	AimSwayState.Time = 0.0f;
+	AimSwayState.CurrentSwayPitch = 0.0f;
+	AimSwayState.CurrentSwayYaw = 0.0f;
+	AimSwayState.BreathMultiplier = 1.0f;
+	AimSwayState.HoldBreathGauge = AimSwayState.MaxHoldBreathGauge;
 	RecoilState = FRecoilState{};
 
 	if (Camera)
@@ -324,7 +324,7 @@ void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
 			AimSwayState.MaxHoldBreathGauge);
 	}
 
-	AimSwayState.BreathMultiplier = bCanHoldBreath ? SniperHoldBreathMultiplier : 1.0f;
+	AimSwayState.BreathMultiplier = bCanHoldBreath ? HoldBreathSwayMultiplier : 1.0f;
 }
 
 void ASniperPawn::UpdateAimSwayState(float DeltaTime)
@@ -338,8 +338,8 @@ void ASniperPawn::UpdateAimSwayState(float DeltaTime)
 		ScopeAlpha);
 	const float SwayAmplitude = BaseAmplitude * AimSwayState.BreathMultiplier;
 
-	AimSwayState.CurrentSwayPitch = std::sin(AimSwayState.Time * SniperSwayPitchFrequency) * SwayAmplitude;
-	AimSwayState.CurrentSwayYaw = std::cos(AimSwayState.Time * SniperSwayYawFrequency) * SwayAmplitude * 0.85f;
+	AimSwayState.CurrentSwayPitch = std::sin(AimSwayState.Time * SwayPitchFrequency) * SwayAmplitude;
+	AimSwayState.CurrentSwayYaw = std::cos(AimSwayState.Time * SwayYawFrequency) * SwayAmplitude * 0.85f;
 }
 
 void ASniperPawn::UpdateRecoilState(float DeltaTime)

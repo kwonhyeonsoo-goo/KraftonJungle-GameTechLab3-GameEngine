@@ -152,6 +152,7 @@
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "",
+        "AimSwayState.ScopedSwayAmount" : 0.006981,
         "ScopeLensBlendTime" : 0.080000,
         "ScopeLensEdgeBlurRadius" : 1.500000,
         "ScopeLensFeather" : 0.080000,
@@ -928,14 +929,15 @@
       }
     }, {
       "ClassName" : "AActor",
-      "Name" : "ScopeTest_UIManager",
+      "Name" : "ScopeTest_GeneralManager",
       "NonSceneComponents" : [{
           "ClassName" : "ULuaScriptComponent",
           "ObjectId" : 32,
           "Properties" : {
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_500",
-            "ScriptFile" : "ScopeTest_UIManager.lua",
+            "InitialGameState" : 4,
+            "ScriptFile" : "Management/GeneralManager.lua",
             "bAutoActivate" : true,
             "bEditorOnly" : false,
             "bHiddenInComponentTree" : false,
@@ -949,7 +951,7 @@
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
-        "PendingTagsString" : "ScopeTest,UIManager",
+        "PendingTagsString" : "ScopeTest,GeneralManager",
         "bNeedsTick" : true
       },
       "RootComponent" : {

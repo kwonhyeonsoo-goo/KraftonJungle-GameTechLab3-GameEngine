@@ -1,0 +1,75 @@
+body {
+    margin: 0px;
+    width: 1920.000000px;
+    height: 1080.000000px;
+}
+
+#loadingRoot {
+    position: relative;
+    left: 0px;
+    top: 0px;
+    width: 100.000000%;
+    height: 100.000000%;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 255);
+    color: rgba(238, 243, 246, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-size: 24.000000px;
+    text-align: left;
+}
+
+#loadingTitle {
+    position: absolute;
+    left: 0px;
+    top: 456.000000px;
+    width: 100.000000%;
+    height: 80.000000px;
+    box-sizing: border-box;
+    opacity: 0.92;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    color: rgba(245, 248, 250, 235);
+    font-family: "Nexon";
+    font-weight: 700;
+    font-size: 42.000000px;
+    text-align: center;
+}
+
+#loadingTip {
+    position: absolute;
+    left: 260.000000px;
+    bottom: 118.000000px;
+    width: 1400.000000px;
+    height: 42.000000px;
+    box-sizing: border-box;
+    opacity: 0.78;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    color: rgba(220, 226, 229, 205);
+    font-family: "Nexon";
+    font-size: 24.000000px;
+    text-align: center;
+}
+
+#pressPrompt {
+    position: absolute;
+    right: 72.000000px;
+    bottom: 54.000000px;
+    width: 360.000000px;
+    height: 40.000000px;
+    box-sizing: border-box;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    color: rgba(255, 213, 118, 255);
+    font-family: "Nexon";
+    font-size: 28.000000px;
+    text-align: right;
+}

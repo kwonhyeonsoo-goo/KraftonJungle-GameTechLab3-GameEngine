@@ -40,7 +40,6 @@ body {
     padding: 0px 0px 0px 0px;
     font-size: 24.000000px;
     text-align: center;
-    object-fit: contain;
 }
 
 #scopeOverlay {
@@ -82,7 +81,6 @@ body {
     padding: 0px 0px 0px 0px;
     font-size: 24.000000px;
     text-align: center;
-    object-fit: fill;
 }
 
 #CompassArrow {
@@ -102,7 +100,6 @@ body {
     padding: 0px 0px 0px 0px;
     font-size: 24.000000px;
     text-align: center;
-    object-fit: fill;
 }
 
 #crosshairImage {
@@ -122,7 +119,6 @@ body {
     padding: 0px 0px 0px 0px;
     font-size: 24.000000px;
     text-align: center;
-    object-fit: fill;
 }
 
 #breathPanel {
@@ -141,7 +137,7 @@ body {
     border-radius: 0px;
     padding: 12.000000px 16.000000px 12.000000px 16.000000px;
     font-size: 22.000000px;
-    text-align: left;
+    text-align: center;
 }
 
 #breathLabel {
@@ -160,9 +156,7 @@ body {
     border-radius: 0px;
     padding: 0px 0px 0px 0px;
     font-size: 22.000000px;
-    font-family: "Nexon";
-    font-weight: 400;
-    text-align: left;
+    text-align: center;
 }
 
 #breathBarTrack {
@@ -220,4 +214,107 @@ body {
     padding: 0px 0px 0px 0px;
     font-size: 0px;
     text-align: center;
+}
+
+#weaponInfoPanel {
+    position: absolute;
+    left: 1512.000000px;
+    top: 882.000000px;
+    width: 336.000000px;
+    height: 128.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 235);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 14.000000px 18.000000px 14.000000px 18.000000px;
+    font-size: 18.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+#weaponPanelBg {
+    position: absolute;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 336.000000px;
+    height: 128.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 0);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 0px;
+    text-align: left;
+}
+
+#weaponNameLabel {
+    position: absolute;
+    left: 22.000000px;
+    top: 15.000000px;
+    width: 292.000000px;
+    height: 24.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 18.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+#ammoCountLabel {
+    position: absolute;
+    left: 22.000000px;
+    top: 42.000000px;
+    width: 292.000000px;
+    height: 54.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 44.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+#ammoTypeLabel {
+    position: absolute;
+    left: 22.000000px;
+    top: 98.000000px;
+    width: 292.000000px;
+    height: 20.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 15.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
 }

@@ -9,10 +9,46 @@
 #include "Lua/LuaDebugManager.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/GarbageCollection.h"
+#include "Core/Types/PropertyTypes.h"
 #include "Serialization/Archive.h"
+
+#include <cstring>
 
 ULuaScriptComponent::ULuaScriptComponent()
 {
+}
+
+namespace
+{
+	bool IsGeneralManagerScriptFile(const FString& ScriptFile)
+	{
+		if (ScriptFile.empty())
+		{
+			return false;
+		}
+
+		size_t FileNameStart = ScriptFile.find_last_of("/\\");
+		const FString FileName = FileNameStart == FString::npos
+			? ScriptFile
+			: ScriptFile.substr(FileNameStart + 1);
+		return FileName == "GeneralManager.lua";
+	}
+
+	const char* ToGameStateName(EGeneralManagerStartState State)
+	{
+		switch (State)
+		{
+		case EGeneralManagerStartState::Intro: return "Intro";
+		case EGeneralManagerStartState::Main: return "Main";
+		case EGeneralManagerStartState::Loading: return "Loading";
+		case EGeneralManagerStartState::PreInGame: return "Pre-InGame";
+		case EGeneralManagerStartState::InGame: return "InGame";
+		case EGeneralManagerStartState::Defeat1: return "Defeat1";
+		case EGeneralManagerStartState::Defeat2: return "Defeat2";
+		case EGeneralManagerStartState::Victory: return "Victory";
+		default: return "Intro";
+		}
+	}
 }
 
 ULuaScriptComponent::~ULuaScriptComponent()
@@ -113,6 +149,7 @@ bool ULuaScriptComponent::ReloadScript()
 {
 	ClearCollisionBindings();
 	ClearSniperBindings();
+	InvokeLuaEndPlay();
 	if (!InitializeLua())
 	{
 		return false;
@@ -544,6 +581,26 @@ void ULuaScriptComponent::PreGetEditableProperties()
 {
 	UActorComponent::PreGetEditableProperties();
 	EnsureDefaultScriptFile();
+}
+
+bool ULuaScriptComponent::ShouldExposeProperty(const FProperty& Property) const
+{
+	if (!UActorComponent::ShouldExposeProperty(Property))
+	{
+		return false;
+	}
+
+	if (Property.Name && std::strcmp(Property.Name, "InitialGameState") == 0)
+	{
+		return IsGeneralManagerScriptFile(ScriptFile);
+	}
+
+	return true;
+}
+
+FString ULuaScriptComponent::GetInitialGameStateName() const
+{
+	return ToGameStateName(InitialGameState);
 }
 
 void ULuaScriptComponent::EnsureDefaultScriptFile()

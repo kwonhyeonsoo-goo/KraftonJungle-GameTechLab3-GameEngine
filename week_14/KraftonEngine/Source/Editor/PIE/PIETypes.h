@@ -43,5 +43,6 @@ struct FPlayInEditorSessionInfo
 	double PIEStartTime = 0.0;
 	// PIE 시작 직전 활성 월드 핸들 — EndPlayMap에서 원복에 사용.
 	FName PreviousActiveWorldHandle;
+	FName CurrentPIEWorldHandle;
 	FPIEViewportCameraSnapshot SavedViewportCamera;
 };

@@ -85,6 +85,7 @@ public:
 	void BindClick(const FString& ElementId, sol::protected_function Callback);
 	void RegisterEventListeners();
 	void ClearEventListeners();
+	void ReleaseLuaCallbacks();
 	UFUNCTION(Callable, Category="UI")
 	void SetText(const FString& ElementId, const FString& Text);
 	UFUNCTION(Pure, Category="UI")

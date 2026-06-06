@@ -85,6 +85,18 @@ public:
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped Sensitivity", Member=ScopeState.ScopedSensitivity, Type=Float, Min=0.0f, Max=10.0f, Speed=0.01f);
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="FOV Blend Speed", Member=ScopeState.ScopeBlendSpeed, Type=Float, Min=0.0f, Max=60.0f, Speed=0.1f);
 
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Base Sway Amount", Member=AimSwayState.BaseSwayAmount, Type=Float, Min=0.0f, Max=0.05f, Speed=0.0001f);
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Scoped Sway Amount", Member=AimSwayState.ScopedSwayAmount, Type=Float, Min=0.0f, Max=0.05f, Speed=0.0001f);
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Sway Multiplier", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float HoldBreathSwayMultiplier = 0.35f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Pitch Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
+	float SwayPitchFrequency = 1.85f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Yaw Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
+	float SwayYawFrequency = 1.43f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Max Hold Breath Gauge", Member=AimSwayState.MaxHoldBreathGauge, Type=Float, Min=0.0f, Max=30.0f, Speed=0.1f);
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Recover Speed", Member=AimSwayState.HoldBreathRecoverSpeed, Type=Float, Min=0.0f, Max=30.0f, Speed=0.1f);
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Consume Speed", Member=AimSwayState.HoldBreathConsumeSpeed, Type=Float, Min=0.0f, Max=30.0f, Speed=0.1f);
+
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Radius", Min=0.01f, Max=1.0f, Speed=0.01f)
 	float ScopeLensRadius = 0.42f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Feather", Min=0.001f, Max=0.5f, Speed=0.01f)

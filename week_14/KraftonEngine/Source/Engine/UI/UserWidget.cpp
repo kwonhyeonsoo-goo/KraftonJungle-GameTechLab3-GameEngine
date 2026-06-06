@@ -36,13 +36,18 @@ void FWidgetActionEventListener::ProcessEvent(Rml::Event& Event)
 		return;
 	}
 
+	const Rml::String& EventType = Event.GetType();
+	const bool bHoverEvent = EventType == "mouseover";
+	const char* PrimaryAttribute = bHoverEvent ? "data-hover-action" : "data-action";
+	const char* FallbackAttribute = bHoverEvent ? "hover-action" : "action";
+
 	Rml::Element* Element = Event.GetTargetElement();
 	while (Element)
 	{
-		Rml::String Action = Element->GetAttribute<Rml::String>("data-action", "");
+		Rml::String Action = Element->GetAttribute<Rml::String>(PrimaryAttribute, "");
 		if (Action.empty())
 		{
-			Action = Element->GetAttribute<Rml::String>("action", "");
+			Action = Element->GetAttribute<Rml::String>(FallbackAttribute, "");
 		}
 
 		if (!Action.empty())
@@ -61,7 +66,7 @@ void UUserWidget::BeginDestroy()
 	// not UObject references. GC can destroy a widget without going through the
 	// regular UIManager shutdown path, so detach listeners and release the document
 	// handle before the UObject enters PendingKill/Garbage state.
-	ClearEventListeners();
+	ReleaseLuaCallbacks();
 	if (Document)
 	{
 		Document->Close();
@@ -125,6 +130,7 @@ void UUserWidget::RegisterEventListeners()
 
 	ActionListener = new FWidgetActionEventListener(this);
 	Document->AddEventListener("click", ActionListener);
+	Document->AddEventListener("mouseover", ActionListener);
 	Document->AddEventListener("change", ActionListener);
 	Document->AddEventListener("submit", ActionListener);
 }
@@ -134,6 +140,7 @@ void UUserWidget::ClearEventListeners()
 	if (Document && ActionListener)
 	{
 		Document->RemoveEventListener("click", ActionListener);
+		Document->RemoveEventListener("mouseover", ActionListener);
 		Document->RemoveEventListener("change", ActionListener);
 		Document->RemoveEventListener("submit", ActionListener);
 	}
@@ -163,6 +170,12 @@ void UUserWidget::ClearEventListeners()
 
 	delete ActionListener;
 	ActionListener = nullptr;
+}
+
+void UUserWidget::ReleaseLuaCallbacks()
+{
+	ClearEventListeners();
+	PendingClickBindings.clear();
 }
 
 void UUserWidget::SetText(const FString& ElementId, const FString& Text)

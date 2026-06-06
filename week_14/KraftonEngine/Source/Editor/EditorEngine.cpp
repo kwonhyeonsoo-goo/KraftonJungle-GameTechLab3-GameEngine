@@ -31,7 +31,10 @@
 #include "Lua/LuaDebugManager.h"
 #include "Object/GarbageCollection.h"
 #include "Audio/AudioManager.h"
+#include "Profiling/Time/Timer.h"
 #include <filesystem>
+#include <string>
+#include <utility>
 
 #include "Mesh/Skeletal/SkeletalMesh.h"
 
@@ -48,6 +51,33 @@ FString GetFileStem(const FString& InPath)
 {
 	const std::filesystem::path Path(FPaths::ToWide(InPath));
 	return FPaths::ToUtf8(Path.stem().wstring());
+}
+
+FName MakePIEWorldHandle(uint32 Serial)
+{
+	return FName("PIE_" + std::to_string(Serial));
+}
+
+FString ResolveScenePathForRuntimeTransition(const FString& InNameOrPath)
+{
+	std::filesystem::path Input(FPaths::ToWide(InNameOrPath));
+	if (Input.is_absolute() && std::filesystem::exists(Input))
+	{
+		return InNameOrPath;
+	}
+
+	const std::filesystem::path ProjectRelative = std::filesystem::path(FPaths::RootDir()) / Input;
+	if (std::filesystem::exists(ProjectRelative))
+	{
+		return FPaths::ToUtf8(ProjectRelative.wstring());
+	}
+
+	std::filesystem::path Resolved = std::filesystem::path(FSceneSaveManager::GetSceneDirectory()) / Input;
+	if (!Resolved.has_extension())
+	{
+		Resolved += FSceneSaveManager::SceneExtension;
+	}
+	return FPaths::ToUtf8(Resolved.wstring());
 }
 
 std::wstring GetSceneDialogDirectory()
@@ -164,7 +194,18 @@ void UEditorEngine::Tick(float DeltaTime)
 	if (bRequestEndPlayMapQueued)
 	{
 		bRequestEndPlayMapQueued = false;
+		bRequestPIESceneTransitionQueued = false;
+		PendingPIESceneTransitionPath.clear();
 		EndPlayMap();
+		if (!PlayInEditorSessionInfo.has_value())
+		{
+			return;
+		}
+	}
+	if (bRequestPIESceneTransitionQueued)
+	{
+		bRequestPIESceneTransitionQueued = false;
+		ProcessQueuedPIESceneTransition();
 	}
 	if (PlaySessionRequest.has_value())
 	{
@@ -478,14 +519,25 @@ void UEditorEngine::RequestEndPlayMap()
 	{
 		return;
 	}
+	bRequestPIESceneTransitionQueued = false;
+	PendingPIESceneTransitionPath.clear();
 	bRequestEndPlayMapQueued = true;
 }
 
-void UEditorEngine::RequestTransitionToScene(const FString& /*InScenePath*/)
+void UEditorEngine::RequestTransitionToScene(const FString& InScenePath)
 {
-	// PIE 중이면 세션 종료(에디터 복귀)로 매핑. PIE 가 아닌 상태(에디터 직접)에서 호출되면
-	// 아무 의미 없으므로 no-op.
-	RequestEndPlayMap();
+	if (!PlayInEditorSessionInfo.has_value() || bRequestEndPlayMapQueued || bPIESceneTransitionInProgress)
+	{
+		return;
+	}
+	if (InScenePath.empty())
+	{
+		UE_LOG("[EditorEngine] PIE TransitionToScene ignored: empty scene path");
+		return;
+	}
+
+	PendingPIESceneTransitionPath = InScenePath;
+	bRequestPIESceneTransitionQueued = true;
 }
 
 void UEditorEngine::StartQueuedPlaySessionRequest()
@@ -512,6 +564,137 @@ void UEditorEngine::StartQueuedPlaySessionRequest()
 	}
 }
 
+void UEditorEngine::ProcessQueuedPIESceneTransition()
+{
+	if (!PlayInEditorSessionInfo.has_value() || bRequestEndPlayMapQueued || bPIESceneTransitionInProgress)
+	{
+		PendingPIESceneTransitionPath.clear();
+		return;
+	}
+
+	const FString ScenePath = std::move(PendingPIESceneTransitionPath);
+	PendingPIESceneTransitionPath.clear();
+	if (ScenePath.empty())
+	{
+		return;
+	}
+
+	LoadPIESceneFromPath(ScenePath);
+}
+
+bool UEditorEngine::LoadPIESceneFromPath(const FString& InScenePath)
+{
+	if (!PlayInEditorSessionInfo.has_value() || bRequestEndPlayMapQueued || bPIESceneTransitionInProgress)
+	{
+		return false;
+	}
+
+	const FString FilePath = ResolveScenePathForRuntimeTransition(InScenePath);
+	if (!std::filesystem::exists(std::filesystem::path(FPaths::ToWide(FilePath))))
+	{
+		UE_LOG("[EditorEngine] PIE TransitionToScene failed: scene file not found: %s", FilePath.c_str());
+		return false;
+	}
+
+	FWorldContext LoadContext;
+	FPerspectiveCameraData CameraData;
+	const EWorldType PIEType = EWorldType::PIE;
+	FSceneSaveManager::LoadSceneFromJSON(FilePath, LoadContext, CameraData, &PIEType);
+	if (!LoadContext.World)
+	{
+		UE_LOG("[EditorEngine] PIE TransitionToScene failed: %s", FilePath.c_str());
+		return false;
+	}
+
+	bPIESceneTransitionInProgress = true;
+
+	const FName OldPIEHandle = PlayInEditorSessionInfo->CurrentPIEWorldHandle.IsValid()
+		? PlayInEditorSessionInfo->CurrentPIEWorldHandle
+		: GetActiveWorldHandle();
+	const FName NewPIEHandle = MakePIEWorldHandle(NextPIEWorldSerial++);
+	UWorld* PIEWorld = LoadContext.World;
+	LoadContext.WorldType = EWorldType::PIE;
+	LoadContext.ContextHandle = NewPIEHandle;
+	LoadContext.ContextName = NewPIEHandle.ToString();
+	PIEWorld->SetWorldType(EWorldType::PIE);
+
+	UClass* GMClass = nullptr;
+	const FString& SceneGMName = PIEWorld->GetWorldSettings().GameModeClassName;
+	if (!SceneGMName.empty())
+	{
+		UClass* Found = UClass::FindByName(SceneGMName.c_str());
+		if (Found && Found->IsA(AGameModeBase::StaticClass()))
+		{
+			GMClass = Found;
+		}
+		else
+		{
+			UE_LOG("[EditorEngine] WorldSettings.GameMode = '%s' not found or invalid; falling back to ProjectSettings",
+				SceneGMName.c_str());
+		}
+	}
+	if (!GMClass)
+	{
+		GMClass = AGameModeBase::ResolveClassFromProjectSettings(nullptr);
+	}
+	if (GMClass)
+	{
+		PIEWorld->SetGameModeClass(GMClass);
+	}
+
+	FLuaDebugManager::AbortPauseForPlaySessionEnd();
+	InputSystem::Get().ResetTransientState();
+	UUIManager::Get().ClearViewport();
+	FLuaScriptManager::FireWorldReset();
+	SelectionManager.ClearSelection();
+	SelectionManager.SetWorld(nullptr);
+	SetActiveWorld(PlayInEditorSessionInfo->PreviousActiveWorldHandle);
+	UE_LOG("[EditorEngine] PIE TransitionToScene swapping world old=%s new=%s scene=%s",
+		OldPIEHandle.ToString().c_str(),
+		NewPIEHandle.ToString().c_str(),
+		FilePath.c_str());
+	DestroyWorldContext(OldPIEHandle);
+	FLuaScriptManager::FireWorldReset();
+
+	WorldList.push_back(LoadContext);
+	PlayInEditorSessionInfo->CurrentPIEWorldHandle = NewPIEHandle;
+	SetActiveWorld(NewPIEHandle);
+	CurrentPIEScenePath = FilePath;
+
+	if (IRenderPipeline* Pipeline = GetRenderPipeline())
+	{
+		Pipeline->OnSceneCleared();
+	}
+
+	SelectionManager.ClearSelection();
+	SelectionManager.SetWorld(PIEWorld);
+
+	if (FLevelEditorViewportClient* ActiveVC = ViewportLayout.GetActiveViewport())
+	{
+		PIEWorld->SetEditorPOVProvider(ActiveVC);
+		if (UGameViewportClient* PIEViewportClient = GetGameViewportClient())
+		{
+			if (Window)
+			{
+				PIEViewportClient->SetOwnerWindow(Window->GetHWND());
+			}
+			PIEViewportClient->SetViewport(ActiveVC->GetViewport());
+			PIEViewportClient->SetCursorClipRect(ActiveVC->GetViewportScreenRect());
+			PIEViewportClient->SetInputPossessed(IsPIEPossessedMode());
+		}
+	}
+
+	PIEWorld->BeginPlay();
+	if (FTimer* Timer = GetTimer())
+	{
+		Timer->Initialize();
+	}
+
+	UE_LOG("[EditorEngine] PIE TransitionToScene loaded: %s", FilePath.c_str());
+	bPIESceneTransitionInProgress = false;
+	return true;
+}
+
 void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Params)
 {
 	InputSystem::Get().ResetAllKeyStates();
@@ -532,10 +715,11 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 	}
 
 	// 2) PIE WorldContext를 WorldList에 등록.
+	const FName PIEHandle = MakePIEWorldHandle(NextPIEWorldSerial++);
 	FWorldContext Ctx;
 	Ctx.WorldType = EWorldType::PIE;
-	Ctx.ContextHandle = FName("PIE");
-	Ctx.ContextName = "PIE";
+	Ctx.ContextHandle = PIEHandle;
+	Ctx.ContextName = PIEHandle.ToString();
 	Ctx.World = PIEWorld;
 	WorldList.push_back(Ctx);
 
@@ -544,15 +728,17 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 	Info.OriginalRequestParams = Params;
 	Info.PIEStartTime = 0.0;
 	Info.PreviousActiveWorldHandle = GetActiveWorldHandle();
+	Info.CurrentPIEWorldHandle = PIEHandle;
 	if (FLevelEditorViewportClient* ActiveVC = ViewportLayout.GetActiveViewport())
 	{
 		ActiveVC->GetCameraView(Info.SavedViewportCamera.POV);
 		Info.SavedViewportCamera.bValid = true;
 	}
 	PlayInEditorSessionInfo = Info;
+	CurrentPIEScenePath = CurrentLevelFilePath;
 
 	// 4) ActiveWorldHandle을 PIE로 전환 — 이후 GetWorld()는 PIE 월드를 반환.
-	SetActiveWorld(FName("PIE"));
+	SetActiveWorld(PIEHandle);
 
 	// GPU Occlusion readback은 ProxyId 기반이라 월드가 갈리면 stale.
 	// 이전 프레임 결과를 무효화해야 wrong-proxy hit 방지.
@@ -633,6 +819,15 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 
 void UEditorEngine::EndPlayMap()
 {
+	bRequestPIESceneTransitionQueued = false;
+	PendingPIESceneTransitionPath.clear();
+
+	if (bPIESceneTransitionInProgress)
+	{
+		bRequestEndPlayMapQueued = true;
+		return;
+	}
+
 	if (!PlayInEditorSessionInfo.has_value())
 	{
 		return;
@@ -646,6 +841,9 @@ void UEditorEngine::EndPlayMap()
 
 	// 활성 월드를 PIE 시작 전 핸들로 복원.
 	const FName PrevHandle = PlayInEditorSessionInfo->PreviousActiveWorldHandle;
+	const FName PIEHandle = PlayInEditorSessionInfo->CurrentPIEWorldHandle.IsValid()
+		? PlayInEditorSessionInfo->CurrentPIEWorldHandle
+		: GetActiveWorldHandle();
 	SetActiveWorld(PrevHandle);
 
 	// 복귀한 Editor 월드의 VisibleProxies/캐시된 카메라 상태를 강제 무효화.
@@ -711,7 +909,8 @@ void UEditorEngine::EndPlayMap()
 	FLuaScriptManager::FireWorldReset();
 
 	// PIE WorldContext 제거 (DestroyWorldContext가 EndPlay + DestroyObject 수행).
-	DestroyWorldContext(FName("PIE"));
+	UE_LOG("[EditorEngine] EndPlayMap destroying PIE world=%s", PIEHandle.ToString().c_str());
+	DestroyWorldContext(PIEHandle);
 
 	// require 캐시된 lua 모듈 (CoroutineManager / ObjRegistry) 의 stale 액터 참조 정리.
 	// 안 하면 다음 PIE 시작 시 옛 코루틴이 freed AActor* 를 deref → 크래시.
@@ -724,6 +923,10 @@ void UEditorEngine::EndPlayMap()
 	}
 
 	PlayInEditorSessionInfo.reset();
+	CurrentPIEScenePath.clear();
+	PendingPIESceneTransitionPath.clear();
+	bRequestPIESceneTransitionQueued = false;
+	bPIESceneTransitionInProgress = false;
 	PIEControlMode = EPIEControlMode::Possessed;
 	InputSystem::Get().ResetCaptureStateForPIEEnd();
 	FSlateApplication::Get().ClearInputOwner();

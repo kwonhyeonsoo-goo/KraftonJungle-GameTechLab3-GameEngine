@@ -36,6 +36,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/ShapeComponent.h"
+#include "Component/SoundComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Camera/CineCameraComponent.h"
 #include "Component/Camera/SpringArmComponent.h"
@@ -580,11 +581,51 @@ void FLuaScriptManager::UnregisterAnimInstance(ULuaAnimInstance* Instance)
     );
 }
 
+namespace
+{
+    bool IsManagementModuleName(const FString& ModuleName)
+    {
+        return ModuleName == "Management" || ModuleName.rfind("Management.", 0) == 0;
+    }
+
+    bool IsGeneralManagerScriptFile(const FString& ScriptFile)
+    {
+        if (ScriptFile.empty())
+        {
+            return false;
+        }
+
+        FString Normalized = ScriptFile;
+        for (char& Ch : Normalized)
+        {
+            if (Ch == '\\')
+            {
+                Ch = '/';
+            }
+        }
+
+        const size_t FileNameStart = Normalized.find_last_of('/');
+        const FString FileName = FileNameStart == FString::npos
+            ? Normalized
+            : Normalized.substr(FileNameStart + 1);
+        return FileName == "GeneralManager.lua";
+    }
+}
+
 void FLuaScriptManager::OnScriptsChanged(const TSet<FString>& ChangedFiles)
 {
     TSet<ULuaScriptComponent*> Targets;
+    bool bReloadGeneralManager = false;
 
     InvalidateChangedModules(ChangedFiles);
+    for (const FString& File : ChangedFiles)
+    {
+        if (IsManagementModuleName(GetModuleNameFromPath(File)))
+        {
+            bReloadGeneralManager = true;
+            break;
+        }
+    }
 
     {
         std::lock_guard<std::mutex> Lock(ComponentMutex);
@@ -606,6 +647,12 @@ void FLuaScriptManager::OnScriptsChanged(const TSet<FString>& ChangedFiles)
 
             const FString& ScriptFile = Component->GetScriptFile();
             if (ScriptFile.empty()) continue;
+
+            if (bReloadGeneralManager && IsGeneralManagerScriptFile(ScriptFile))
+            {
+                Targets.insert(Component);
+                continue;
+            }
 
             for (const FString& File : ChangedFiles)
             {
@@ -680,11 +727,40 @@ void FLuaScriptManager::InvalidateChangedModules(const TSet<FString>& ChangedFil
     sol::table Loaded = (*Lua)["package"]["loaded"];
     if (!Loaded.valid()) return;
 
+    TSet<FString> ModulesToInvalidate;
+    bool bInvalidateManagementGraph = false;
     for (const FString& File : ChangedFiles)
     {
         FString ModuleName = GetModuleNameFromPath(File);
         if (ModuleName.empty()) continue;
 
+        ModulesToInvalidate.insert(ModuleName);
+        if (IsManagementModuleName(ModuleName))
+        {
+            bInvalidateManagementGraph = true;
+        }
+    }
+
+    if (bInvalidateManagementGraph)
+    {
+        for (const auto& Entry : Loaded)
+        {
+            sol::object Key = Entry.first;
+            if (!Key.valid() || Key.get_type() != sol::type::string)
+            {
+                continue;
+            }
+
+            FString ModuleName = Key.as<FString>();
+            if (IsManagementModuleName(ModuleName))
+            {
+                ModulesToInvalidate.insert(ModuleName);
+            }
+        }
+    }
+
+    for (const FString& ModuleName : ModulesToInvalidate)
+    {
         Loaded[ModuleName] = sol::nil;
         UE_LOG("[LuaHotReload] Invalidated module: %s", ModuleName.c_str());
     }
@@ -3813,6 +3889,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     AudioManager.set_function(
+        "FadeInSFX",
+        [](FAudioHandle Handle, float DurationSeconds, sol::optional<float> TargetVolume)
+        {
+            return FAudioManager::Get().FadeInSFX(Handle, DurationSeconds, TargetVolume.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "FadeOutSFX",
+        [](FAudioHandle Handle, float DurationSeconds)
+        {
+            return FAudioManager::Get().FadeOutSFX(Handle, DurationSeconds);
+        }
+    );
+    AudioManager.set_function(
         "PlaySFX3D",
         [](const FString& PathOrKey, const FVector& Position, sol::optional<float> VolumeScale, sol::optional<float> MinDistance, sol::optional<float> MaxDistance)
         {
@@ -3836,6 +3926,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         []()
         {
             FAudioManager::Get().StopBGM();
+        }
+    );
+    AudioManager.set_function(
+        "FadeInBGM",
+        [](float DurationSeconds, sol::optional<float> TargetVolume)
+        {
+            return FAudioManager::Get().FadeInBGM(DurationSeconds, TargetVolume.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "FadeOutBGM",
+        [](float DurationSeconds)
+        {
+            return FAudioManager::Get().FadeOutBGM(DurationSeconds);
         }
     );
     AudioManager.set_function(
@@ -3937,6 +4041,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         [](FAudioHandle Handle)
         {
             FAudioManager::Get().StopSound(Handle);
+        }
+    );
+    AudioManager.set_function(
+        "FadeInSound",
+        [](FAudioHandle Handle, float DurationSeconds, sol::optional<float> TargetVolume)
+        {
+            return FAudioManager::Get().FadeInSound(Handle, DurationSeconds, TargetVolume.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "FadeOutSound",
+        [](FAudioHandle Handle, float DurationSeconds)
+        {
+            return FAudioManager::Get().FadeOutSound(Handle, DurationSeconds);
         }
     );
     AudioManager.set_function(
@@ -4933,7 +5051,11 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         "GetScriptFile",
         &ULuaScriptComponent::GetScriptFile,
         "SetScriptFile",
-        &ULuaScriptComponent::SetScriptFile
+        &ULuaScriptComponent::SetScriptFile,
+        "GetInitialGameStateName",
+        &ULuaScriptComponent::GetInitialGameStateName,
+        "GetStartState",
+        &ULuaScriptComponent::GetInitialGameStateName
     );
 
     Lua.new_usertype<USniperWeaponComponent>(
@@ -6620,6 +6742,50 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         )
     );
 
+    Lua.new_usertype<USoundComponent>(
+        "SoundComponent",
+        sol::base_classes,
+        sol::bases<USceneComponent, UActorComponent, UObject>(),
+        "Play",
+        &USoundComponent::Play,
+        "Stop",
+        &USoundComponent::Stop,
+        "IsPlaying",
+        &USoundComponent::IsPlaying,
+        "SetSoundPath",
+        &USoundComponent::SetSoundPath,
+        "GetSoundPath",
+        &USoundComponent::GetSoundPath,
+        "SetVolume",
+        &USoundComponent::SetVolume,
+        "GetVolume",
+        &USoundComponent::GetVolume,
+        "SetPitch",
+        &USoundComponent::SetPitch,
+        "GetPitch",
+        &USoundComponent::GetPitch,
+        "SetLooping",
+        &USoundComponent::SetLooping,
+        "IsLooping",
+        &USoundComponent::IsLooping,
+        "SetPlayOnBeginPlay",
+        &USoundComponent::SetPlayOnBeginPlay,
+        "ShouldPlayOnBeginPlay",
+        &USoundComponent::ShouldPlayOnBeginPlay,
+        "SetSpatialized",
+        &USoundComponent::SetSpatialized,
+        "IsSpatialized",
+        &USoundComponent::IsSpatialized,
+        "Set3DMinMaxDistance",
+        &USoundComponent::Set3DMinMaxDistance,
+        "GetMinDistance",
+        &USoundComponent::GetMinDistance,
+        "GetMaxDistance",
+        &USoundComponent::GetMaxDistance,
+        "GetActiveHandle",
+        &USoundComponent::GetActiveHandle
+    );
+
     Lua.new_usertype<UPrimitiveComponent>(
         "PrimitiveComponent",
         sol::base_classes,
@@ -7093,6 +7259,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         [](AActor& Actor)
         {
             return Actor.GetComponentByClass<UCameraComponent>();
+        },
+
+        "GetSoundComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USoundComponent>();
         },
 
         "GetSkeletalMeshComponent",
@@ -8007,6 +8179,13 @@ void FLuaScriptManager::RegisterUIBindings(sol::state& Lua)
         [](const FString& DocumentPath)
         {
             return UUIManager::Get().CreateWidget(nullptr, DocumentPath);
+        }
+    );
+    UI.set_function(
+        "ClearViewport",
+        []()
+        {
+            UUIManager::Get().ClearViewport();
         }
     );
     UI.set_function(
