@@ -16,6 +16,19 @@ namespace
         const float DY = A.Y - B.Y;
         return sqrtf(DX * DX + DY * DY);
     }
+
+    float NormalizeYawDelta(float DeltaYaw)
+    {
+        while (DeltaYaw > 180.0f)
+        {
+            DeltaYaw -= 360.0f;
+        }
+        while (DeltaYaw < -180.0f)
+        {
+            DeltaYaw += 360.0f;
+        }
+        return DeltaYaw;
+    }
 }
 
 UCombatCoverAgentComponent::UCombatCoverAgentComponent()
@@ -40,6 +53,8 @@ void UCombatCoverAgentComponent::BeginPlay()
     Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
     FireRange = (std::max)(0.0f, FireRange);
     MovingFireRange = (std::max)(0.0f, MovingFireRange);
+    FacingYawRate = (std::max)(0.0f, FacingYawRate);
+    FacingYawOffset = NormalizeYawDelta(FacingYawOffset);
     DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
     if (AActor* Owner = GetOwner())
     {
@@ -84,6 +99,8 @@ void UCombatCoverAgentComponent::PostEditProperty(const char* PropertyName)
     Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
     FireRange = (std::max)(0.0f, FireRange);
     MovingFireRange = (std::max)(0.0f, MovingFireRange);
+    FacingYawRate = (std::max)(0.0f, FacingYawRate);
+    FacingYawOffset = NormalizeYawDelta(FacingYawOffset);
     AttackDamage = (std::max)(0.0f, AttackDamage);
     AttackIntervalMin = (std::max)(0.0f, AttackIntervalMin);
     AttackIntervalMax = (std::max)(AttackIntervalMin, AttackIntervalMax);
@@ -571,6 +588,11 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
     }
 
     const FVector Direction = Delta.Normalized();
+    if (!CurrentTarget.Get())
+    {
+        FaceDirection2D(Direction, DeltaTime);
+    }
+
     if (bUseCharacterMovement)
     {
         if (ACharacter* Character = Cast<ACharacter>(Owner))
@@ -596,6 +618,77 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
     }
 }
 
+void UCombatCoverAgentComponent::FaceDirection2D(const FVector& Direction, float DeltaTime)
+{
+    if (!bOrientToCombatDirection)
+    {
+        return;
+    }
+
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        return;
+    }
+
+    FVector FlatDirection = Direction;
+    FlatDirection.Z = 0.0f;
+
+    const float LengthSq = FlatDirection.X * FlatDirection.X + FlatDirection.Y * FlatDirection.Y;
+    if (LengthSq <= 1e-6f)
+    {
+        return;
+    }
+
+    const float TargetYaw = std::atan2(FlatDirection.Y, FlatDirection.X) * (180.0f / 3.14159265358979323846f) + FacingYawOffset;
+
+    FRotator Rotation = Owner->GetActorRotation();
+    const float DeltaYaw = NormalizeYawDelta(TargetYaw - Rotation.Yaw);
+    const float YawRate = (std::max)(0.0f, FacingYawRate);
+
+    if (YawRate <= 0.0f || DeltaTime <= 0.0f)
+    {
+        Rotation.Yaw = TargetYaw;
+    }
+    else
+    {
+        const float Step = YawRate * DeltaTime;
+        if (std::fabs(DeltaYaw) <= Step)
+        {
+            Rotation.Yaw = TargetYaw;
+        }
+        else
+        {
+            Rotation.Yaw += (DeltaYaw > 0.0f ? Step : -Step);
+        }
+    }
+
+    Rotation.Yaw = NormalizeYawDelta(Rotation.Yaw);
+    Owner->SetActorRotation(Rotation);
+}
+
+void UCombatCoverAgentComponent::FaceLocation2D(const FVector& WorldLocation, float DeltaTime)
+{
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        return;
+    }
+
+    FaceDirection2D(WorldLocation - Owner->GetActorLocation(), DeltaTime);
+}
+
+void UCombatCoverAgentComponent::TickFaceCombatTarget(float DeltaTime)
+{
+    UCombatCoverAgentComponent* Target = CurrentTarget.Get();
+    if (!Target || !Target->IsAlive() || !Target->GetOwner())
+    {
+        return;
+    }
+
+    FaceLocation2D(Target->GetOwner()->GetActorLocation(), DeltaTime);
+}
+
 void UCombatCoverAgentComponent::SetBlocked()
 {
     State = ECombatCoverAgentState::Blocked;
@@ -618,6 +711,10 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
         if (Target && !Target->IsAlive())
         {
             ClearEngagementTarget();
+        }
+        else
+        {
+            TickFaceCombatTarget(DeltaTime);
         }
     }
 

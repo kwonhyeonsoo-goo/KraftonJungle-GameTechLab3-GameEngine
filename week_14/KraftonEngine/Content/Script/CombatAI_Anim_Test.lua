@@ -1,8 +1,10 @@
 local animInstance = nil
-local elapsed = 0.0
+local combatAgent = nil
 local fireElapsed = 0.0
-local lastMoveState = -1
-local deathSet = false
+local lastMoveState = -1.0
+local lastDeath = false
+
+local FIRE_TRIGGER_INTERVAL = 0.45
 
 local function find_anim_instance()
     if obj == nil then
@@ -30,6 +32,39 @@ local function get_anim_instance()
     return animInstance
 end
 
+local function find_combat_agent()
+    if obj == nil then
+        return nil
+    end
+
+    if obj.GetCombatCoverAgentComponent ~= nil then
+        local agent = obj:GetCombatCoverAgentComponent()
+        if agent ~= nil then
+            return agent
+        end
+    end
+
+    if obj.GetComponents == nil then
+        return nil
+    end
+
+    local components = obj:GetComponents()
+    for _, component in pairs(components) do
+        if component ~= nil and component.IsA ~= nil and component:IsA("UCombatCoverAgentComponent") then
+            return component
+        end
+    end
+
+    return nil
+end
+
+local function get_combat_agent()
+    if combatAgent == nil then
+        combatAgent = find_combat_agent()
+    end
+    return combatAgent
+end
+
 local function set_initial_variables()
     local anim = get_anim_instance()
     if anim == nil then
@@ -41,22 +76,25 @@ local function set_initial_variables()
     return true
 end
 
-local function current_move_state()
-    if elapsed < 10.0 then
+local function current_move_state(agent)
+    if agent == nil then
         return 0.0
     end
-    if elapsed < 20.0 then
+    if agent:IsMovingForCombatRange() then
         return 2.0
     end
-    return 1.0
+    if agent:IsInCover() or agent:IsEngaging() or agent:IsSuppressed() or agent:GetIncomingFireCount() > 0 then
+        return 1.0
+    end
+    return 0.0
 end
 
 function BeginPlay()
-    elapsed = 0.0
-    fireElapsed = 0.0
-    lastMoveState = -1
-    deathSet = false
     animInstance = find_anim_instance()
+    combatAgent = find_combat_agent()
+    fireElapsed = 0.0
+    lastMoveState = -1.0
+    lastDeath = false
     set_initial_variables()
 end
 
@@ -66,26 +104,30 @@ function Tick(dt)
         return
     end
 
-    elapsed = elapsed + dt
+    local agent = get_combat_agent()
+    local isDead = agent ~= nil and not agent:IsAlive()
+    local moveState = current_move_state(agent)
 
-    local moveState = current_move_state()
     anim:SetGraphVariableFloat("MoveState", moveState)
+    anim:SetGraphVariableBool("Death", isDead)
 
-    if moveState ~= lastMoveState then
+    if moveState ~= lastMoveState or isDead ~= lastDeath then
         fireElapsed = 0.0
         lastMoveState = moveState
+        lastDeath = isDead
     end
 
-    if moveState == 1.0 and not deathSet then
+    if isDead then
+        return
+    end
+
+    if agent ~= nil and agent:IsEngaging() then
         fireElapsed = fireElapsed + dt
-        while fireElapsed >= 2.0 do
-            fireElapsed = fireElapsed - 2.0
+        while fireElapsed >= FIRE_TRIGGER_INTERVAL do
+            fireElapsed = fireElapsed - FIRE_TRIGGER_INTERVAL
             anim:SetGraphVariableTrigger("Fire")
         end
-    end
-
-    if elapsed >= 30.0 and not deathSet then
-        anim:SetGraphVariableBool("Death", true)
-        deathSet = true
+    else
+        fireElapsed = 0.0
     end
 end
