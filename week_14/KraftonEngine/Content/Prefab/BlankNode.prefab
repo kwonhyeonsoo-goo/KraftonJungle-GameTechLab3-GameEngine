@@ -1,58 +1,58 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "Obastacle_B",
+    "Name" : "AStaticMeshActor_144",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
         "Properties" : {
           "DebugSlotRadius" : 1.500000,
           "DisplayName" : "",
-          "Links" : [],
-          "MaxOccupants" : 2,
+          "Links" : [{
+              "PathPoints" : [[0.399028, 40.480465, 0.000000], [3.751410, 34.842373, 0.000000], [7.075802, 27.133137, 0.000000], [10.390865, 18.733528, 0.000000], [13.715258, 11.024295, 0.000000], [17.067640, 5.386200, 0.000000]],
+              "TargetNodeId" : "CoverNode_014",
+              "Weight" : 1.000000,
+              "bBidirectional" : false
+            }, {
+              "PathPoints" : [[1.817105, 42.193981, 0.000000], [8.826630, 40.974934, 0.000000], [17.151604, 39.308067, 0.000000], [25.915068, 37.491936, 0.000000], [34.240040, 35.825073, 0.000000], [41.249561, 34.606026, 0.000000]],
+              "TargetNodeId" : "CoverNode_005",
+              "Weight" : 1.000000,
+              "bBidirectional" : false
+            }, {
+              "PathPoints" : [[3.331196, 45.207386, 0.000000], [14.245485, 51.759777, 0.000000], [27.909618, 60.719143, 0.000000], [42.490383, 70.480865, 0.000000], [56.154518, 79.440239, 0.000000], [67.068810, 85.992615, 0.000000]],
+              "TargetNodeId" : "CoverNode_008",
+              "Weight" : 1.000000,
+              "bBidirectional" : false
+            }, {
+              "PathPoints" : [[0.399028, 42.072109, 0.000000], [3.751410, 40.538780, 0.000000], [7.075802, 38.442177, 0.000000], [10.390865, 36.157825, 0.000000], [13.715258, 34.061226, 0.000000], [17.067640, 32.527889, 0.000000]],
+              "TargetNodeId" : "CoverNode_009",
+              "Weight" : 1.000000,
+              "bBidirectional" : false
+            }],
+          "MaxOccupants" : 1,
           "NodeId" : "",
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
           "Slots" : [{
-              "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+              "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [1.000000, 1.000000, 0.000000],
+              "LocalPosition" : [0.000000, 1.000000, 0.000000],
               "Radius" : 2.000000,
               "SlotId" : 0,
               "Tags" : "Ally,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
-              "bUseApproachOnExit" : true
+              "bUseApproachOnExit" : false
             }, {
-              "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
+              "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+              "LocalPosition" : [0.000000, -1.000000, 0.000000],
               "Radius" : 2.000000,
               "SlotId" : 1,
-              "Tags" : "Ally,Cover",
-              "Weight" : 1.000000,
-              "bUseApproachOnEntry" : false,
-              "bUseApproachOnExit" : true
-            }, {
-              "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
-              "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-              "Radius" : 2.000000,
-              "SlotId" : 2,
               "Tags" : "Enemy,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
-              "bUseApproachOnExit" : true
-            }, {
-              "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
-              "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [1.000000, -1.000000, 0.000000],
-              "Radius" : 2.000000,
-              "SlotId" : 3,
-              "Tags" : "Enemy,Cover",
-              "Weight" : 1.000000,
-              "bUseApproachOnEntry" : false,
-              "bUseApproachOnExit" : true
+              "bUseApproachOnExit" : false
             }],
           "bAutoActivate" : true,
           "bEditorOnly" : false,
@@ -63,7 +63,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [19.027874, 81.744011, 112.576714],
+      "PendingActorLocation" : [4.006880, -6.312962, -0.172269],
       "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -80,11 +80,11 @@
         "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
         "CollisionEnabled" : 0,
         "Mass" : 1.000000,
-        "MaterialSlots" : ["Content/Material/Auto/weathered_concrete_barriers.uasset"],
+        "MaterialSlots" : ["None"],
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [19.027874, 81.744011, 112.576714],
+        "RelativeTransform.Location" : [4.006880, -6.312962, -0.172269],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -93,7 +93,7 @@
           "Responses[3]" : 2,
           "Responses[4]" : 2
         },
-        "StaticMeshPath" : "Content/Data/Obstacle/ObstacleB_StaticMesh.uasset",
+        "StaticMeshPath" : "None",
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -109,7 +109,7 @@
       }
     }
   },
-  "SourceActorName" : "Obastacle_B",
+  "SourceActorName" : "AStaticMeshActor_144",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

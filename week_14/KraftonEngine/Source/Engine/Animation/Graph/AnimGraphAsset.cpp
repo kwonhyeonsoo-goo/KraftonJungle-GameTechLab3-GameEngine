@@ -30,9 +30,10 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphVariable&   Var);
 namespace
 {
 	constexpr uint32 kAnimGraphAssetMagic   = 0x46475241u; // 'AGRF' - Anim Graph File
-	constexpr uint32 kAnimGraphAssetVersion = 4u;          // v4 persists StateMachine editor node positions.
+	constexpr uint32 kAnimGraphAssetVersion = 5u;          // v5 persists SequencePlayer playback ranges.
 	thread_local bool g_LoadLegacyTransitionFormat = false;
 	thread_local bool g_LoadLegacyStateMachinePositionFormat = false;
+	thread_local bool g_LoadLegacyPlaybackRangeFormat = false;
 
 	struct FLegacyTransitionFormatScope
 	{
@@ -58,6 +59,20 @@ namespace
 		~FLegacyStateMachinePositionFormatScope()
 		{
 			g_LoadLegacyStateMachinePositionFormat = bPrevious;
+		}
+		bool bPrevious = false;
+	};
+
+	struct FLegacyPlaybackRangeFormatScope
+	{
+		explicit FLegacyPlaybackRangeFormatScope(bool bEnable)
+			: bPrevious(g_LoadLegacyPlaybackRangeFormat)
+		{
+			g_LoadLegacyPlaybackRangeFormat = bEnable;
+		}
+		~FLegacyPlaybackRangeFormatScope()
+		{
+			g_LoadLegacyPlaybackRangeFormat = bPrevious;
 		}
 		bool bPrevious = false;
 	};
@@ -123,6 +138,16 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphState& State)
 	Ar << State.SequencePath;
 	Ar << State.PlayRate;
 	Ar << State.bLooping;
+	if (Ar.IsLoading() && g_LoadLegacyPlaybackRangeFormat)
+	{
+		State.StartTime = 0.0f;
+		State.EndTime = 0.0f;
+	}
+	else
+	{
+		Ar << State.StartTime;
+		Ar << State.EndTime;
+	}
 	if (Ar.IsLoading() && g_LoadLegacyStateMachinePositionFormat)
 	{
 		State.PosX = 0.0f;
@@ -169,6 +194,16 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphNode& Node)
 	Ar << Node.Pins;
 	Ar << Node.PlayRate;
 	Ar << Node.bLooping;
+	if (Ar.IsLoading() && g_LoadLegacyPlaybackRangeFormat)
+	{
+		Node.StartTime = 0.0f;
+		Node.EndTime = 0.0f;
+	}
+	else
+	{
+		Ar << Node.StartTime;
+		Ar << Node.EndTime;
+	}
 	Ar << Node.SequencePath; // SequenceRef 는 transient — Initialize 시 path 로 재해상.
 	Ar << Node.SlotName;
 	Ar << Node.BlendWeight;
@@ -621,6 +656,8 @@ void UAnimGraphAsset::Serialize(FArchive& Ar)
 	FLegacyTransitionFormatScope LegacyTransitionScope(bLegacyTransitions);
 	const bool bLegacyStateMachinePositions = Version < 4;
 	FLegacyStateMachinePositionFormatScope LegacyStateMachinePositionScope(bLegacyStateMachinePositions);
+	const bool bLegacyPlaybackRanges = Version < 5;
+	FLegacyPlaybackRangeFormatScope LegacyPlaybackRangeScope(bLegacyPlaybackRanges);
 	Ar << Nodes;
 	Ar << Links;
 	Ar << OwnerClassName;

@@ -381,13 +381,15 @@ namespace
 		return "";
 	}
 
+	FString FormatPlaybackRangeSummary(float StartTime, float EndTime);
+
 	FString NodeSecondarySummary(const FAnimGraphNode& Node)
 	{
 		char Buf[128];
 		switch (Node.Type)
 		{
 			case EAnimGraphNodeType::SequencePlayer:
-				std::snprintf(Buf, sizeof(Buf), "%s, %.2fx", Node.bLooping ? "Loop" : "Once", Node.PlayRate);
+				std::snprintf(Buf, sizeof(Buf), "%s, %.2fx, %s", Node.bLooping ? "Loop" : "Once", Node.PlayRate, FormatPlaybackRangeSummary(Node.StartTime, Node.EndTime).c_str());
 				return Buf;
 			case EAnimGraphNodeType::StateMachine:
 				std::snprintf(Buf, sizeof(Buf), "%zu states, %zu transitions", Node.States.size(), Node.Transitions.size());
@@ -945,6 +947,45 @@ namespace
 		return bChanged;
 	}
 
+
+	bool RenderPlaybackRangeControls(float& StartTime, float& EndTime)
+	{
+		bool bChanged = false;
+
+		ImGui::TextUnformatted("Playback Range");
+		ImGui::TextDisabled("End <= Start means sequence end.");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Start/End are source animation seconds. Use this to play only a sub-section before transition rules such as Automatic Sequence End fire.");
+		}
+
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::DragFloat("##RangeStart", &StartTime, 0.02f, 0.0f, 600.0f, "Start %.3fs"))
+		{
+			StartTime = std::max(0.0f, StartTime);
+			bChanged = true;
+		}
+
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::DragFloat("##RangeEnd", &EndTime, 0.02f, 0.0f, 600.0f, "End %.3fs"))
+		{
+			EndTime = std::max(0.0f, EndTime);
+			bChanged = true;
+		}
+
+		if (ImGui::Button("Reset Playback Range", ImVec2(-1.0f, 0.0f)))
+		{
+			if (StartTime != 0.0f || EndTime != 0.0f)
+			{
+				StartTime = 0.0f;
+				EndTime = 0.0f;
+				bChanged = true;
+			}
+		}
+
+		return bChanged;
+	}
+
 	// State 한 개의 form. true 반환 — 변경 발생.
 	// OwnerNode (이 state 를 보유한 StateMachine 노드) 의 NodeId 는 sub-graph dropdown 의
 	// 자기 자신 제외용. AllNodes 는 sub-graph 후보 (그래프 안의 다른 StateMachine 노드) list.
@@ -1044,6 +1085,8 @@ namespace
 		{
 			bChanged = true;
 		}
+
+		bChanged |= RenderPlaybackRangeControls(State.StartTime, State.EndTime);
 
 		if (bSubActive) ImGui::EndDisabled();
 
@@ -1513,6 +1556,8 @@ namespace
 				{
 					bChanged = true;
 				}
+
+				bChanged |= RenderPlaybackRangeControls(Node.StartTime, Node.EndTime);
 				break;
 			}
 
@@ -1965,10 +2010,32 @@ namespace
 		return GetStemFromPath(State.SequencePath);
 	}
 
+
+	FString FormatPlaybackRangeSummary(float StartTime, float EndTime)
+	{
+		if (StartTime <= 0.0f && EndTime <= 0.0f)
+		{
+			return "Full Range";
+		}
+		char Buf[96];
+		if (EndTime > StartTime)
+		{
+			std::snprintf(Buf, sizeof(Buf), "%.2fs-%.2fs", StartTime, EndTime);
+		}
+		else
+		{
+			std::snprintf(Buf, sizeof(Buf), "%.2fs-End", StartTime);
+		}
+		return Buf;
+	}
+
 	FString FormatStatePlaybackSummary(const FAnimGraphState& State)
 	{
-		char Buf[96];
-		std::snprintf(Buf, sizeof(Buf), "%s  |  %.2fx", State.bLooping ? "Loop" : "Once", State.PlayRate);
+		char Buf[128];
+		std::snprintf(Buf, sizeof(Buf), "%s  |  %.2fx  |  %s",
+			State.bLooping ? "Loop" : "Once",
+			State.PlayRate,
+			FormatPlaybackRangeSummary(State.StartTime, State.EndTime).c_str());
 		return Buf;
 	}
 
@@ -2879,6 +2946,8 @@ bool FAnimGraphEditorWidget::CloneNodeFragment(UAnimGraphAsset* Asset, const TAr
 		NewNode->SequenceRef = nullptr;
 		NewNode->PlayRate = SrcNode.PlayRate;
 		NewNode->bLooping = SrcNode.bLooping;
+		NewNode->StartTime = SrcNode.StartTime;
+		NewNode->EndTime = SrcNode.EndTime;
 		NewNode->SlotName = SrcNode.SlotName;
 		NewNode->BlendWeight = SrcNode.BlendWeight;
 		NewNode->RootBoneName = SrcNode.RootBoneName;

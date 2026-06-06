@@ -256,6 +256,7 @@ private:
     int32 TargetSlotId = -1;
     TArray<FVector> CurrentMovePath;
     int32 CurrentMovePathIndex = 0;
+    float LinkedMoveStartDelayRemaining = 0.0f;
     FCombatCoverSlotHandle FinalReservedSlot;
     float AdvanceTimer = 0.0f;
     float RetryTimer = 0.0f;

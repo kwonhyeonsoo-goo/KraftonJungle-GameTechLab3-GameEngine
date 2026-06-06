@@ -20,14 +20,25 @@ public:
 	float              PlayRate  = 1.0f;
 	bool               bLooping  = true;
 
+	// Source sequence playback window in seconds. EndTime <= StartTime means use Sequence->GetPlayLength().
+	float              StartTime = 0.0f;
+	float              EndTime   = 0.0f;
+
 	float              LocalTime = 0.0f;
 	FTransform         LastRootMotionDelta;
 
+	void Initialize(const FAnimationInitializeContext& Context) override;
 	void OnBecomeRelevant(const FAnimationInitializeContext& Context) override;
 	void Update(const FAnimationUpdateContext& Context) override;
 	void Evaluate(FPoseContext& Output) override;
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	const FTransform& GetLastRootMotionDelta() const override { return LastRootMotionDelta; }
+
+	float GetEffectiveStartTime() const;
+	float GetEffectiveEndTime() const;
+	float GetEffectivePlayLength() const;
+	float GetElapsedTimeInRange() const;
+	float GetRemainingTimeInRange() const;
 
 	const char* GetDebugName() const override { return "SequencePlayer"; }
 };
