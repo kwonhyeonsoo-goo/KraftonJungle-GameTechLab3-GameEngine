@@ -136,6 +136,9 @@ private:
     int32 CountNodeClaims(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* IgnoreAgent) const;
     bool SlotTagsMatchTeam(const FCombatCoverSlot& Slot, const FString& TeamTag) const;
     void GatherAdvanceCandidateNodes(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* CurrentNode, TArray<UCombatCoverNodeComponent*>& OutNodes) const;
+    bool BuildMovePathToSlot(const FCombatCoverSlotHandle& SlotHandle, FCombatMovePath& OutPath) const;
+    bool BuildMovePathBetweenNodes(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverSlotHandle& FinalSlot, FCombatMovePath& OutPath) const;
+    const FCombatCoverLink* FindTraversalLink(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, bool& bOutReverse) const;
     UCombatCoverAgentComponent* FindBestTargetFor(UCombatCoverAgentComponent* Agent) const;
     bool CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const;
     void DrawFireDebugLine(UCombatCoverAgentComponent* Shooter, UCombatCoverAgentComponent* Target, float Duration) const;

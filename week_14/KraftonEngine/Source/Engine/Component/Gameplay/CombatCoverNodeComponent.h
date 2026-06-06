@@ -46,6 +46,9 @@ struct FCombatCoverLink
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Weight", Min=0.0f, Max=1000.0f, Speed=0.1f)
     float Weight = 1.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Path Points", Type=Array)
+    TArray<FVector> PathPoints;
 };
 
 USTRUCT()
@@ -61,6 +64,19 @@ struct FCombatCoverSlotHandle
     {
         NodeId.clear();
         SlotId = -1;
+    }
+};
+
+struct FCombatMovePath
+{
+    TArray<FVector> Points;
+    FCombatCoverSlotHandle FinalSlot;
+
+    bool IsValid() const { return FinalSlot.IsValid() && !Points.empty(); }
+    void Reset()
+    {
+        Points.clear();
+        FinalSlot.Reset();
     }
 };
 

@@ -267,12 +267,19 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         }
 
         const FVector TargetLocation = Target->GetOwner()->GetActorLocation();
-        Scene.AddDebugLine(NodeLocation, TargetLocation, LinkColor);
+        FVector PreviousPoint = NodeLocation;
+        for (const FVector& PathPoint : Link.PathPoints)
+        {
+            Scene.AddDebugLine(PreviousPoint, PathPoint, LinkColor);
+            AddDebugCross(Scene, PathPoint, 20.0f, FColor(255, 120, 40));
+            PreviousPoint = PathPoint;
+        }
+        Scene.AddDebugLine(PreviousPoint, TargetLocation, LinkColor);
 
-        const FVector ToTarget = TargetLocation - NodeLocation;
+        const FVector ToTarget = TargetLocation - PreviousPoint;
         if (!ToTarget.IsNearlyZero())
         {
-            AddDebugArrow(Scene, NodeLocation + ToTarget * 0.65f, ToTarget.Normalized(), 120.0f, LinkColor);
+            AddDebugArrow(Scene, PreviousPoint + ToTarget * 0.65f, ToTarget.Normalized(), 120.0f, LinkColor);
         }
     }
 }

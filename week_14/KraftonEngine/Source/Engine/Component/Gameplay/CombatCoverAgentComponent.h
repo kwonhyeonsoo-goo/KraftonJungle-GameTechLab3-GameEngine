@@ -57,7 +57,7 @@ public:
     UFUNCTION(Callable, Category="CombatAgent")
     void RequestAdvance();
 
-    void MoveToReservedSlot(const FCombatCoverSlotHandle& SlotHandle, bool bInitialMove);
+    void MoveToReservedSlot(const FCombatMovePath& MovePath, bool bInitialMove);
 
     UFUNCTION(Callable, Category="CombatAgent")
     void MarkDead();
@@ -239,6 +239,9 @@ private:
     int32 CurrentSlotId = -1;
     FString TargetNodeId;
     int32 TargetSlotId = -1;
+    TArray<FVector> CurrentMovePath;
+    int32 CurrentMovePathIndex = 0;
+    FCombatCoverSlotHandle FinalReservedSlot;
     float AdvanceTimer = 0.0f;
     float RetryTimer = 0.0f;
     float TargetScanTimer = 0.0f;

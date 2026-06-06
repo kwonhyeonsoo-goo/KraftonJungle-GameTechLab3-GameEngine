@@ -197,7 +197,14 @@ bool UCombatFlowManagerComponent::AssignInitialSlot(UCombatCoverAgentComponent* 
         return false;
     }
 
-    Agent->MoveToReservedSlot(Candidate, true);
+    FCombatMovePath MovePath;
+    if (!BuildMovePathToSlot(Candidate, MovePath))
+    {
+        ReleaseAgent(Agent);
+        return false;
+    }
+
+    Agent->MoveToReservedSlot(MovePath, true);
     return true;
 }
 
@@ -242,8 +249,15 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
             continue;
         }
 
+        FCombatMovePath MovePath;
+        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, Candidate, MovePath))
+        {
+            ReleaseAgent(Agent);
+            continue;
+        }
+
         ReleaseAgentExcept(Agent, Candidate);
-        Agent->MoveToReservedSlot(Candidate, false);
+        Agent->MoveToReservedSlot(MovePath, false);
         return true;
     }
 
@@ -842,6 +856,106 @@ void UCombatFlowManagerComponent::GatherAdvanceCandidateNodes(
             }
         }
     }
+}
+
+bool UCombatFlowManagerComponent::BuildMovePathToSlot(const FCombatCoverSlotHandle& SlotHandle, FCombatMovePath& OutPath) const
+{
+    OutPath.Reset();
+    if (!SlotHandle.IsValid())
+    {
+        return false;
+    }
+
+    UCombatCoverNodeComponent* TargetNode = FindNode(SlotHandle.NodeId);
+    if (!TargetNode)
+    {
+        return false;
+    }
+
+    const int32 SlotIndex = TargetNode->FindSlotIndexById(SlotHandle.SlotId);
+    if (SlotIndex < 0)
+    {
+        return false;
+    }
+
+    OutPath.FinalSlot = SlotHandle;
+    OutPath.Points.push_back(TargetNode->GetSlotWorldPosition(SlotIndex));
+    return true;
+}
+
+bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
+    UCombatCoverNodeComponent* FromNode,
+    UCombatCoverNodeComponent* ToNode,
+    const FCombatCoverSlotHandle& FinalSlot,
+    FCombatMovePath& OutPath) const
+{
+    if (!BuildMovePathToSlot(FinalSlot, OutPath))
+    {
+        return false;
+    }
+
+    bool bReverse = false;
+    const FCombatCoverLink* Link = FindTraversalLink(FromNode, ToNode, bReverse);
+    if (!Link || Link->PathPoints.empty())
+    {
+        return true;
+    }
+
+    TArray<FVector> Points;
+    if (bReverse)
+    {
+        for (int32 Index = static_cast<int32>(Link->PathPoints.size()) - 1; Index >= 0; --Index)
+        {
+            Points.push_back(Link->PathPoints[Index]);
+        }
+    }
+    else
+    {
+        for (const FVector& Point : Link->PathPoints)
+        {
+            Points.push_back(Point);
+        }
+    }
+
+    for (const FVector& Point : OutPath.Points)
+    {
+        Points.push_back(Point);
+    }
+    OutPath.Points = Points;
+    return true;
+}
+
+const FCombatCoverLink* UCombatFlowManagerComponent::FindTraversalLink(
+    UCombatCoverNodeComponent* FromNode,
+    UCombatCoverNodeComponent* ToNode,
+    bool& bOutReverse) const
+{
+    bOutReverse = false;
+    if (!FromNode || !ToNode || FromNode->GetNodeId().empty() || ToNode->GetNodeId().empty())
+    {
+        return nullptr;
+    }
+
+    const FString& ToNodeId = ToNode->GetNodeId();
+    for (const FCombatCoverLink& Link : FromNode->GetLinks())
+    {
+        if (Link.TargetNodeId == ToNodeId)
+        {
+            return &Link;
+        }
+    }
+
+    const FString& FromNodeId = FromNode->GetNodeId();
+    for (const FCombatCoverLink& Link : ToNode->GetLinks())
+    {
+        if (Link.TargetNodeId == FromNodeId)
+        {
+            bOutReverse = true;
+            return &Link;
+        }
+    }
+
+    return nullptr;
 }
 
 UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UCombatCoverAgentComponent* Agent) const

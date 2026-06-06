@@ -32,6 +32,9 @@ void UCombatCoverAgentComponent::BeginPlay()
     CurrentSlotId = -1;
     TargetNodeId.clear();
     TargetSlotId = -1;
+    CurrentMovePath.clear();
+    CurrentMovePathIndex = 0;
+    FinalReservedSlot.Reset();
     ApplyCombatRoleDefaults();
     MaxHealth = (std::max)(1.0f, MaxHealth);
     Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
@@ -115,16 +118,19 @@ void UCombatCoverAgentComponent::RequestAdvance()
     }
 }
 
-void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatCoverSlotHandle& SlotHandle, bool bInitialMove)
+void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatMovePath& MovePath, bool bInitialMove)
 {
-    if (!SlotHandle.IsValid())
+    if (!MovePath.IsValid())
     {
         SetBlocked();
         return;
     }
 
-    TargetNodeId = SlotHandle.NodeId;
-    TargetSlotId = SlotHandle.SlotId;
+    FinalReservedSlot = MovePath.FinalSlot;
+    TargetNodeId = MovePath.FinalSlot.NodeId;
+    TargetSlotId = MovePath.FinalSlot.SlotId;
+    CurrentMovePath = MovePath.Points;
+    CurrentMovePathIndex = 0;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     State = bInitialMove ? ECombatCoverAgentState::MovingToInitialSlot : ECombatCoverAgentState::MovingToLinkedNode;
@@ -169,6 +175,9 @@ void UCombatCoverAgentComponent::MarkDead()
     CurrentSlotId = -1;
     TargetNodeId.clear();
     TargetSlotId = -1;
+    CurrentMovePath.clear();
+    CurrentMovePathIndex = 0;
+    FinalReservedSlot.Reset();
 }
 
 
@@ -500,7 +509,47 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
         return;
     }
 
-    const FVector TargetLocation = TargetNode->GetSlotWorldPosition(SlotIndex);
+    if (CurrentMovePath.empty())
+    {
+        CurrentMovePath.push_back(TargetNode->GetSlotWorldPosition(SlotIndex));
+        CurrentMovePathIndex = 0;
+    }
+
+    if (CurrentMovePathIndex < 0)
+    {
+        CurrentMovePathIndex = 0;
+    }
+
+    auto FinishMove = [this, Manager]()
+    {
+        FCombatCoverSlotHandle ArrivedSlot = FinalReservedSlot;
+        if (!ArrivedSlot.IsValid())
+        {
+            ArrivedSlot.NodeId = TargetNodeId;
+            ArrivedSlot.SlotId = TargetSlotId;
+        }
+
+        Manager->ConfirmArrived(this, ArrivedSlot);
+
+        CurrentNodeId = ArrivedSlot.NodeId;
+        CurrentSlotId = ArrivedSlot.SlotId;
+        TargetNodeId.clear();
+        TargetSlotId = -1;
+        CurrentMovePath.clear();
+        CurrentMovePathIndex = 0;
+        FinalReservedSlot.Reset();
+        AdvanceTimer = 0.0f;
+        RetryTimer = 0.0f;
+        State = ECombatCoverAgentState::InCover;
+    };
+
+    if (CurrentMovePathIndex >= static_cast<int32>(CurrentMovePath.size()))
+    {
+        FinishMove();
+        return;
+    }
+
+    const FVector TargetLocation = CurrentMovePath[CurrentMovePathIndex];
     FVector CurrentLocation = Owner->GetActorLocation();
     FVector Delta = TargetLocation - CurrentLocation;
     Delta.Z = 0.0f;
@@ -508,18 +557,11 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
     const float Distance = Delta.Length();
     if (Distance <= AcceptanceRadius)
     {
-        FCombatCoverSlotHandle ArrivedSlot;
-        ArrivedSlot.NodeId = TargetNodeId;
-        ArrivedSlot.SlotId = TargetSlotId;
-        Manager->ConfirmArrived(this, ArrivedSlot);
-
-        CurrentNodeId = TargetNodeId;
-        CurrentSlotId = TargetSlotId;
-        TargetNodeId.clear();
-        TargetSlotId = -1;
-        AdvanceTimer = 0.0f;
-        RetryTimer = 0.0f;
-        State = ECombatCoverAgentState::InCover;
+        ++CurrentMovePathIndex;
+        if (CurrentMovePathIndex >= static_cast<int32>(CurrentMovePath.size()))
+        {
+            FinishMove();
+        }
         return;
     }
 
