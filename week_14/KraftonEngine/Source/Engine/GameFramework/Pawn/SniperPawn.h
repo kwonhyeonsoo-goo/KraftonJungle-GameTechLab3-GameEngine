@@ -50,6 +50,27 @@ public:
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetMaxHoldBreathGauge() const { return AimSwayState.MaxHoldBreathGauge; }
 
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsHoldBreathInputHeld() const { return InputState.bHoldBreathHeld; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetHoldBreathDuration() const
+	{
+		return AimSwayState.HoldBreathConsumeSpeed > 0.0f
+			? AimSwayState.MaxHoldBreathGauge / AimSwayState.HoldBreathConsumeSpeed
+			: 0.0f;
+	}
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetHoldBreathGaugeRatio() const
+	{
+		if (AimSwayState.MaxHoldBreathGauge <= 0.0f)
+		{
+			return 0.0f;
+		}
+
+		const float Ratio = AimSwayState.HoldBreathGauge / AimSwayState.MaxHoldBreathGauge;
+		return Ratio < 0.0f ? 0.0f : (Ratio > 1.0f ? 1.0f : Ratio);
+	}
+
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float MouseSensitivity = 0.2f;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Min Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)

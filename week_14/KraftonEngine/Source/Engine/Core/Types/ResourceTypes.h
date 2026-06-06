@@ -23,6 +23,71 @@ struct FTextureAtlasResource
 };
 
 // 의미론적 별칭 — 타입은 동일하지만 용도를 명시합니다.
-using FFontResource     = FTextureAtlasResource;
+struct FFontGlyph
+{
+	uint32 Id = 0;
+	uint32 X = 0;
+	uint32 Y = 0;
+	uint32 Width = 0;
+	uint32 Height = 0;
+	int32 XOffset = 0;
+	int32 YOffset = 0;
+	int32 XAdvance = 0;
+	uint32 Page = 0;
+	uint32 Channel = 0;
+
+	bool IsDrawable() const { return Width > 0 && Height > 0; }
+};
+
+struct FFontCommon
+{
+	uint32 LineHeight = 0;
+	uint32 Base = 0;
+	uint32 ScaleW = 0;
+	uint32 ScaleH = 0;
+	uint32 Pages = 0;
+	bool bPacked = false;
+	uint32 AlphaChannel = 0;
+	uint32 RedChannel = 0;
+	uint32 GreenChannel = 0;
+	uint32 BlueChannel = 0;
+};
+
+struct FFontResource : public FTextureAtlasResource
+{
+	FString MetadataPath;
+	FFontCommon Common;
+	TArray<FString> PageFiles;
+	TMap<uint32, FFontGlyph> Glyphs;
+	TMap<uint64, int32> Kernings;
+
+	static uint64 MakeKerningKey(uint32 First, uint32 Second)
+	{
+		return (static_cast<uint64>(First) << 32) | static_cast<uint64>(Second);
+	}
+
+	const FFontGlyph* FindGlyph(uint32 Codepoint) const
+	{
+		auto It = Glyphs.find(Codepoint);
+		return (It != Glyphs.end()) ? &It->second : nullptr;
+	}
+
+	int32 FindKerning(uint32 First, uint32 Second) const
+	{
+		auto It = Kernings.find(MakeKerningKey(First, Second));
+		return (It != Kernings.end()) ? It->second : 0;
+	}
+
+	bool HasGlyph(uint32 Codepoint) const
+	{
+		return Glyphs.find(Codepoint) != Glyphs.end();
+	}
+
+	bool HasGlyphMetrics() const
+	{
+		return Common.ScaleW > 0 && Common.ScaleH > 0 && !Glyphs.empty();
+	}
+};
+
 using FParticleResource = FTextureAtlasResource;
 using FTextureResource  = FTextureAtlasResource;	// 단일 정적 텍스처 (Columns=Rows=1)

@@ -16,6 +16,8 @@
 #include "ImGui/imgui_impl_dx11.h"
 #include "ImGui/imgui_impl_win32.h"
 
+#include <d3d11.h>
+
 #include "Render/Pipeline/Renderer.h"
 #include "Engine/Input/InputSystem.h"
 #include "Lua/LuaDebugManager.h"
@@ -26,6 +28,7 @@
 
 #include "Editor/Slate/SlateApplication.h"
 #include "Editor/UI/Util/ImGuiSetting.h"
+#include "Editor/UI/Util/EditorTextureManager.h"
 #include "Editor/UI/Util/NotificationToast.h"
 
 #include "Editor/UI/Asset/Curve/FloatCurveEditorWidget.h"
@@ -355,6 +358,25 @@ bool ParseRuntimeUIPreviewFloat(const FString& Value, float& OutValue)
 	return true;
 }
 
+bool ParseRuntimeUIPreviewPercent(const FString& Value, float& OutValue)
+{
+	FString Trimmed = TrimRuntimeUIPreviewText(Value);
+	if (Trimmed.empty() || Trimmed.back() != '%')
+	{
+		return false;
+	}
+
+	Trimmed.pop_back();
+	float Percent = 0.0f;
+	if (!ParseRuntimeUIPreviewFloat(Trimmed, Percent))
+	{
+		return false;
+	}
+
+	OutValue = Percent * 0.01f;
+	return true;
+}
+
 bool ParseRuntimeUIPreviewColor(const FString& RawValue, ImVec4& OutColor)
 {
 	FString Value = ToLowerRuntimeUIPreviewText(TrimRuntimeUIPreviewText(RawValue));
@@ -440,25 +462,49 @@ struct FRuntimeUIPreviewStyle
 	bool bHasTop = false;
 	bool bHasWidth = false;
 	bool bHasHeight = false;
+	bool bHasLeftPercent = false;
+	bool bHasTopPercent = false;
+	bool bHasWidthPercent = false;
+	bool bHasHeightPercent = false;
+	bool bHasRight = false;
+	bool bHasBottom = false;
 	bool bHasPadding = false;
+	bool bHasMarginLeft = false;
 	bool bHasMarginTop = false;
 	bool bHasMarginBottom = false;
 	bool bHasMarginRight = false;
+	bool bHasOpacity = false;
+	bool bHasDisplay = false;
+	bool bHasJustifyContent = false;
+	bool bHasAlignItems = false;
 	bool bHasBackgroundColor = false;
 	bool bHasBorderColor = false;
 	bool bHasTextColor = false;
 	bool bHasBorderWidth = false;
 	bool bHasBorderRadius = false;
 	bool bHasFontSize = false;
+	bool bHasObjectFit = false;
 
 	float Left = 0.0f;
 	float Top = 0.0f;
 	float Width = 0.0f;
 	float Height = 0.0f;
+	float LeftPercent = 0.0f;
+	float TopPercent = 0.0f;
+	float WidthPercent = 0.0f;
+	float HeightPercent = 0.0f;
+	float Right = 0.0f;
+	float Bottom = 0.0f;
 	float Padding = 0.0f;
+	float MarginLeft = 0.0f;
 	float MarginTop = 0.0f;
 	float MarginBottom = 0.0f;
 	float MarginRight = 0.0f;
+	float Opacity = 1.0f;
+	FString Display;
+	FString JustifyContent;
+	FString AlignItems;
+	FString ObjectFit;
 	float BorderWidth = 0.0f;
 	float BorderRadius = 0.0f;
 	float FontSize = 14.0f;
@@ -481,6 +527,7 @@ struct FRuntimeUIPreviewNode
 	FString ClassName;
 	FString Text;
 	FString Action;
+	FString ImageSource;
 	bool bGeneratedId = false;
 	int32 ParentIndex = -1;
 	FRuntimeUIPreviewStyle Style;
@@ -489,7 +536,7 @@ struct FRuntimeUIPreviewNode
 struct FRuntimeUIPreviewModel
 {
 	TArray<FRuntimeUIPreviewNode> Nodes;
-	ImVec2 CanvasSize = ImVec2(960.0f, 540.0f);
+	ImVec2 CanvasSize = ImVec2(1920.0f, 1080.0f);
 };
 
 void MergeRuntimeUIPreviewStyle(FRuntimeUIPreviewStyle& Target, const FRuntimeUIPreviewStyle& Source)
@@ -498,16 +545,28 @@ void MergeRuntimeUIPreviewStyle(FRuntimeUIPreviewStyle& Target, const FRuntimeUI
 	if (Source.bHasTop) { Target.Top = Source.Top; Target.bHasTop = true; }
 	if (Source.bHasWidth) { Target.Width = Source.Width; Target.bHasWidth = true; }
 	if (Source.bHasHeight) { Target.Height = Source.Height; Target.bHasHeight = true; }
+	if (Source.bHasLeftPercent) { Target.LeftPercent = Source.LeftPercent; Target.bHasLeftPercent = true; }
+	if (Source.bHasTopPercent) { Target.TopPercent = Source.TopPercent; Target.bHasTopPercent = true; }
+	if (Source.bHasWidthPercent) { Target.WidthPercent = Source.WidthPercent; Target.bHasWidthPercent = true; }
+	if (Source.bHasHeightPercent) { Target.HeightPercent = Source.HeightPercent; Target.bHasHeightPercent = true; }
+	if (Source.bHasRight) { Target.Right = Source.Right; Target.bHasRight = true; }
+	if (Source.bHasBottom) { Target.Bottom = Source.Bottom; Target.bHasBottom = true; }
 	if (Source.bHasPadding) { Target.Padding = Source.Padding; Target.bHasPadding = true; }
+	if (Source.bHasMarginLeft) { Target.MarginLeft = Source.MarginLeft; Target.bHasMarginLeft = true; }
 	if (Source.bHasMarginTop) { Target.MarginTop = Source.MarginTop; Target.bHasMarginTop = true; }
 	if (Source.bHasMarginBottom) { Target.MarginBottom = Source.MarginBottom; Target.bHasMarginBottom = true; }
 	if (Source.bHasMarginRight) { Target.MarginRight = Source.MarginRight; Target.bHasMarginRight = true; }
+	if (Source.bHasOpacity) { Target.Opacity = Source.Opacity; Target.bHasOpacity = true; }
+	if (Source.bHasDisplay) { Target.Display = Source.Display; Target.bHasDisplay = true; }
+	if (Source.bHasJustifyContent) { Target.JustifyContent = Source.JustifyContent; Target.bHasJustifyContent = true; }
+	if (Source.bHasAlignItems) { Target.AlignItems = Source.AlignItems; Target.bHasAlignItems = true; }
 	if (Source.bHasBackgroundColor) { Target.BackgroundColor = Source.BackgroundColor; Target.bHasBackgroundColor = true; }
 	if (Source.bHasBorderColor) { Target.BorderColor = Source.BorderColor; Target.bHasBorderColor = true; }
 	if (Source.bHasTextColor) { Target.TextColor = Source.TextColor; Target.bHasTextColor = true; }
 	if (Source.bHasBorderWidth) { Target.BorderWidth = Source.BorderWidth; Target.bHasBorderWidth = true; }
 	if (Source.bHasBorderRadius) { Target.BorderRadius = Source.BorderRadius; Target.bHasBorderRadius = true; }
 	if (Source.bHasFontSize) { Target.FontSize = Source.FontSize; Target.bHasFontSize = true; }
+	if (Source.bHasObjectFit) { Target.ObjectFit = Source.ObjectFit; Target.bHasObjectFit = true; }
 }
 
 void ApplyRuntimeUIPreviewStyleProperty(FRuntimeUIPreviewStyle& Style, const FString& RawName, const FString& RawValue)
@@ -515,25 +574,55 @@ void ApplyRuntimeUIPreviewStyleProperty(FRuntimeUIPreviewStyle& Style, const FSt
 	const FString Name = ToLowerRuntimeUIPreviewText(TrimRuntimeUIPreviewText(RawName));
 	const FString Value = TrimRuntimeUIPreviewText(RawValue);
 	float Number = 0.0f;
-	if (Name == "left" && ParseRuntimeUIPreviewFloat(Value, Number))
+	if (Name == "left" && ParseRuntimeUIPreviewPercent(Value, Number))
+	{
+		Style.LeftPercent = Number;
+		Style.bHasLeftPercent = true;
+	}
+	else if (Name == "left" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
 		Style.Left = Number;
 		Style.bHasLeft = true;
+	}
+	else if (Name == "top" && ParseRuntimeUIPreviewPercent(Value, Number))
+	{
+		Style.TopPercent = Number;
+		Style.bHasTopPercent = true;
 	}
 	else if (Name == "top" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
 		Style.Top = Number;
 		Style.bHasTop = true;
 	}
+	else if (Name == "width" && ParseRuntimeUIPreviewPercent(Value, Number))
+	{
+		Style.WidthPercent = Number;
+		Style.bHasWidthPercent = true;
+	}
 	else if (Name == "width" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
 		Style.Width = Number;
 		Style.bHasWidth = true;
 	}
+	else if (Name == "height" && ParseRuntimeUIPreviewPercent(Value, Number))
+	{
+		Style.HeightPercent = Number;
+		Style.bHasHeightPercent = true;
+	}
 	else if (Name == "height" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
 		Style.Height = Number;
 		Style.bHasHeight = true;
+	}
+	else if (Name == "right" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Right = Number;
+		Style.bHasRight = true;
+	}
+	else if (Name == "bottom" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Bottom = Number;
+		Style.bHasBottom = true;
 	}
 	else if (Name == "padding" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
@@ -542,12 +631,19 @@ void ApplyRuntimeUIPreviewStyleProperty(FRuntimeUIPreviewStyle& Style, const FSt
 	}
 	else if (Name == "margin" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
+		Style.MarginLeft = Number;
 		Style.MarginTop = Number;
 		Style.MarginBottom = Number;
 		Style.MarginRight = Number;
 		Style.bHasMarginTop = true;
 		Style.bHasMarginBottom = true;
 		Style.bHasMarginRight = true;
+		Style.bHasMarginLeft = true;
+	}
+	else if (Name == "margin-left" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.MarginLeft = Number;
+		Style.bHasMarginLeft = true;
 	}
 	else if (Name == "margin-top" && ParseRuntimeUIPreviewFloat(Value, Number))
 	{
@@ -563,6 +659,26 @@ void ApplyRuntimeUIPreviewStyleProperty(FRuntimeUIPreviewStyle& Style, const FSt
 	{
 		Style.MarginRight = Number;
 		Style.bHasMarginRight = true;
+	}
+	else if (Name == "opacity" && ParseRuntimeUIPreviewFloat(Value, Number))
+	{
+		Style.Opacity = RuntimeUIPreviewMax(0.0f, RuntimeUIPreviewMin(Number, 1.0f));
+		Style.bHasOpacity = true;
+	}
+	else if (Name == "display")
+	{
+		Style.Display = ToLowerRuntimeUIPreviewText(Value);
+		Style.bHasDisplay = true;
+	}
+	else if (Name == "justify-content")
+	{
+		Style.JustifyContent = ToLowerRuntimeUIPreviewText(Value);
+		Style.bHasJustifyContent = true;
+	}
+	else if (Name == "align-items")
+	{
+		Style.AlignItems = ToLowerRuntimeUIPreviewText(Value);
+		Style.bHasAlignItems = true;
 	}
 	else if ((Name == "background" || Name == "background-color") && ParseRuntimeUIPreviewColor(Value, Style.BackgroundColor))
 	{
@@ -590,6 +706,15 @@ void ApplyRuntimeUIPreviewStyleProperty(FRuntimeUIPreviewStyle& Style, const FSt
 	{
 		Style.FontSize = Number;
 		Style.bHasFontSize = true;
+	}
+	else if (Name == "object-fit")
+	{
+		Style.ObjectFit = ToLowerRuntimeUIPreviewText(Value);
+		if (Style.ObjectFit == "fill")
+		{
+			Style.ObjectFit = "stretch";
+		}
+		Style.bHasObjectFit = true;
 	}
 }
 
@@ -710,6 +835,160 @@ FRuntimeUIPreviewStyleSheet ParseRuntimeUIPreviewStyleSheet(const FString& Sourc
 		SearchPos = StyleClose + 8;
 	}
 	return StyleSheet;
+}
+
+FString ExtractRuntimeUIPreviewAttribute(const FString& TagSource, const char* AttributeName);
+FString ExtractRuntimeUIPreviewTagName(const FString& TagSource);
+
+std::filesystem::path ResolveRuntimeUIPreviewRelativePath(const FString& BaseDocumentPath, const FString& ResourcePath)
+{
+	std::filesystem::path Path(FPaths::ToWide(ResourcePath));
+	if (Path.is_relative())
+	{
+		std::filesystem::path BasePath(FPaths::ToWide(BaseDocumentPath));
+		if (BasePath.is_relative())
+		{
+			BasePath = std::filesystem::path(FPaths::RootDir()) / BasePath;
+		}
+		Path = BasePath.parent_path() / Path;
+	}
+	return Path.lexically_normal();
+}
+
+FString ReadRuntimeUIPreviewTextFile(const std::filesystem::path& Path)
+{
+	std::ifstream File(Path, std::ios::binary);
+	if (!File)
+	{
+		return FString();
+	}
+
+	std::ostringstream Stream;
+	Stream << File.rdbuf();
+	return Stream.str();
+}
+
+bool WriteRuntimeUIPreviewTextFile(const std::filesystem::path& Path, const FString& Source)
+{
+	std::error_code Ec;
+	std::filesystem::create_directories(Path.parent_path(), Ec);
+	if (Ec)
+	{
+		return false;
+	}
+
+	std::ofstream File(Path, std::ios::binary);
+	if (!File)
+	{
+		return false;
+	}
+
+	File << Source;
+	return File.good();
+}
+
+bool FindRuntimeUIPreviewLinkedStylesheetPath(const FString& Source, const FString& DocumentPath, FString& OutPath)
+{
+	size_t SearchPos = 0;
+	while (SearchPos < Source.size())
+	{
+		const size_t Open = Source.find('<', SearchPos);
+		if (Open == FString::npos)
+		{
+			break;
+		}
+
+		const size_t Close = Source.find('>', Open + 1);
+		if (Close == FString::npos)
+		{
+			break;
+		}
+
+		FString TagSource = TrimRuntimeUIPreviewText(Source.substr(Open + 1, Close - Open - 1));
+		if (!TagSource.empty() && TagSource[0] != '/' && ExtractRuntimeUIPreviewTagName(TagSource) == "link")
+		{
+			const FString Type = ToLowerRuntimeUIPreviewText(ExtractRuntimeUIPreviewAttribute(TagSource, "type"));
+			const FString Href = ExtractRuntimeUIPreviewAttribute(TagSource, "href");
+			if (!Href.empty() && (Type.empty() || Type == "text/rcss"))
+			{
+				OutPath = FPaths::ToUtf8(ResolveRuntimeUIPreviewRelativePath(DocumentPath, Href).generic_wstring());
+				return true;
+			}
+		}
+
+		SearchPos = Close + 1;
+	}
+	return false;
+}
+
+constexpr size_t GRuntimeUIPreviewSourceEditorCapacity = 1024 * 1024;
+
+void SyncRuntimeUIPreviewEditBytesFromString(const FString& Source, TArray<char>& OutBytes)
+{
+	const size_t BufferSize = (std::max)(GRuntimeUIPreviewSourceEditorCapacity, Source.size() + 4096);
+	OutBytes.assign(BufferSize, '\0');
+	if (!Source.empty())
+	{
+		const size_t CopySize = (std::min)(Source.size(), BufferSize - 1);
+		std::memcpy(OutBytes.data(), Source.data(), CopySize);
+	}
+}
+
+bool RenderRuntimeUIPreviewSourceEditor(const char* Label, TArray<char>& Bytes, FString& OutSource, const ImVec2& Size)
+{
+	if (Bytes.empty())
+	{
+		Bytes.assign(GRuntimeUIPreviewSourceEditorCapacity, '\0');
+	}
+
+	const bool bChanged = ImGui::InputTextMultiline(
+		Label,
+		Bytes.data(),
+		static_cast<int>(Bytes.size()),
+		Size,
+		ImGuiInputTextFlags_AllowTabInput);
+	if (bChanged)
+	{
+		OutSource = Bytes.data();
+	}
+	return bChanged;
+}
+
+FString BuildRuntimeUIPreviewSourceWithLinkedStyles(const FString& Source, const FString& DocumentPath)
+{
+	FString Combined = Source;
+	size_t SearchPos = 0;
+	while (SearchPos < Source.size())
+	{
+		const size_t LinkOpen = Source.find("<link", SearchPos);
+		if (LinkOpen == FString::npos)
+		{
+			break;
+		}
+
+		const size_t LinkClose = Source.find('>', LinkOpen + 1);
+		if (LinkClose == FString::npos)
+		{
+			break;
+		}
+
+		const FString LinkTag = Source.substr(LinkOpen + 1, LinkClose - LinkOpen - 1);
+		const FString Href = ExtractRuntimeUIPreviewAttribute(LinkTag, "href");
+		if (!Href.empty())
+		{
+			const std::filesystem::path StylePath = ResolveRuntimeUIPreviewRelativePath(DocumentPath, Href);
+			const FString StyleSource = ReadRuntimeUIPreviewTextFile(StylePath);
+			if (!StyleSource.empty())
+			{
+				Combined += "\n<style>\n";
+				Combined += StyleSource;
+				Combined += "\n</style>\n";
+			}
+		}
+
+		SearchPos = LinkClose + 1;
+	}
+	return Combined;
 }
 
 FString ExtractRuntimeUIPreviewTagName(const FString& TagSource)
@@ -903,6 +1182,7 @@ FRuntimeUIPreviewModel ParseRuntimeUIPreviewModel(const FString& Source)
 		const bool bSelfClosing = IsRuntimeUIPreviewSelfClosingTag(TagName, TagSource);
 		FString Id = ExtractRuntimeUIPreviewAttribute(TagSource, "id");
 		const FString ClassName = ExtractRuntimeUIPreviewAttribute(TagSource, "class");
+		const FString ImageSource = ExtractRuntimeUIPreviewAttribute(TagSource, "src");
 		FString Action = ExtractRuntimeUIPreviewAttribute(TagSource, "data-action");
 		if (Action.empty())
 		{
@@ -928,6 +1208,7 @@ FRuntimeUIPreviewModel ParseRuntimeUIPreviewModel(const FString& Source)
 			!Action.empty() ||
 			TagName == "button" ||
 			TagName == "input" ||
+			TagName == "img" ||
 			(!Text.empty() && (TagName == "div" || TagName == "span" || TagName == "p"));
 
 		int32 CreatedNodeIndex = -1;
@@ -939,6 +1220,7 @@ FRuntimeUIPreviewModel ParseRuntimeUIPreviewModel(const FString& Source)
 			Node.ClassName = ClassName;
 			Node.Text = Text;
 			Node.Action = Action;
+			Node.ImageSource = ImageSource;
 			Node.ParentIndex = Stack.empty() ? -1 : Stack.back().NodeIndex;
 			if (Node.Id.empty())
 			{
@@ -1005,9 +1287,76 @@ bool RuntimeUIPreviewHasRecentAction(const TArray<FString>& RuntimeEvents, const
 	return !Action.empty() && std::find(RuntimeEvents.begin(), RuntimeEvents.end(), Action) != RuntimeEvents.end();
 }
 
-void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const TArray<FString>& RuntimeEvents)
+FString ResolveRuntimeUIPreviewImagePath(const FString& DocumentPath, const FString& ImageSource)
 {
-	FRuntimeUIPreviewModel Model = ParseRuntimeUIPreviewModel(Source);
+	if (ImageSource.empty())
+	{
+		return FString();
+	}
+
+	return FPaths::ToUtf8(ResolveRuntimeUIPreviewRelativePath(DocumentPath, ImageSource).generic_wstring());
+}
+
+ImVec2 GetRuntimeUIPreviewImageSize(ID3D11ShaderResourceView* ImageSRV)
+{
+	if (!ImageSRV)
+	{
+		return ImVec2(0.0f, 0.0f);
+	}
+
+	ID3D11Resource* Resource = nullptr;
+	ImageSRV->GetResource(&Resource);
+	if (!Resource)
+	{
+		return ImVec2(0.0f, 0.0f);
+	}
+
+	ID3D11Texture2D* Texture = nullptr;
+	const HRESULT Hr = Resource->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&Texture));
+	Resource->Release();
+	if (FAILED(Hr) || !Texture)
+	{
+		return ImVec2(0.0f, 0.0f);
+	}
+
+	D3D11_TEXTURE2D_DESC Desc = {};
+	Texture->GetDesc(&Desc);
+	Texture->Release();
+	return ImVec2(static_cast<float>(Desc.Width), static_cast<float>(Desc.Height));
+}
+
+void GetRuntimeUIPreviewImageFitRect(
+	const FString& ObjectFit,
+	const ImVec2& Min,
+	const ImVec2& Max,
+	const ImVec2& SourceSize,
+	ImVec2& OutMin,
+	ImVec2& OutMax)
+{
+	OutMin = Min;
+	OutMax = Max;
+	const FString Fit = ToLowerRuntimeUIPreviewText(ObjectFit.empty() ? FString("stretch") : ObjectFit);
+	if (Fit == "stretch" || Fit == "fill" || SourceSize.x <= 0.0f || SourceSize.y <= 0.0f)
+	{
+		return;
+	}
+
+	const float BoxWidth = RuntimeUIPreviewMax(1.0f, Max.x - Min.x);
+	const float BoxHeight = RuntimeUIPreviewMax(1.0f, Max.y - Min.y);
+	const float ScaleX = BoxWidth / SourceSize.x;
+	const float ScaleY = BoxHeight / SourceSize.y;
+	const float FitScale = Fit == "cover"
+		? RuntimeUIPreviewMax(ScaleX, ScaleY)
+		: RuntimeUIPreviewMin(ScaleX, ScaleY);
+	const ImVec2 FittedSize(SourceSize.x * FitScale, SourceSize.y * FitScale);
+	OutMin = ImVec2(Min.x + (BoxWidth - FittedSize.x) * 0.5f, Min.y + (BoxHeight - FittedSize.y) * 0.5f);
+	OutMax = ImVec2(OutMin.x + FittedSize.x, OutMin.y + FittedSize.y);
+}
+
+void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const FString& DocumentPath, const TArray<FString>& RuntimeEvents)
+{
+	const FString PreviewSource = BuildRuntimeUIPreviewSourceWithLinkedStyles(Source, DocumentPath);
+	FRuntimeUIPreviewModel Model = ParseRuntimeUIPreviewModel(PreviewSource);
 
 	ImVec2 Available = ImGui::GetContentRegionAvail();
 	if (Available.x < 64.0f) Available.x = 64.0f;
@@ -1053,20 +1402,58 @@ void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const TArray<FStrin
 		const int32 ParentIndex = Node.ParentIndex;
 		const bool bHasParent = ParentIndex >= 0 && ParentIndex < static_cast<int32>(Model.Nodes.size());
 		const FRuntimeUIPreviewStyle* ParentStyle = bHasParent ? &Model.Nodes[ParentIndex].Style : nullptr;
-		const float ParentPadding = ParentStyle && ParentStyle->bHasPadding ? ParentStyle->Padding : 12.0f;
+		const bool bUsesExplicitPosition =
+			Node.Style.bHasLeft || Node.Style.bHasLeftPercent || Node.Style.bHasRight ||
+			Node.Style.bHasTop || Node.Style.bHasTopPercent || Node.Style.bHasBottom;
+		const float ParentPadding = bHasParent
+			? (ParentStyle && ParentStyle->bHasPadding ? ParentStyle->Padding : (bUsesExplicitPosition ? 0.0f : 12.0f))
+			: 0.0f;
 		const ImVec2 ParentMin = bHasParent ? RectMin[ParentIndex] : ImVec2(0.0f, 0.0f);
 		const ImVec2 ParentMax = bHasParent ? RectMax[ParentIndex] : Model.CanvasSize;
 		const float ParentWidth = RuntimeUIPreviewMax(80.0f, ParentMax.x - ParentMin.x - ParentPadding * 2.0f);
+		const float ParentHeight = RuntimeUIPreviewMax(80.0f, ParentMax.y - ParentMin.y - ParentPadding * 2.0f);
+		const bool bParentFlex = ParentStyle && ParentStyle->bHasDisplay && ParentStyle->Display == "flex";
+		const float Width = Node.Style.bHasWidthPercent
+			? ParentWidth * Node.Style.WidthPercent
+			: GetRuntimeUIPreviewDefaultWidth(Node, ParentWidth);
+		const float Height = Node.Style.bHasHeightPercent
+			? ParentHeight * Node.Style.HeightPercent
+			: GetRuntimeUIPreviewDefaultHeight(Node);
 
 		float X = ParentMin.x + ParentPadding;
 		float Y = ParentMin.y + ParentPadding;
-		if (Node.Style.bHasLeft)
+		if (Node.Style.bHasLeftPercent)
+		{
+			X = ParentMin.x + ParentPadding + ParentWidth * Node.Style.LeftPercent;
+		}
+		else if (Node.Style.bHasLeft)
 		{
 			X = ParentMin.x + Node.Style.Left;
 		}
-		if (Node.Style.bHasTop)
+		else if (Node.Style.bHasRight)
+		{
+			X = ParentMax.x - ParentPadding - Node.Style.Right - Width;
+		}
+		if (Node.Style.bHasMarginLeft)
+		{
+			X += Node.Style.MarginLeft;
+		}
+		if (bParentFlex && ParentStyle->bHasAlignItems && ParentStyle->AlignItems == "center" && !bUsesExplicitPosition)
+		{
+			X = ParentMin.x + ParentPadding + (ParentWidth - Width) * 0.5f;
+		}
+
+		if (Node.Style.bHasTopPercent)
+		{
+			Y = ParentMin.y + ParentPadding + ParentHeight * Node.Style.TopPercent;
+		}
+		else if (Node.Style.bHasTop)
 		{
 			Y = ParentMin.y + Node.Style.Top;
+		}
+		else if (Node.Style.bHasBottom)
+		{
+			Y = ParentMax.y - ParentPadding - Node.Style.Bottom - Height;
 		}
 		else if (bHasParent)
 		{
@@ -1076,9 +1463,11 @@ void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const TArray<FStrin
 		{
 			Y += static_cast<float>(Index) * 38.0f;
 		}
+		if (bParentFlex && ParentStyle->bHasJustifyContent && ParentStyle->JustifyContent == "flex-end" && !bUsesExplicitPosition)
+		{
+			Y = ParentMax.y - ParentPadding - Height;
+		}
 
-		const float Width = GetRuntimeUIPreviewDefaultWidth(Node, ParentWidth);
-		const float Height = GetRuntimeUIPreviewDefaultHeight(Node);
 		RectMin[Index] = ImVec2(X, Y);
 		RectMax[Index] = ImVec2(X + Width, Y + Height);
 
@@ -1113,6 +1502,37 @@ void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const TArray<FStrin
 		const float Radius = Node.Style.bHasBorderRadius ? Node.Style.BorderRadius * Scale : 3.0f;
 		DrawList->AddRectFilled(Min, Max, ImGui::GetColorU32(Fill), Radius);
 
+		ID3D11ShaderResourceView* ImageSRV = nullptr;
+		bool bMissingImage = false;
+		if (Node.TagName == "img" && !Node.ImageSource.empty())
+		{
+			const FString ImagePath = ResolveRuntimeUIPreviewImagePath(DocumentPath, Node.ImageSource);
+			ImageSRV = FEditorTextureManager::Get().GetOrLoadThumbnail(ImagePath);
+			if (ImageSRV)
+			{
+				ImVec2 ImageMin = Min;
+				ImVec2 ImageMax = Max;
+				GetRuntimeUIPreviewImageFitRect(
+					Node.Style.bHasObjectFit ? Node.Style.ObjectFit : FString("stretch"),
+					Min,
+					Max,
+					GetRuntimeUIPreviewImageSize(ImageSRV),
+					ImageMin,
+					ImageMax);
+				DrawList->PushClipRect(Min, Max, true);
+				DrawList->AddImage(reinterpret_cast<ImTextureID>(ImageSRV), ImageMin, ImageMax);
+				DrawList->PopClipRect();
+			}
+			else
+			{
+				bMissingImage = true;
+			}
+		}
+		else if (Node.TagName == "img")
+		{
+			bMissingImage = true;
+		}
+
 		ImVec4 Border = bFired
 			? ImVec4(0.36f, 0.92f, 0.56f, 1.0f)
 			: (Node.Style.bHasBorderColor ? Node.Style.BorderColor : ImVec4(0.30f, 0.36f, 0.44f, 0.80f));
@@ -1129,9 +1549,20 @@ void RenderRuntimeUIPreviewBoxPreview(const FString& Source, const TArray<FStrin
 		{
 			TextColor = ImVec4(0.08f, 0.11f, 0.16f, 1.0f);
 		}
-		DrawList->PushClipRect(Min, Max, true);
-		DrawList->AddText(ImVec2(Min.x + 8.0f, Min.y + 6.0f), ImGui::GetColorU32(TextColor), Label.c_str());
-		DrawList->PopClipRect();
+		if (bMissingImage)
+		{
+			DrawList->AddLine(Min, Max, ImGui::GetColorU32(ImVec4(1.0f, 0.25f, 0.22f, 0.85f)), 1.5f);
+			DrawList->AddLine(ImVec2(Max.x, Min.y), ImVec2(Min.x, Max.y), ImGui::GetColorU32(ImVec4(1.0f, 0.25f, 0.22f, 0.85f)), 1.5f);
+			DrawList->PushClipRect(Min, Max, true);
+			DrawList->AddText(ImVec2(Min.x + 8.0f, Min.y + 6.0f), ImGui::GetColorU32(ImVec4(1.0f, 0.42f, 0.36f, 1.0f)), "Missing image");
+			DrawList->PopClipRect();
+		}
+		else if (!ImageSRV || Node.TagName != "img")
+		{
+			DrawList->PushClipRect(Min, Max, true);
+			DrawList->AddText(ImVec2(Min.x + 8.0f, Min.y + 6.0f), ImGui::GetColorU32(TextColor), Label.c_str());
+			DrawList->PopClipRect();
+		}
 	}
 
 	ImGui::EndChild();
@@ -1719,6 +2150,20 @@ void FEditorMainPanel::RenderRuntimeUIPreviewDocument()
 	}
 
 	const bool bMounted = IsRuntimeUIPreviewMounted();
+	const bool bDirty = bRuntimeUIPreviewSourceDirty || bRuntimeUIPreviewRcssDirty;
+	if (ImGui::Button(bDirty ? "Save *" : "Save"))
+	{
+		SaveRuntimeUIPreviewSources();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Save + Remount"))
+	{
+		if (SaveRuntimeUIPreviewSources() && RuntimeUIPreviewError.empty())
+		{
+			MountRuntimeUIPreviewInViewport(true);
+		}
+	}
+	ImGui::SameLine();
 	if (ImGui::Button("Reload"))
 	{
 		ReloadRuntimeUIPreviewDocument();
@@ -1822,14 +2267,24 @@ void FEditorMainPanel::RenderRuntimeUIPreviewDocument()
 	{
 		if (ImGui::BeginTabItem("Preview"))
 		{
-			RenderRuntimeUIPreviewBoxPreview(RuntimeUIPreviewSource, RuntimeUIPreviewRuntimeEvents);
+			RenderRuntimeUIPreviewBoxPreview(RuntimeUIPreviewSourceEditBuffer, RuntimeUIPreviewPath, RuntimeUIPreviewRuntimeEvents);
 			ImGui::EndTabItem();
 		}
-		if (ImGui::BeginTabItem("Source"))
+		if (ImGui::BeginTabItem(bRuntimeUIPreviewSourceDirty ? "RML *" : "RML"))
 		{
-			ImGui::BeginChild("RuntimeUIPreviewSource", ImVec2(0.0f, 0.0f), false, ImGuiWindowFlags_HorizontalScrollbar);
-			ImGui::TextUnformatted(RuntimeUIPreviewSource.c_str());
-			ImGui::EndChild();
+			if (RenderRuntimeUIPreviewSourceEditor("##RuntimeUIPreviewRmlSource", RuntimeUIPreviewSourceEditBytes, RuntimeUIPreviewSourceEditBuffer, ImVec2(0.0f, 0.0f)))
+			{
+				bRuntimeUIPreviewSourceDirty = RuntimeUIPreviewSourceEditBuffer != RuntimeUIPreviewSource;
+			}
+			ImGui::EndTabItem();
+		}
+		if (!RuntimeUIPreviewRcssPath.empty() && ImGui::BeginTabItem(bRuntimeUIPreviewRcssDirty ? "RCSS *" : "RCSS"))
+		{
+			ImGui::TextDisabled("%s", RuntimeUIPreviewRcssPath.c_str());
+			if (RenderRuntimeUIPreviewSourceEditor("##RuntimeUIPreviewRcssSource", RuntimeUIPreviewRcssEditBytes, RuntimeUIPreviewRcssEditBuffer, ImVec2(0.0f, -ImGui::GetTextLineHeightWithSpacing())))
+			{
+				bRuntimeUIPreviewRcssDirty = RuntimeUIPreviewRcssEditBuffer != RuntimeUIPreviewRcssSource;
+			}
 			ImGui::EndTabItem();
 		}
 		ImGui::EndTabBar();
@@ -1840,9 +2295,17 @@ void FEditorMainPanel::RenderRuntimeUIPreviewDocument()
 void FEditorMainPanel::ReloadRuntimeUIPreviewDocument()
 {
 	RuntimeUIPreviewSource.clear();
+	RuntimeUIPreviewSourceEditBuffer.clear();
+	RuntimeUIPreviewSourceEditBytes.clear();
+	RuntimeUIPreviewRcssPath.clear();
+	RuntimeUIPreviewRcssSource.clear();
+	RuntimeUIPreviewRcssEditBuffer.clear();
+	RuntimeUIPreviewRcssEditBytes.clear();
 	RuntimeUIPreviewError.clear();
 	RuntimeUIPreviewActionEvents.clear();
 	RuntimeUIPreviewElementIds.clear();
+	bRuntimeUIPreviewSourceDirty = false;
+	bRuntimeUIPreviewRcssDirty = false;
 
 	if (RuntimeUIPreviewPath.empty())
 	{
@@ -1873,10 +2336,71 @@ void FEditorMainPanel::ReloadRuntimeUIPreviewDocument()
 	std::ostringstream Stream;
 	Stream << File.rdbuf();
 	RuntimeUIPreviewSource = Stream.str();
+	RuntimeUIPreviewSourceEditBuffer = RuntimeUIPreviewSource;
+	SyncRuntimeUIPreviewEditBytesFromString(RuntimeUIPreviewSourceEditBuffer, RuntimeUIPreviewSourceEditBytes);
+
+	if (FindRuntimeUIPreviewLinkedStylesheetPath(RuntimeUIPreviewSource, RuntimeUIPreviewPath, RuntimeUIPreviewRcssPath))
+	{
+		RuntimeUIPreviewRcssSource = ReadRuntimeUIPreviewTextFile(std::filesystem::path(FPaths::ToWide(RuntimeUIPreviewRcssPath)));
+		RuntimeUIPreviewRcssEditBuffer = RuntimeUIPreviewRcssSource;
+		SyncRuntimeUIPreviewEditBytesFromString(RuntimeUIPreviewRcssEditBuffer, RuntimeUIPreviewRcssEditBytes);
+	}
 
 	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "data-action", RuntimeUIPreviewActionEvents);
 	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "action", RuntimeUIPreviewActionEvents);
 	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "id", RuntimeUIPreviewElementIds);
+}
+
+bool FEditorMainPanel::SaveRuntimeUIPreviewSources()
+{
+	RuntimeUIPreviewError.clear();
+	if (RuntimeUIPreviewPath.empty())
+	{
+		RuntimeUIPreviewError = "Runtime UI path is empty.";
+		return false;
+	}
+
+	std::filesystem::path RmlPath(FPaths::ToWide(RuntimeUIPreviewPath));
+	if (RmlPath.is_relative())
+	{
+		RmlPath = std::filesystem::path(FPaths::RootDir()) / RmlPath;
+	}
+	RmlPath = RmlPath.lexically_normal();
+
+	if (!WriteRuntimeUIPreviewTextFile(RmlPath, RuntimeUIPreviewSourceEditBuffer))
+	{
+		RuntimeUIPreviewError = FString("Failed to save Runtime UI document: ") + RuntimeUIPreviewPath;
+		return false;
+	}
+
+	RuntimeUIPreviewSource = RuntimeUIPreviewSourceEditBuffer;
+	bRuntimeUIPreviewSourceDirty = false;
+
+	if (!RuntimeUIPreviewRcssPath.empty())
+	{
+		std::filesystem::path RcssPath(FPaths::ToWide(RuntimeUIPreviewRcssPath));
+		if (RcssPath.is_relative())
+		{
+			RcssPath = std::filesystem::path(FPaths::RootDir()) / RcssPath;
+		}
+		RcssPath = RcssPath.lexically_normal();
+
+		if (!WriteRuntimeUIPreviewTextFile(RcssPath, RuntimeUIPreviewRcssEditBuffer))
+		{
+			RuntimeUIPreviewError = FString("Failed to save Runtime UI stylesheet: ") + RuntimeUIPreviewRcssPath;
+			return false;
+		}
+
+		RuntimeUIPreviewRcssSource = RuntimeUIPreviewRcssEditBuffer;
+		bRuntimeUIPreviewRcssDirty = false;
+	}
+
+	RuntimeUIPreviewActionEvents.clear();
+	RuntimeUIPreviewElementIds.clear();
+	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "data-action", RuntimeUIPreviewActionEvents);
+	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "action", RuntimeUIPreviewActionEvents);
+	CollectRuntimeUIAttributeValues(RuntimeUIPreviewSource, "id", RuntimeUIPreviewElementIds);
+	return true;
 }
 
 bool FEditorMainPanel::MountRuntimeUIPreviewInViewport(bool bForceReload)

@@ -27,7 +27,7 @@ private:
 	void RenderHierarchyNode(URuntimeUILayoutAsset* Layout, int32 WidgetIndex);
 	void AddWidget(URuntimeUILayoutAsset* Layout, int32 TypeIndex);
 	bool SaveAndExport(URuntimeUILayoutAsset* Layout, bool bOpenGeneratedRml);
-	bool ImportGeneratedRmlAndRcss(URuntimeUILayoutAsset* Layout);
+	bool ImportGeneratedRmlAndRcss(URuntimeUILayoutAsset* Layout, bool bConfirmStructuralChanges);
 	void EnsureGeneratedPaths(URuntimeUILayoutAsset* Layout);
 	void MarkLayoutDirty();
 	void HandleUndoRedoShortcuts(URuntimeUILayoutAsset* Layout);
@@ -49,4 +49,6 @@ private:
 	TArray<TArray<uint8>> RedoStack;
 	FString LastStatus;
 	bool bLastOperationFailed = false;
+	bool bPendingStructuralImportConfirmation = false;
+	FString PendingStructuralImportSignature;
 };

@@ -26,6 +26,16 @@
 
 namespace FAssetRegistry
 {
+	namespace
+	{
+		bool IsFontMetadataExtension(const std::filesystem::path& Path)
+		{
+			std::wstring Ext = Path.extension().wstring();
+			std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+			return Ext == L".font" || Ext == L".fnt";
+		}
+	}
+
 	const TArray<FAssetListItem>& ListByTypeName(const char* AssetTypeName)
 	{
 		static const TArray<FAssetListItem> Empty;
@@ -106,6 +116,32 @@ namespace FAssetRegistry
 				TextureCache.push_back(std::move(Item));
 			}
 			return TextureCache;
+		}
+		if (std::strcmp(AssetTypeName, "Font") == 0 || std::strcmp(AssetTypeName, "UFontAsset") == 0)
+		{
+			static TArray<FAssetListItem> FontCache;
+			FontCache.clear();
+
+			namespace fs = std::filesystem;
+			const fs::path FontRoot = fs::path(FPaths::RootDir()) / L"Content" / L"Font";
+			const fs::path ProjectRoot(FPaths::RootDir());
+			if (fs::exists(FontRoot) && fs::is_directory(FontRoot))
+			{
+				std::error_code IterError;
+				for (fs::recursive_directory_iterator It(FontRoot, fs::directory_options::skip_permission_denied, IterError), End;
+				     !IterError && It != End; It.increment(IterError))
+				{
+					std::error_code EntryError;
+					if (!It->is_regular_file(EntryError) || EntryError) continue;
+					if (!IsFontMetadataExtension(It->path())) continue;
+
+					FAssetListItem Item;
+					Item.DisplayName = FPaths::ToUtf8(It->path().stem().wstring());
+					Item.FullPath = FPaths::ToUtf8(It->path().lexically_relative(ProjectRoot).generic_wstring());
+					FontCache.push_back(std::move(Item));
+				}
+			}
+			return FontCache;
 		}
 		if (std::strcmp(AssetTypeName, "Audio") == 0 || std::strcmp(AssetTypeName, "Sound") == 0)
 		{

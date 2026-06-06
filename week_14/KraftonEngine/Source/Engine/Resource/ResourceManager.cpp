@@ -2,6 +2,8 @@
 #include "Platform/Paths.h"
 #include "SimpleJSON/json.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <filesystem>
 #include <d3d11.h>
@@ -18,8 +20,196 @@ namespace ResourceKey
 	constexpr const char* Particle = "Particle";
 	constexpr const char* Texture  = "Texture";
 	constexpr const char* Path     = "Path";
+	constexpr const char* MetadataPath = "MetadataPath";
 	constexpr const char* Columns  = "Columns";
 	constexpr const char* Rows     = "Rows";
+}
+
+namespace
+{
+	FString ToLowerCopy(FString Value)
+	{
+		std::transform(Value.begin(), Value.end(), Value.begin(), [](unsigned char Ch)
+		{
+			return static_cast<char>(std::tolower(Ch));
+		});
+		return Value;
+	}
+
+	bool IsFontMetadataPath(const FString& Path)
+	{
+		const FString Ext = ToLowerCopy(std::filesystem::path(FPaths::ToWide(Path)).extension().string());
+		return Ext == ".font" || Ext == ".fnt" || Ext == ".json";
+	}
+
+	FString NormalizeResourceLookupPath(const FString& Path)
+	{
+		if (Path.empty())
+		{
+			return {};
+		}
+
+		std::filesystem::path Normalized(FPaths::ToWide(FPaths::MakeProjectRelative(Path)));
+		return ToLowerCopy(FPaths::ToUtf8(Normalized.lexically_normal().generic_wstring()));
+	}
+
+	int32 ReadJsonInt(const json::JSON& Obj, const char* Key, int32 DefaultValue = 0)
+	{
+		if (!Obj.hasKey(Key))
+		{
+			return DefaultValue;
+		}
+
+		bool bOk = false;
+		const long IntValue = Obj.at(Key).ToInt(bOk);
+		if (bOk)
+		{
+			return static_cast<int32>(IntValue);
+		}
+
+		const double FloatValue = Obj.at(Key).ToFloat(bOk);
+		return bOk ? static_cast<int32>(FloatValue) : DefaultValue;
+	}
+
+	FString ReadJsonString(const json::JSON& Obj, const char* Key, const FString& DefaultValue = {})
+	{
+		if (!Obj.hasKey(Key))
+		{
+			return DefaultValue;
+		}
+
+		bool bOk = false;
+		FString Value = Obj.at(Key).ToString(bOk);
+		return bOk ? Value : DefaultValue;
+	}
+
+	FString ResolveFontPagePath(const FString& MetadataPath, const FString& PageFile)
+	{
+		if (MetadataPath.empty() || PageFile.empty())
+		{
+			return {};
+		}
+
+		std::filesystem::path MetaPath(FPaths::ToWide(MetadataPath));
+		if (!MetaPath.is_absolute())
+		{
+			MetaPath = std::filesystem::path(FPaths::RootDir()) / MetaPath;
+		}
+
+		std::filesystem::path PagePath(FPaths::ToWide(PageFile));
+		if (!PagePath.is_absolute())
+		{
+			PagePath = MetaPath.parent_path() / PagePath;
+		}
+
+		PagePath = PagePath.lexically_normal();
+		return FPaths::MakeProjectRelative(FPaths::ToUtf8(PagePath.generic_wstring()));
+	}
+
+	bool LoadFontMetadata(FFontResource& Resource)
+	{
+		if (Resource.MetadataPath.empty())
+		{
+			return false;
+		}
+
+		std::filesystem::path FullPath(FPaths::ToWide(Resource.MetadataPath));
+		if (!FullPath.is_absolute())
+		{
+			FullPath = std::filesystem::path(FPaths::RootDir()) / FullPath;
+		}
+
+		std::ifstream File(FullPath);
+		if (!File.is_open())
+		{
+			UE_LOG("Font metadata open failed: %s", Resource.MetadataPath.c_str());
+			return false;
+		}
+
+		FString Content((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+		json::JSON Root = json::JSON::Load(Content);
+		if (!Root.hasKey("common") || !Root.hasKey("chars"))
+		{
+			UE_LOG("Font metadata missing common/chars: %s", Resource.MetadataPath.c_str());
+			return false;
+		}
+
+		const json::JSON& Common = Root.at("common");
+		Resource.Common.LineHeight = static_cast<uint32>(ReadJsonInt(Common, "lineHeight"));
+		Resource.Common.Base = static_cast<uint32>(ReadJsonInt(Common, "base"));
+		Resource.Common.ScaleW = static_cast<uint32>(ReadJsonInt(Common, "scaleW"));
+		Resource.Common.ScaleH = static_cast<uint32>(ReadJsonInt(Common, "scaleH"));
+		Resource.Common.Pages = static_cast<uint32>(ReadJsonInt(Common, "pages"));
+		Resource.Common.bPacked = ReadJsonInt(Common, "packed") != 0;
+		Resource.Common.AlphaChannel = static_cast<uint32>(ReadJsonInt(Common, "alphaChnl"));
+		Resource.Common.RedChannel = static_cast<uint32>(ReadJsonInt(Common, "redChnl"));
+		Resource.Common.GreenChannel = static_cast<uint32>(ReadJsonInt(Common, "greenChnl"));
+		Resource.Common.BlueChannel = static_cast<uint32>(ReadJsonInt(Common, "blueChnl"));
+
+		Resource.PageFiles.clear();
+		if (Root.hasKey("pages"))
+		{
+			for (const json::JSON& Page : Root.at("pages").ArrayRange())
+			{
+				bool bString = false;
+				FString PageFile = Page.ToString(bString);
+				if (!bString && Page.hasKey("file"))
+				{
+					PageFile = ReadJsonString(Page, "file");
+				}
+				if (!PageFile.empty())
+				{
+					Resource.PageFiles.push_back(PageFile);
+				}
+			}
+		}
+
+		Resource.Glyphs.clear();
+		for (const json::JSON& Ch : Root.at("chars").ArrayRange())
+		{
+			FFontGlyph Glyph;
+			Glyph.Id = static_cast<uint32>(ReadJsonInt(Ch, "id"));
+			Glyph.X = static_cast<uint32>(ReadJsonInt(Ch, "x"));
+			Glyph.Y = static_cast<uint32>(ReadJsonInt(Ch, "y"));
+			Glyph.Width = static_cast<uint32>(ReadJsonInt(Ch, "width"));
+			Glyph.Height = static_cast<uint32>(ReadJsonInt(Ch, "height"));
+			Glyph.XOffset = ReadJsonInt(Ch, "xoffset");
+			Glyph.YOffset = ReadJsonInt(Ch, "yoffset");
+			Glyph.XAdvance = ReadJsonInt(Ch, "xadvance");
+			Glyph.Page = static_cast<uint32>(ReadJsonInt(Ch, "page"));
+			Glyph.Channel = static_cast<uint32>(ReadJsonInt(Ch, "chnl"));
+			Resource.Glyphs[Glyph.Id] = Glyph;
+		}
+
+		Resource.Kernings.clear();
+		if (Root.hasKey("kernings"))
+		{
+			for (const json::JSON& Kerning : Root.at("kernings").ArrayRange())
+			{
+				const uint32 First = static_cast<uint32>(ReadJsonInt(Kerning, "first"));
+				const uint32 Second = static_cast<uint32>(ReadJsonInt(Kerning, "second"));
+				const int32 Amount = ReadJsonInt(Kerning, "amount");
+				if (First != 0 && Second != 0 && Amount != 0)
+				{
+					Resource.Kernings[FFontResource::MakeKerningKey(First, Second)] = Amount;
+				}
+			}
+		}
+
+		if (Resource.Glyphs.empty() || Resource.Common.ScaleW == 0 || Resource.Common.ScaleH == 0)
+		{
+			UE_LOG("Font metadata has no usable glyph metrics: %s", Resource.MetadataPath.c_str());
+			return false;
+		}
+
+		if (IsFontMetadataPath(Resource.Path) && !Resource.PageFiles.empty())
+		{
+			Resource.Path = ResolveFontPagePath(Resource.MetadataPath, Resource.PageFiles[0]);
+		}
+
+		UE_LOG("Loaded font metadata: %s (%zu glyphs)", Resource.MetadataPath.c_str(), Resource.Glyphs.size());
+		return true;
+	}
 }
 
 void FResourceManager::LoadFromFile(const FString& Path, ID3D11Device* InDevice)
@@ -47,9 +237,18 @@ void FResourceManager::LoadFromFile(const FString& Path, ID3D11Device* InDevice)
 			FFontResource Resource;
 			Resource.Name    = FName(Pair.first.c_str());
 			Resource.Path    = Entry[ResourceKey::Path].ToString();
-			Resource.Columns = static_cast<uint32>(Entry[ResourceKey::Columns].ToInt());
-			Resource.Rows    = static_cast<uint32>(Entry[ResourceKey::Rows].ToInt());
+			Resource.Columns = static_cast<uint32>(ReadJsonInt(Entry, ResourceKey::Columns, 16));
+			Resource.Rows    = static_cast<uint32>(ReadJsonInt(Entry, ResourceKey::Rows, 16));
 			Resource.SRV     = nullptr;
+			if (Entry.hasKey(ResourceKey::MetadataPath))
+			{
+				Resource.MetadataPath = Entry[ResourceKey::MetadataPath].ToString();
+			}
+			else if (IsFontMetadataPath(Resource.Path))
+			{
+				Resource.MetadataPath = Resource.Path;
+			}
+			LoadFontMetadata(Resource);
 			FontResources[Pair.first] = Resource;
 		}
 	}
@@ -248,7 +447,42 @@ void FResourceManager::RegisterFont(const FName& FontName, const FString& InPath
 	Resource.Columns = Columns;
 	Resource.Rows    = Rows;
 	Resource.SRV     = nullptr;
+	if (IsFontMetadataPath(Resource.Path))
+	{
+		Resource.MetadataPath = Resource.Path;
+		LoadFontMetadata(Resource);
+	}
 	FontResources[FontName.ToString()] = Resource;
+}
+
+bool FResourceManager::ResolveFontNameByPath(const FString& InPath, FName& OutFontName) const
+{
+	const FString TargetPath = NormalizeResourceLookupPath(InPath);
+	if (TargetPath.empty())
+	{
+		return false;
+	}
+
+	for (const auto& [Key, Resource] : FontResources)
+	{
+		if (NormalizeResourceLookupPath(Resource.Path) == TargetPath
+			|| NormalizeResourceLookupPath(Resource.MetadataPath) == TargetPath)
+		{
+			OutFontName = Resource.Name.IsValid() ? Resource.Name : FName(Key);
+			return true;
+		}
+
+		for (const FString& PageFile : Resource.PageFiles)
+		{
+			if (NormalizeResourceLookupPath(ResolveFontPagePath(Resource.MetadataPath, PageFile)) == TargetPath)
+			{
+				OutFontName = Resource.Name.IsValid() ? Resource.Name : FName(Key);
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 // --- Particle ---

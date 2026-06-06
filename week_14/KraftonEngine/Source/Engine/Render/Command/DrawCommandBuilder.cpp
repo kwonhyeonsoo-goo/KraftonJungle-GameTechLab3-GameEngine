@@ -18,6 +18,9 @@
 #include "Materials/Material.h"
 #include "Texture/Texture2D.h"
 
+#include <algorithm>
+#include <cmath>
+
 // UpdateProxyLOD defined in RenderCollector.cpp (shared)
 extern void UpdateProxyLOD(FPrimitiveSceneProxy* Proxy, const FLODUpdateContext& LODCtx);
 
@@ -596,11 +599,20 @@ void FDrawCommandBuilder::AddWorldText(const FTextRenderSceneProxy* TextProxy, c
 {
 	FontGeometry.AddWorldText(
 		TextProxy->CachedText,
+		TextProxy->CachedFont,
+		TextProxy->CachedColor,
 		TextProxy->CachedBillboardMatrix.GetLocation(),
-		Frame.CameraRight,
-		Frame.CameraUp,
+		TextProxy->CachedTextRight,
+		TextProxy->CachedTextUp,
 		TextProxy->CachedBillboardMatrix.GetScale(),
-		TextProxy->CachedFontScale
+		TextProxy->CachedFontScale,
+		TextProxy->GetCachedCharWidth(),
+		TextProxy->GetCachedCharHeight(),
+		TextProxy->GetCachedSpacing(),
+		TextProxy->GetCachedLineSpacing(),
+		TextProxy->GetCachedHorizontalAlign(),
+		TextProxy->GetCachedVerticalAlign(),
+		TextProxy->CachedDepthStencil
 	);
 }
 
@@ -1135,13 +1147,17 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		FShader* ScopeShader = FShaderManager::Get().GetOrCreate(EShaderPath::ScopeLensComposite);
 		if (ScopeShader)
 		{
+			const float AspectRatio = Frame.ViewportHeight > 0.0f ? Frame.ViewportWidth / Frame.ViewportHeight : 1.0f;
+			constexpr float ReferenceScopeAspectRatio = 16.0f / 9.0f;
+			const float AspectRadiusScale = AspectRatio > 0.0f ? (std::min)(AspectRatio / ReferenceScopeAspectRatio, 1.0f) : 1.0f;
+
 			FScopeLensConstants ScopeData = {};
-			ScopeData.Radius = Frame.CameraScopeLens.Radius;
-			ScopeData.Feather = Frame.CameraScopeLens.Feather;
+			ScopeData.Radius = std::clamp(Frame.CameraScopeLens.Radius * AspectRadiusScale, 0.0f, 1.5f);
+			ScopeData.Feather = std::clamp(Frame.CameraScopeLens.Feather * AspectRadiusScale, 0.0f, 1.0f);
 			ScopeData.OuterBlurRadius = Frame.CameraScopeLens.OuterBlurRadius;
 			ScopeData.EdgeBlurRadius = Frame.CameraScopeLens.EdgeBlurRadius;
 			ScopeData.Intensity = Frame.CameraScopeLens.Intensity;
-			ScopeData.AspectRatio = Frame.ViewportHeight > 0.0f ? Frame.ViewportWidth / Frame.ViewportHeight : 1.0f;
+			ScopeData.AspectRatio = AspectRatio;
 			ScopeLensCB.Update(Ctx, &ScopeData, sizeof(FScopeLensConstants));
 
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
@@ -1151,16 +1167,24 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		}
 	}
 
-	// Camera Letterbox
-	if (!bPureDebugView && Frame.CameraLetterbox.bEnabled && Frame.CameraLetterbox.Amount > 0.0f)
+	// Camera Letterbox / fixed 16:9 presentation bars
+	constexpr float ReferencePresentationAspect = 16.0f / 9.0f;
+	const float PresentationAspect = Frame.ViewportHeight > 0.0f ? Frame.ViewportWidth / Frame.ViewportHeight : ReferencePresentationAspect;
+	const bool bNeedsFixedAspectBars = std::abs(PresentationAspect - ReferencePresentationAspect) > 0.001f;
+	const bool bNeedsCameraLetterbox = Frame.CameraLetterbox.bEnabled && Frame.CameraLetterbox.Amount > 0.0f;
+	if (!bPureDebugView && (bNeedsFixedAspectBars || bNeedsCameraLetterbox))
 	{
 		FShader* LetterboxShader = FShaderManager::Get().GetOrCreate(EShaderPath::CameraLetterbox);
 		if (LetterboxShader)
 		{
 			FCameraLetterboxConstants LetterboxData = {};
-			LetterboxData.LetterboxColor = Frame.CameraLetterbox.Color.ToVector4();
-			LetterboxData.LetterboxAmount = Frame.CameraLetterbox.Amount;
-			LetterboxData.LetterboxThickness = Frame.CameraLetterbox.Thickness;
+			LetterboxData.LetterboxColor = bNeedsCameraLetterbox
+				? Frame.CameraLetterbox.Color.ToVector4()
+				: FVector4(0.0f, 0.0f, 0.0f, 1.0f);
+			LetterboxData.LetterboxAmount = bNeedsCameraLetterbox ? Frame.CameraLetterbox.Amount : 0.0f;
+			LetterboxData.LetterboxThickness = bNeedsCameraLetterbox ? Frame.CameraLetterbox.Thickness : 0.0f;
+			LetterboxData.ViewportAspect = PresentationAspect;
+			LetterboxData.ReferenceAspect = ReferencePresentationAspect;
 
 			CameraLetterboxCB.Update(Ctx, &LetterboxData, sizeof(FCameraLetterboxConstants));
 
@@ -1197,33 +1221,51 @@ void FDrawCommandBuilder::BuildFontCommands(EViewMode ViewMode)
 	if (ViewModeUtils::SuppressesEditorOverlays(ViewMode))
 		return;
 
-	const FFontResource* FontRes = FResourceManager::Get().FindFont(FName("Default"));
-	if (!FontRes || !FontRes->IsLoaded()) return;
-
 	ID3D11DeviceContext* Ctx = CachedContext;
 
 	if (FontGeometry.GetWorldQuadCount() > 0 && FontGeometry.UploadWorldBuffers(Ctx))
 	{
-		FDrawCommand& Cmd = DrawCommandList.AddCommand();
-		Cmd.Pass = ERenderPass::Transparent;
-		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::Font);
-		Cmd.RenderState = PassRenderStateTable->ToDrawCommandState(ERenderPass::Transparent, ViewMode);
-		Cmd.Buffer = { FontGeometry.GetWorldVBBuffer(), FontGeometry.GetWorldVBStride(), FontGeometry.GetWorldIBBuffer() };
-		Cmd.Buffer.IndexCount = FontGeometry.GetWorldIndexCount();
-		Cmd.Bindings.SRVs[(int)EMaterialTextureSlot::Diffuse] = FontRes->SRV;
-		Cmd.BuildSortKey();
+		uint16 BatchIndex = 0;
+		for (const FFontDrawBatch& Batch : FontGeometry.GetWorldBatches())
+		{
+			if (!Batch.Font || !Batch.Font->IsLoaded() || Batch.IndexCount == 0)
+			{
+				continue;
+			}
+
+			FDrawCommand& Cmd = DrawCommandList.AddCommand();
+			Cmd.Pass = ERenderPass::Transparent;
+			Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::Font);
+			Cmd.RenderState = PassRenderStateTable->ToDrawCommandState(ERenderPass::Transparent, ViewMode);
+			Cmd.RenderState.DepthStencil = Batch.DepthStencil;
+			Cmd.Buffer = { FontGeometry.GetWorldVBBuffer(), FontGeometry.GetWorldVBStride(), FontGeometry.GetWorldIBBuffer() };
+			Cmd.Buffer.FirstIndex = Batch.FirstIndex;
+			Cmd.Buffer.IndexCount = Batch.IndexCount;
+			Cmd.Bindings.SRVs[(int)EMaterialTextureSlot::Diffuse] = Batch.Font->SRV;
+			Cmd.BuildSortKey(BatchIndex++);
+		}
 	}
 
 	if (FontGeometry.GetScreenQuadCount() > 0 && FontGeometry.UploadScreenBuffers(Ctx))
 	{
-		FDrawCommand& Cmd = DrawCommandList.AddCommand();
-		Cmd.Pass = ERenderPass::OverlayFont;
-		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::OverlayFont);
-		Cmd.RenderState = PassRenderStateTable->ToDrawCommandState(ERenderPass::OverlayFont, ViewMode);
-		Cmd.Buffer = { FontGeometry.GetScreenVBBuffer(), FontGeometry.GetScreenVBStride(), FontGeometry.GetScreenIBBuffer() };
-		Cmd.Buffer.IndexCount = FontGeometry.GetScreenIndexCount();
-		Cmd.Bindings.SRVs[(int)EMaterialTextureSlot::Diffuse] = FontRes->SRV;
-		Cmd.BuildSortKey();
+		uint16 BatchIndex = 0;
+		for (const FFontDrawBatch& Batch : FontGeometry.GetScreenBatches())
+		{
+			if (!Batch.Font || !Batch.Font->IsLoaded() || Batch.IndexCount == 0)
+			{
+				continue;
+			}
+
+			FDrawCommand& Cmd = DrawCommandList.AddCommand();
+			Cmd.Pass = ERenderPass::OverlayFont;
+			Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::OverlayFont);
+			Cmd.RenderState = PassRenderStateTable->ToDrawCommandState(ERenderPass::OverlayFont, ViewMode);
+			Cmd.Buffer = { FontGeometry.GetScreenVBBuffer(), FontGeometry.GetScreenVBStride(), FontGeometry.GetScreenIBBuffer() };
+			Cmd.Buffer.FirstIndex = Batch.FirstIndex;
+			Cmd.Buffer.IndexCount = Batch.IndexCount;
+			Cmd.Bindings.SRVs[(int)EMaterialTextureSlot::Diffuse] = Batch.Font->SRV;
+			Cmd.BuildSortKey(BatchIndex++);
+		}
 	}
 }
 

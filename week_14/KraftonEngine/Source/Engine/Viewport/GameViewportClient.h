@@ -55,6 +55,7 @@ public:
 	bool IsCursorVisible() const { return !bCursorCaptured; }
 	void SetCursorLocked(bool bLocked);
 	bool IsCursorLocked() const { return bCursorCaptured; }
+	void RefreshCursorVisibility();
 	void SetMouseCaptured(bool bCaptured);
 	bool IsMouseCaptured() const { return bCursorCaptured; }
 	void ReleaseMouseCapture();

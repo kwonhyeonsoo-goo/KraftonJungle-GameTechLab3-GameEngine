@@ -1,49 +1,223 @@
 body {
     margin: 0px;
-    width: 100%;
-    height: 100%;
-    font-family: sans-serif;
-    color: rgba(255, 255, 255, 255);
+    width: 1920.000000px;
+    height: 1080.000000px;
 }
 
 #hudRoot {
-    position: absolute;
+    position: relative;
     left: 0px;
     top: 0px;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+    width: 100.000000%;
+    height: 100.000000%;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 24.000000px;
+    text-align: center;
 }
 
 #compassImage {
     position: absolute;
-    left: 50%;
-    top: 18px;
-    width: 720px;
-    height: 50px;
-    margin-left: -360px;
+    left: 560.000000px;
+    top: 18.000000px;
+    width: 800.000000px;
+    height: 50.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
     opacity: 1;
-    pointer-events: none;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 24.000000px;
+    text-align: center;
+    object-fit: contain;
 }
 
 #scopeOverlay {
     position: absolute;
     left: 0px;
     top: 0px;
-    width: 100%;
-    height: 100%;
+    width: 100.000000%;
+    height: 100.000000%;
+    box-sizing: border-box;
+    overflow: hidden;
     opacity: 0;
-    pointer-events: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 24.000000px;
+    text-align: center;
 }
 
 #scopeImage {
     position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 760px;
-    height: 760px;
-    margin-left: -380px;
-    margin-top: -380px;
+    left: 474.000000px;
+    bottom: 0px;
+    width: 972.000000px;
+    height: 972.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
     opacity: 1;
-    pointer-events: none;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 24.000000px;
+    text-align: center;
+    object-fit: fill;
+}
+
+#CompassArrow {
+    position: absolute;
+    left: 948.000000px;
+    top: 76.000000px;
+    width: 16.000000px;
+    height: 16.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 24.000000px;
+    text-align: center;
+    object-fit: fill;
+}
+
+#crosshairImage {
+    position: absolute;
+    left: 936.000000px;
+    top: 516.000000px;
+    width: 48.000000px;
+    height: 48.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 24.000000px;
+    text-align: center;
+    object-fit: fill;
+}
+
+#breathPanel {
+    position: absolute;
+    left: 1439.000000px;
+    top: 501.000000px;
+    width: 320.000000px;
+    height: 78.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 25);
+    color: rgba(236, 242, 255, 235);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 12.000000px 16.000000px 12.000000px 16.000000px;
+    font-size: 22.000000px;
+    text-align: left;
+}
+
+#breathLabel {
+    position: absolute;
+    left: 16.000000px;
+    top: 10.000000px;
+    width: 288.000000px;
+    height: 28.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 22.000000px;
+    font-family: "Nexon";
+    font-weight: 400;
+    text-align: left;
+}
+
+#breathBarTrack {
+    position: absolute;
+    left: 16.000000px;
+    top: 46.000000px;
+    width: 288.000000px;
+    height: 18.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(12, 18, 26, 220);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(236, 242, 255, 175);
+    border-width: 1.000000px 1.000000px 1.000000px 1.000000px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 0px;
+    text-align: center;
+}
+
+#breathBarFill {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 288.000000px;
+    height: 18.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 255);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 0px;
+    text-align: center;
+}
+
+#breathProgress {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 288.000000px;
+    height: 18.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 0;
+    background-color: rgba(255, 255, 255, 255);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 0px;
+    text-align: center;
 }

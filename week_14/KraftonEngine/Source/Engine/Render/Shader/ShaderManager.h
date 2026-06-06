@@ -154,6 +154,7 @@ namespace EShaderPath
 	inline constexpr const char* OverlayFont = "Shaders/UI/OverlayFont.hlsl";
 	inline constexpr const char* SubUV = "Shaders/UI/SubUV.hlsl";
 	inline constexpr const char* Billboard = "Shaders/UI/Billboard.hlsl";
+	inline constexpr const char* RmlUiComposite = "Shaders/UI/RmlUiComposite.hlsl";
 
 	inline constexpr const char* ParticleSprite = "Shaders/Particle/Sprite.hlsl";
 	inline constexpr const char* ParticleMesh   = "Shaders/Particle/Mesh.hlsl";

@@ -14,7 +14,11 @@ struct VSOutput
 
 cbuffer UIRenderCB : register(b0)
 {
-	float2 ViewportSize;
+	float2 PhysicalViewportSize;
+	float2 VirtualViewportSize;
+	float UIScale;
+	float2 UIOffset;
+	float UIPadding0;
 	float2 Translation;
 	column_major float4x4 Transform;
 };
@@ -27,9 +31,10 @@ VSOutput VS(VSInput Input)
 	VSOutput Output;
 	float4 PixelPosition = float4(Input.Position + Translation, 0.0f, 1.0f);
 	PixelPosition = mul(Transform, PixelPosition);
+	float2 PhysicalPosition = PixelPosition.xy * UIScale + UIOffset;
 	float2 NdcPosition = float2(
-		(PixelPosition.x / ViewportSize.x) * 2.0f - 1.0f,
-		1.0f - (PixelPosition.y / ViewportSize.y) * 2.0f
+		(PhysicalPosition.x / PhysicalViewportSize.x) * 2.0f - 1.0f,
+		1.0f - (PhysicalPosition.y / PhysicalViewportSize.y) * 2.0f
 	);
 	Output.Position = float4(NdcPosition, 0.0f, 1.0f);
 	Output.Color = Input.Color;

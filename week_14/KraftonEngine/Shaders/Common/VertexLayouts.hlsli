@@ -52,6 +52,13 @@ struct VS_Input_PT
     float2 texcoord : TEXCOORD;
 };
 
+struct VS_Input_PTC
+{
+    float3 position : POSITION;
+    float2 texcoord : TEXCOORD;
+    float4 color    : COLOR;
+};
+
 // Position only (Outline primitive expansion)
 struct VS_Input_P
 {
@@ -74,6 +81,13 @@ struct PS_Input_Tex
 {
     float4 position : SV_POSITION;
     float2 texcoord : TEXCOORD;
+};
+
+struct PS_Input_TexColor
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD;
+    float4 color    : COLOR;
 };
 
 // SV_POSITION + Normal + Color + TexCoord (StaticMesh)

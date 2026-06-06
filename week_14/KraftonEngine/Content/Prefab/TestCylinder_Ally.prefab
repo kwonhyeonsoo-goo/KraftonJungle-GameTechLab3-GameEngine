@@ -1,19 +1,24 @@
 {
   "Actor" : {
-    "ClassName" : "AStaticMeshActor",
-    "Name" : "agent1",
+    "ClassName" : "ASkeletalMeshActor",
+    "Name" : "ASkeletalMeshActor_1",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverAgentComponent",
         "ObjectId" : 3,
         "Properties" : {
-          "AcceptanceRadius" : 2.500000,
+          "AcceptanceRadius" : 0.000000,
           "AdvanceInterval" : 3.000000,
           "AdvanceLinkMode" : 0,
-          "DamagePerSecond" : 10.000000,
+          "AttackDamage" : 5.000000,
+          "AttackIntervalMax" : 2.000000,
+          "AttackIntervalMin" : 1.000000,
+          "CombatRole" : 0,
+          "DeathDebugScaleMultiplier" : 0.100000,
           "FireRange" : 50.000000,
           "Health" : 100.000000,
           "MaxHealth" : 100.000000,
-          "MoveSpeed" : 10.000000,
+          "MoveSpeed" : 5.000000,
+          "MovingFireRange" : 30.000000,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
           "RetryInterval" : 1.000000,
@@ -25,13 +30,29 @@
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
+          "bShrinkActorOnDeath" : false,
           "bTickEnable" : true,
-          "bUseCharacterMovement" : true
+          "bUseCharacterMovement" : true,
+          "bUseMovingFireRange" : true,
+          "bUseRoleCombatDefaults" : true
+        }
+      }, {
+        "ClassName" : "ULuaScriptComponent",
+        "ObjectId" : 4,
+        "Properties" : {
+          "PendingTagsString" : "",
+          "PersistentGuid" : "Component_334",
+          "ScriptFile" : "CombatAI_Anim_Test.lua",
+          "bAutoActivate" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
         }
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [-48.873283, 16.728001, 0.000000],
+      "PendingActorLocation" : [-83.214981, 13.424393, -1.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -40,19 +61,55 @@
     },
     "RootComponent" : {
       "Children" : [],
-      "ClassName" : "UStaticMeshComponent",
+      "ClassName" : "USkeletalMeshComponent",
       "ObjectId" : 2,
       "Properties" : {
+        "AnimInstance" : {
+          "ClassName" : "UAnimGraphInstance",
+          "Properties" : {
+            "DefaultSequencePath" : "Content/Data/CombatAI/Rifle_Idle_Anim_Unreal_Take.uasset",
+            "GraphAssetPath" : "Content/Animation/CombatAI.uasset",
+            "RootMotionMode" : 1
+          }
+        },
+        "AnimInstanceClass" : "UAnimGraphInstance",
+        "AnimationData" : {
+          "AnimToPlayPath" : "",
+          "PlayRate" : 1.000000,
+          "bLooping" : true,
+          "bPlaying" : true
+        },
+        "AnimationMode" : 2,
         "AttachSocketName" : "Name_None",
+        "BackStandUpAnimationPath" : "None",
         "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
         "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
         "CollisionEnabled" : 0,
+        "DirectHitFullBodyThreshold" : 0.850000,
+        "FrontStandUpAnimationPath" : "None",
+        "FullBodyLaunchImpulseMagnitude" : 900.000000,
         "Mass" : 1.000000,
-        "MaterialSlots" : ["Content/Material/Auto/BasicShapeMaterial.uasset"],
+        "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_1.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
         "ObjectType" : 0,
+        "PartialEscalationThreshold" : 0.800000,
+        "PartialFirstValidPoseBlendInTime" : 0.040000,
+        "PartialRagdollBlendInTime" : 0.080000,
+        "PartialRagdollBlendOutTime" : 0.140000,
+        "PartialRagdollHoldTime" : 0.180000,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_332",
-        "RelativeTransform.Location" : [-48.873283, 16.728001, 0.000000],
+        "PhysicsAssetOverridePath" : "None",
+        "RagdollAdditionalImpulseMagnitude" : 240.000000,
+        "RagdollBaseImpulseMagnitude" : 120.000000,
+        "RagdollBlendInTime" : 0.150000,
+        "RagdollCompletionHoldTime" : 0.050000,
+        "RagdollFallbackHoldTime" : 0.120000,
+        "RagdollFirstValidPoseBlendInTime" : 0.080000,
+        "RagdollOverdriveImpulseMagnitudeScale" : 600.000000,
+        "RagdollRecoveryBlendOutTime" : 0.300000,
+        "RecoveryFullBodyThreshold" : 0.900000,
+        "RecoveryImpulseThreshold" : 0.550000,
+        "RelativeTransform.Location" : [-83.214981, 13.424393, -1.000000],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -61,7 +118,9 @@
           "Responses[3]" : 2,
           "Responses[4]" : 2
         },
-        "StaticMeshPath" : "Content/Data/BasicShape/Cylinder_StaticMesh.uasset",
+        "ShockwaveFullBodyThreshold" : 0.900000,
+        "ShockwaveImpulseThreshold" : 0.450000,
+        "SkeletalMeshPath" : "Content/Data/CombatAI/SK_Bandit_SkeletalMesh.uasset",
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -77,7 +136,7 @@
       }
     }
   },
-  "SourceActorName" : "agent1",
+  "SourceActorName" : "ASkeletalMeshActor_1",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

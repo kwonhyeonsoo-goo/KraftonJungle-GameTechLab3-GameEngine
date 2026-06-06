@@ -2,8 +2,10 @@
 
 #include "sol/sol.hpp"
 
+#include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Runtime/EngineInitHooks.h"
+#include "GameFramework/AActor.h"
 #include "Lua/LuaScriptManager.h"
 
 // ============================================================
@@ -19,7 +21,49 @@
 // ============================================================
 void RegisterGameLuaBindings(sol::state& Lua)
 {
-	(void)Lua;
+	Lua.new_usertype<UCombatCoverAgentComponent>(
+		"CombatCoverAgentComponent",
+		sol::base_classes,
+		sol::bases<UActorComponent, UObject>(),
+		"GetTeamTag",
+		&UCombatCoverAgentComponent::GetTeamTag,
+		"GetStateName",
+		&UCombatCoverAgentComponent::GetStateName,
+		"GetHealth",
+		&UCombatCoverAgentComponent::GetHealth,
+		"GetMaxHealth",
+		&UCombatCoverAgentComponent::GetMaxHealth,
+		"GetIncomingFireCount",
+		&UCombatCoverAgentComponent::GetIncomingFireCount,
+		"GetSuppressionTimeRemaining",
+		&UCombatCoverAgentComponent::GetSuppressionTimeRemaining,
+		"IsAlive",
+		&UCombatCoverAgentComponent::IsAlive,
+		"IsEngaging",
+		&UCombatCoverAgentComponent::IsEngaging,
+		"IsMovingForCombatRange",
+		&UCombatCoverAgentComponent::IsMovingForCombatRange,
+		"IsInCover",
+		&UCombatCoverAgentComponent::IsInCover,
+		"IsSuppressed",
+		&UCombatCoverAgentComponent::IsSuppressed,
+		"CanFireWhileMoving",
+		&UCombatCoverAgentComponent::CanFireWhileMoving,
+		"MarkDead",
+		&UCombatCoverAgentComponent::MarkDead
+	);
+
+	sol::table ActorType = Lua["Actor"];
+	if (ActorType.valid())
+	{
+		ActorType.set_function(
+			"GetCombatCoverAgentComponent",
+			[](AActor& Actor) -> UCombatCoverAgentComponent*
+			{
+				return Actor.GetComponentByClass<UCombatCoverAgentComponent>();
+			}
+		);
+	}
 }
 
 // 자기-등록 — Editor / Game 측이 RegisterGameLuaBindings 함수명을 모르고도
