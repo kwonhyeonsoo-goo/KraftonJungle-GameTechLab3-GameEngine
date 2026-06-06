@@ -47,13 +47,17 @@ protected:
 private:
 	void UpdateBullets(float DeltaTime);
 	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, const FVector& AppliedWindAcceleration, float DeltaTime, class UWorld* World);
+	void UpdateImpactVisuals(float DeltaTime);
 	void DrawWindDebug(class UWorld* World) const;
 	void SyncBulletVisuals();
 	void HideAllBulletVisuals();
 	UBillboardComponent* GetOrCreateBulletHeadVisual(int32 VisualIndex);
 	UBillboardComponent* GetOrCreateBulletTracerVisual(int32 VisualIndex);
+	UBillboardComponent* GetOrCreateImpactVisual(int32 VisualIndex);
 	UMaterial* ResolveBulletHeadVisualMaterial();
 	UMaterial* ResolveBulletTracerVisualMaterial();
+	UMaterial* ResolveImpactVisualMaterial();
+	void SpawnImpactVisual(const FVector& ImpactLocation);
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
@@ -64,12 +68,26 @@ private:
 	bool bEnableWind = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Wind")
 	FVector WindAcceleration = FVector(0.0f, 1.5f, 0.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Simulation")
+	bool bEnableBallisticSubsteps = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Simulation")
+	int32 MaxBallisticSubsteps = 2;
+	UPROPERTY(Edit, Save, Category="Sniper|Simulation")
+	float MaxBallisticSubstepDeltaTime = 1.0f / 120.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bEnableBulletVisuals = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Head Visual Material", AssetType="Material")
 	FSoftObjectPtr BulletHeadVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
 	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Tracer Visual Material", AssetType="Material")
 	FSoftObjectPtr BulletTracerVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	bool bEnableImpactVisuals = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Impact Visual Material", AssetType="Material")
+	FSoftObjectPtr ImpactVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	float ImpactVisualScale = 0.075f;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	float ImpactVisualLifetime = 0.08f;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bDrawDebugBallistics = false;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
@@ -78,7 +96,10 @@ private:
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
 	TArray<TWeakObjectPtr<UBillboardComponent>> BulletHeadVisualPool;
 	TArray<TWeakObjectPtr<UBillboardComponent>> BulletTracerVisualPool;
+	TArray<TWeakObjectPtr<UBillboardComponent>> ImpactVisualPool;
+	TArray<float> ImpactVisualRemainingTimes;
 	TWeakObjectPtr<UMaterial> BulletHeadVisualMaterial;
 	TWeakObjectPtr<UMaterial> BulletTracerVisualMaterial;
+	TWeakObjectPtr<UMaterial> ImpactVisualMaterial;
 	TArray<FBallisticBullet> ActiveBullets;
 };

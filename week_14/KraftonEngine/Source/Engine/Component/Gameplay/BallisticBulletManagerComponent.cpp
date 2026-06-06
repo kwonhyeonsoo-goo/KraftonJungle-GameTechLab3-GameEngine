@@ -36,6 +36,7 @@ namespace
 	constexpr float SniperBulletVisualMinScale = 0.04f;
 	constexpr float SniperBulletTracerMinWidth = 0.01f;
 	constexpr float SniperBulletTracerDefaultThickness = 1.0f;
+	constexpr float SniperBallisticSubstepMinDeltaTime = 1.0f / 480.0f;
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
 
@@ -124,6 +125,7 @@ void UBallisticBulletManagerComponent::TickComponent(
 
 	UpdateBullets(DeltaTime);
 	CompactDeadBullets();
+	UpdateImpactVisuals(DeltaTime);
 	SyncBulletVisuals();
 }
 
@@ -144,9 +146,25 @@ void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
 		DrawWindDebug(World);
 	}
 
-	for (FBallisticBullet& Bullet : ActiveBullets)
+	int32 SubstepCount = 1;
+	if (bEnableBallisticSubsteps && MaxBallisticSubsteps > 1 && MaxBallisticSubstepDeltaTime > 0.0f)
 	{
-		UpdateSingleBullet(Bullet, WorldGravity, AppliedWindAcceleration, DeltaTime, World);
+		SubstepCount = static_cast<int32>(std::ceil(DeltaTime / MaxBallisticSubstepDeltaTime));
+		SubstepCount = std::clamp(SubstepCount, 1, MaxBallisticSubsteps);
+	}
+
+	const float SubstepDeltaTime = DeltaTime / static_cast<float>(SubstepCount);
+	if (SubstepDeltaTime < SniperBallisticSubstepMinDeltaTime)
+	{
+		SubstepCount = 1;
+	}
+
+	for (int32 SubstepIndex = 0; SubstepIndex < SubstepCount; ++SubstepIndex)
+	{
+		for (FBallisticBullet& Bullet : ActiveBullets)
+		{
+			UpdateSingleBullet(Bullet, WorldGravity, AppliedWindAcceleration, DeltaTime / static_cast<float>(SubstepCount), World);
+		}
 	}
 }
 
@@ -243,6 +261,41 @@ void UBallisticBulletManagerComponent::DrawWindDebug(UWorld* World) const
 	DrawDebugLine(World, ArrowEnd, ArrowHeadRight, FColor(80, 255, 120), SniperWindDebugArrowDuration);
 }
 
+void UBallisticBulletManagerComponent::UpdateImpactVisuals(float DeltaTime)
+{
+	if (ImpactVisualPool.empty())
+	{
+		return;
+	}
+
+	for (int32 VisualIndex = 0; VisualIndex < static_cast<int32>(ImpactVisualPool.size()); ++VisualIndex)
+	{
+		UBillboardComponent* Visual = ImpactVisualPool[VisualIndex].Get();
+		if (!Visual)
+		{
+			continue;
+		}
+
+		if (VisualIndex >= static_cast<int32>(ImpactVisualRemainingTimes.size()))
+		{
+			Visual->SetVisibility(false);
+			continue;
+		}
+
+		float& RemainingTime = ImpactVisualRemainingTimes[VisualIndex];
+		if (RemainingTime > 0.0f)
+		{
+			RemainingTime -= DeltaTime;
+		}
+
+		if (RemainingTime <= 0.0f)
+		{
+			RemainingTime = 0.0f;
+			Visual->SetVisibility(false);
+		}
+	}
+}
+
 void UBallisticBulletManagerComponent::SyncBulletVisuals()
 {
 	if (!bEnableBulletVisuals)
@@ -270,7 +323,8 @@ void UBallisticBulletManagerComponent::SyncBulletVisuals()
 		const float SegmentDistance = Segment.Length();
 		const FVector TracerLocation = Bullet.PreviousPosition + Segment * 0.5f;
 		const float TracerWidth = (std::max)(Bullet.VisualTracerWidth, SniperBulletTracerMinWidth);
-		float TracerLength = SegmentDistance * Bullet.VisualTracerLengthScale;
+		const float SpeedBasedLength = Bullet.Velocity.Length() * 0.0012f;
+		float TracerLength = (std::max)(SegmentDistance, SpeedBasedLength) * Bullet.VisualTracerLengthScale;
 		TracerLength = (std::max)(TracerLength, Bullet.VisualTracerMinLength);
 		TracerLength = (std::min)(TracerLength, Bullet.VisualTracerMaxLength);
 		TracerLength = (std::max)(TracerLength, TracerWidth);
@@ -316,6 +370,19 @@ void UBallisticBulletManagerComponent::HideAllBulletVisuals()
 		{
 			Visual->SetVisibility(false);
 		}
+	}
+
+	for (TWeakObjectPtr<UBillboardComponent>& VisualEntry : ImpactVisualPool)
+	{
+		if (UBillboardComponent* Visual = VisualEntry.Get())
+		{
+			Visual->SetVisibility(false);
+		}
+	}
+
+	for (float& RemainingTime : ImpactVisualRemainingTimes)
+	{
+		RemainingTime = 0.0f;
 	}
 }
 
@@ -453,6 +520,117 @@ UMaterial* UBallisticBulletManagerComponent::ResolveBulletTracerVisualMaterial()
 	return LoadedMaterial;
 }
 
+UBillboardComponent* UBallisticBulletManagerComponent::GetOrCreateImpactVisual(int32 VisualIndex)
+{
+	if (VisualIndex < 0)
+	{
+		return nullptr;
+	}
+
+	if (VisualIndex < static_cast<int32>(ImpactVisualPool.size()))
+	{
+		if (UBillboardComponent* Existing = ImpactVisualPool[VisualIndex].Get())
+		{
+			return Existing;
+		}
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return nullptr;
+	}
+
+	UBillboardComponent* Visual = OwnerActor->AddComponent<UBillboardComponent>();
+	if (!Visual)
+	{
+		return nullptr;
+	}
+
+	if (USceneComponent* RootComponent = OwnerActor->GetRootComponent())
+	{
+		Visual->AttachToComponent(RootComponent);
+	}
+
+	Visual->SetAbsoluteScale(true);
+	Visual->SetHiddenInComponentTree(true);
+	Visual->SetVisibility(false);
+
+	if (UMaterial* VisualMaterial = ResolveImpactVisualMaterial())
+	{
+		Visual->SetMaterial(VisualMaterial);
+	}
+
+	if (VisualIndex >= static_cast<int32>(ImpactVisualPool.size()))
+	{
+		ImpactVisualPool.resize(VisualIndex + 1);
+	}
+
+	if (VisualIndex >= static_cast<int32>(ImpactVisualRemainingTimes.size()))
+	{
+		ImpactVisualRemainingTimes.resize(VisualIndex + 1, 0.0f);
+	}
+
+	ImpactVisualPool[VisualIndex] = Visual;
+	return Visual;
+}
+
+UMaterial* UBallisticBulletManagerComponent::ResolveImpactVisualMaterial()
+{
+	if (UMaterial* Existing = ImpactVisualMaterial.Get())
+	{
+		return Existing;
+	}
+
+	const FString MaterialPath =
+		(!ImpactVisualMaterialPath.empty() && ImpactVisualMaterialPath != "None")
+		? static_cast<FString>(ImpactVisualMaterialPath)
+		: FString(SniperDefaultBulletVisualMaterialPath);
+
+	UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+	ImpactVisualMaterial = LoadedMaterial;
+	return LoadedMaterial;
+}
+
+void UBallisticBulletManagerComponent::SpawnImpactVisual(const FVector& ImpactLocation)
+{
+	if (!bEnableImpactVisuals)
+	{
+		return;
+	}
+
+	int32 FreeVisualIndex = -1;
+	for (int32 VisualIndex = 0; VisualIndex < static_cast<int32>(ImpactVisualRemainingTimes.size()); ++VisualIndex)
+	{
+		if (ImpactVisualRemainingTimes[VisualIndex] <= 0.0f)
+		{
+			FreeVisualIndex = VisualIndex;
+			break;
+		}
+	}
+
+	if (FreeVisualIndex < 0)
+	{
+		FreeVisualIndex = static_cast<int32>(ImpactVisualPool.size());
+	}
+
+	UBillboardComponent* Visual = GetOrCreateImpactVisual(FreeVisualIndex);
+	if (!Visual)
+	{
+		return;
+	}
+
+	if (FreeVisualIndex >= static_cast<int32>(ImpactVisualRemainingTimes.size()))
+	{
+		ImpactVisualRemainingTimes.resize(FreeVisualIndex + 1, 0.0f);
+	}
+
+	ImpactVisualRemainingTimes[FreeVisualIndex] = ImpactVisualLifetime;
+	Visual->SetWorldLocation(ImpactLocation);
+	Visual->SetRelativeScale(FVector(1.0f, ImpactVisualScale, ImpactVisualScale));
+	Visual->SetVisibility(true);
+}
+
 bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bullet, UWorld* World, FHitResult& OutHit) const
 {
 	if (!World)
@@ -496,6 +674,8 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 {
 	Bullet.Position = Hit.WorldHitLocation;
 	Bullet.bIsAlive = false;
+
+	SpawnImpactVisual(Hit.WorldHitLocation);
 
 	if (World && bDrawDebugImpactMarker)
 	{
