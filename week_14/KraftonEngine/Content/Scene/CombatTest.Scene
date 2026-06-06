@@ -1798,7 +1798,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 63,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_006",
@@ -1816,28 +1816,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -1903,7 +1903,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 66,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_011",
@@ -1921,28 +1921,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2008,7 +2008,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 69,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_012",
@@ -2026,28 +2026,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2113,7 +2113,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 72,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_009",
@@ -2131,28 +2131,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2218,7 +2218,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 75,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [],
             "MaxOccupants" : 1,
@@ -2228,28 +2228,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2315,7 +2315,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 78,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_012",
@@ -2333,28 +2333,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2420,7 +2420,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 81,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_011",
@@ -2438,28 +2438,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2525,7 +2525,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 84,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_012",
@@ -2543,28 +2543,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2630,7 +2630,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 87,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_005",
@@ -2644,28 +2644,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2731,7 +2731,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 90,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_005",
@@ -2749,28 +2749,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2836,7 +2836,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 93,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_010",
@@ -2854,28 +2854,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -2941,7 +2941,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 96,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_002",
@@ -2959,28 +2959,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
@@ -3046,7 +3046,7 @@
           "ClassName" : "UCombatCoverNodeComponent",
           "ObjectId" : 99,
           "Properties" : {
-            "DebugSlotRadius" : 35.000000,
+            "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
                 "TargetNodeId" : "CoverNode_004",
@@ -3064,28 +3064,28 @@
             "Slots" : [{
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000
               }, {
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
                 "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 80.000000,
+                "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000

@@ -24,7 +24,7 @@ struct FCombatCoverSlot
     FVector LocalForward = FVector::ForwardVector;
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
-    float Radius = 80.0f;
+    float Radius = 2.0f;
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Tags")
     FString Tags = "Enemy,Cover";
@@ -46,6 +46,9 @@ struct FCombatCoverLink
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Weight", Min=0.0f, Max=1000.0f, Speed=0.1f)
     float Weight = 1.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Path Points", Type=Array)
+    TArray<FVector> PathPoints;
 };
 
 USTRUCT()
@@ -61,6 +64,19 @@ struct FCombatCoverSlotHandle
     {
         NodeId.clear();
         SlotId = -1;
+    }
+};
+
+struct FCombatMovePath
+{
+    TArray<FVector> Points;
+    FCombatCoverSlotHandle FinalSlot;
+
+    bool IsValid() const { return FinalSlot.IsValid() && !Points.empty(); }
+    void Reset()
+    {
+        Points.clear();
+        FinalSlot.Reset();
     }
 };
 
@@ -151,5 +167,5 @@ private:
     int32 MaxOccupants = 1;
 
     UPROPERTY(Edit, Save, Category="CombatCover|Debug", DisplayName="Debug Slot Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
-    float DebugSlotRadius = 35.0f;
+    float DebugSlotRadius = 1.5f;
 };

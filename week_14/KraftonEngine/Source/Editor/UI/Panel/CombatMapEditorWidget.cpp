@@ -79,6 +79,28 @@ namespace
         return std::sqrt(DX * DX + DY * DY);
     }
 
+    ImVec2 AddImVec2(const ImVec2& A, const ImVec2& B)
+    {
+        return ImVec2(A.x + B.x, A.y + B.y);
+    }
+
+    ImVec2 MulImVec2(const ImVec2& V, float Scale)
+    {
+        return ImVec2(V.x * Scale, V.y * Scale);
+    }
+
+    ImVec2 CubicBezierPoint(const ImVec2& P0, const ImVec2& P1, const ImVec2& P2, const ImVec2& P3, float T)
+    {
+        const float A = 1.0f - T;
+        const float B0 = A * A * A;
+        const float B1 = 3.0f * T * A * A;
+        const float B2 = 3.0f * T * T * A;
+        const float B3 = T * T * T;
+        return ImVec2(
+            B0 * P0.x + B1 * P1.x + B2 * P2.x + B3 * P3.x,
+            B0 * P0.y + B1 * P1.y + B2 * P2.y + B3 * P3.y);
+    }
+
     uint32 GraphKeyForNode(const UCombatCoverNodeComponent* Node)
     {
 		if (!IsValid(Node))
@@ -376,6 +398,11 @@ void FCombatMapEditorWidget::RenderToolbar()
         bPendingOpenAutoLinkPopup = true;
     }
     ImGui::SameLine();
+    if (ImGui::Button("Generate Bezier Points"))
+    {
+        bPendingOpenGenerateBezierPathPointsPopup = true;
+    }
+    ImGui::SameLine();
     if (ImGui::Button("Agent Type Stats"))
     {
         bPendingOpenRoleStatsPopup = true;
@@ -410,6 +437,12 @@ void FCombatMapEditorWidget::RenderToolbar()
         {
             Manager->SetDrawFireRanges(bDrawFireRanges);
         }
+        ImGui::SameLine();
+        bool bDrawAllNodeDebugVisuals = Manager->GetDrawAllNodeDebugVisuals();
+        if (ImGui::Checkbox("Show All Nodes", &bDrawAllNodeDebugVisuals))
+        {
+            Manager->SetDrawAllNodeDebugVisuals(bDrawAllNodeDebugVisuals);
+        }
     }
 
     AActor* SelectedActor = GetSelectedActor();
@@ -418,6 +451,7 @@ void FCombatMapEditorWidget::RenderToolbar()
 
     RenderRoleStatsPopup();
     RenderAutoLinkPopup();
+    RenderGenerateBezierPathPointsPopup();
     RenderValidationPopup();
 }
 
@@ -574,7 +608,7 @@ void FCombatMapEditorWidget::RenderSlotPanel(UCombatCoverNodeComponent* Node)
         return;
     }
 
-    ImGui::BeginChild("CombatSlotList", ImVec2(0.0f, 220.0f), true);
+    ImGui::BeginChild("CombatSlotList", ImVec2(0.0f, 160.0f), true);
     for (int32 Index = 0; Index < static_cast<int32>(Slots.size()); ++Index)
     {
         FCombatCoverSlot& Slot = Slots[Index];
@@ -616,6 +650,12 @@ void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
 
     ImGui::Text("Source: %s", NodeListLabel(Node).c_str());
 
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::DragInt("Bezier Samples", &BezierPathSampleCount, 1.0f, 1, 64);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::DragFloat("Bezier Strength", &BezierPathStrength, 1.0f, 1.0f, 2000.0f);
+
     TArray<FCombatCoverLink>& Links = Node->GetMutableLinks();
     if (Links.empty())
     {
@@ -623,11 +663,13 @@ void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
     }
     else
     {
-        ImGui::BeginChild("CombatLinkList", ImVec2(0.0f, 130.0f), true);
+        ImGui::BeginChild("CombatLinkList", ImVec2(0.0f, 360.0f), true);
         for (int32 Index = 0; Index < static_cast<int32>(Links.size()); ++Index)
         {
             FCombatCoverLink& Link = Links[Index];
             ImGui::PushID(Index);
+
+            UCombatCoverNodeComponent* TargetNode = FindLinkTargetNode(Link);
             ImGui::Text("-> %s", Link.TargetNodeId.c_str());
             ImGui::SameLine();
             ImGui::Checkbox("Bidirectional", &Link.bBidirectional);
@@ -641,6 +683,54 @@ void FCombatMapEditorWidget::RenderLinkPanel(UCombatCoverNodeComponent* Node)
                 ImGui::PopID();
                 break;
             }
+
+            if (!IsValidCombatNode(TargetNode))
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.25f, 1.0f), "Target node is missing.");
+            }
+
+            if (ImGui::Button("Generate Points From Bezier"))
+            {
+                GenerateBezierPathPointsForLink(Node, Link, BezierPathSampleCount, BezierPathStrength);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Clear Points"))
+            {
+                Link.PathPoints.clear();
+            }
+
+            ImGui::TextDisabled("Path Points: %d", static_cast<int32>(Link.PathPoints.size()));
+            for (int32 PointIndex = 0; PointIndex < static_cast<int32>(Link.PathPoints.size()); ++PointIndex)
+            {
+                ImGui::PushID(PointIndex);
+                ImGui::SetNextItemWidth(-70.0f);
+                ImGui::DragFloat3("##PathPoint", Link.PathPoints[PointIndex].Data, 1.0f);
+                ImGui::SameLine();
+                if (ImGui::Button("X"))
+                {
+                    Link.PathPoints.erase(Link.PathPoints.begin() + PointIndex);
+                    ImGui::PopID();
+                    break;
+                }
+                ImGui::PopID();
+            }
+
+            if (ImGui::Button("Add Path Point"))
+            {
+                FVector NewPoint = Node->GetOwner() ? Node->GetOwner()->GetActorLocation() : FVector::ZeroVector;
+                if (IsValidCombatNode(TargetNode))
+                {
+                    const FVector SourceLocation = Node->GetOwner()->GetActorLocation();
+                    const FVector TargetLocation = TargetNode->GetOwner()->GetActorLocation();
+                    NewPoint = SourceLocation + (TargetLocation - SourceLocation) * 0.5f;
+                }
+                if (!Link.PathPoints.empty())
+                {
+                    NewPoint = Link.PathPoints.back();
+                }
+                Link.PathPoints.push_back(NewPoint);
+            }
+
             ImGui::Separator();
             ImGui::PopID();
         }
@@ -1087,6 +1177,45 @@ void FCombatMapEditorWidget::RenderAutoLinkPopup()
     }
 }
 
+void FCombatMapEditorWidget::RenderGenerateBezierPathPointsPopup()
+{
+    if (bPendingOpenGenerateBezierPathPointsPopup)
+    {
+        ImGui::OpenPopup("Generate Bezier Path Points");
+        bPendingOpenGenerateBezierPathPointsPopup = false;
+    }
+
+    if (ImGui::BeginPopupModal("Generate Bezier Path Points", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TextWrapped("Generate Bezier-sampled path points for every existing valid cover link.");
+        ImGui::TextDisabled("This overwrites each link's current PathPoints.");
+        ImGui::Separator();
+        ImGui::SetNextItemWidth(180.0f);
+        ImGui::DragInt("Bezier Samples", &BezierPathSampleCount, 1.0f, 1, 64);
+        ImGui::SetNextItemWidth(180.0f);
+        ImGui::DragFloat("Bezier Strength", &BezierPathStrength, 1.0f, 1.0f, 2000.0f);
+
+        if (ImGui::Button("Generate For All Links"))
+        {
+            GenerateNodeIdsAndRenameActors();
+            Refresh();
+
+            const int32 Count = GenerateBezierPathPointsForAllLinks(BezierPathSampleCount, BezierPathStrength);
+            UE_LOG("CombatMapEditor: generated Bezier path points for %d links", Count);
+
+            Refresh();
+            ResetGraphLayoutFromScene();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close"))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void FCombatMapEditorWidget::RenderValidationPopup()
 {
     if (bPendingOpenValidationPopup)
@@ -1150,6 +1279,97 @@ FVector FCombatMapEditorWidget::GraphToWorld(const ImVec2& Position) const
 {
     const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
     return FVector(Position.x * SafeUnitsPerGraphUnit, Position.y * SafeUnitsPerGraphUnit, 0.0f);
+}
+
+UCombatCoverNodeComponent* FCombatMapEditorWidget::FindLinkTargetNode(const FCombatCoverLink& Link) const
+{
+    if (Link.TargetNodeId.empty())
+    {
+        return nullptr;
+    }
+
+    for (UCombatCoverNodeComponent* Candidate : CachedNodes)
+    {
+        if (IsValidCombatNode(Candidate) && Candidate->GetNodeId() == Link.TargetNodeId)
+        {
+            return Candidate;
+        }
+    }
+
+    return nullptr;
+}
+
+bool FCombatMapEditorWidget::GenerateBezierPathPointsForLink(
+    UCombatCoverNodeComponent* SourceNode,
+    FCombatCoverLink& Link,
+    int32 SampleCount,
+    float Strength)
+{
+    if (!IsValidCombatNode(SourceNode))
+    {
+        return false;
+    }
+
+    UCombatCoverNodeComponent* TargetNode = FindLinkTargetNode(Link);
+    if (!IsValidCombatNode(TargetNode))
+    {
+        return false;
+    }
+
+    SampleCount = (std::max)(1, (std::min)(64, SampleCount));
+    Strength = (std::max)(1.0f, Strength);
+
+    const ImVec2 P0 = WorldToGraph(SourceNode->GetOwner()->GetActorLocation());
+    const ImVec2 P3 = WorldToGraph(TargetNode->GetOwner()->GetActorLocation());
+
+    const float DX = P3.x - P0.x;
+    const float DY = P3.y - P0.y;
+    const float Distance = std::sqrt(DX * DX + DY * DY);
+    const float HalfDistance = Distance * 0.5f;
+    constexpr float HalfPi = 1.57079632679489661923f;
+    if (HalfDistance < Strength)
+    {
+        Strength = Strength * std::sin(HalfPi * HalfDistance / Strength);
+    }
+
+    const ImVec2 StartDir(1.0f, 0.0f);
+    const ImVec2 EndDir(-1.0f, 0.0f);
+    const ImVec2 P1 = AddImVec2(P0, MulImVec2(StartDir, Strength));
+    const ImVec2 P2 = AddImVec2(P3, MulImVec2(EndDir, Strength));
+
+    Link.PathPoints.clear();
+    Link.PathPoints.reserve(static_cast<size_t>(SampleCount));
+    for (int32 Index = 1; Index <= SampleCount; ++Index)
+    {
+        const float T = static_cast<float>(Index) / static_cast<float>(SampleCount + 1);
+        FVector WorldPoint = GraphToWorld(CubicBezierPoint(P0, P1, P2, P3, T));
+        WorldPoint.Z = SourceNode->GetOwner()->GetActorLocation().Z;
+        Link.PathPoints.push_back(WorldPoint);
+    }
+
+    return true;
+}
+
+int32 FCombatMapEditorWidget::GenerateBezierPathPointsForAllLinks(int32 SampleCount, float Strength)
+{
+    int32 Count = 0;
+    for (UCombatCoverNodeComponent* SourceNode : CachedNodes)
+    {
+        if (!IsValidCombatNode(SourceNode))
+        {
+            continue;
+        }
+
+        TArray<FCombatCoverLink>& Links = SourceNode->GetMutableLinks();
+        for (FCombatCoverLink& Link : Links)
+        {
+            if (GenerateBezierPathPointsForLink(SourceNode, Link, SampleCount, Strength))
+            {
+                ++Count;
+            }
+        }
+    }
+    return Count;
 }
 
 void FCombatMapEditorWidget::EnsureGraphNodePositionFromScene(UCombatCoverNodeComponent* Node, int32 /*NodeIndex*/)

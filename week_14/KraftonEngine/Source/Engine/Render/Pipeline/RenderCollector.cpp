@@ -1,6 +1,7 @@
 #include "RenderCollector.h"
 
 #include "Component/ActorComponent.h"
+#include "Component/Gameplay/CombatFlowManagerComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Profiling/Stats/Stats.h"
@@ -62,6 +63,7 @@ void FRenderCollector::Collect(UWorld* World, const FFrameContext& Frame, FColle
 	}
 
 	FilterVisibleProxies(Frame, Scene, Output);
+	CollectCombatCoverDebugVisuals(World, Scene);
 }
 
 void FRenderCollector::CollectGrid(float GridSpacing, int32 GridHalfLineCount, FScene& Scene)
@@ -225,6 +227,28 @@ void FRenderCollector::CollectSelectedActorVisuals(FScene& Scene)
 		{
 			if (IsValid(Comp))
 				Comp->ContributeSelectedVisuals(Scene);
+		}
+	}
+}
+
+void FRenderCollector::CollectCombatCoverDebugVisuals(UWorld* World, FScene& Scene)
+{
+	if (!World)
+	{
+		return;
+	}
+
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!IsValid(Actor))
+		{
+			continue;
+		}
+
+		UCombatFlowManagerComponent* Manager = Actor->GetComponentByClass<UCombatFlowManagerComponent>();
+		if (Manager && Manager->GetDrawAllNodeDebugVisuals())
+		{
+			Manager->DrawAllDebugVisuals(true);
 		}
 	}
 }
