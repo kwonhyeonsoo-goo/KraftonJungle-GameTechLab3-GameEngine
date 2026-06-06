@@ -15,6 +15,8 @@
 
 namespace
 {
+	int32 GRuntimeUILayoutSerializingPayloadVersion = URuntimeUILayoutAsset::CurrentPayloadVersion;
+
 	const char* GetWidgetTypeName(ERuntimeUIWidgetType Type)
 	{
 		switch (Type)
@@ -106,6 +108,11 @@ namespace
 		return std::to_string(Value) + "px";
 	}
 
+	FString ToPercent(float Value)
+	{
+		return std::to_string(Value) + "%";
+	}
+
 	FString MakeRelativeHref(const std::filesystem::path& RmlPath, const std::filesystem::path& RcssPath)
 	{
 		std::error_code Ec;
@@ -193,13 +200,39 @@ namespace
 		const FString SafeId = ToCssId(Node.Id);
 		Stream << "#" << SafeId << " {\n";
 		Stream << "    position: " << (bIsRoot ? "relative" : "absolute") << ";\n";
-		Stream << "    left: " << ToPx(Node.Position.X) << ";\n";
-		Stream << "    top: " << ToPx(Node.Position.Y) << ";\n";
-		Stream << "    width: " << ToPx(Node.Size.X) << ";\n";
-		Stream << "    height: " << ToPx(Node.Size.Y) << ";\n";
+		if (Node.bUseRight)
+		{
+			Stream << "    right: " << ToPx(Node.Right) << ";\n";
+		}
+		else
+		{
+			Stream << "    left: " << (Node.bUseLeftPercent ? ToPercent(Node.PositionPercent.X) : ToPx(Node.Position.X)) << ";\n";
+		}
+		if (Node.bUseBottom)
+		{
+			Stream << "    bottom: " << ToPx(Node.Bottom) << ";\n";
+		}
+		else
+		{
+			Stream << "    top: " << (Node.bUseTopPercent ? ToPercent(Node.PositionPercent.Y) : ToPx(Node.Position.Y)) << ";\n";
+		}
+		Stream << "    width: " << (Node.bUseWidthPercent ? ToPercent(Node.SizePercent.X) : ToPx(Node.Size.X)) << ";\n";
+		Stream << "    height: " << (Node.bUseHeightPercent ? ToPercent(Node.SizePercent.Y) : ToPx(Node.Size.Y)) << ";\n";
 		Stream << "    box-sizing: border-box;\n";
 		Stream << "    overflow: hidden;\n";
 		Stream << "    opacity: " << Node.Opacity << ";\n";
+		if (Node.bUseFlexLayout)
+		{
+			Stream << "    display: flex;\n";
+			if (!Node.JustifyContent.empty())
+			{
+				Stream << "    justify-content: " << Node.JustifyContent << ";\n";
+			}
+			if (!Node.AlignItems.empty())
+			{
+				Stream << "    align-items: " << Node.AlignItems << ";\n";
+			}
+		}
 		Stream << "    background-color: " << ToRcssColor(Node.BackgroundColor) << ";\n";
 		Stream << "    color: " << ToRcssColor(Node.TextColor) << ";\n";
 		Stream << "    border-color: " << ToRcssColor(Node.BorderColor) << ";\n";
@@ -220,6 +253,10 @@ namespace
 		{
 			Stream << "    object-fit: " << GetImageFitName(Node.ImageFit) << ";\n";
 		}
+		if (!Node.MaskImagePath.empty())
+		{
+			Stream << "    mask-image: url(" << Node.MaskImagePath << ");\n";
+		}
 		Stream << "}\n\n";
 	}
 }
@@ -233,6 +270,7 @@ void URuntimeUILayoutAsset::Serialize(FArchive& Ar)
 {
 	int32 Version = CurrentPayloadVersion;
 	Ar << Version;
+	GRuntimeUILayoutSerializingPayloadVersion = Version;
 	Ar << AssetPath;
 	Ar << GeneratedRmlPath;
 	Ar << GeneratedRcssPath;
@@ -243,6 +281,7 @@ void URuntimeUILayoutAsset::Serialize(FArchive& Ar)
 	{
 		RebuildChildrenFromParents();
 	}
+	GRuntimeUILayoutSerializingPayloadVersion = CurrentPayloadVersion;
 }
 
 void URuntimeUILayoutAsset::ResetToDefault()
@@ -600,8 +639,17 @@ FArchive& operator<<(FArchive& Ar, FRuntimeUIWidgetNode& Node)
 	Ar << Node.Children;
 	Ar << Node.Position;
 	Ar << Node.Size;
+	if (GRuntimeUILayoutSerializingPayloadVersion >= 2)
+	{
+		Ar << Node.PositionPercent;
+		Ar << Node.SizePercent;
+	}
 	Ar << Node.Text;
 	Ar << Node.ImagePath;
+	if (GRuntimeUILayoutSerializingPayloadVersion >= 4)
+	{
+		Ar << Node.MaskImagePath;
+	}
 	Ar << Node.StyleClass;
 	Ar << Node.OnClickAction;
 	Ar << Node.BackgroundColor;
@@ -612,6 +660,13 @@ FArchive& operator<<(FArchive& Ar, FRuntimeUIWidgetNode& Node)
 	Ar << Node.BorderRadius;
 	Ar << Node.FontSize;
 	Ar << Node.Opacity;
+	if (GRuntimeUILayoutSerializingPayloadVersion >= 2)
+	{
+		Ar << Node.Right;
+		Ar << Node.Bottom;
+		Ar << Node.JustifyContent;
+		Ar << Node.AlignItems;
+	}
 
 	int32 ImageFit = static_cast<int32>(Node.ImageFit);
 	Ar << ImageFit;
@@ -621,5 +676,19 @@ FArchive& operator<<(FArchive& Ar, FRuntimeUIWidgetNode& Node)
 	}
 
 	Ar << Node.bVisible;
+	if (GRuntimeUILayoutSerializingPayloadVersion >= 2)
+	{
+		Ar << Node.bUseLeftPercent;
+		Ar << Node.bUseTopPercent;
+		Ar << Node.bUseWidthPercent;
+		Ar << Node.bUseHeightPercent;
+		Ar << Node.bUseRight;
+		Ar << Node.bUseBottom;
+		Ar << Node.bUseFlexLayout;
+	}
+	if (GRuntimeUILayoutSerializingPayloadVersion >= 3)
+	{
+		Ar << Node.bLockAspectRatio;
+	}
 	return Ar;
 }

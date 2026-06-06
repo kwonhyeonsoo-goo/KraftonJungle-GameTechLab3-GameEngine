@@ -11,6 +11,7 @@
 #include "Engine/Input/InputSystem.h"
 #include "GameFramework/Actor/DecalActor.h"
 #include "GameFramework/Actor/HeightFogActor.h"
+#include "GameFramework/Actor/TextActor.h"
 #include "GameFramework/Actor/TriggerVolumeBase.h"
 #include "GameFramework/Actor/TriggerVolumeParticle.h"
 #include "GameFramework/Light/AmbientLightActor.h"
@@ -1992,6 +1993,7 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 		PlaceActorMenuItem("Box Collider", EViewportPlaceActorType::BoxCollider);
 		PlaceActorMenuItem("Sphere Collider", EViewportPlaceActorType::SphereCollider);
 		PlaceActorMenuItem("Capsule Collider", EViewportPlaceActorType::CapsuleCollider);
+		PlaceActorMenuItem("Text", EViewportPlaceActorType::Text);
 		PlaceActorMenuItem("Trigger Volume", EViewportPlaceActorType::TriggerVolume);
 		PlaceActorMenuItem("Trigger Volume (Particle)", EViewportPlaceActorType::TriggerVolumeParticle);
 		PlaceActorMenuItem("Skeletal Mesh Actor", EViewportPlaceActorType::SkeletalMesh);
@@ -2279,6 +2281,17 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 		{
 			Actor->InitDefaultComponents();
 			SpawnedActor = Actor;
+		}
+		break;
+	}
+	case EViewportPlaceActorType::Text:
+	{
+		ATextActor* Actor = World->SpawnActor<ATextActor>();
+		if (Actor)
+		{
+			Actor->InitDefaultComponents();
+			SpawnedActor = Actor;
+			SpawnLocation.Z += 1.0f;
 		}
 		break;
 	}

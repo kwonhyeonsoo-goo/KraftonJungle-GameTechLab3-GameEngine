@@ -3,6 +3,7 @@
 #include "Component/Camera/CameraComponent.h"
 #include "Engine/Input/InputSystem.h"
 #include "Math/MathUtils.h"
+#include "UI/CursorSystem.h"
 #include "UI/UIManager.h"
 #include "Core/Logging/Log.h"
 #include "Viewport/Viewport.h"
@@ -25,6 +26,7 @@ void UGameViewportClient::EndGameSession()
 	// 이걸 안 풀면 ::ShowCursor 카운터 음수 + ::ClipCursor 클립이 종료 후에도 남아 다른 앱
 	// 까지 영향받음 (특히 ClipCursor 는 프로세스 종료 후에도 잔존하다가 다음 SetCursorPos
 	// 까지 유지될 수 있다).
+	FCursorSystem::Get().ResetRuntimeState();
 	SetCursorCaptured(false);
 	Viewport = nullptr;
 }
@@ -177,6 +179,7 @@ void UGameViewportClient::SetInputPossessed(bool bPossessed)
 	if (!bPossessed)
 	{
 		ClearGameInputSnapshot();
+		FCursorSystem::Get().SetSoftwareCursorVisible(false);
 		ReleaseGameCapture();
 	}
 }
@@ -211,6 +214,25 @@ void UGameViewportClient::SetCursorVisible(bool bVisible)
 void UGameViewportClient::SetCursorLocked(bool bLocked)
 {
 	SetMouseCaptured(bLocked);
+}
+
+void UGameViewportClient::RefreshCursorVisibility()
+{
+	const bool bShowHardwareCursor = !bCursorCaptured &&
+		(!bInputPossessed || !FCursorSystem::Get().IsSoftwareCursorActive());
+	if (bShowHardwareCursor)
+	{
+		while (::ShowCursor(TRUE) < 0) {}
+	}
+	else
+	{
+		while (::ShowCursor(FALSE) >= 0) {}
+	}
+
+	if (!bCursorCaptured)
+	{
+		::ClipCursor(nullptr);
+	}
 }
 
 void UGameViewportClient::SetMouseCaptured(bool bCaptured)
@@ -307,8 +329,7 @@ void UGameViewportClient::SetCursorCaptured(bool bCaptured)
 		return;
 	}
 
-	while (::ShowCursor(TRUE) < 0) {}
-	::ClipCursor(nullptr);
+	RefreshCursorVisibility();
 }
 
 void UGameViewportClient::ApplyCursorClip()

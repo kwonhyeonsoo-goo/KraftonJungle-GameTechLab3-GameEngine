@@ -51,7 +51,7 @@ public:
 	void Serialize(FArchive& Ar) override;
 
 	// FLuaScriptManager 가 .lua 변경 감지 시 호출.
-	void ReloadScript();
+	bool ReloadScript();
 
 	// Lua state shutdown 전에 sol reference 를 명시적으로 해제한다.
 	void ReleaseLuaRuntimeForShutdown();
@@ -59,7 +59,7 @@ public:
 private:
 	void ClearGraph();      // ReloadScript 경로 — RootNode + OwnedNodes + lua env 정리.
 	void InstallBindings();
-	void DispatchLuaInit();
+	bool DispatchLuaInit();
 
 	int32 StoreLuaTransitionCondition(sol::protected_function Condition);
 	bool EvaluateLuaTransitionCondition(int32 ConditionIndex, uint32 Generation);
@@ -74,6 +74,7 @@ private:
 	sol::protected_function       LuaOnNotify;
 	sol::table                    LuaSelf;        // self table — lua 가 변수 저장 (self.Speed 등)
 
+	bool                          bLastScriptLoadSucceeded = false;
 	TArray<float>                 LuaMorphWeights;
 	TArray<uint8>                 LuaMorphOverrideMask;
 	bool                          bLuaMorphOverrideEnabled = false;

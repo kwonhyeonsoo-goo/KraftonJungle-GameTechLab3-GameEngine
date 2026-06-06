@@ -109,7 +109,9 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
 	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
 	InputComponent->AddActionMapping("SniperScope", "RightMouseButton");
+	InputComponent->AddActionMapping("SniperHoldBreath", "Shift");
 	InputComponent->AddActionMapping("SniperHoldBreath", "LeftShift");
+	InputComponent->AddActionMapping("SniperHoldBreath", "RightShift");
 	InputComponent->AddActionMapping("SniperSwitchAmmoNormal", "1");
 	InputComponent->AddActionMapping("SniperSwitchAmmoAntiMaterial", "2");
 
@@ -216,6 +218,9 @@ void ASniperPawn::CacheComponentReferences()
 void ASniperPawn::SyncSniperRuntimeState()
 {
 	InputState = FSniperInputState{};
+	bUseControllerRotationPitch = true;
+	bUseControllerRotationYaw = true;
+
 	if (Camera)
 	{
 		ScopeState.NormalFOV = Camera->GetFOV();

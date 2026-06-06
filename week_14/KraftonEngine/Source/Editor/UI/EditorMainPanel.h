@@ -59,6 +59,7 @@ private:
 	void RenderActiveDocument(float ReservedTopHeight, float ReservedBottomHeight, float DeltaTime);
 	void RenderRuntimeUIPreviewDocument();
 	void ReloadRuntimeUIPreviewDocument();
+	bool SaveRuntimeUIPreviewSources();
 	bool MountRuntimeUIPreviewInViewport(bool bForceReload);
 	void UnmountRuntimeUIPreviewFromViewport();
 	bool IsRuntimeUIPreviewMounted() const;
@@ -91,11 +92,19 @@ private:
 
 	FString RuntimeUIPreviewPath;
 	FString RuntimeUIPreviewSource;
+	FString RuntimeUIPreviewSourceEditBuffer;
+	TArray<char> RuntimeUIPreviewSourceEditBytes;
+	FString RuntimeUIPreviewRcssPath;
+	FString RuntimeUIPreviewRcssSource;
+	FString RuntimeUIPreviewRcssEditBuffer;
+	TArray<char> RuntimeUIPreviewRcssEditBytes;
 	FString RuntimeUIPreviewError;
 	TArray<FString> RuntimeUIPreviewActionEvents;
 	TArray<FString> RuntimeUIPreviewElementIds;
 	TArray<FString> RuntimeUIPreviewRuntimeEvents;
 	UUserWidget* RuntimeUIPreviewViewportWidget = nullptr;
+	bool bRuntimeUIPreviewSourceDirty = false;
+	bool bRuntimeUIPreviewRcssDirty = false;
 
 	bool bShowWidgetList = false;
 	bool bShowShortcutOverlay = false;

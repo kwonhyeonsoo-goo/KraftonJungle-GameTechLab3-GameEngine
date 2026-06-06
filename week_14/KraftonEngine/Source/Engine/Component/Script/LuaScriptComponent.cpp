@@ -65,7 +65,7 @@ void ULuaScriptComponent::BeginDestroy()
 	UActorComponent::BeginDestroy();
 }
 
-void ULuaScriptComponent::InitializeLua()
+bool ULuaScriptComponent::InitializeLua()
 {
 	ClearLuaRuntime();
 	bEndPlayRouted = false;
@@ -85,7 +85,7 @@ void ULuaScriptComponent::InitializeLua()
 	{
 		UE_LOG("Failed to read Lua script %s", ResolvedPath.c_str());
 		ClearLuaRuntime();
-		return;
+		return false;
 	}
 	sol::protected_function_result Result = Lua.safe_script(Content, Env, sol::script_pass_on_error, ResolvedPath);
 
@@ -95,7 +95,7 @@ void ULuaScriptComponent::InitializeLua()
 		UE_LOG("Failed to load Lua script %s: %s", ScriptFile.c_str(), Err.what());
 		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		ClearLuaRuntime();
-		return;
+		return false;
 	}
 
 	LuaBeginPlay = Env["BeginPlay"];
@@ -106,14 +106,19 @@ void ULuaScriptComponent::InitializeLua()
 	LuaOnHit = Env["OnHit"];
 	LuaOnEndHit = Env["OnEndHit"];
 	LuaOnSniperHit = Env["OnSniperHit"];
+	return true;
 }
 
-void ULuaScriptComponent::ReloadScript()
+bool ULuaScriptComponent::ReloadScript()
 {
 	ClearCollisionBindings();
 	ClearSniperBindings();
-	InitializeLua();
+	if (!InitializeLua())
+	{
+		return false;
+	}
 
+	bool bReloaded = true;
 	if (LuaBeginPlay)
 	{
 		FLuaCallScope Scope(this);
@@ -123,11 +128,13 @@ void ULuaScriptComponent::ReloadScript()
 			sol::error Err = Result;
 			UE_LOG("Lua BeginPlay error in %s: %s", ScriptFile.c_str(), Err.what());
 			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
+			bReloaded = false;
 		}
 	}
 
 	BindOwnerCollisionEvents();
 	BindOwnerSniperEvents();
+	return bReloaded;
 }
 
 void ULuaScriptComponent::BeginPlay()
@@ -135,10 +142,10 @@ void ULuaScriptComponent::BeginPlay()
 	EnsureDefaultScriptFile();
 	UActorComponent::BeginPlay();
 
-	InitializeLua();
+	const bool bLuaLoaded = InitializeLua();
 	FLuaScriptManager::RegisterComponent(this);
 
-	if (LuaBeginPlay)
+	if (bLuaLoaded && LuaBeginPlay)
 	{
 		FLuaCallScope Scope(this);
 		sol::protected_function_result Result = LuaBeginPlay();

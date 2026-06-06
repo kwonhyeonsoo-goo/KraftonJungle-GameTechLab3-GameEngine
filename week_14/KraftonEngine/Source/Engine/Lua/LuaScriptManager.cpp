@@ -80,6 +80,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/Actor/ParticleSystemActor.h"
+#include "GameFramework/Actor/TextActor.h"
 #include "GameFramework/Camera/CameraModifier.h"
 #include "GameFramework/Camera/CameraShakeBase.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
@@ -121,6 +122,7 @@
 #include "Serialization/PrefabManager.h"
 #include "SimpleJSON/json.hpp"
 #include "Texture/Texture2D.h"
+#include "UI/CursorSystem.h"
 #include "UI/UIManager.h"
 #include "UI/UserWidget.h"
 #include "Viewport/GameViewportClient.h"
@@ -171,6 +173,14 @@ namespace
     FString LuaUiToPx(float Value)
     {
         return std::to_string(Value) + "px";
+    }
+
+    sol::table LuaUiMakeViewportSizeTable(const FVector2& Size)
+    {
+        sol::table Result = FLuaScriptManager::GetState().create_table();
+        Result["Width"] = Size.X;
+        Result["Height"] = Size.Y;
+        return Result;
     }
 
     FString LuaUiToSeconds(float Value)
@@ -613,8 +623,11 @@ void FLuaScriptManager::OnScriptsChanged(const TSet<FString>& ChangedFiles)
         if (!Component) continue;
 
         UE_LOG("[LuaHotReload] Reloading: %s", Component->GetScriptFile().c_str());
-        FNotificationManager::Get().AddNotification("Lua Reloaded: " + Component->GetScriptFile(), ENotificationType::Success, 3.0f);
-        Component->ReloadScript();
+        const bool bReloaded = Component->ReloadScript();
+        FNotificationManager::Get().AddNotification(
+            (bReloaded ? "Lua Reloaded: " : "Lua Reload Failed: ") + Component->GetScriptFile(),
+            bReloaded ? ENotificationType::Success : ENotificationType::Error,
+            bReloaded ? 3.0f : 5.0f);
     }
 
     // AnimInstance 측도 같은 패턴 — 매칭되는 ScriptFile 의 인스턴스 reload.
@@ -652,8 +665,11 @@ void FLuaScriptManager::OnScriptsChanged(const TSet<FString>& ChangedFiles)
     {
         if (!Inst) continue;
         UE_LOG("[LuaHotReload] Reloading Anim: %s", Inst->ScriptFile.c_str());
-        FNotificationManager::Get().AddNotification("Anim Reloaded: " + Inst->ScriptFile, ENotificationType::Success, 3.0f);
-        Inst->ReloadScript();
+        const bool bReloaded = Inst->ReloadScript();
+        FNotificationManager::Get().AddNotification(
+            (bReloaded ? "Anim Reloaded: " : "Anim Reload Failed: ") + Inst->ScriptFile,
+            bReloaded ? ENotificationType::Success : ENotificationType::Error,
+            bReloaded ? 3.0f : 5.0f);
     }
 }
 
@@ -1919,6 +1935,12 @@ namespace
         return GEngine ? GEngine->GetGameViewportClient() : nullptr;
     }
 
+    UGameViewportClient* GetLuaPossessedGameViewportClient()
+    {
+        UGameViewportClient* ViewportClient = GetLuaGameViewportClient();
+        return ViewportClient && ViewportClient->IsPossessed() ? ViewportClient : nullptr;
+    }
+
     void AppendUtf8Codepoint(FString& Out, uint32_t Codepoint)
     {
         if (Codepoint <= 0x7F)
@@ -2599,7 +2621,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "SetCursorVisible",
         [](bool bVisible)
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
+            {
+                GameViewportClient->SetCursorVisible(bVisible);
+                return true;
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "SetShowMouseCursor",
+        [](bool bVisible)
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 GameViewportClient->SetCursorVisible(bVisible);
                 return true;
@@ -2612,7 +2647,19 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "IsCursorVisible",
         []()
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
+            {
+                return GameViewportClient->IsCursorVisible();
+            }
+
+            return false;
+        }
+    );
+    Input.set_function(
+        "IsShowMouseCursor",
+        []()
+        {
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 return GameViewportClient->IsCursorVisible();
             }
@@ -2624,7 +2671,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "SetCursorLocked",
         [](bool bLocked)
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 GameViewportClient->SetCursorLocked(bLocked);
                 return true;
@@ -2637,7 +2684,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "IsCursorLocked",
         []()
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 return GameViewportClient->IsCursorLocked();
             }
@@ -2649,7 +2696,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "SetMouseCaptured",
         [](bool bCaptured)
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 GameViewportClient->SetMouseCaptured(bCaptured);
                 return true;
@@ -2662,7 +2709,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "SetMouseCapture",
         [](bool bCaptured)
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 GameViewportClient->SetMouseCaptured(bCaptured);
                 return true;
@@ -2675,7 +2722,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "IsMouseCaptured",
         []()
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 return GameViewportClient->IsMouseCaptured();
             }
@@ -2687,13 +2734,153 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "ReleaseMouseCapture",
         []()
         {
-            if (UGameViewportClient* GameViewportClient = GetLuaGameViewportClient())
+            if (UGameViewportClient* GameViewportClient = GetLuaPossessedGameViewportClient())
             {
                 GameViewportClient->ReleaseMouseCapture();
                 return true;
             }
 
             return false;
+        }
+    );
+
+    // Cursor - runtime software cursor.
+    Input.set_function(
+        "SetSoftwareCursorVisible",
+        [](bool bVisible)
+        {
+            if (!GetLuaPossessedGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().SetSoftwareCursorVisible(bVisible);
+            return true;
+        }
+    );
+    Input.set_function(
+        "IsSoftwareCursorVisible",
+        []()
+        {
+            return GetLuaPossessedGameViewportClient() && FCursorSystem::Get().IsSoftwareCursorVisible();
+        }
+    );
+    Input.set_function(
+        "SetCursorImage",
+        [](const FString& TexturePath, sol::optional<float> Width, sol::optional<float> Height, sol::optional<float> HotSpotX, sol::optional<float> HotSpotY)
+        {
+            if (!GetLuaPossessedGameViewportClient())
+            {
+                return false;
+            }
+
+            return FCursorSystem::Get().SetCursorImage(
+                TexturePath,
+                Width.value_or(0.0f),
+                Height.value_or(0.0f),
+                HotSpotX.value_or(0.0f),
+                HotSpotY.value_or(0.0f));
+        }
+    );
+    Input.set_function(
+        "ClearCursorImage",
+        []()
+        {
+            if (!GetLuaPossessedGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().ClearCursorImage();
+            return true;
+        }
+    );
+    Input.set_function(
+        "SetCursorHotSpot",
+        [](float X, float Y)
+        {
+            if (!GetLuaPossessedGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().SetCursorHotSpot(X, Y);
+            return true;
+        }
+    );
+    Input.set_function(
+        "SetCursorSize",
+        [](float Width, float Height)
+        {
+            if (!GetLuaPossessedGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().SetCursorSize(Width, Height);
+            return true;
+        }
+    );
+    Input.set_function(
+        "SetCursorHitBox",
+        [](float OffsetX, float OffsetY, float Width, float Height)
+        {
+            if (!GetLuaPossessedGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().SetCursorHitBox(OffsetX, OffsetY, Width, Height);
+            return true;
+        }
+    );
+    Input.set_function(
+        "IsCursorOverRect",
+        [](float X, float Y, float Width, float Height)
+        {
+            return GetLuaPossessedGameViewportClient() && FCursorSystem::Get().IsCursorOverRect(X, Y, Width, Height);
+        }
+    );
+    Input.set_function(
+        "GetCursorX",
+        []()
+        {
+            return FCursorSystem::Get().GetCursorX();
+        }
+    );
+    Input.set_function(
+        "GetCursorY",
+        []()
+        {
+            return FCursorSystem::Get().GetCursorY();
+        }
+    );
+    Input.set_function(
+        "GetCursorHitX",
+        []()
+        {
+            return FCursorSystem::Get().GetCursorHitX();
+        }
+    );
+    Input.set_function(
+        "GetCursorHitY",
+        []()
+        {
+            return FCursorSystem::Get().GetCursorHitY();
+        }
+    );
+    Input.set_function(
+        "GetCursorHitWidth",
+        []()
+        {
+            return FCursorSystem::Get().GetCursorHitWidth();
+        }
+    );
+    Input.set_function(
+        "GetCursorHitHeight",
+        []()
+        {
+            return FCursorSystem::Get().GetCursorHitHeight();
         }
     );
 
@@ -3070,20 +3257,14 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "GetViewportSize",
         []() -> sol::table
         {
-            sol::table Result = FLuaScriptManager::GetState().create_table();
-            Result["Width"] = 0.0f;
-            Result["Height"] = 0.0f;
-
-            if (GEngine)
-            {
-                if (FWindowsWindow* Window = GEngine->GetWindow())
-                {
-                    Result["Width"] = Window->GetWidth();
-                    Result["Height"] = Window->GetHeight();
-                }
-            }
-
-            return Result;
+            return LuaUiMakeViewportSizeTable(UUIManager::Get().GetVirtualViewportSize());
+        }
+    );
+    Application.set_function(
+        "GetPhysicalViewportSize",
+        []() -> sol::table
+        {
+            return LuaUiMakeViewportSizeTable(UUIManager::Get().GetPhysicalViewportSize());
         }
     );
 
@@ -3196,20 +3377,14 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         "GetViewportSize",
         []() -> sol::table
         {
-            sol::table Result = FLuaScriptManager::GetState().create_table();
-            Result["Width"]   = 0.0f;
-            Result["Height"]  = 0.0f;
-
-            if (GEngine)
-            {
-                if (FWindowsWindow* Window = GEngine->GetWindow())
-                {
-                    Result["Width"]  = Window->GetWidth();
-                    Result["Height"] = Window->GetHeight();
-                }
-            }
-
-            return Result;
+            return LuaUiMakeViewportSizeTable(UUIManager::Get().GetVirtualViewportSize());
+        }
+    );
+    Engine.set_function(
+        "GetPhysicalViewportSize",
+        []() -> sol::table
+        {
+            return LuaUiMakeViewportSizeTable(UUIManager::Get().GetPhysicalViewportSize());
         }
     );
     Engine.set_function(
@@ -4409,6 +4584,11 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         {
             return IsValid(&Object) ? Cast<APawn>(&Object) : nullptr;
         },
+        "AsSniperPawn",
+        [](UObject& Object) -> ASniperPawn*
+        {
+            return IsValid(&Object) ? Cast<ASniperPawn>(&Object) : nullptr;
+        },
         "AsPrimitiveComponent",
         [](UObject& Object) -> UPrimitiveComponent*
         {
@@ -5518,10 +5698,22 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         {
             return LuaVector4ToTable(State, C.GetColor());
         },
+        "SetOpacity",
+        &UTextRenderComponent::SetOpacity,
+        "GetOpacity",
+        &UTextRenderComponent::GetOpacity,
         "SetFontSize",
         &UTextRenderComponent::SetFontSize,
         "GetFontSize",
         &UTextRenderComponent::GetFontSize,
+        "SetLetterSpacing",
+        &UTextRenderComponent::SetLetterSpacing,
+        "GetLetterSpacing",
+        &UTextRenderComponent::GetLetterSpacing,
+        "SetLineSpacing",
+        &UTextRenderComponent::SetLineSpacing,
+        "GetLineSpacing",
+        &UTextRenderComponent::GetLineSpacing,
         "SetRenderSpace",
         [](UTextRenderComponent& C, int32 Space)
         {
@@ -5532,6 +5724,14 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         {
             return static_cast<int32>(C.GetRenderSpace());
         },
+        "SetBillboardEnabled",
+        &UTextRenderComponent::SetTextBillboardEnabled,
+        "IsBillboardEnabled",
+        &UTextRenderComponent::IsTextBillboardEnabled,
+        "SetDepthTestEnabled",
+        &UTextRenderComponent::SetDepthTestEnabled,
+        "IsDepthTestEnabled",
+        &UTextRenderComponent::IsDepthTestEnabled,
         "SetScreenPosition",
         &UTextRenderComponent::SetScreenPosition,
         "GetScreenX",
@@ -6243,6 +6443,14 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &AParticleSystemActor::GetParticleSystemComponent
     );
 
+    Lua.new_usertype<ATextActor>(
+        "TextActor",
+        sol::base_classes,
+        sol::bases<AActor, UObject>(),
+        "GetTextRenderComponent",
+        &ATextActor::GetTextRenderComponent
+    );
+
     sol::table Particle = Lua.create_named_table("Particle");
     Particle.set_function(
         "LoadSystem",
@@ -6764,6 +6972,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             return IsValid(Actor);
         },
 
+        "AsSniperPawn",
+        [](AActor& Actor) -> ASniperPawn*
+        {
+            return Cast<ASniperPawn>(&Actor);
+        },
+
         "HasTag",
         [](AActor& Actor, const FString& Tag)
         {
@@ -7072,6 +7286,42 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         {
             Self.SetInputModeGameAndUI();
         },
+        "SetShowMouseCursor",
+        &APlayerController::SetShowMouseCursor,
+        "IsShowMouseCursor",
+        &APlayerController::IsShowMouseCursor,
+        "SetCursorVisible",
+        &APlayerController::SetShowMouseCursor,
+        "IsCursorVisible",
+        &APlayerController::IsShowMouseCursor,
+        "SetCursorLocked",
+        &APlayerController::SetCursorLocked,
+        "IsCursorLocked",
+        &APlayerController::IsCursorLocked,
+        "SetSoftwareCursorVisible",
+        &APlayerController::SetSoftwareCursorVisible,
+        "IsSoftwareCursorVisible",
+        &APlayerController::IsSoftwareCursorVisible,
+        "SetCursorImage",
+        [](APlayerController& Self, const FString& TexturePath, sol::optional<float> Width, sol::optional<float> Height, sol::optional<float> HotSpotX, sol::optional<float> HotSpotY)
+        {
+            return Self.SetCursorImage(
+                TexturePath,
+                Width.value_or(0.0f),
+                Height.value_or(0.0f),
+                HotSpotX.value_or(0.0f),
+                HotSpotY.value_or(0.0f));
+        },
+        "ClearCursorImage",
+        &APlayerController::ClearCursorImage,
+        "SetCursorHotSpot",
+        &APlayerController::SetCursorHotSpot,
+        "SetCursorSize",
+        &APlayerController::SetCursorSize,
+        "SetCursorHitBox",
+        &APlayerController::SetCursorHitBox,
+        "IsCursorOverRect",
+        &APlayerController::IsCursorOverRect,
         "SetViewTargetWithBlend",
         [](APlayerController& Self, AActor* Target, sol::optional<float> BlendTime)
         {
@@ -7131,7 +7381,13 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetHoldBreathGauge",
         &ASniperPawn::GetHoldBreathGauge,
         "GetMaxHoldBreathGauge",
-        &ASniperPawn::GetMaxHoldBreathGauge
+        &ASniperPawn::GetMaxHoldBreathGauge,
+        "IsHoldBreathInputHeld",
+        &ASniperPawn::IsHoldBreathInputHeld,
+        "GetHoldBreathDuration",
+        &ASniperPawn::GetHoldBreathDuration,
+        "GetHoldBreathGaugeRatio",
+        &ASniperPawn::GetHoldBreathGaugeRatio
     );
 
     Lua.new_usertype<AWheeledVehiclePawn>(
@@ -7267,6 +7523,10 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             AActor* Actor = W->SpawnActorByClass(Cls);
             if (IsValid(Actor))
             {
+                if (ATextActor* TextActor = Cast<ATextActor>(Actor))
+                {
+                    TextActor->InitDefaultComponents();
+                }
                 Actor->SetActorLocation(Location.value_or(FVector(0, 0, 0)));
                 Actor->SetActorRotation(Rotation.value_or(FVector(0, 0, 0)));
                 Actor->SetActorScale(Scale.value_or(FVector(1, 1, 1)));
@@ -7747,6 +8007,20 @@ void FLuaScriptManager::RegisterUIBindings(sol::state& Lua)
         [](const FString& DocumentPath)
         {
             return UUIManager::Get().CreateWidget(nullptr, DocumentPath);
+        }
+    );
+    UI.set_function(
+        "GetViewportSize",
+        []() -> sol::table
+        {
+            return LuaUiMakeViewportSizeTable(UUIManager::Get().GetVirtualViewportSize());
+        }
+    );
+    UI.set_function(
+        "GetPhysicalViewportSize",
+        []() -> sol::table
+        {
+            return LuaUiMakeViewportSizeTable(UUIManager::Get().GetPhysicalViewportSize());
         }
     );
     UI.set_function(
