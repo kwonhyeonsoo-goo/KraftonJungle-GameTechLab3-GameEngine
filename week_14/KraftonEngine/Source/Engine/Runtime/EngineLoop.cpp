@@ -37,6 +37,11 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int nShowCmd)
 			}
 		});
 
+	Application.SetOnCloseRequestedCallback([]()
+		{
+			return !GEngine || GEngine->CanCloseApplication();
+		});
+
 	CreateEngine();
 
 	{

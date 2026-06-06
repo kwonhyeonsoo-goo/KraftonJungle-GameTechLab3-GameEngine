@@ -750,11 +750,32 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 	}
 	else
 	{
-		//기즈모와 충돌하지 않았다면 월드 BVH를 통해 가장 가까운 프리미티브를 찾음
 		AActor* BestActor = nullptr;
-		if (UWorld* W = GetWorld())
+		FHitResult WorldHitResult{};
+		const bool bUseRayPicking = Settings && Settings->PickingMode == EEditorPickingMode::Ray;
+		if (bUseRayPicking)
 		{
-			W->RaycastPrimitives(Ray, HitResult, BestActor); //BVH 시작
+			if (UWorld* W = GetWorld())
+			{
+				W->RaycastPrimitives(Ray, WorldHitResult, BestActor);
+			}
+		}
+		else if (Viewport && GEngine)
+		{
+			ImVec2 MousePos = ImGui::GetIO().MousePos;
+			const float LocalMouseX = MousePos.x - ViewportScreenRect.X;
+			const float LocalMouseY = MousePos.y - ViewportScreenRect.Y;
+			const float VPWidth = static_cast<float>(Viewport->GetWidth());
+			const float VPHeight = static_cast<float>(Viewport->GetHeight());
+			if (LocalMouseX >= 0.0f && LocalMouseY >= 0.0f && LocalMouseX < VPWidth && LocalMouseY < VPHeight)
+			{
+				uint32 PickId = 0;
+				ID3D11DeviceContext* DeviceContext = GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext();
+				if (Viewport->ReadEditorIdPickAt(static_cast<uint32>(LocalMouseX), static_cast<uint32>(LocalMouseY), DeviceContext, PickId))
+				{
+					BestActor = Viewport->GetEditorIdPickActor(PickId);
+				}
+			}
 		}
 
 		bool bCtrlHeld = InputSystem::Get().GetKey(VK_CONTROL);
@@ -777,9 +798,9 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 			{
 				if (SelectionManager->GetPrimarySelection() == BestActor)
 				{
-					if (HitResult.HitComponent)
+					if (bUseRayPicking && WorldHitResult.HitComponent)
 					{
-						SelectionManager->SelectComponent(HitResult.HitComponent);
+						SelectionManager->SelectComponent(WorldHitResult.HitComponent);
 					}
 				}
 				else
@@ -804,13 +825,18 @@ void FEditorViewportClient::UpdateLayoutRect()
 	if (!LayoutWindow) return;
 
 	const FRect& R = LayoutWindow->GetRect();
-	ViewportScreenRect = R;
+	UpdateViewportRect(R);
+}
+
+void FEditorViewportClient::UpdateViewportRect(const FRect& InRect)
+{
+	ViewportScreenRect = InRect;
 
 	// FViewport 리사이즈 요청 (슬롯 크기와 RT 크기 동기화)
 	if (Viewport)
 	{
-		uint32 SlotW = static_cast<uint32>(R.Width);
-		uint32 SlotH = static_cast<uint32>(R.Height);
+		uint32 SlotW = static_cast<uint32>(InRect.Width);
+		uint32 SlotH = static_cast<uint32>(InRect.Height);
 		if (SlotW > 0 && SlotH > 0 && (SlotW != Viewport->GetWidth() || SlotH != Viewport->GetHeight()))
 		{
 			Viewport->RequestResize(SlotW, SlotH);
@@ -829,7 +855,12 @@ void FEditorViewportClient::RenderViewportImage(bool bIsActiveViewport)
 	ImVec2 Min(R.X, R.Y);
 	ImVec2 Max(R.X + R.Width, R.Y + R.Height);
 
-	DrawList->AddImage((ImTextureID)Viewport->GetSRV(), Min, Max);
+	ID3D11ShaderResourceView* DisplaySRV = Viewport->GetSRV();
+	if (RenderOptions.ViewMode == EViewMode::IdBuffer && Viewport->GetEditorIdPickDebugSRV())
+	{
+		DisplaySRV = Viewport->GetEditorIdPickDebugSRV();
+	}
+	DrawList->AddImage((ImTextureID)DisplaySRV, Min, Max);
 
 	// 활성 뷰포트 테두리 강조
 	if (bIsActiveViewport)

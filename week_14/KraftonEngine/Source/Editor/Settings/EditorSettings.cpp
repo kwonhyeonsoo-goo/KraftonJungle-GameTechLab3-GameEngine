@@ -11,6 +11,7 @@ namespace Key
 	constexpr const char* Viewport = "Viewport";
 	constexpr const char* MeshEditorViewport = "MeshEditorViewport";
 	constexpr const char* Paths = "Paths";
+	constexpr const char* PickingMode = "PickingMode";
 
 	// Viewport
 	constexpr const char* CameraSpeed = "CameraSpeed";
@@ -75,6 +76,12 @@ namespace Key
 	constexpr const char* Slots = "Slots";
 	constexpr const char* ViewportType = "ViewportType";
 	constexpr const char* SplitterRatios = "SplitterRatios";
+
+	// PIE Viewport Preview
+	constexpr const char* PIEViewportPreview = "PIEViewportPreview";
+	constexpr const char* bPIEFullscreenPreview = "bFullscreenPreview";
+	constexpr const char* bPIELockAspectRatio = "bLockAspectRatio";
+	constexpr const char* PIEAspectPreset = "AspectPreset";
 
 	// UI Widgets
 	constexpr const char* UIWidgets = "UIWidgets";
@@ -340,6 +347,7 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 
 	JSON Root = Object();
 	Root[Key::SkinningMode] = static_cast<int32>(SkinningModeRuntime::Get());
+	Root[Key::PickingMode] = static_cast<int32>(PickingMode);
 
 	// Viewport
 	JSON Viewport = SaveCameraControls(LevelViewportCameraControls);
@@ -380,6 +388,12 @@ void FEditorSettings::SaveToFile(const FString& Path) const
 	}
 	LayoutObj[Key::SplitterRatios] = RatiosArr;
 	Root[Key::Layout] = LayoutObj;
+
+	JSON PIEPreviewObj = Object();
+	PIEPreviewObj[Key::bPIEFullscreenPreview] = PIEViewportPreview.bFullscreenPreview;
+	PIEPreviewObj[Key::bPIELockAspectRatio] = PIEViewportPreview.bLockAspectRatio;
+	PIEPreviewObj[Key::PIEAspectPreset] = PIEViewportPreview.AspectPreset;
+	Root[Key::PIEViewportPreview] = PIEPreviewObj;
 
 	// UI Widgets
 	JSON WidgetsObj = Object();
@@ -445,6 +459,14 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 	JSON Root = JSON::Load(Content);
 	ESkinningMode LoadedSkinningMode = SkinningModeRuntime::Get();
 	bool bLoadedSkinningMode = TryLoadSkinningMode(Root, LoadedSkinningMode);
+	if (Root.hasKey(Key::PickingMode))
+	{
+		const int32 RawPickingMode = Root[Key::PickingMode].ToInt();
+		if (RawPickingMode >= 0 && RawPickingMode < static_cast<int32>(EEditorPickingMode::Count))
+		{
+			PickingMode = static_cast<EEditorPickingMode>(RawPickingMode);
+		}
+	}
 
 	// Viewport
 	if (Root.hasKey(Key::Viewport))
@@ -515,6 +537,27 @@ void FEditorSettings::LoadFromFile(const FString& Path)
 			for (int32 i = 0; i < SplitterCount; ++i)
 			{
 				SplitterRatios[i] = static_cast<float>(RatiosArr[i].ToFloat());
+			}
+		}
+	}
+
+	if (Root.hasKey(Key::PIEViewportPreview))
+	{
+		JSON PIEPreviewObj = Root[Key::PIEViewportPreview];
+		if (PIEPreviewObj.hasKey(Key::bPIEFullscreenPreview))
+			PIEViewportPreview.bFullscreenPreview = PIEPreviewObj[Key::bPIEFullscreenPreview].ToBool();
+		if (PIEPreviewObj.hasKey(Key::bPIELockAspectRatio))
+			PIEViewportPreview.bLockAspectRatio = PIEPreviewObj[Key::bPIELockAspectRatio].ToBool();
+		if (PIEPreviewObj.hasKey(Key::PIEAspectPreset))
+		{
+			PIEViewportPreview.AspectPreset = PIEPreviewObj[Key::PIEAspectPreset].ToInt();
+			if (PIEViewportPreview.AspectPreset < 0)
+			{
+				PIEViewportPreview.AspectPreset = 0;
+			}
+			if (PIEViewportPreview.AspectPreset > 4)
+			{
+				PIEViewportPreview.AspectPreset = 4;
 			}
 		}
 	}

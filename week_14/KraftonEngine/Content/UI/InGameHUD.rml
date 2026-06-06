@@ -1,0 +1,13 @@
+<rml>
+<head>
+    <link type="text/rcss" href="InGameHUD.rcss" />
+</head>
+<body>
+    <div id="hudRoot" data-ui-type="Canvas" data-ui-name="In Game HUD">
+        <img id="compassImage" data-ui-type="Image" data-ui-name="Compass Image" src="Image/Hor-Compass/Compass.png" />
+        <div id="scopeOverlay" data-ui-type="Panel" data-ui-name="Scope Overlay">
+            <img id="scopeImage" data-ui-type="Image" data-ui-name="Scope Image" src="Image/Scope/Scope_3.png" />
+        </div>
+    </div>
+</body>
+</rml>

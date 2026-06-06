@@ -270,6 +270,7 @@ struct FSystemResources
 
 	// --- Forward Fog CB (b7) — UberTransparent self-fog 용 전역 fog 파라미터 ---
 	FConstantBuffer ForwardFogBuffer;			// b7 — ECBSlot::ForwardFog
+	FConstantBuffer EditorPickingBuffer;			// b12 — ECBSlot::EditorPicking
 
 	// --- Lighting ---
 	FConstantBuffer LightingConstantBuffer;		// b4 — ECBSlot::Lighting

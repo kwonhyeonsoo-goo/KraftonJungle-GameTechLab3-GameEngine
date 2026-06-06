@@ -28,6 +28,7 @@ namespace ECBSlot
 	constexpr uint32 Lighting = 4;   // b4: LightingBuffer (Ambient + Directional + 메타)
 	constexpr uint32 Shadow = 5;     // b5: ShadowBuffer (Shadow 행렬 + 파라미터)
 	constexpr uint32 MeshScalarOverlay = 6; // b6: ViewModeMesh scalar overlay
+	constexpr uint32 EditorPicking = 12; // b12: editor ID picking
 	constexpr uint32 ForwardFog = 7; // b7: 전역 Fog 파라미터 (UberTransparent self-fog 용)
 }
 
@@ -126,6 +127,17 @@ struct FMeshScalarOverlayConstants
 	float OverlayAlpha = 0.8f;
 	float Pad = 0.0f;
 };
+
+struct FEditorPickingConstants
+{
+	uint32 PickingId = 0;
+	uint32 bUseAlphaTest = 0;
+	float AlphaCutoff = 0.01f;
+	float Padding0 = 0.0f;
+	FVector2 UVOffset = FVector2(0.0f, 0.0f);
+	FVector2 UVScale = FVector2(1.0f, 1.0f);
+};
+static_assert(sizeof(FEditorPickingConstants) % 16 == 0, "FEditorPickingConstants must be 16-byte aligned");
 
 // =============================================================================
 // Shadow 상수

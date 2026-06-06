@@ -38,6 +38,7 @@ public:
 	UGizmoComponent* GetGizmo() const;
 
 	void SetGizmoEnabled(bool bEnabled);
+	bool IsGizmoEnabled() const { return bGizmoEnabled; }
 	void SetWorld(UWorld* InWorld);
 	const char* GetReferencerName() const override { return "FSelectionManager"; }
 	void AddReferencedObjects(FReferenceCollector& Collector) override;

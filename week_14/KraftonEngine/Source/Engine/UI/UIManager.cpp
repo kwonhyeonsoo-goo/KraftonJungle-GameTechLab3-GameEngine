@@ -1366,66 +1366,73 @@ void UUIManager::ProcessInputAtPosition(int32 MouseX, int32 MouseY, bool bMouseI
 	const int KeyModifierState = GetRmlKeyModifierState(Input);
 	const FUIInputCaptureState CaptureState = GetViewportInputCaptureState();
 	const bool bTextInputFocused = IsElementOrAncestorFormControl(RmlContext->GetFocusElement());
+	const bool bShouldForwardMouse =
+		CaptureState.bWantsMouse ||
+		CaptureState.bBlocksGameInput ||
+		CaptureState.bBlocksGameMouseLook;
 	const bool bShouldForwardKeyboard = CaptureState.bWantsKeyboard || CaptureState.bWantsTextInput || bTextInputFocused;
 	const bool bShouldForwardText = CaptureState.bWantsTextInput || bTextInputFocused;
 
 	bDispatchingRmlEvents = true;
-	if (bMouseInsideViewport)
+	if (bShouldForwardMouse)
 	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseMove(MouseX, MouseY, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame ||
-			(!bMouseEventNotConsumed && RmlContext->IsMouseInteracting());
-	}
-	else
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseLeave();
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
+		if (bMouseInsideViewport)
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseMove(MouseX, MouseY, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame ||
+				(!bMouseEventNotConsumed && RmlContext->IsMouseInteracting());
+		}
+		else
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseLeave();
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
 
-	if (Input.GetKeyDown(VK_LBUTTON))
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(0, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
-	if (Input.GetKeyUp(VK_LBUTTON))
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
-	if (Input.GetKeyDown(VK_RBUTTON))
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(1, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
-	if (Input.GetKeyUp(VK_RBUTTON))
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(1, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
-	if (Input.GetKeyDown(VK_MBUTTON))
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(2, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
-	if (Input.GetKeyUp(VK_MBUTTON))
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(2, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
-	}
-	const float WheelDelta = Input.GetScrollNotches();
-	if (WheelDelta != 0.0f)
-	{
-		const bool bMouseEventNotConsumed = RmlContext->ProcessMouseWheel(WheelDelta, KeyModifierState);
-		LastFrameInputCaptureState.bConsumedMouseThisFrame =
-			LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		if (Input.GetKeyDown(VK_LBUTTON))
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(0, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
+		if (Input.GetKeyUp(VK_LBUTTON))
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
+		if (Input.GetKeyDown(VK_RBUTTON))
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(1, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
+		if (Input.GetKeyUp(VK_RBUTTON))
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(1, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
+		if (Input.GetKeyDown(VK_MBUTTON))
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(2, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
+		if (Input.GetKeyUp(VK_MBUTTON))
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(2, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
+		const float WheelDelta = Input.GetScrollNotches();
+		if (WheelDelta != 0.0f)
+		{
+			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseWheel(WheelDelta, KeyModifierState);
+			LastFrameInputCaptureState.bConsumedMouseThisFrame =
+				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
+		}
 	}
 
 	if (bShouldForwardKeyboard)

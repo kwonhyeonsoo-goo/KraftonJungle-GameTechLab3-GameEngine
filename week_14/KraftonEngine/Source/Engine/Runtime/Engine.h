@@ -31,6 +31,7 @@ public:
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	virtual void OnWindowResized(uint32 Width, uint32 Height);
+	virtual bool CanCloseApplication() { return true; }
 
 	// Lua / GameMode 어디서든 안전하게 호출 가능한 scene 전환 요청. 게임 빌드는 active world
 	// 를 다음 Tick 끝에 destroy 하고 새 scene 을 로드한다. 에디터(PIE) 빌드는 PIE 세션을 종료해

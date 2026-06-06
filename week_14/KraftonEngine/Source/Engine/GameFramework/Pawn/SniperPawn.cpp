@@ -5,6 +5,8 @@
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/SceneComponent.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/GameMode/PlayerController.h"
 #include "Math/MathUtils.h"
 
 #include <algorithm>
@@ -72,6 +74,20 @@ void ASniperPawn::BeginPlay()
 	SyncSniperRuntimeState();
 
 	APawn::BeginPlay();
+}
+
+void ASniperPawn::EndPlay()
+{
+	if (APlayerController* PC = GetController())
+	{
+		if (APlayerCameraManager* CameraManager = PC->GetPlayerCameraManager())
+		{
+			CameraManager->SetScopeZoomEnabled(false);
+			CameraManager->ClearScopeLens();
+		}
+	}
+
+	AActor::EndPlay();
 }
 
 void ASniperPawn::PostDuplicate()
@@ -200,6 +216,11 @@ void ASniperPawn::CacheComponentReferences()
 void ASniperPawn::SyncSniperRuntimeState()
 {
 	InputState = FSniperInputState{};
+	if (Camera)
+	{
+		ScopeState.NormalFOV = Camera->GetFOV();
+	}
+
 	ScopeState.bIsScoped = false;
 	ScopeState.TargetFOV = ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ScopeState.NormalFOV;
@@ -209,7 +230,24 @@ void ASniperPawn::SyncSniperRuntimeState()
 
 	if (Camera)
 	{
-		Camera->SetFOV(ScopeState.CurrentFOV);
+		Camera->SetFOV(ScopeState.NormalFOV);
+	}
+
+	if (APlayerController* PC = GetController())
+	{
+		if (APlayerCameraManager* CameraManager = PC->GetPlayerCameraManager())
+		{
+			CameraManager->SetScopeLensProfile(
+				ScopeLensRadius,
+				ScopeLensOuterBlurRadius,
+				ScopeState.CurrentFOV,
+				ScopeLensFeather,
+				ScopeLensEdgeBlurRadius,
+				ScopeLensIntensity,
+				ScopeState.CurrentSensitivity,
+				ScopeLensBlendTime);
+			CameraManager->SetScopeZoomEnabled(false);
+		}
 	}
 
 	FRotator Control = GetControlRotation();
@@ -238,7 +276,24 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 
 	if (Camera)
 	{
-		Camera->SetFOV(ScopeState.CurrentFOV);
+		Camera->SetFOV(ScopeState.NormalFOV);
+	}
+
+	if (APlayerController* PC = GetController())
+	{
+		if (APlayerCameraManager* CameraManager = PC->GetPlayerCameraManager())
+		{
+			CameraManager->SetScopeLensProfile(
+				ScopeLensRadius,
+				ScopeLensOuterBlurRadius,
+				ScopeState.CurrentFOV,
+				ScopeLensFeather,
+				ScopeLensEdgeBlurRadius,
+				ScopeLensIntensity,
+				ScopeState.CurrentSensitivity,
+				ScopeLensBlendTime);
+			CameraManager->SetScopeZoomEnabled(ScopeState.bIsScoped);
+		}
 	}
 }
 
