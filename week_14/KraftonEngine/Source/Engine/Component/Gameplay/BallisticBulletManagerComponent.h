@@ -80,6 +80,12 @@ private:
 	FSoftObjectPtr BulletHeadVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
 	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Tracer Visual Material", AssetType="Material")
 	FSoftObjectPtr BulletTracerVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Head Visual Scale Multiplier")
+	float BulletHeadVisualScaleMultiplier = 1.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Tracer Width Multiplier")
+	float BulletTracerWidthMultiplier = 1.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Tracer Length Multiplier")
+	float BulletTracerLengthMultiplier = 1.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bEnableImpactVisuals = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Impact Visual Material", AssetType="Material")

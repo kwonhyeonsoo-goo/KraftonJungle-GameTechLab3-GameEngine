@@ -314,7 +314,8 @@ void UBallisticBulletManagerComponent::SyncBulletVisuals()
 		}
 
 		const FBallisticBullet& Bullet = ActiveBullets[BulletIndex];
-		const float HeadScale = (std::max)(Bullet.VisualScale, SniperBulletVisualMinScale);
+		const float SafeHeadScaleMultiplier = (std::max)(BulletHeadVisualScaleMultiplier, 0.01f);
+		const float HeadScale = (std::max)(Bullet.VisualScale * SafeHeadScaleMultiplier, SniperBulletVisualMinScale);
 		HeadVisual->SetWorldLocation(Bullet.Position);
 		HeadVisual->SetRelativeScale(FVector(1.0f, HeadScale, HeadScale));
 		HeadVisual->SetVisibility(Bullet.bIsAlive);
@@ -322,11 +323,13 @@ void UBallisticBulletManagerComponent::SyncBulletVisuals()
 		const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
 		const float SegmentDistance = Segment.Length();
 		const FVector TracerLocation = Bullet.PreviousPosition + Segment * 0.5f;
-		const float TracerWidth = (std::max)(Bullet.VisualTracerWidth, SniperBulletTracerMinWidth);
+		const float SafeTracerWidthMultiplier = (std::max)(BulletTracerWidthMultiplier, 0.01f);
+		const float SafeTracerLengthMultiplier = (std::max)(BulletTracerLengthMultiplier, 0.01f);
+		const float TracerWidth = (std::max)(Bullet.VisualTracerWidth * SafeTracerWidthMultiplier, SniperBulletTracerMinWidth);
 		const float SpeedBasedLength = Bullet.Velocity.Length() * 0.0012f;
-		float TracerLength = (std::max)(SegmentDistance, SpeedBasedLength) * Bullet.VisualTracerLengthScale;
-		TracerLength = (std::max)(TracerLength, Bullet.VisualTracerMinLength);
-		TracerLength = (std::min)(TracerLength, Bullet.VisualTracerMaxLength);
+		float TracerLength = (std::max)(SegmentDistance, SpeedBasedLength) * Bullet.VisualTracerLengthScale * SafeTracerLengthMultiplier;
+		TracerLength = (std::max)(TracerLength, Bullet.VisualTracerMinLength * SafeTracerLengthMultiplier);
+		TracerLength = (std::min)(TracerLength, Bullet.VisualTracerMaxLength * SafeTracerLengthMultiplier);
 		TracerLength = (std::max)(TracerLength, TracerWidth);
 
 		TracerVisual->SetWorldLocation(TracerLocation);

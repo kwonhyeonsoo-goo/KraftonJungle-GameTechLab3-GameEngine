@@ -1,4 +1,4 @@
-// Generated from C:/development/Jungle_Week14_Team7/KraftonEngine/Content/Material/Particle/BulletTracerSprite.uasset
+// Generated from C:/development/Jungle_Week14_Team7/KraftonEngine/Content/Material/Custom/BulletTraceSprite.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
@@ -46,7 +46,7 @@ float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, flo
     return SpecularLight * SpecularColor;
 }
 
-Texture2D Tex_Diffuse : register(t0);
+Texture2D Tex_DiffuseTexture : register(t0);
 
 cbuffer PerMaterial : register(b2)
 {
@@ -62,19 +62,14 @@ float3 GetCommonMaterialEmissive()
 
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
-    float2 n_3 = Input.UV0;
-    float4 n_5 = Tex_Diffuse.Sample(LinearWrapSampler, n_3);
-    float4 n_14 = Input.VertexColor;
-    float3 n_21 = ((n_5).rgb * (n_14).rgb);
-    float3 n_25 = (float4(n_21, 0.0f)).rgb;
-    float n_28 = (float4(n_21, 0.0f)).a;
+    float4 n_3 = Tex_DiffuseTexture.Sample(LinearWrapSampler, Input.UV0);
     FMaterialResult Result;
-    Result.BaseColor = n_25;
+    Result.BaseColor = (n_3).rgb;
     Result.Normal = float3(0, 0, 1);
     Result.Roughness = 0.5f;
     Result.Metallic = 0.0f;
     Result.Emissive = float3(0, 0, 0);
-    Result.Opacity = n_28;
+    Result.Opacity = (n_3).a;
     return Result;
 }
 
@@ -118,6 +113,7 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
     float3 N = normalize(input.normal);
 
     float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
+    float OutOpacity = saturate(Result.Opacity);
 
-    return float4(finalRgb, saturate(Result.Opacity));
+    return float4(finalRgb, OutOpacity);
 }
