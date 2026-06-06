@@ -43,6 +43,8 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		&UCombatCoverAgentComponent::IsEngaging,
 		"IsMovingForCombatRange",
 		&UCombatCoverAgentComponent::IsMovingForCombatRange,
+		"IsInCover",
+		&UCombatCoverAgentComponent::IsInCover,
 		"IsSuppressed",
 		&UCombatCoverAgentComponent::IsSuppressed,
 		"CanFireWhileMoving",

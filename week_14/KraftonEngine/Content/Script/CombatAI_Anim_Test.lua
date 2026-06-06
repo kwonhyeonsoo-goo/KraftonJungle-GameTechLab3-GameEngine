@@ -83,7 +83,7 @@ local function current_move_state(agent)
     if agent:IsMovingForCombatRange() then
         return 2.0
     end
-    if agent:IsEngaging() or agent:IsSuppressed() or agent:GetIncomingFireCount() > 0 then
+    if agent:IsInCover() or agent:IsEngaging() or agent:IsSuppressed() or agent:GetIncomingFireCount() > 0 then
         return 1.0
     end
     return 0.0

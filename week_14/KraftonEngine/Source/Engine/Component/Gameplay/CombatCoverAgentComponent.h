@@ -135,6 +135,9 @@ public:
     bool CanFireWhileMoving() const { return bCanFireWhileMoving; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
+    bool IsInCover() const { return State == ECombatCoverAgentState::InCover; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool IsSuppressed() const { return State == ECombatCoverAgentState::Suppressed; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")

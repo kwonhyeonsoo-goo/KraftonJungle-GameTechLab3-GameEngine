@@ -17,7 +17,7 @@
           "FireRange" : 50.000000,
           "Health" : 100.000000,
           "MaxHealth" : 100.000000,
-          "MoveSpeed" : 10.000000,
+          "MoveSpeed" : 5.000000,
           "MovingFireRange" : 30.000000,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
