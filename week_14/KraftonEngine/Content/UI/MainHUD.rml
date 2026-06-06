@@ -1,0 +1,20 @@
+<rml>
+<head>
+    <link type="text/rcss" href="MainHUD.rcss" />
+</head>
+<body>
+    <div id="mainRoot" data-ui-type="Canvas" data-ui-name="Main HUD">
+        <div id="logoSlot" data-ui-type="Panel" data-ui-name="Logo Slot"></div>
+
+        <div id="mainMenu" data-ui-type="Panel" data-ui-name="Main Menu">
+            <button id="btnGameStart" class="menu-button primary" data-ui-type="Button" data-ui-name="Game Start" data-action="GameStart" data-hover-action="MainButtonHover"><span id="btnGameStartLabel" class="menu-button-label">Game Start</span></button>
+            <button id="btnScoreBoard" class="menu-button secondary" data-ui-type="Button" data-ui-name="Score Board" data-action="MainButtonClick" data-hover-action="MainButtonHover"><span id="btnScoreBoardLabel" class="menu-button-label">Score Board</span></button>
+            <button id="btnSettings" class="menu-button secondary" data-ui-type="Button" data-ui-name="Settings" data-action="MainButtonClick" data-hover-action="MainButtonHover"><span id="btnSettingsLabel" class="menu-button-label">Settings</span></button>
+            <button id="btnCredits" class="menu-button secondary" data-ui-type="Button" data-ui-name="Credits" data-action="MainButtonClick" data-hover-action="MainButtonHover"><span id="btnCreditsLabel" class="menu-button-label">Credits</span></button>
+            <button id="btnExit" class="menu-button secondary" data-ui-type="Button" data-ui-name="Exit" data-action="MainButtonClick" data-hover-action="MainButtonHover"><span id="btnExitLabel" class="menu-button-label">Exit</span></button>
+        </div>
+
+        <div id="versionLabel" data-ui-type="Text" data-ui-name="Version Label">v.20260607</div>
+    </div>
+</body>
+</rml>

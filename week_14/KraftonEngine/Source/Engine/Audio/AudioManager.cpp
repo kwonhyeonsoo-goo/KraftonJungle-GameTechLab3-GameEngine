@@ -58,6 +58,8 @@ void FAudioManager::Shutdown()
 		BGMGroup = nullptr;
 		SFXGroup = nullptr;
 		BGMChannel = nullptr;
+		bBGMVolumeFade = false;
+		bBGMStopAfterVolumeFade = false;
 		LoopChannels.clear();
 		ActiveChannels.clear();
 		SFXPlaybackPolicies.clear();
@@ -103,14 +105,20 @@ void FAudioManager::Shutdown()
 	System->close();
 	System->release();
 	System = nullptr;
+	bBGMVolumeFade = false;
+	bBGMStopAfterVolumeFade = false;
 }
 
 void FAudioManager::Tick()
 {
 	if (System)
 	{
+		UpdateBGMFade();
+		UpdateFades();
 		PruneStoppedChannels();
 		System->update();
+		UpdateBGMFade();
+		UpdateFades();
 		PruneStoppedChannels();
 	}
 }
@@ -174,12 +182,17 @@ bool FAudioManager::PlaySFX(const FString& PathOrKey, float VolumeScale)
 
 FAudioHandle FAudioManager::PlaySFXHandle(const FString& PathOrKey, float VolumeScale)
 {
+	return PlaySound2D(PathOrKey, false, VolumeScale);
+}
+
+FAudioHandle FAudioManager::PlaySound2D(const FString& PathOrKey, bool bLoop, float VolumeScale)
+{
 	if (!System || PathOrKey.empty())
 	{
 		return 0;
 	}
 
-	FMOD::Sound* Sound = ResolveSound(PathOrKey, false);
+	FMOD::Sound* Sound = ResolveSound(PathOrKey, bLoop);
 	if (!Sound)
 	{
 		return 0;
@@ -203,7 +216,7 @@ FAudioHandle FAudioManager::PlaySFXHandle(const FString& PathOrKey, float Volume
 		return 0;
 	}
 
-	Channel->setMode(FMOD_2D | FMOD_LOOP_OFF);
+	Channel->setMode(FMOD_2D | (bLoop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF));
 	Channel->setVolume(std::clamp(VolumeScale, 0.0f, 1.0f));
 	Channel->setPaused(false);
 	const FAudioHandle Handle = RegisterChannel(Channel, PathOrKey, Priority);
@@ -214,14 +227,14 @@ FAudioHandle FAudioManager::PlaySFXHandle(const FString& PathOrKey, float Volume
 	return Handle;
 }
 
-FAudioHandle FAudioManager::PlaySFX3D(const FString& PathOrKey, const FVector& Position, float VolumeScale, float MinDistance, float MaxDistance)
+FAudioHandle FAudioManager::PlaySound3D(const FString& PathOrKey, const FVector& Position, bool bLoop, float VolumeScale, float MinDistance, float MaxDistance)
 {
 	if (!System || PathOrKey.empty())
 	{
 		return 0;
 	}
 
-	FMOD::Sound* Sound = ResolveSound(PathOrKey, false);
+	FMOD::Sound* Sound = ResolveSound(PathOrKey, bLoop);
 	if (!Sound)
 	{
 		return 0;
@@ -249,7 +262,7 @@ FAudioHandle FAudioManager::PlaySFX3D(const FString& PathOrKey, const FVector& P
 	const float ClampedMax = (std::max)(ClampedMin, MaxDistance);
 	FMOD_VECTOR FMODPosition = ToFMODVector(Position);
 
-	Channel->setMode(FMOD_3D | FMOD_3D_LINEARROLLOFF | FMOD_LOOP_OFF);
+	Channel->setMode(FMOD_3D | FMOD_3D_LINEARROLLOFF | (bLoop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF));
 	Channel->set3DMinMaxDistance(ClampedMin, ClampedMax);
 	Channel->set3DAttributes(&FMODPosition, nullptr);
 	Channel->setVolume(std::clamp(VolumeScale, 0.0f, 1.0f));
@@ -260,6 +273,11 @@ FAudioHandle FAudioManager::PlaySFX3D(const FString& PathOrKey, const FVector& P
 		NoteSFXPlayback(PathOrKey);
 	}
 	return Handle;
+}
+
+FAudioHandle FAudioManager::PlaySFX3D(const FString& PathOrKey, const FVector& Position, float VolumeScale, float MinDistance, float MaxDistance)
+{
+	return PlaySound3D(PathOrKey, Position, false, VolumeScale, MinDistance, MaxDistance);
 }
 
 void FAudioManager::PlayBGM(const FString& Key, float Volume)
@@ -274,17 +292,31 @@ void FAudioManager::PlayBGM(const FString& Key, float Volume)
 
 	if (BGMChannel)
 	{
+		bBGMVolumeFade = false;
+		bBGMStopAfterVolumeFade = false;
 		BGMChannel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
 	}
 }
 
 void FAudioManager::StopBGM()
 {
+	bBGMVolumeFade = false;
+	bBGMStopAfterVolumeFade = false;
 	if (BGMChannel)
 	{
 		BGMChannel->stop();
 		BGMChannel = nullptr;
 	}
+}
+
+bool FAudioManager::FadeInBGM(float DurationSeconds, float TargetVolume)
+{
+	return BeginBGMFade(DurationSeconds, TargetVolume, false);
+}
+
+bool FAudioManager::FadeOutBGM(float DurationSeconds)
+{
+	return BeginBGMFade(DurationSeconds, 0.0f, true);
 }
 
 void FAudioManager::PlayLoop(const FString& Key, const FString& LoopName, float Volume, float Pitch)
@@ -438,6 +470,202 @@ FMOD::Channel* FAudioManager::FindPlayingLoopChannel(const FString& LoopName)
 	return Channel;
 }
 
+bool FAudioManager::BeginBGMFade(float DurationSeconds, float TargetVolume, bool bStopAfterFade)
+{
+	if (!BGMChannel)
+	{
+		return false;
+	}
+
+	bool bIsPlaying = false;
+	if (BGMChannel->isPlaying(&bIsPlaying) != FMOD_OK || !bIsPlaying)
+	{
+		BGMChannel = nullptr;
+		bBGMVolumeFade = false;
+		bBGMStopAfterVolumeFade = false;
+		return false;
+	}
+
+	if (DurationSeconds <= 0.0f)
+	{
+		const float ClampedTarget = std::clamp(TargetVolume, 0.0f, 1.0f);
+		BGMChannel->setVolume(ClampedTarget);
+		if (bStopAfterFade)
+		{
+			StopBGM();
+		}
+		return true;
+	}
+
+	float CurrentVolume = 1.0f;
+	if (BGMChannel->getVolume(&CurrentVolume) != FMOD_OK)
+	{
+		CurrentVolume = 1.0f;
+	}
+
+	bBGMVolumeFade = true;
+	bBGMStopAfterVolumeFade = bStopAfterFade;
+	BGMVolumeFadeStartTimeSeconds = GetAudioTimeSeconds();
+	BGMVolumeFadeDurationSeconds = (std::max)(0.0f, DurationSeconds);
+	BGMVolumeFadeStartVolume = std::clamp(CurrentVolume, 0.0f, 1.0f);
+	BGMVolumeFadeTargetVolume = std::clamp(TargetVolume, 0.0f, 1.0f);
+	return true;
+}
+
+bool FAudioManager::BeginChannelFade(FAudioHandle Handle, float DurationSeconds, float TargetVolume, bool bStopAfterFade)
+{
+	if (DurationSeconds <= 0.0f)
+	{
+		const bool bWasPlaying = IsSoundPlaying(Handle);
+		SetSoundVolume(Handle, TargetVolume);
+		if (bStopAfterFade)
+		{
+			StopSound(Handle);
+		}
+		return bWasPlaying;
+	}
+
+	FMOD::Channel* Channel = FindActiveChannel(Handle);
+	if (!Channel || !ActiveChannels.contains(Handle))
+	{
+		return false;
+	}
+
+	float CurrentVolume = 1.0f;
+	if (Channel->getVolume(&CurrentVolume) != FMOD_OK)
+	{
+		CurrentVolume = 1.0f;
+	}
+
+	FActiveAudioChannel& Info = ActiveChannels[Handle];
+	Info.bVolumeFade = true;
+	Info.bStopAfterVolumeFade = bStopAfterFade;
+	Info.VolumeFadeStartTimeSeconds = GetAudioTimeSeconds();
+	Info.VolumeFadeDurationSeconds = (std::max)(0.0f, DurationSeconds);
+	Info.VolumeFadeStartVolume = std::clamp(CurrentVolume, 0.0f, 1.0f);
+	Info.VolumeFadeTargetVolume = std::clamp(TargetVolume, 0.0f, 1.0f);
+	return true;
+}
+
+void FAudioManager::UpdateBGMFade()
+{
+	if (!bBGMVolumeFade)
+	{
+		return;
+	}
+
+	if (!BGMChannel)
+	{
+		bBGMVolumeFade = false;
+		bBGMStopAfterVolumeFade = false;
+		return;
+	}
+
+	bool bIsPlaying = false;
+	if (BGMChannel->isPlaying(&bIsPlaying) != FMOD_OK || !bIsPlaying)
+	{
+		BGMChannel = nullptr;
+		bBGMVolumeFade = false;
+		bBGMStopAfterVolumeFade = false;
+		return;
+	}
+
+	const float Duration = (std::max)(0.0f, BGMVolumeFadeDurationSeconds);
+	if (Duration <= 0.0f)
+	{
+		BGMChannel->setVolume(BGMVolumeFadeTargetVolume);
+		if (bBGMStopAfterVolumeFade)
+		{
+			StopBGM();
+		}
+		else
+		{
+			bBGMVolumeFade = false;
+		}
+		return;
+	}
+
+	const double Elapsed = GetAudioTimeSeconds() - BGMVolumeFadeStartTimeSeconds;
+	const float Alpha = std::clamp(static_cast<float>(Elapsed / static_cast<double>(Duration)), 0.0f, 1.0f);
+	const float Volume = BGMVolumeFadeStartVolume + (BGMVolumeFadeTargetVolume - BGMVolumeFadeStartVolume) * Alpha;
+	BGMChannel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
+
+	if (Alpha >= 1.0f)
+	{
+		if (bBGMStopAfterVolumeFade)
+		{
+			StopBGM();
+		}
+		else
+		{
+			bBGMVolumeFade = false;
+			bBGMStopAfterVolumeFade = false;
+		}
+	}
+}
+
+void FAudioManager::UpdateFades()
+{
+	const double NowSeconds = GetAudioTimeSeconds();
+	for (auto It = ActiveChannels.begin(); It != ActiveChannels.end();)
+	{
+		FActiveAudioChannel& Info = It->second;
+		if (!Info.bVolumeFade)
+		{
+			++It;
+			continue;
+		}
+
+		bool bIsPlaying = false;
+		if (!Info.Channel || Info.Channel->isPlaying(&bIsPlaying) != FMOD_OK || !bIsPlaying)
+		{
+			It = ActiveChannels.erase(It);
+			continue;
+		}
+
+		const float Duration = (std::max)(0.0f, Info.VolumeFadeDurationSeconds);
+		if (Duration <= 0.0f)
+		{
+			Info.Channel->setVolume(Info.VolumeFadeTargetVolume);
+			if (Info.bStopAfterVolumeFade)
+			{
+				Info.Channel->stop();
+				It = ActiveChannels.erase(It);
+			}
+			else
+			{
+				Info.bVolumeFade = false;
+				Info.bStopAfterVolumeFade = false;
+				++It;
+			}
+			continue;
+		}
+
+		const double Elapsed = NowSeconds - Info.VolumeFadeStartTimeSeconds;
+		const float Alpha = std::clamp(static_cast<float>(Elapsed / static_cast<double>(Duration)), 0.0f, 1.0f);
+		const float Volume = Info.VolumeFadeStartVolume + (Info.VolumeFadeTargetVolume - Info.VolumeFadeStartVolume) * Alpha;
+		Info.Channel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
+
+		if (Alpha >= 1.0f)
+		{
+			if (Info.bStopAfterVolumeFade)
+			{
+				Info.Channel->stop();
+				It = ActiveChannels.erase(It);
+			}
+			else
+			{
+				Info.bVolumeFade = false;
+				Info.bStopAfterVolumeFade = false;
+				++It;
+			}
+			continue;
+		}
+
+		++It;
+	}
+}
+
 void FAudioManager::PruneStoppedChannels()
 {
 	for (auto It = ActiveChannels.begin(); It != ActiveChannels.end();)
@@ -582,6 +810,26 @@ void FAudioManager::StopSound(FAudioHandle Handle)
 	ActiveChannels.erase(Handle);
 }
 
+bool FAudioManager::FadeInSound(FAudioHandle Handle, float DurationSeconds, float TargetVolume)
+{
+	return BeginChannelFade(Handle, DurationSeconds, TargetVolume, false);
+}
+
+bool FAudioManager::FadeOutSound(FAudioHandle Handle, float DurationSeconds)
+{
+	return BeginChannelFade(Handle, DurationSeconds, 0.0f, true);
+}
+
+bool FAudioManager::FadeInSFX(FAudioHandle Handle, float DurationSeconds, float TargetVolume)
+{
+	return FadeInSound(Handle, DurationSeconds, TargetVolume);
+}
+
+bool FAudioManager::FadeOutSFX(FAudioHandle Handle, float DurationSeconds)
+{
+	return FadeOutSound(Handle, DurationSeconds);
+}
+
 void FAudioManager::StopAllSounds()
 {
 	for (auto& Pair : ActiveChannels)
@@ -603,6 +851,11 @@ void FAudioManager::SetSoundVolume(FAudioHandle Handle, float Volume)
 {
 	if (FMOD::Channel* Channel = FindActiveChannel(Handle))
 	{
+		if (ActiveChannels.contains(Handle))
+		{
+			ActiveChannels[Handle].bVolumeFade = false;
+			ActiveChannels[Handle].bStopAfterVolumeFade = false;
+		}
 		Channel->setVolume(std::clamp(Volume, 0.0f, 1.0f));
 	}
 }

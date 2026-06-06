@@ -202,6 +202,13 @@ namespace
 		return Prop.GetDisplayName();
 	}
 
+	FString MakeAssetSelectableLabel(const FString& DisplayName, const FString& FullPath)
+	{
+		const FString VisibleName = DisplayName.empty() ? FullPath : DisplayName;
+		const FString StableId = FullPath.empty() ? VisibleName : FullPath;
+		return VisibleName + "##" + StableId;
+	}
+
 	const FString* FindPropertyMetadata(const FPropertyValue& Prop, const FString& Key)
 	{
 		const TMap<FString, FString>& Metadata = Prop.GetMetadata();
@@ -1176,7 +1183,7 @@ namespace
             for (const FAssetListItem& Item : Items)
             {
                 const bool bSelected = (CurrentPath == Item.FullPath);
-                if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+                if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
                 {
                     OutSelectedPath = Item.FullPath;
                     bChanged        = true;
@@ -3232,7 +3239,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			for (const FMaterialAssetListItem& Item : MatFiles)
 			{
 				bool bSelected = (CurrentPath == Item.FullPath);
-				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 				{
 					SetPath(Item.FullPath);
 					bChanged = true;
@@ -3325,7 +3332,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			for (const FAssetListItem& Item : MeshFiles)
 			{
 				bool bSelected = (CurrentPath == Item.FullPath);
-				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 				{
 					SetPath(Item.FullPath);
 					bChanged = true;
@@ -3404,7 +3411,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			for (const FAssetListItem& Item : AnimFiles)
 			{
 				bool bSelected = (CurrentPath == Item.FullPath);
-				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 				{
 					SetPath(Item.FullPath);
 					bChanged = true;
@@ -3446,7 +3453,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			for (const FAssetListItem& Item : GraphFiles)
 			{
 				bool bSelected = (CurrentPath == Item.FullPath);
-				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 				{
 					SetPath(Item.FullPath);
 					bChanged = true;
@@ -3491,7 +3498,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			for (const FAssetListItem& Item : ParticleFiles)
 			{
 				bool bSelected = (CurrentPath == Item.FullPath);
-				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 				{
 					SetPath(Item.FullPath);
 					bChanged = true;
@@ -3570,7 +3577,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			for (const FAssetListItem& Item : LuaFiles)
 			{
 				bool bSelected = (CurrentPath == Item.FullPath);
-				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 				{
 					SetPath(Item.FullPath);
 					bChanged = true;
@@ -3614,7 +3621,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		for (const FAssetListItem& Item : MeshFiles)
 		{
 			bool bSelected = (CurrentPath == Item.FullPath);
-			if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+			if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 			{
 				SetPath(Item.FullPath);
 				bChanged = true;
@@ -4604,7 +4611,7 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 				for (const FAssetListItem& Item : MeshFiles)
 				{
 					const bool bSelected = CurrentMesh && CurrentMesh->GetAssetPathFileName() == Item.FullPath;
-					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 					{
 						ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
 						UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(Item.FullPath, Device);
@@ -4678,7 +4685,7 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 				for (const FAssetListItem& Item : MeshFiles)
 				{
 					const bool bSelected = CurrentMesh && CurrentMesh->GetAssetPathFileName() == Item.FullPath;
-					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					if (ImGui::Selectable(MakeAssetSelectableLabel(Item.DisplayName, Item.FullPath).c_str(), bSelected))
 					{
 						ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
 						USkeletalMesh* Loaded = FMeshManager::LoadSkeletalMesh(Item.FullPath, Device);

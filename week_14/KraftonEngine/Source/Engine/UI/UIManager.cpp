@@ -1099,6 +1099,7 @@ void UUIManager::Initialize(ID3D11Device* InDevice)
 
 void UUIManager::Shutdown()
 {
+	ReleaseLuaCallbacks();
 	DestroyAllWidgets();
 
 	if (RmlContext)
@@ -1622,6 +1623,7 @@ void UUIManager::ClearViewport()
 	{
 		if (IsAliveObject(Widget))
 		{
+			Widget->ReleaseLuaCallbacks();
 			CloseDocument(Widget);
 			Widget->MarkRemovedFromViewport();
 		}
@@ -1631,6 +1633,19 @@ void UUIManager::ClearViewport()
 	if (RmlContext)
 	{
 		RmlContext->Update();
+	}
+}
+
+void UUIManager::ReleaseLuaCallbacks()
+{
+	CompactInvalidWidgets();
+
+	for (UUserWidget* Widget : CreatedWidgets)
+	{
+		if (IsAliveObject(Widget))
+		{
+			Widget->ReleaseLuaCallbacks();
+		}
 	}
 }
 

@@ -134,20 +134,22 @@ public:
 
 	// 즉시 동기 종료 — Save / NewScene / Load 등 에디터 월드를 만지는 작업 직전에 호출.
 	// PIE 중이 아니면 no-op.
-	void StopPlayInEditorImmediate() { if (IsPlayingInEditor()) EndPlayMap(); }
+	void StopPlayInEditorImmediate() { RequestEndPlayMap(); }
 
-	// PIE 안에서 Lua 가 Engine.TransitionToScene 호출 시: scene 교체 대신 PIE 세션을 종료해
-	// 에디터 화면으로 복귀. UE 의 Stop Play 와 동일 의미로 매핑 (PIE 중간에 다른 scene 으로
-	// 점프하는 의미가 모호하므로). InScenePath 는 무시.
+	// PIE 안에서 Lua 가 Engine.TransitionToScene 호출 시 같은 PIE 세션 안에서 scene 을 교체한다.
+	// StopPIE 요청이 들어오면 pending transition 을 버리고 PIE 종료를 우선한다.
 	void RequestTransitionToScene(const FString& InScenePath) override;
-	bool IsSceneTransitionPending() const override { return bRequestEndPlayMapQueued; }
-	FString GetCurrentScenePath() const override { return CurrentLevelFilePath; }
+	bool IsSceneTransitionPending() const override { return bRequestEndPlayMapQueued || bRequestPIESceneTransitionQueued || bPIESceneTransitionInProgress; }
+	FString GetCurrentScenePath() const override { return IsPlayingInEditor() && !CurrentPIEScenePath.empty() ? CurrentPIEScenePath : CurrentLevelFilePath; }
+	FString GetPendingScenePath() const override { return PendingPIESceneTransitionPath; }
 
 private:
 	// Tick 내에서 호출 — 큐에 요청이 있으면 StartPlayInEditorSession 실행
 	void StartQueuedPlaySessionRequest();
 	void StartPlayInEditorSession(const FRequestPlaySessionParams& Params);
 	void EndPlayMap();
+	void ProcessQueuedPIESceneTransition();
+	bool LoadPIESceneFromPath(const FString& InScenePath);
 	void HandleUndoRedoShortcuts(const FInputSystemSnapshot& Snapshot);
 	bool EnterPIEPossessedMode();
 	bool EnterPIEEjectedMode();
@@ -173,8 +175,13 @@ private:
 	std::optional<FPlayInEditorSessionInfo> PlayInEditorSessionInfo;
 	// 종료 요청 지연 플래그. Tick 선두에서 확인 후 EndPlayMap 호출.
 	bool bRequestEndPlayMapQueued = false;
+	bool bRequestPIESceneTransitionQueued = false;
+	bool bPIESceneTransitionInProgress = false;
+	uint32 NextPIEWorldSerial = 1;
 	EPIEControlMode PIEControlMode = EPIEControlMode::Possessed;
 	FString CurrentLevelFilePath;
+	FString CurrentPIEScenePath;
+	FString PendingPIESceneTransitionPath;
 	FString CleanSceneSnapshot;
 
 };

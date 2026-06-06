@@ -388,6 +388,49 @@ void FLuaScriptManager::RegisterUIBindings(sol::state& Lua)
         }
     );
     UI.set_function(
+        "ClearViewport",
+        []()
+        {
+            UUIManager::Get().ClearViewport();
+        }
+    );
+    UI.set_function(
+        "GetViewportSize",
+        [](sol::this_state State)
+        {
+            sol::state_view Lua(State);
+            const FVector2 Size = UUIManager::Get().GetVirtualViewportSize();
+            sol::table Result = Lua.create_table();
+            Result["X"] = Size.X;
+            Result["Y"] = Size.Y;
+            Result["x"] = Size.X;
+            Result["y"] = Size.Y;
+            Result["Width"] = Size.X;
+            Result["Height"] = Size.Y;
+            Result["width"] = Size.X;
+            Result["height"] = Size.Y;
+            return Result;
+        }
+    );
+    UI.set_function(
+        "GetPhysicalViewportSize",
+        [](sol::this_state State)
+        {
+            sol::state_view Lua(State);
+            const FVector2 Size = UUIManager::Get().GetPhysicalViewportSize();
+            sol::table Result = Lua.create_table();
+            Result["X"] = Size.X;
+            Result["Y"] = Size.Y;
+            Result["x"] = Size.X;
+            Result["y"] = Size.Y;
+            Result["Width"] = Size.X;
+            Result["Height"] = Size.Y;
+            Result["width"] = Size.X;
+            Result["height"] = Size.Y;
+            return Result;
+        }
+    );
+    UI.set_function(
         "GetElementText",
         [](const FString& ElementId)
         {

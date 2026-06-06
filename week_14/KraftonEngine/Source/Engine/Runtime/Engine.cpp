@@ -292,8 +292,24 @@ void UEngine::DestroyWorldContext(const FName& Handle)
 	{
 		if (it->ContextHandle == Handle)
 		{
-			it->World->EndPlay();
-			UObjectManager::Get().DestroyObject(it->World);
+			if (ActiveWorldHandle == Handle)
+			{
+				ActiveWorldHandle = FName::None;
+				for (const FWorldContext& Ctx : WorldList)
+				{
+					if (Ctx.ContextHandle != Handle)
+					{
+						ActiveWorldHandle = Ctx.ContextHandle;
+						break;
+					}
+				}
+			}
+
+			if (it->World)
+			{
+				it->World->EndPlay();
+				UObjectManager::Get().DestroyObject(it->World);
+			}
 			WorldList.erase(it);
 			return;
 		}

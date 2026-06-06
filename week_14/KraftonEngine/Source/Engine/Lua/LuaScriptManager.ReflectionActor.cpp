@@ -3061,6 +3061,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     AudioManager.set_function(
+        "FadeInSFX",
+        [](FAudioHandle Handle, float DurationSeconds, sol::optional<float> TargetVolume)
+        {
+            return FAudioManager::Get().FadeInSFX(Handle, DurationSeconds, TargetVolume.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "FadeOutSFX",
+        [](FAudioHandle Handle, float DurationSeconds)
+        {
+            return FAudioManager::Get().FadeOutSFX(Handle, DurationSeconds);
+        }
+    );
+    AudioManager.set_function(
         "PlaySFX3D",
         [](const FString& PathOrKey, const FVector& Position, sol::optional<float> VolumeScale, sol::optional<float> MinDistance, sol::optional<float> MaxDistance)
         {
@@ -3084,6 +3098,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         []()
         {
             FAudioManager::Get().StopBGM();
+        }
+    );
+    AudioManager.set_function(
+        "FadeInBGM",
+        [](float DurationSeconds, sol::optional<float> TargetVolume)
+        {
+            return FAudioManager::Get().FadeInBGM(DurationSeconds, TargetVolume.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "FadeOutBGM",
+        [](float DurationSeconds)
+        {
+            return FAudioManager::Get().FadeOutBGM(DurationSeconds);
         }
     );
     AudioManager.set_function(
@@ -3220,6 +3248,20 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         [](FAudioHandle Handle, const FVector& Position)
         {
             FAudioManager::Get().SetSoundPosition(Handle, Position);
+        }
+    );
+    AudioManager.set_function(
+        "FadeInSound",
+        [](FAudioHandle Handle, float DurationSeconds, sol::optional<float> TargetVolume)
+        {
+            return FAudioManager::Get().FadeInSound(Handle, DurationSeconds, TargetVolume.value_or(1.0f));
+        }
+    );
+    AudioManager.set_function(
+        "FadeOutSound",
+        [](FAudioHandle Handle, float DurationSeconds)
+        {
+            return FAudioManager::Get().FadeOutSound(Handle, DurationSeconds);
         }
     );
     AudioManager.set_function(

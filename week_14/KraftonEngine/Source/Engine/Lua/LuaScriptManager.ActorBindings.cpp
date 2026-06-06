@@ -43,6 +43,7 @@
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/Shape/SphereComponent.h"
 #include "Component/ShapeComponent.h"
+#include "Component/SoundComponent.h"
 #include "Component/Vehicle/VehicleWheelPoseComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
@@ -1836,6 +1837,50 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &UCameraComponent::OnResize
     );
 
+    Lua.new_usertype<USoundComponent>(
+        "SoundComponent",
+        sol::base_classes,
+        sol::bases<USceneComponent, UActorComponent, UObject>(),
+        "Play",
+        &USoundComponent::Play,
+        "Stop",
+        &USoundComponent::Stop,
+        "IsPlaying",
+        &USoundComponent::IsPlaying,
+        "SetSoundPath",
+        &USoundComponent::SetSoundPath,
+        "GetSoundPath",
+        &USoundComponent::GetSoundPath,
+        "SetVolume",
+        &USoundComponent::SetVolume,
+        "GetVolume",
+        &USoundComponent::GetVolume,
+        "SetPitch",
+        &USoundComponent::SetPitch,
+        "GetPitch",
+        &USoundComponent::GetPitch,
+        "SetLooping",
+        &USoundComponent::SetLooping,
+        "IsLooping",
+        &USoundComponent::IsLooping,
+        "SetPlayOnBeginPlay",
+        &USoundComponent::SetPlayOnBeginPlay,
+        "ShouldPlayOnBeginPlay",
+        &USoundComponent::ShouldPlayOnBeginPlay,
+        "SetSpatialized",
+        &USoundComponent::SetSpatialized,
+        "IsSpatialized",
+        &USoundComponent::IsSpatialized,
+        "Set3DMinMaxDistance",
+        &USoundComponent::Set3DMinMaxDistance,
+        "GetMinDistance",
+        &USoundComponent::GetMinDistance,
+        "GetMaxDistance",
+        &USoundComponent::GetMaxDistance,
+        "GetActiveHandle",
+        &USoundComponent::GetActiveHandle
+    );
+
     Lua.new_usertype<AActor>(
         "Actor",
         sol::base_classes,
@@ -2068,6 +2113,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         [](AActor& Actor)
         {
             return Actor.GetComponentByClass<USniperDamageReceiverComponent>();
+        },
+
+        "GetSoundComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USoundComponent>();
         },
 
         "GetActorSequenceComponent",

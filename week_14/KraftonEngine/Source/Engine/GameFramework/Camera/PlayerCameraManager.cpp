@@ -1,6 +1,7 @@
 #include "PlayerCameraManager.h"
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
+#include "Audio/AudioManager.h"
 #include "Component/Camera/CameraComponent.h"
 #include "GameFramework/Camera/CameraShakeBase.h"
 #include "GameFramework/Camera/CameraModifier.h"
@@ -806,6 +807,10 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 	{
 		CameraCachePOV    = NewPOV;
 		bCameraCacheValid = true;
+		FAudioManager::Get().SetListener(
+			CameraCachePOV.Location,
+			CameraCachePOV.Rotation.GetForwardVector(),
+			CameraCachePOV.Rotation.GetUpVector());
 	}
 	else
 	{

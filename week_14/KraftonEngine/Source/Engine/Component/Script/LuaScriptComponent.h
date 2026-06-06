@@ -13,6 +13,19 @@ class USniperWeaponComponent;
 struct FHitResult;
 struct FSniperHitInfo;
 
+UENUM()
+enum class EGeneralManagerStartState : uint8
+{
+	Intro = 0,
+	Main = 1,
+	Loading = 2,
+	PreInGame = 3,
+	InGame = 4,
+	Defeat1 = 5,
+	Defeat2 = 6,
+	Victory = 7
+};
+
 UCLASS()
 class ULuaScriptComponent : public UActorComponent
 {
@@ -33,12 +46,17 @@ public:
 
 
 	void PreGetEditableProperties() override;
+	bool ShouldExposeProperty(const FProperty& Property) const override;
 	UFUNCTION(Pure, Category="Script")
 	const FString& GetScriptFile() const { return ScriptFile; }
 	UFUNCTION(Pure, Category="Script")
 	FString GetScriptFileValue() const { return ScriptFile; }
 	UFUNCTION(Callable, Category="Script")
 	void SetScriptFile(const FString& InScriptFile) { ScriptFile = InScriptFile; }
+	UFUNCTION(Pure, Category="General Manager")
+	EGeneralManagerStartState GetInitialGameState() const { return InitialGameState; }
+	UFUNCTION(Pure, Category="General Manager")
+	FString GetInitialGameStateName() const;
 	void DispatchOverlap(class AActor* OtherActor);
 
 	// Lua script 의 환경(env)에서 인자 없는 전역 함수 하나를 호출. 함수가 없거나
@@ -84,6 +102,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Script", DisplayName="ScriptFile", AssetType="Script")
 	FString ScriptFile;
+
+	UPROPERTY(Edit, Save, Category="General Manager", DisplayName="Initial Game State", Type=Enum, Enum=EGeneralManagerStartState)
+	EGeneralManagerStartState InitialGameState = EGeneralManagerStartState::InGame;
 	
 	sol::environment Env;
 	sol::protected_function LuaBeginPlay;

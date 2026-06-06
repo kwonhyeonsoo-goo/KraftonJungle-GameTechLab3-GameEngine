@@ -17,6 +17,12 @@
                 <div id="breathProgress" data-ui-type="Panel" data-ui-name="Hold Breath Progress"></div>
             </div>
         </div>
+        <div id="weaponInfoPanel" data-ui-type="Panel" data-ui-name="Weapon Info Panel">
+            <img id="weaponPanelBg" data-ui-type="Image" data-ui-name="Weapon Panel Background" src="Image/HUD/WeaponPanelFade.png" data-ui-fit="fill" />
+            <div id="weaponNameLabel" data-ui-type="Text" data-ui-name="Weapon Name">SNIPER RIFLE</div>
+            <div id="ammoCountLabel" data-ui-type="Text" data-ui-name="Ammo Count">00 / 00</div>
+            <div id="ammoTypeLabel" data-ui-type="Text" data-ui-name="Ammo Type">AMMO TYPE  NORMAL</div>
+        </div>
     </div>
 </body>
 </rml>
