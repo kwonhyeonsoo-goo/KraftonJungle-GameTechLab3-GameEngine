@@ -53,6 +53,7 @@ private:
 	static void RegisterReflectionBindings(sol::state& Lua);
 	static void RegisterActorBindings(sol::state& Lua);
 	static void RegisterUIBindings(sol::state& Lua);
+	static void ClearReflectedEventOverrides();
 
 	static void OnScriptsChanged(const TSet<FString>& ChangedFiles);
 	static void InvalidateChangedModules(const TSet<FString>& ChangedFiles);

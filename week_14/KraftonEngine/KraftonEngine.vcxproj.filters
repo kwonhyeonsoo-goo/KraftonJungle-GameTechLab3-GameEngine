@@ -1553,7 +1553,13 @@
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Core.cpp">
+      <Filter>Source\Engine\Lua</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Math.cpp">
+      <Filter>Source\Engine\Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ReflectionActor.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.UI.cpp">
