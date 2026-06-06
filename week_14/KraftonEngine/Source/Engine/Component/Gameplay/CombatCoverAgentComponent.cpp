@@ -1,4 +1,4 @@
-#include "CombatCoverAgentComponent.h"
+﻿#include "CombatCoverAgentComponent.h"
 
 #include "Component/Gameplay/CombatFlowManagerComponent.h"
 #include "Core/Logging/Log.h"
@@ -10,6 +10,9 @@
 
 namespace
 {
+	//여기입니다! 일어섰다가 움직일 때 잠깐 멈추는 시간이 여기입니다!
+    constexpr float LinkedMoveStartDelaySeconds = 1.2f;
+
     float Distance2D(const FVector& A, const FVector& B)
     {
         const float DX = A.X - B.X;
@@ -137,6 +140,7 @@ void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatMovePath& MoveP
     TargetSlotId = MovePath.FinalSlot.SlotId;
     CurrentMovePath = MovePath.Points;
     CurrentMovePathIndex = 0;
+    LinkedMoveStartDelayRemaining = bInitialMove ? 0.0f : LinkedMoveStartDelaySeconds;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     State = bInitialMove ? ECombatCoverAgentState::MovingToInitialSlot : ECombatCoverAgentState::MovingToLinkedNode;
@@ -173,6 +177,7 @@ void UCombatCoverAgentComponent::MarkDead()
     TargetSlotId = -1;
     CurrentMovePath.clear();
     CurrentMovePathIndex = 0;
+    LinkedMoveStartDelayRemaining = 0.0f;
     FinalReservedSlot.Reset();
 }
 
@@ -516,6 +521,12 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
         CurrentMovePathIndex = 0;
     }
 
+    if (State == ECombatCoverAgentState::MovingToLinkedNode && LinkedMoveStartDelayRemaining > 0.0f)
+    {
+        LinkedMoveStartDelayRemaining = (std::max)(0.0f, LinkedMoveStartDelayRemaining - DeltaTime);
+        return;
+    }
+
     auto FinishMove = [this, Manager]()
     {
         FCombatCoverSlotHandle ArrivedSlot = FinalReservedSlot;
@@ -533,6 +544,7 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
         TargetSlotId = -1;
         CurrentMovePath.clear();
         CurrentMovePathIndex = 0;
+        LinkedMoveStartDelayRemaining = 0.0f;
         FinalReservedSlot.Reset();
         AdvanceTimer = 0.0f;
         RetryTimer = 0.0f;
@@ -671,6 +683,7 @@ void UCombatCoverAgentComponent::TickFaceCombatTarget(float DeltaTime)
 void UCombatCoverAgentComponent::SetBlocked()
 {
     State = ECombatCoverAgentState::Blocked;
+    LinkedMoveStartDelayRemaining = 0.0f;
     RetryTimer = 0.0f;
 }
 
