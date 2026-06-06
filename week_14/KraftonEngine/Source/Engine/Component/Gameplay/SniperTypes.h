@@ -96,12 +96,14 @@ struct FAmmoBallisticData
 	GENERATED_BODY()
 
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
-	float InitialSpeed = 900.0f;
+	float InitialSpeed = 760.0f;
 	float MuzzleVelocityVariance = 0.0f;
 	float GravityScale = 1.0f;
-	float DragCoefficient = 0.0f;
+	float BallisticCoefficient = 0.30f;
+	float DragScale = 1.0f;
 	float Damage = 100.0f;
 	float BulletRadius = 0.03f;
+	float VisualScale = 0.06f;
 	float LifeTime = 5.0f;
 	float FireInterval = 1.0f;
 	float WindInfluenceScale = 1.0f;
@@ -120,9 +122,11 @@ struct FBallisticBullet
 	FVector Velocity = FVector::ZeroVector;
 	float Damage = 0.0f;
 	float Radius = 0.0f;
+	float VisualScale = 0.06f;
 	float LifeTime = 0.0f;
 	float GravityScale = 1.0f;
-	float DragCoefficient = 0.0f;
+	float BallisticCoefficient = 0.30f;
+	float DragScale = 1.0f;
 	float WindInfluenceScale = 1.0f;
 	float TraveledDistance = 0.0f;
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;

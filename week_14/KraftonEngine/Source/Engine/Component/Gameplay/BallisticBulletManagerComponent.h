@@ -2,10 +2,13 @@
 
 #include "Component/ActorComponent.h"
 #include "Component/Gameplay/SniperTypes.h"
+#include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Gameplay/BallisticBulletManagerComponent.generated.h"
 
+class UBillboardComponent;
+class UMaterial;
 class USniperWeaponComponent;
 
 UCLASS()
@@ -45,6 +48,10 @@ private:
 	void UpdateBullets(float DeltaTime);
 	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, const FVector& AppliedWindAcceleration, float DeltaTime, class UWorld* World);
 	void DrawWindDebug(class UWorld* World) const;
+	void SyncBulletVisuals();
+	void HideAllBulletVisuals();
+	UBillboardComponent* GetOrCreateBulletVisual(int32 VisualIndex);
+	UMaterial* ResolveBulletVisualMaterial();
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
@@ -55,7 +62,17 @@ private:
 	bool bEnableWind = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Wind")
 	FVector WindAcceleration = FVector(0.0f, 1.5f, 0.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	bool bEnableBulletVisuals = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Visual Material", AssetType="Material")
+	FSoftObjectPtr BulletVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	bool bDrawDebugBallistics = false;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	bool bDrawDebugImpactMarker = false;
 
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
+	TArray<TWeakObjectPtr<UBillboardComponent>> BulletVisualPool;
+	TWeakObjectPtr<UMaterial> BulletVisualMaterial;
 	TArray<FBallisticBullet> ActiveBullets;
 };

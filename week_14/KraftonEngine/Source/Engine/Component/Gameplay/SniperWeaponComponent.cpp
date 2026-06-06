@@ -14,6 +14,8 @@ namespace
 	constexpr float SniperZeroingSimulationStepSeconds = 1.0f / 240.0f;
 	constexpr int32 SniperZeroingSimulationMaxSteps = 2400;
 	constexpr int32 SniperZeroingBinarySearchSteps = 16;
+	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
+	constexpr float SniperBaseDragScale = 0.00008f;
 
 	float RandomSignedUnit()
 	{
@@ -29,6 +31,44 @@ namespace
 		return Vector * CosTheta
 			+ FVector::Cross(NormalizedAxis, Vector) * SinTheta
 			+ NormalizedAxis * (NormalizedAxis.Dot(Vector) * (1.0f - CosTheta));
+	}
+
+	float ComputeMachDragMultiplier(float Speed)
+	{
+		const float Mach = Speed / SniperSpeedOfSoundMetersPerSecond;
+		if (Mach > 1.2f)
+		{
+			return 1.0f;
+		}
+
+		if (Mach > 0.9f)
+		{
+			const float Alpha = (1.2f - Mach) / 0.3f;
+			return FMath::Lerp(1.0f, 1.4f, Alpha);
+		}
+
+		return 0.9f;
+	}
+
+	FVector ComputeBallisticDragAcceleration(const FVector& Velocity, const FAmmoBallisticData& AmmoData)
+	{
+		const float Speed = Velocity.Length();
+		if (Speed < 1.0f)
+		{
+			return FVector::ZeroVector;
+		}
+
+		const FVector Direction = Velocity / Speed;
+		const float SafeBallisticCoefficient = FMath::Max(AmmoData.BallisticCoefficient, 0.01f);
+		const float MachFactor = ComputeMachDragMultiplier(Speed);
+
+		return Direction * -1.0f
+			* Speed
+			* Speed
+			* SniperBaseDragScale
+			* MachFactor
+			* AmmoData.DragScale
+			/ SafeBallisticCoefficient;
 	}
 
 	float SampleZeroingVerticalOffset(
@@ -51,9 +91,7 @@ namespace
 
 		for (int32 StepIndex = 0; StepIndex < SniperZeroingSimulationMaxSteps; ++StepIndex)
 		{
-			const FVector DragAcceleration = Velocity.IsNearlyZero()
-				? FVector::ZeroVector
-				: Velocity * (-AmmoData.DragCoefficient);
+			const FVector DragAcceleration = ComputeBallisticDragAcceleration(Velocity, AmmoData);
 			const FVector TotalAcceleration = WorldGravity * AmmoData.GravityScale + DragAcceleration;
 			Position += Velocity * SniperZeroingSimulationStepSeconds
 				+ TotalAcceleration * (0.5f * SniperZeroingSimulationStepSeconds * SniperZeroingSimulationStepSeconds);
@@ -172,9 +210,11 @@ bool USniperWeaponComponent::RequestFire(
 	Bullet.Velocity = ZeroedShotDirection * FinalInitialSpeed;
 	Bullet.Damage = AmmoData->Damage;
 	Bullet.Radius = AmmoData->BulletRadius;
+	Bullet.VisualScale = AmmoData->VisualScale;
 	Bullet.LifeTime = AmmoData->LifeTime;
 	Bullet.GravityScale = AmmoData->GravityScale;
-	Bullet.DragCoefficient = AmmoData->DragCoefficient;
+	Bullet.BallisticCoefficient = AmmoData->BallisticCoefficient;
+	Bullet.DragScale = AmmoData->DragScale;
 	Bullet.WindInfluenceScale = AmmoData->WindInfluenceScale;
 	Bullet.AmmoType = AmmoData->AmmoType;
 	Bullet.Owner = Shooter;
@@ -304,12 +344,14 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 
 	FAmmoBallisticData NormalAmmo;
 	NormalAmmo.AmmoType = ESniperAmmoType::Normal;
-	NormalAmmo.InitialSpeed = 900.0f;
+	NormalAmmo.InitialSpeed = 760.0f;
 	NormalAmmo.MuzzleVelocityVariance = 0.01f;
 	NormalAmmo.GravityScale = 1.0f;
-	NormalAmmo.DragCoefficient = 0.015f;
+	NormalAmmo.BallisticCoefficient = 0.28f;
+	NormalAmmo.DragScale = 1.0f;
 	NormalAmmo.Damage = 100.0f;
 	NormalAmmo.BulletRadius = 0.03f;
+	NormalAmmo.VisualScale = 0.055f;
 	NormalAmmo.LifeTime = 5.0f;
 	NormalAmmo.FireInterval = 1.0f;
 	NormalAmmo.WindInfluenceScale = 1.0f;
@@ -320,12 +362,14 @@ void USniperWeaponComponent::InitializeDefaultAmmoData()
 
 	FAmmoBallisticData AntiMaterialAmmo;
 	AntiMaterialAmmo.AmmoType = ESniperAmmoType::AntiMaterial;
-	AntiMaterialAmmo.InitialSpeed = 1200.0f;
+	AntiMaterialAmmo.InitialSpeed = 920.0f;
 	AntiMaterialAmmo.MuzzleVelocityVariance = 0.005f;
 	AntiMaterialAmmo.GravityScale = 0.9f;
-	AntiMaterialAmmo.DragCoefficient = 0.0075f;
+	AntiMaterialAmmo.BallisticCoefficient = 0.50f;
+	AntiMaterialAmmo.DragScale = 0.9f;
 	AntiMaterialAmmo.Damage = 300.0f;
 	AntiMaterialAmmo.BulletRadius = 0.05f;
+	AntiMaterialAmmo.VisualScale = 0.075f;
 	AntiMaterialAmmo.LifeTime = 5.0f;
 	AntiMaterialAmmo.FireInterval = 1.5f;
 	AntiMaterialAmmo.WindInfluenceScale = 0.7f;

@@ -1,4 +1,4 @@
-// Generated from Content/Material/Editor/EmptyActor__.uasset
+// Generated from C:/development/Jungle_Week14_Team7/KraftonEngine/Content/Material/Particle/BulletTracerSprite.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
@@ -27,6 +27,24 @@ struct FMaterialResult
     float3 Emissive;
     float Opacity;
 };
+
+float MaterialRoughnessToShininess(float Roughness)
+{
+    float R = saturate(Roughness);
+    return lerp(256.0f, 2.0f, R * R);
+}
+
+float3 ApplyMaterialMetallicDiffuse(float3 BaseColor, float Metallic)
+{
+    return BaseColor * (1.0f - saturate(Metallic));
+}
+
+float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, float Metallic)
+{
+    float M = saturate(Metallic);
+    float3 SpecularColor = lerp(float3(0.04f, 0.04f, 0.04f), BaseColor, M);
+    return SpecularLight * SpecularColor;
+}
 
 Texture2D Tex_Diffuse : register(t0);
 

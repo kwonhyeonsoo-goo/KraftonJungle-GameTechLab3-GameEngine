@@ -2,10 +2,13 @@
 
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
+#include "Component/Primitive/BillboardComponent.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialManager.h"
 #include "Math/Quat.h"
 
 #include <cmath>
@@ -29,6 +32,48 @@ namespace
 	constexpr float SniperWindDebugArrowDuration = 0.0f;
 	constexpr float SniperWindDebugMinMagnitude = 0.01f;
 	constexpr float SniperRagdollImpactSpeedThreshold = 300.0f;
+	constexpr const char* SniperDefaultBulletVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	constexpr float SniperBulletVisualMinScale = 0.04f;
+	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
+	constexpr float SniperBaseDragScale = 0.00008f;
+
+	float ComputeMachDragMultiplier(float Speed)
+	{
+		const float Mach = Speed / SniperSpeedOfSoundMetersPerSecond;
+		if (Mach > 1.2f)
+		{
+			return 1.0f;
+		}
+
+		if (Mach > 0.9f)
+		{
+			const float Alpha = (1.2f - Mach) / 0.3f;
+			return FMath::Lerp(1.0f, 1.4f, Alpha);
+		}
+
+		return 0.9f;
+	}
+
+	FVector ComputeBallisticDragAcceleration(const FBallisticBullet& Bullet)
+	{
+		const float Speed = Bullet.Velocity.Length();
+		if (Speed < 1.0f)
+		{
+			return FVector::ZeroVector;
+		}
+
+		const FVector Direction = Bullet.Velocity / Speed;
+		const float SafeBallisticCoefficient = FMath::Max(Bullet.BallisticCoefficient, 0.01f);
+		const float MachFactor = ComputeMachDragMultiplier(Speed);
+
+		return Direction * -1.0f
+			* Speed
+			* Speed
+			* SniperBaseDragScale
+			* MachFactor
+			* Bullet.DragScale
+			/ SafeBallisticCoefficient;
+	}
 }
 
 UBallisticBulletManagerComponent::UBallisticBulletManagerComponent()
@@ -45,6 +90,7 @@ void UBallisticBulletManagerComponent::BeginPlay()
 void UBallisticBulletManagerComponent::EndPlay()
 {
 	ResetBullets();
+	HideAllBulletVisuals();
 	UActorComponent::EndPlay();
 }
 
@@ -62,6 +108,7 @@ bool UBallisticBulletManagerComponent::SpawnBullet(const FBallisticBullet& Bulle
 void UBallisticBulletManagerComponent::ResetBullets()
 {
 	ActiveBullets.clear();
+	HideAllBulletVisuals();
 }
 
 void UBallisticBulletManagerComponent::TickComponent(
@@ -75,6 +122,7 @@ void UBallisticBulletManagerComponent::TickComponent(
 
 	UpdateBullets(DeltaTime);
 	CompactDeadBullets();
+	SyncBulletVisuals();
 }
 
 void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
@@ -116,9 +164,7 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 
 	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale * SniperDebugGravityMultiplier;
 	const FVector WindDriftAcceleration = AppliedWindAcceleration * Bullet.WindInfluenceScale;
-	const FVector DragAcceleration = Bullet.Velocity.IsNearlyZero()
-		? FVector::ZeroVector
-		: Bullet.Velocity * (-Bullet.DragCoefficient);
+	const FVector DragAcceleration = ComputeBallisticDragAcceleration(Bullet);
 	const FVector TotalAcceleration = GravityAcceleration + WindDriftAcceleration + DragAcceleration;
 	Bullet.Position += Bullet.Velocity * DeltaTime + TotalAcceleration * (0.5f * DeltaTime * DeltaTime);
 	Bullet.Velocity += TotalAcceleration * DeltaTime;
@@ -135,7 +181,7 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 		Bullet.TraveledDistance += SegmentDistance;
 	}
 
-	if (World)
+	if (World && bDrawDebugBallistics)
 	{
 		DrawDebugLine(World, Bullet.PreviousPosition, Bullet.Position, FColor(0, 220, 255), SniperDebugTrailDuration);
 		DrawDebugSphere(
@@ -195,6 +241,116 @@ void UBallisticBulletManagerComponent::DrawWindDebug(UWorld* World) const
 	DrawDebugLine(World, ArrowEnd, ArrowHeadRight, FColor(80, 255, 120), SniperWindDebugArrowDuration);
 }
 
+void UBallisticBulletManagerComponent::SyncBulletVisuals()
+{
+	if (!bEnableBulletVisuals)
+	{
+		HideAllBulletVisuals();
+		return;
+	}
+
+	for (int32 BulletIndex = 0; BulletIndex < static_cast<int32>(ActiveBullets.size()); ++BulletIndex)
+	{
+		UBillboardComponent* Visual = GetOrCreateBulletVisual(BulletIndex);
+		if (!Visual)
+		{
+			continue;
+		}
+
+		const FBallisticBullet& Bullet = ActiveBullets[BulletIndex];
+		Visual->SetWorldLocation(Bullet.Position);
+		const float VisualScale = (std::max)(Bullet.VisualScale, SniperBulletVisualMinScale);
+		Visual->SetRelativeScale(FVector(VisualScale, VisualScale, VisualScale));
+		Visual->SetVisibility(Bullet.bIsAlive);
+	}
+
+	for (int32 VisualIndex = static_cast<int32>(ActiveBullets.size()); VisualIndex < static_cast<int32>(BulletVisualPool.size()); ++VisualIndex)
+	{
+		if (UBillboardComponent* Visual = BulletVisualPool[VisualIndex].Get())
+		{
+			Visual->SetVisibility(false);
+		}
+	}
+}
+
+void UBallisticBulletManagerComponent::HideAllBulletVisuals()
+{
+	for (TWeakObjectPtr<UBillboardComponent>& VisualEntry : BulletVisualPool)
+	{
+		if (UBillboardComponent* Visual = VisualEntry.Get())
+		{
+			Visual->SetVisibility(false);
+		}
+	}
+}
+
+UBillboardComponent* UBallisticBulletManagerComponent::GetOrCreateBulletVisual(int32 VisualIndex)
+{
+	if (VisualIndex < 0)
+	{
+		return nullptr;
+	}
+
+	if (VisualIndex < static_cast<int32>(BulletVisualPool.size()))
+	{
+		if (UBillboardComponent* Existing = BulletVisualPool[VisualIndex].Get())
+		{
+			return Existing;
+		}
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return nullptr;
+	}
+
+	UBillboardComponent* Visual = OwnerActor->AddComponent<UBillboardComponent>();
+	if (!Visual)
+	{
+		return nullptr;
+	}
+
+	if (USceneComponent* RootComponent = OwnerActor->GetRootComponent())
+	{
+		Visual->AttachToComponent(RootComponent);
+	}
+
+	Visual->SetAbsoluteScale(true);
+	Visual->SetHiddenInComponentTree(true);
+	Visual->SetVisibility(false);
+
+	if (UMaterial* VisualMaterial = ResolveBulletVisualMaterial())
+	{
+		Visual->SetMaterial(VisualMaterial);
+	}
+
+	if (VisualIndex >= static_cast<int32>(BulletVisualPool.size()))
+	{
+		BulletVisualPool.resize(VisualIndex + 1);
+	}
+
+	BulletVisualPool[VisualIndex] = Visual;
+	return Visual;
+}
+
+UMaterial* UBallisticBulletManagerComponent::ResolveBulletVisualMaterial()
+{
+	if (UMaterial* Existing = BulletVisualMaterial.Get())
+	{
+		return Existing;
+	}
+
+	const FString MaterialPath =
+		(!BulletVisualMaterialPath.empty() && BulletVisualMaterialPath != "None")
+		? static_cast<FString>(BulletVisualMaterialPath)
+		: FString(SniperDefaultBulletVisualMaterialPath);
+
+	UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+	BulletVisualMaterial = LoadedMaterial;
+	return LoadedMaterial;
+}
+
 bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bullet, UWorld* World, FHitResult& OutHit) const
 {
 	if (!World)
@@ -239,7 +395,7 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	Bullet.Position = Hit.WorldHitLocation;
 	Bullet.bIsAlive = false;
 
-	if (World)
+	if (World && bDrawDebugImpactMarker)
 	{
 		DrawDebugSphere(
 			World,
