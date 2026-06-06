@@ -4816,16 +4816,24 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &USniperDamageReceiverComponent::IsFriendly,
         "HasArmor",
         &USniperDamageReceiverComponent::HasArmor,
+        "GetArmorStrength",
+        &USniperDamageReceiverComponent::GetArmorStrength,
+        "AllowsRicochet",
+        &USniperDamageReceiverComponent::AllowsRicochet,
         "CanRagdoll",
         &USniperDamageReceiverComponent::CanRagdoll,
         "IsDead",
         &USniperDamageReceiverComponent::IsDead,
         "CanReceiveSniperHit",
         &USniperDamageReceiverComponent::CanReceiveSniperHit,
+        "ResolveSniperHit",
+        &USniperDamageReceiverComponent::ResolveSniperHit,
         "ResetHealth",
         &USniperDamageReceiverComponent::ResetHealth,
         "ApplySniperHit",
-        &USniperDamageReceiverComponent::ApplySniperHit
+        &USniperDamageReceiverComponent::ApplySniperHit,
+        "ApplyResolvedSniperHit",
+        &USniperDamageReceiverComponent::ApplyResolvedSniperHit
     );
 
     Lua.new_usertype<FSniperHitInfo>(

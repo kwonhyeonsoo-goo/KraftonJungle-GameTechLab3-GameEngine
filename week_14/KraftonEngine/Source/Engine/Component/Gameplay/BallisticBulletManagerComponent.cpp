@@ -255,7 +255,8 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	{
 		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
 		{
-			DamageReceiver->ApplySniperHit(HitInfo);
+			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);
+			DamageReceiver->ApplyResolvedSniperHit(HitInfo);
 		}
 	}
 

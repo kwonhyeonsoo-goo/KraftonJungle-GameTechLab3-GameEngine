@@ -28,15 +28,23 @@ public:
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool HasArmor() const { return bHasArmor; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
+	float GetArmorStrength() const { return ArmorStrength; }
+	UFUNCTION(Pure, Category="Sniper|Damage")
+	bool AllowsRicochet() const { return bAllowRicochet; }
+	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool CanRagdoll() const { return bCanRagdoll; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool IsDead() const { return bIsDead; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool CanReceiveSniperHit() const;
+	UFUNCTION(Pure, Category="Sniper|Damage")
+	FSniperHitInfo ResolveSniperHit(const FSniperHitInfo& HitInfo) const;
 	UFUNCTION(Callable, Category="Sniper|Damage")
 	void ResetHealth();
 	UFUNCTION(Callable, Category="Sniper|Damage")
 	bool ApplySniperHit(const FSniperHitInfo& HitInfo);
+	UFUNCTION(Callable, Category="Sniper|Damage")
+	bool ApplyResolvedSniperHit(const FSniperHitInfo& HitInfo);
 
 	FSniperDamageReceiverEventSignature OnSniperDamaged;
 	FSniperDamageReceiverEventSignature OnSniperKilled;
@@ -56,6 +64,12 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Has Armor")
 	bool bHasArmor = false;
+
+	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Armor Strength", Min=0.1f, Max=20.0f, Speed=0.1f)
+	float ArmorStrength = 2.5f;
+
+	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Allow Ricochet")
+	bool bAllowRicochet = true;
 
 	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Can Ragdoll")
 	bool bCanRagdoll = true;
