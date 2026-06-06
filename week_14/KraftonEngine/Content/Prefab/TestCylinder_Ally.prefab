@@ -1,6 +1,6 @@
 {
   "Actor" : {
-    "ClassName" : "AStaticMeshActor",
+    "ClassName" : "ASkeletalMeshActor",
     "Name" : "agent1",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverAgentComponent",
@@ -28,32 +28,64 @@
           "bTickEnable" : true,
           "bUseCharacterMovement" : true
         }
+      }, {
+        "ClassName" : "ULuaScriptComponent",
+        "ObjectId" : 4,
+        "Properties" : {
+          "PendingTagsString" : "",
+          "PersistentGuid" : "Component_334",
+          "ScriptFile" : "CombatAI_Anim_Test.lua",
+          "bAutoActivate" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
       }],
     "ObjectId" : 1,
     "Properties" : {
       "PendingActorLocation" : [-48.873283, 16.728001, 0.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
-      "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+      "PendingActorScale" : [5.000000, 5.000000, 5.000000],
       "PendingActorVisible" : true,
       "PendingTagsString" : "",
       "bNeedsTick" : true
     },
     "RootComponent" : {
       "Children" : [],
-      "ClassName" : "UStaticMeshComponent",
+      "ClassName" : "USkeletalMeshComponent",
       "ObjectId" : 2,
       "Properties" : {
+        "AnimInstance" : {
+          "ClassName" : "UAnimGraphInstance",
+          "Properties" : {
+            "DefaultSequencePath" : "Content/Data/CombatAI/Rifle_Idle_Anim_Unreal_Take.uasset",
+            "GraphAssetPath" : "Content/Animation/CombatAI.uasset",
+            "RootMotionMode" : 1
+          }
+        },
+        "AnimInstanceClass" : "UAnimGraphInstance",
+        "AnimationData" : {
+          "AnimToPlayPath" : "",
+          "PlayRate" : 1.000000,
+          "bLooping" : true,
+          "bPlaying" : true
+        },
+        "AnimationMode" : 2,
         "AttachSocketName" : "Name_None",
+        "BackStandUpAnimationPath" : "None",
         "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
         "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
         "CollisionEnabled" : 0,
+        "FrontStandUpAnimationPath" : "None",
         "Mass" : 1.000000,
-        "MaterialSlots" : ["Content/Material/Auto/BasicShapeMaterial.uasset"],
+        "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_1.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_332",
+        "PhysicsAssetOverridePath" : "None",
         "RelativeTransform.Location" : [-48.873283, 16.728001, 0.000000],
-        "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+        "RelativeTransform.Scale" : [5.000000, 5.000000, 5.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
           "Responses[1]" : 2,
@@ -61,7 +93,7 @@
           "Responses[3]" : 2,
           "Responses[4]" : 2
         },
-        "StaticMeshPath" : "Content/Data/BasicShape/Cylinder_StaticMesh.uasset",
+        "SkeletalMeshPath" : "Content/Data/CombatAI/SK_Bandit_SkeletalMesh.uasset",
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
