@@ -42,6 +42,7 @@ namespace
 	// Variable Get 노드 생성/변수 타입 변경 경로에서 모두 사용된다.
 	// RenderGetVariableAction 이 helper 정의보다 먼저 배치되어 있으므로 전방 선언이 필요하다.
 	void SetVariableGetOutputType(FAnimGraphNode& Node, EAnimGraphPinType Type);
+	ImVec2 DefaultStateMachineStatePosition(int32 StateIndex);
 
 	const char* NodeTypeLabel(EAnimGraphNodeType Type)
 	{
@@ -109,6 +110,7 @@ namespace
 			case ETransitionRuleKind::AutomaticSequenceEnd: return "Automatic Sequence End";
 			case ETransitionRuleKind::AlwaysTrue:           return "Always True";
 			case ETransitionRuleKind::AlwaysFalse:          return "Always False";
+			case ETransitionRuleKind::Trigger:              return "Trigger";
 		}
 		return "Rule";
 	}
@@ -125,6 +127,7 @@ namespace
 			case ETransitionRuleKind::AutomaticSequenceEnd: return "automatic sequence end complete finished transition rule";
 			case ETransitionRuleKind::AlwaysTrue:           return "always true unconditional transition rule";
 			case ETransitionRuleKind::AlwaysFalse:          return "always false disabled transition rule";
+			case ETransitionRuleKind::Trigger:              return "trigger event one shot fire attack shoot transition rule";
 		}
 		return "transition rule";
 	}
@@ -143,6 +146,7 @@ namespace
 			case EAnimGraphPinType::Bool:  return ImVec4(0.88f, 0.20f, 0.16f, 1.0f);
 			case EAnimGraphPinType::Int:   return ImVec4(0.32f, 0.72f, 1.00f, 1.0f);
 			case EAnimGraphPinType::Name:  return ImVec4(0.80f, 0.52f, 1.00f, 1.0f);
+			case EAnimGraphPinType::Trigger: return ImVec4(1.00f, 0.62f, 0.18f, 1.0f);
 		}
 		return ImVec4(0.78f, 0.78f, 0.78f, 1.0f);
 	}
@@ -194,6 +198,7 @@ namespace
 			case EAnimGraphPinType::Bool:  return "Bool";
 			case EAnimGraphPinType::Int:   return "Int";
 			case EAnimGraphPinType::Name:  return "Name";
+			case EAnimGraphPinType::Trigger: return "Trigger";
 		}
 		return "Pin";
 	}
@@ -643,7 +648,7 @@ namespace
 	{
 		if (Var.VariableName == FName::None) return false;
 		const FString Label = FString("Get ") + Var.VariableName.ToString();
-		const FString Haystack = Label + FString(" Variable Property Access Float Bool Int");
+		const FString Haystack = Label + FString(" Variable Property Access Float Bool Int Trigger");
 		if (!StringContainsInsensitive(Haystack, SearchText)) return false;
 
 		ImGui::PushStyleColor(ImGuiCol_Text, NodeTitleColor(EAnimGraphNodeType::VariableGet));
@@ -704,6 +709,7 @@ namespace
 			case EAnimGraphPinType::Bool:  return "Bool";
 			case EAnimGraphPinType::Int:   return "Int";
 			case EAnimGraphPinType::Name:  return "Name";
+			case EAnimGraphPinType::Trigger: return "Trigger";
 			case EAnimGraphPinType::Pose:  return "Pose";
 		}
 		return "Variable";
@@ -853,6 +859,8 @@ namespace
 				return Type == EAnimGraphPinType::Bool;
 			case ETransitionRuleKind::FloatCompare:
 				return Type == EAnimGraphPinType::Float || Type == EAnimGraphPinType::Int;
+			case ETransitionRuleKind::Trigger:
+				return Type == EAnimGraphPinType::Trigger;
 			default:
 				return true;
 		}
@@ -1049,7 +1057,7 @@ namespace
 		ImGui::SetNextItemWidth(-1.0f);
 		if (ImGui::BeginCombo(Label, TransitionRuleKindLabel(InOutKind)))
 		{
-			for (int i = 0; i <= static_cast<int>(ETransitionRuleKind::AlwaysFalse); ++i)
+			for (int i = 0; i <= static_cast<int>(ETransitionRuleKind::Trigger); ++i)
 			{
 				const ETransitionRuleKind K = static_cast<ETransitionRuleKind>(i);
 				const bool bSel = (InOutKind == K);
@@ -1126,6 +1134,7 @@ namespace
 
 			if (ImGui::CollapsingHeader("Variables", ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				RuleAction(ETransitionRuleKind::Trigger);
 				RuleAction(ETransitionRuleKind::BoolProperty);
 				RuleAction(ETransitionRuleKind::FloatCompare);
 			}
@@ -1203,6 +1212,15 @@ namespace
 				T.Threshold = 0.0f;
 				bChanged = true;
 			}
+			ImGui::SameLine();
+			if (ImGui::Button("Fire: Trigger Fired"))
+			{
+				EnsureGraphVariable(Asset, FName("Fire"), EAnimGraphPinType::Trigger);
+				T.RuleKind = ETransitionRuleKind::Trigger;
+				T.VariableName = FName("Fire");
+				T.Threshold = 0.0f;
+				bChanged = true;
+			}
 		}
 
 		switch (T.RuleKind)
@@ -1242,6 +1260,13 @@ namespace
 					T.Threshold = bExpected ? 1.0f : 0.0f;
 					bChanged = true;
 				}
+				break;
+			}
+			case ETransitionRuleKind::Trigger:
+			{
+				ImGui::TextUnformatted("Trigger Variable");
+				bChanged |= VariableNameComboFiltered("##RuleTriggerProperty", Asset, OwnerCls, T.VariableName, EAnimGraphPinType::Trigger, false);
+				ImGui::TextWrapped("Consumes the trigger when the transition evaluates true.");
 				break;
 			}
 			case ETransitionRuleKind::TimeRemaining:
@@ -1322,6 +1347,13 @@ namespace
 				}
 				break;
 			}
+			case ETransitionRuleKind::Trigger:
+			{
+				ImGui::TextUnformatted("Trigger Variable");
+				bChanged |= VariableNameComboFiltered("##RuleTriggerProperty", Asset, OwnerCls, T.VariableName, EAnimGraphPinType::Trigger, false);
+				ImGui::TextWrapped("Consumes the trigger when the transition evaluates true.");
+				break;
+			}
 			case ETransitionRuleKind::TimeRemaining:
 				ImGui::TextUnformatted("Remaining Seconds <=");
 				ImGui::SetNextItemWidth(-1.0f);
@@ -1394,6 +1426,15 @@ namespace
 			{
 				T.RuleKind = ETransitionRuleKind::AutomaticSequenceEnd;
 				T.VariableName = FName::None;
+				T.Threshold = 0.0f;
+				bChanged = true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Fire Trigger"))
+			{
+				EnsureGraphVariable(Asset, FName("Fire"), EAnimGraphPinType::Trigger);
+				T.RuleKind = ETransitionRuleKind::Trigger;
+				T.VariableName = FName("Fire");
 				T.Threshold = 0.0f;
 				bChanged = true;
 			}
@@ -1561,6 +1602,10 @@ namespace
 					{
 						FAnimGraphState S;
 						S.StateName = FName("NewState");
+						const ImVec2 Pos = DefaultStateMachineStatePosition(static_cast<int32>(Node.States.size()));
+						S.PosX = Pos.x;
+						S.PosY = Pos.y;
+						S.bHasGraphPosition = true;
 						Node.States.push_back(std::move(S));
 						// 첫 state 면 InitialStateName 자동 박기 — SM 컴파일 시 SetInitialState 가
 						// None 이면 SM 자체가 동작 안 함.
@@ -1703,7 +1748,7 @@ namespace
 		{
 			ImGui::BulletText("Get Skeletal Mesh Component");
 			ImGui::BulletText("Get Anim Instance");
-			ImGui::BulletText("Set Anim Graph Float/Bool/Int");
+			ImGui::BulletText("Set Anim Graph Float/Bool/Int/Trigger");
 			ImGui::TextDisabled("Success=false이면 AnimInstance가 AnimGraphInstance가 아니거나 변수명이 다릅니다.");
 		}
 
@@ -1743,13 +1788,16 @@ namespace
 				ImGui::SetNextItemWidth(-1.0f);
 				if (ImGui::BeginCombo("##VariableType", VariableTypeLabel(Var.Type)))
 				{
-					for (EAnimGraphPinType Type : { EAnimGraphPinType::Float, EAnimGraphPinType::Bool, EAnimGraphPinType::Int })
+					for (EAnimGraphPinType Type : { EAnimGraphPinType::Float, EAnimGraphPinType::Bool, EAnimGraphPinType::Int, EAnimGraphPinType::Trigger })
 					{
 						const bool bSel = Var.Type == Type;
 						if (ImGui::Selectable(VariableTypeLabel(Type), bSel))
 						{
 							Var.Type = Type;
-							if (Type == EAnimGraphPinType::Bool) Var.DefaultValue = Var.DefaultValue >= 0.5f ? 1.0f : 0.0f;
+							if (Type == EAnimGraphPinType::Bool || Type == EAnimGraphPinType::Trigger)
+							{
+								Var.DefaultValue = Var.DefaultValue >= 0.5f ? 1.0f : 0.0f;
+							}
 							for (FAnimGraphNode& Node : const_cast<TArray<FAnimGraphNode>&>(Asset.GetNodes()))
 							{
 								if (Node.Type == EAnimGraphNodeType::VariableGet && Node.VariableName == Var.VariableName)
@@ -1773,6 +1821,11 @@ namespace
 						Var.DefaultValue = bValue ? 1.0f : 0.0f;
 						bChanged = true;
 					}
+				}
+				else if (Var.Type == EAnimGraphPinType::Trigger)
+				{
+					ImGui::TextDisabled("Trigger defaults to not fired.");
+					Var.DefaultValue = 0.0f;
 				}
 				else if (Var.Type == EAnimGraphPinType::Int)
 				{
@@ -1938,6 +1991,12 @@ namespace
 					Var.c_str(), T.Threshold >= 0.5f ? "true" : "false", T.BlendTime);
 				return Buf;
 			}
+			case ETransitionRuleKind::Trigger:
+			{
+				const FString Var = (T.VariableName == FName::None) ? FString("<select trigger>") : T.VariableName.ToString();
+				std::snprintf(Buf, sizeof(Buf), "When %s fires  |  Blend %.2fs", Var.c_str(), T.BlendTime);
+				return Buf;
+			}
 			case ETransitionRuleKind::TimeRemaining:
 				std::snprintf(Buf, sizeof(Buf), "Current state time remaining <= %.2fs  |  Blend %.2fs", T.Threshold, T.BlendTime);
 				return Buf;
@@ -1968,6 +2027,8 @@ namespace
 				return "Float > Compare";
 			case ETransitionRuleKind::BoolProperty:
 				return "Bool Property";
+			case ETransitionRuleKind::Trigger:
+				return "Trigger";
 			case ETransitionRuleKind::TimeRemaining:
 				return "Time Remaining";
 			case ETransitionRuleKind::TimeRemainingRatio:
@@ -2073,6 +2134,7 @@ namespace
 			case ETransitionRuleKind::BoolProperty:
 				Reverse.Threshold = Source.Threshold >= 0.5f ? 0.0f : 1.0f;
 				break;
+			case ETransitionRuleKind::Trigger:
 			case ETransitionRuleKind::AlwaysTrue:
 			case ETransitionRuleKind::AlwaysFalse:
 			case ETransitionRuleKind::TimeRemaining:
@@ -2113,6 +2175,20 @@ namespace
 			bChanged |= AddReverseTransitionFrom(StateMachineNode, i);
 		}
 		return bChanged;
+	}
+
+	ImVec2 DefaultStateMachineStatePosition(int32 StateIndex)
+	{
+		const int32 Col = StateIndex % 3;
+		const int32 Row = StateIndex / 3;
+		return ImVec2(Col * 300.0f, Row * 170.0f);
+	}
+
+	ImVec2 StoredStatePositionOrDefault(const FAnimGraphState& State, int32 StateIndex)
+	{
+		return State.bHasGraphPosition
+			? ImVec2(State.PosX, State.PosY)
+			: DefaultStateMachineStatePosition(StateIndex);
 	}
 
 
@@ -2602,9 +2678,88 @@ bool FAnimGraphEditorWidget::RestoreGraphSnapshot(UAnimGraphAsset* Asset, const 
 	return true;
 }
 
+void FAnimGraphEditorWidget::SyncRootGraphPositions(UAnimGraphAsset* Asset)
+{
+	if (!Asset || !NodeEditorContext || ViewMode != EViewMode::RootAnimGraph || !bPositionsPushed)
+	{
+		return;
+	}
+
+	ed::SetCurrentEditor(NodeEditorContext);
+	for (FAnimGraphNode& Node : const_cast<TArray<FAnimGraphNode>&>(Asset->GetNodes()))
+	{
+		const ImVec2 P = ed::GetNodePosition(ToNodeId(Node.NodeId));
+		if (std::fabs(Node.PosX - P.x) > 0.01f || std::fabs(Node.PosY - P.y) > 0.01f)
+		{
+			Node.PosX = P.x;
+			Node.PosY = P.y;
+			MarkDirty();
+		}
+	}
+}
+
+void FAnimGraphEditorWidget::SyncOpenStateMachinePositions(UAnimGraphAsset* Asset)
+{
+	if (!Asset || !NodeEditorContext || ViewMode != EViewMode::StateMachine || !bStateMachinePositionsPushed)
+	{
+		return;
+	}
+
+	FAnimGraphNode* StateMachineNode = Asset->FindNode(OpenStateMachineNodeId);
+	if (!StateMachineNode || StateMachineNode->Type != EAnimGraphNodeType::StateMachine)
+	{
+		return;
+	}
+
+	ed::SetCurrentEditor(NodeEditorContext);
+	const ImVec2 EntryPos = ed::GetNodePosition(ToNodeId(MakeEntryNodeId(StateMachineNode->NodeId)));
+	if (!StateMachineNode->bHasStateEntryPosition ||
+		std::fabs(StateMachineNode->StateEntryPosX - EntryPos.x) > 0.01f ||
+		std::fabs(StateMachineNode->StateEntryPosY - EntryPos.y) > 0.01f)
+	{
+		StateMachineNode->StateEntryPosX = EntryPos.x;
+		StateMachineNode->StateEntryPosY = EntryPos.y;
+		StateMachineNode->bHasStateEntryPosition = true;
+		MarkDirty();
+	}
+
+	const ImVec2 AnyPos = ed::GetNodePosition(ToNodeId(MakeAnyStateNodeId(StateMachineNode->NodeId)));
+	if (!StateMachineNode->bHasAnyStatePosition ||
+		std::fabs(StateMachineNode->AnyStatePosX - AnyPos.x) > 0.01f ||
+		std::fabs(StateMachineNode->AnyStatePosY - AnyPos.y) > 0.01f)
+	{
+		StateMachineNode->AnyStatePosX = AnyPos.x;
+		StateMachineNode->AnyStatePosY = AnyPos.y;
+		StateMachineNode->bHasAnyStatePosition = true;
+		MarkDirty();
+	}
+
+	for (int32 i = 0; i < static_cast<int32>(StateMachineNode->States.size()); ++i)
+	{
+		FAnimGraphState& State = StateMachineNode->States[i];
+		const ImVec2 P = ed::GetNodePosition(ToNodeId(MakeStateNodeId(StateMachineNode->NodeId, i)));
+		if (!State.bHasGraphPosition ||
+			std::fabs(State.PosX - P.x) > 0.01f ||
+			std::fabs(State.PosY - P.y) > 0.01f)
+		{
+			State.PosX = P.x;
+			State.PosY = P.y;
+			State.bHasGraphPosition = true;
+			MarkDirty();
+		}
+	}
+}
+
+void FAnimGraphEditorWidget::SyncCanvasPositionsToAsset(UAnimGraphAsset* Asset)
+{
+	SyncRootGraphPositions(Asset);
+	SyncOpenStateMachinePositions(Asset);
+}
+
 void FAnimGraphEditorWidget::CommitGraphEdit(UAnimGraphAsset* Asset)
 {
 	if (!Asset || bRestoringSnapshot) return;
+	SyncCanvasPositionsToAsset(Asset);
 	SanitizeGraphReferences(Asset);
 	const TArray<uint8> BeforeSnapshot = UndoStack.empty() ? TArray<uint8>() : UndoStack.back();
 	const TArray<uint8> Snapshot = MakeGraphSnapshot(Asset);
@@ -3096,18 +3251,25 @@ void FAnimGraphEditorWidget::ValidateGraph(UAnimGraphAsset* Asset)
 						AddValidationMessage(LastValidationMessages, bLastValidationOk,
 							NodeTitleForDisplay(Node) + " has a transition with a missing source state.", true);
 					}
-					if ((T.RuleKind == ETransitionRuleKind::FloatCompare || T.RuleKind == ETransitionRuleKind::BoolProperty) && T.VariableName == FName::None)
+					if ((T.RuleKind == ETransitionRuleKind::FloatCompare ||
+						 T.RuleKind == ETransitionRuleKind::BoolProperty ||
+						 T.RuleKind == ETransitionRuleKind::Trigger) &&
+						T.VariableName == FName::None)
 					{
 						AddValidationMessage(LastValidationMessages, bLastValidationOk,
 							NodeTitleForDisplay(Node) + " has a property-based transition rule without a selected variable.", true);
 					}
-					else if ((T.RuleKind == ETransitionRuleKind::FloatCompare || T.RuleKind == ETransitionRuleKind::BoolProperty)
+					else if ((T.RuleKind == ETransitionRuleKind::FloatCompare ||
+							  T.RuleKind == ETransitionRuleKind::BoolProperty ||
+							  T.RuleKind == ETransitionRuleKind::Trigger)
 						&& !IsVariableResolvable(Asset, OwnerCls, T.VariableName))
 					{
 						AddValidationMessage(LastValidationMessages, bLastValidationOk,
 							NodeTitleForDisplay(Node) + " has a transition rule referencing an unknown variable: " + T.VariableName.ToString(), true);
 					}
-					else if (T.RuleKind == ETransitionRuleKind::FloatCompare || T.RuleKind == ETransitionRuleKind::BoolProperty)
+					else if (T.RuleKind == ETransitionRuleKind::FloatCompare ||
+							 T.RuleKind == ETransitionRuleKind::BoolProperty ||
+							 T.RuleKind == ETransitionRuleKind::Trigger)
 					{
 						EAnimGraphPinType VarType = EAnimGraphPinType::Float;
 						if (TryResolveVariableType(Asset, OwnerCls, T.VariableName, VarType) && !VariableTypeMatchesRule(T.RuleKind, VarType))
@@ -3576,13 +3738,20 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 
 	if (ImGui::Button("Add State"))
 	{
+		SyncOpenStateMachinePositions(&Asset);
 		FAnimGraphState S;
 		S.StateName = MakeUniqueStateName(StateMachineNode.States, "State");
+		const ImVec2 Pos = DefaultStateMachineStatePosition(static_cast<int32>(StateMachineNode.States.size()));
+		S.PosX = Pos.x;
+		S.PosY = Pos.y;
+		S.bHasGraphPosition = true;
 		StateMachineNode.States.push_back(std::move(S));
+		const int32 NewStateIdx = static_cast<int32>(StateMachineNode.States.size()) - 1;
 		if (StateMachineNode.InitialStateName == FName::None)
 		{
 			StateMachineNode.InitialStateName = StateMachineNode.States.back().StateName;
 		}
+		ed::SetNodePosition(ToNodeId(MakeStateNodeId(StateMachineNode.NodeId, NewStateIdx)), Pos);
 		Asset.BumpVersion();
 		CommitGraphEdit(&Asset);
 		bStateMachinePositionsPushed = false;
@@ -3658,14 +3827,18 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 
 	if (!bStateMachinePositionsPushed)
 	{
-		ed::SetNodePosition(ToNodeId(MakeEntryNodeId(StateMachineNode.NodeId)), ImVec2(-360.0f, -55.0f));
-		ed::SetNodePosition(ToNodeId(MakeAnyStateNodeId(StateMachineNode.NodeId)), ImVec2(-360.0f, 115.0f));
+		ed::SetNodePosition(ToNodeId(MakeEntryNodeId(StateMachineNode.NodeId)),
+			StateMachineNode.bHasStateEntryPosition
+				? ImVec2(StateMachineNode.StateEntryPosX, StateMachineNode.StateEntryPosY)
+				: ImVec2(-360.0f, -55.0f));
+		ed::SetNodePosition(ToNodeId(MakeAnyStateNodeId(StateMachineNode.NodeId)),
+			StateMachineNode.bHasAnyStatePosition
+				? ImVec2(StateMachineNode.AnyStatePosX, StateMachineNode.AnyStatePosY)
+				: ImVec2(-360.0f, 115.0f));
 		for (int32 i = 0; i < static_cast<int32>(StateMachineNode.States.size()); ++i)
 		{
-			const int32 Col = i % 3;
-			const int32 Row = i / 3;
 			ed::SetNodePosition(ToNodeId(MakeStateNodeId(StateMachineNode.NodeId, i)),
-				ImVec2(0.0f + Col * 300.0f, Row * 170.0f));
+				StoredStatePositionOrDefault(StateMachineNode.States[i], i));
 		}
 		bStateMachinePositionsPushed = true;
 	}
@@ -3904,6 +4077,10 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 			{
 				FAnimGraphState S;
 				S.StateName = MakeUniqueStateName(StateMachineNode.States, "State");
+				const ImVec2 NewPos = ed::ScreenToCanvas(ImGui::GetMousePos());
+				S.PosX = NewPos.x;
+				S.PosY = NewPos.y;
+				S.bHasGraphPosition = true;
 				StateMachineNode.States.push_back(std::move(S));
 				const int32 NewStateIdx = static_cast<int32>(StateMachineNode.States.size()) - 1;
 				const FName NewStateName = StateMachineNode.States[NewStateIdx].StateName;
@@ -3926,7 +4103,6 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 					}
 				}
 
-				const ImVec2 NewPos = ed::ScreenToCanvas(ImGui::GetMousePos());
 				ed::SetNodePosition(ToNodeId(MakeStateNodeId(StateMachineNode.NodeId, NewStateIdx)), NewPos);
 				Asset.BumpVersion();
 				CommitGraphEdit(&Asset);
@@ -3969,10 +4145,11 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 			{
 				if (ed::AcceptDeletedItem())
 				{
+					SyncOpenStateMachinePositions(&Asset);
 					RemoveStateAndCascade(StateMachineNode, StateIdx);
+					bStateMachinePositionsPushed = false;
 					Asset.BumpVersion();
 		CommitGraphEdit(&Asset);
-					bStateMachinePositionsPushed = false;
 				}
 			}
 			else
@@ -3998,6 +4175,8 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 	}
 	else if (ed::ShowBackgroundContextMenu())
 	{
+		PendingNewNodeScreenPosition = ImGui::GetMousePos();
+		PendingNewNodePosition = ed::ScreenToCanvas(PendingNewNodeScreenPosition);
 		ImGui::OpenPopup("StateMachineBackgroundMenu");
 	}
 
@@ -4022,10 +4201,11 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 			}
 			if (ImGui::MenuItem("Delete State"))
 			{
+				SyncOpenStateMachinePositions(&Asset);
 				RemoveStateAndCascade(StateMachineNode, StateIdx);
+				bStateMachinePositionsPushed = false;
 				Asset.BumpVersion();
 				CommitGraphEdit(&Asset);
-				bStateMachinePositionsPushed = false;
 			}
 		}
 		else
@@ -4084,13 +4264,20 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 	{
 		if (ImGui::MenuItem("Add State"))
 		{
+			SyncOpenStateMachinePositions(&Asset);
 			FAnimGraphState S;
 			S.StateName = MakeUniqueStateName(StateMachineNode.States, "State");
+			const ImVec2 Pos = PendingNewNodePosition;
+			S.PosX = Pos.x;
+			S.PosY = Pos.y;
+			S.bHasGraphPosition = true;
 			StateMachineNode.States.push_back(std::move(S));
+			const int32 NewStateIdx = static_cast<int32>(StateMachineNode.States.size()) - 1;
 			if (StateMachineNode.InitialStateName == FName::None)
 			{
 				StateMachineNode.InitialStateName = StateMachineNode.States.back().StateName;
 			}
+			ed::SetNodePosition(ToNodeId(MakeStateNodeId(StateMachineNode.NodeId, NewStateIdx)), Pos);
 			Asset.BumpVersion();
 			CommitGraphEdit(&Asset);
 			bStateMachinePositionsPushed = false;
@@ -4172,6 +4359,7 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 			ImGui::SameLine();
 			if (ImGui::Button("Delete State"))
 			{
+				SyncOpenStateMachinePositions(&Asset);
 				RemoveStateAndCascade(StateMachineNode, SelectedStateIndex);
 				bChanged = true;
 				bStateMachinePositionsPushed = false;
@@ -4193,6 +4381,9 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 						Nested->DisplayName = FName(NestedName.c_str());
 						FAnimGraphState Inner;
 						Inner.StateName = FName("EntryState");
+						Inner.PosX = 0.0f;
+						Inner.PosY = 0.0f;
+						Inner.bHasGraphPosition = true;
 						Nested->States.push_back(Inner);
 						Nested->InitialStateName = Inner.StateName;
 						const uint32 NestedNodeId = Nested->NodeId;
@@ -4313,6 +4504,7 @@ void FAnimGraphEditorWidget::RenderStateMachineEditor(UAnimGraphAsset& Asset, FA
 
 		if (bChanged)
 		{
+			SyncOpenStateMachinePositions(&Asset);
 			Asset.BumpVersion();
 			CommitGraphEdit(&Asset);
 		}
@@ -4573,16 +4765,7 @@ void FAnimGraphEditorWidget::Render(float DeltaTime)
 	ed::EndDelete();
 
 	// ── 위치 동기화 (ed → model) ──
-	for (FAnimGraphNode& Node : const_cast<TArray<FAnimGraphNode>&>(Asset->GetNodes()))
-	{
-		const ImVec2 P = ed::GetNodePosition(ToNodeId(Node.NodeId));
-		if (std::fabs(Node.PosX - P.x) > 0.01f || std::fabs(Node.PosY - P.y) > 0.01f)
-		{
-			Node.PosX = P.x;
-			Node.PosY = P.y;
-			MarkDirty();
-		}
-	}
+	SyncRootGraphPositions(Asset);
 
 	// ── 컨텍스트 메뉴 ──
 	ed::NodeId   ContextNodeId   = 0;

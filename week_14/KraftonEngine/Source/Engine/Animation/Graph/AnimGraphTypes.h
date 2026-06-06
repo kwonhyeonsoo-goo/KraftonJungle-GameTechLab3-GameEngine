@@ -15,14 +15,15 @@ enum class EAnimGraphPinKind : uint8
 	Output
 };
 
-// 단계 1 은 Pose 만 실질 사용. Float/Bool/Int/Name 은 후속 VariableGet 노드 대비 미리 정의.
+// 단계 1 은 Pose 만 실질 사용. Float/Bool/Int/Name/Trigger 는 후속 VariableGet 노드 대비 미리 정의.
 enum class EAnimGraphPinType : uint8
 {
 	Pose,
 	Float,
 	Bool,
 	Int,
-	Name
+	Name,
+	Trigger
 };
 
 // FAnimNode_* 와 1:1 매핑되는 enum.
@@ -44,8 +45,8 @@ enum class EAnimGraphNodeType : uint8
 struct FAnimGraphVariable
 {
 	FName             VariableName;
-	EAnimGraphPinType Type         = EAnimGraphPinType::Float; // Float / Bool / Int 지원.
-	float             DefaultValue = 0.0f;                     // Bool 은 0/1, Int 는 float 저장 후 int cast.
+	EAnimGraphPinType Type         = EAnimGraphPinType::Float; // Float / Bool / Int / Trigger 지원.
+	float             DefaultValue = 0.0f;                     // Bool/Trigger 는 0/1, Int 는 float 저장 후 int cast.
 	FString           Category;
 
 	friend FArchive& operator<<(FArchive& Ar, FAnimGraphVariable& Var);
@@ -108,7 +109,8 @@ enum class ETransitionRuleKind : uint8
 	TimeElapsed,           // Current state elapsed seconds >= Threshold
 	AutomaticSequenceEnd,  // Non-looping sequence reached the end
 	AlwaysTrue,            // Explicit unconditional rule
-	AlwaysFalse            // Explicit disabled rule
+	AlwaysFalse,           // Explicit disabled rule
+	Trigger                // AnimGraph Trigger variable fired once; consuming it resets the variable.
 };
 
 struct FAnimGraphState
@@ -117,6 +119,9 @@ struct FAnimGraphState
 	FString  SequencePath; // 이 state 가 재생할 sequence (디스크 path). LoadAnimation 으로 해상.
 	float    PlayRate    = 1.0f;
 	bool     bLooping    = true;
+	float    PosX        = 0.0f;
+	float    PosY        = 0.0f;
+	bool     bHasGraphPosition = false;
 
 	// Sub-state-machine — 그래프 안의 다른 StateMachine 노드를 가리킴. 0 == 없음 (일반 sequence state).
 	// 컴파일러가 그 노드를 컴파일해 UAnimState::SubGraphOverride 에 박음 → state Enter 시 sub-tree
@@ -185,6 +190,12 @@ struct FAnimGraphNode
 	TArray<FAnimGraphState>      States;
 	TArray<FAnimGraphTransition> Transitions;
 	FName                        InitialStateName;
+	float                        StateEntryPosX = -360.0f;
+	float                        StateEntryPosY = -55.0f;
+	bool                         bHasStateEntryPosition = false;
+	float                        AnyStatePosX = -360.0f;
+	float                        AnyStatePosY = 115.0f;
+	bool                         bHasAnyStatePosition = false;
 
 	friend FArchive& operator<<(FArchive& Ar, FAnimGraphNode& Node);
 };

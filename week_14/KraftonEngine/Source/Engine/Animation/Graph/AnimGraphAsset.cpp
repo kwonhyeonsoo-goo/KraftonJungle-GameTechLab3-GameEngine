@@ -30,8 +30,9 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphVariable&   Var);
 namespace
 {
 	constexpr uint32 kAnimGraphAssetMagic   = 0x46475241u; // 'AGRF' - Anim Graph File
-	constexpr uint32 kAnimGraphAssetVersion = 3u;          // v3 adds AnimGraph-owned variables.
+	constexpr uint32 kAnimGraphAssetVersion = 4u;          // v4 persists StateMachine editor node positions.
 	thread_local bool g_LoadLegacyTransitionFormat = false;
+	thread_local bool g_LoadLegacyStateMachinePositionFormat = false;
 
 	struct FLegacyTransitionFormatScope
 	{
@@ -43,6 +44,20 @@ namespace
 		~FLegacyTransitionFormatScope()
 		{
 			g_LoadLegacyTransitionFormat = bPrevious;
+		}
+		bool bPrevious = false;
+	};
+
+	struct FLegacyStateMachinePositionFormatScope
+	{
+		explicit FLegacyStateMachinePositionFormatScope(bool bEnable)
+			: bPrevious(g_LoadLegacyStateMachinePositionFormat)
+		{
+			g_LoadLegacyStateMachinePositionFormat = bEnable;
+		}
+		~FLegacyStateMachinePositionFormatScope()
+		{
+			g_LoadLegacyStateMachinePositionFormat = bPrevious;
 		}
 		bool bPrevious = false;
 	};
@@ -108,6 +123,18 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphState& State)
 	Ar << State.SequencePath;
 	Ar << State.PlayRate;
 	Ar << State.bLooping;
+	if (Ar.IsLoading() && g_LoadLegacyStateMachinePositionFormat)
+	{
+		State.PosX = 0.0f;
+		State.PosY = 0.0f;
+		State.bHasGraphPosition = false;
+	}
+	else
+	{
+		Ar << State.PosX;
+		Ar << State.PosY;
+		Ar << State.bHasGraphPosition;
+	}
 	Ar << State.SubGraphNodeId;
 	return Ar;
 }
@@ -150,6 +177,24 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphNode& Node)
 	Ar << Node.States;
 	Ar << Node.Transitions;
 	Ar << Node.InitialStateName;
+	if (Ar.IsLoading() && g_LoadLegacyStateMachinePositionFormat)
+	{
+		Node.StateEntryPosX = -360.0f;
+		Node.StateEntryPosY = -55.0f;
+		Node.bHasStateEntryPosition = false;
+		Node.AnyStatePosX = -360.0f;
+		Node.AnyStatePosY = 115.0f;
+		Node.bHasAnyStatePosition = false;
+	}
+	else
+	{
+		Ar << Node.StateEntryPosX;
+		Ar << Node.StateEntryPosY;
+		Ar << Node.bHasStateEntryPosition;
+		Ar << Node.AnyStatePosX;
+		Ar << Node.AnyStatePosY;
+		Ar << Node.bHasAnyStatePosition;
+	}
 	return Ar;
 }
 
@@ -574,6 +619,8 @@ void UAnimGraphAsset::Serialize(FArchive& Ar)
 
 	const bool bLegacyTransitions = Version < 2;
 	FLegacyTransitionFormatScope LegacyTransitionScope(bLegacyTransitions);
+	const bool bLegacyStateMachinePositions = Version < 4;
+	FLegacyStateMachinePositionFormatScope LegacyStateMachinePositionScope(bLegacyStateMachinePositions);
 	Ar << Nodes;
 	Ar << Links;
 	Ar << OwnerClassName;
