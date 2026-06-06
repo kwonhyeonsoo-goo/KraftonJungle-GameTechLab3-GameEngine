@@ -135,22 +135,21 @@ namespace
 	{
 		if (!SM) return 0.0f;
 		const UAnimState* State = SM->GetCurrentState();
-		if (!IsValid(State) || !IsValid(State->Sequence)) return 0.0f;
-		return std::max(0.0f, State->Sequence->GetPlayLength());
+		return IsValid(State) ? State->GetEffectivePlayLength() : 0.0f;
 	}
 
 	float GetCurrentStateElapsedSeconds(const FAnimNode_StateMachine* SM)
 	{
 		if (!SM) return 0.0f;
 		const UAnimState* State = SM->GetCurrentState();
-		return IsValid(State) ? std::max(0.0f, State->GetLocalTime()) : 0.0f;
+		return IsValid(State) ? State->GetElapsedTimeInRange() : 0.0f;
 	}
 
 	float GetCurrentStateRemainingSeconds(const FAnimNode_StateMachine* SM)
 	{
-		const float Length = GetCurrentStateLengthSeconds(SM);
-		if (Length <= 0.0f) return 0.0f;
-		return std::max(0.0f, Length - GetCurrentStateElapsedSeconds(SM));
+		if (!SM) return 0.0f;
+		const UAnimState* State = SM->GetCurrentState();
+		return IsValid(State) ? State->GetRemainingTimeInRange() : 0.0f;
 	}
 
 	// Transition rule — UE 의 Transition Rule Graph 에서 가장 많이 쓰는 노드들을 데이터 기반으로 평가.
@@ -201,8 +200,8 @@ namespace
 				{
 					const UAnimState* State = SM ? SM->GetCurrentState() : nullptr;
 					if (!IsValid(State) || !IsValid(State->Sequence) || State->bLooping) return false;
-					const float Length = State->Sequence->GetPlayLength();
-					return Length > 0.0f && State->GetLocalTime() >= Length - 1e-4f;
+					const float EndTime = State->GetEffectiveEndTime();
+					return EndTime > State->GetEffectiveStartTime() && State->GetLocalTime() >= EndTime - 1e-4f;
 				}
 
 				case ETransitionRuleKind::AlwaysTrue:
@@ -286,6 +285,8 @@ namespace
 				SP->Sequence = Node.SequenceRef;
 				SP->PlayRate = Node.PlayRate;
 				SP->bLooping = Node.bLooping;
+				SP->StartTime = Node.StartTime;
+				SP->EndTime = Node.EndTime;
 				if (!Node.SequenceRef)
 				{
 					UE_LOG("AnimGraphCompiler: SequencePlayer 노드 id=%u 에 Sequence 미설정.", Node.NodeId);
@@ -406,6 +407,8 @@ namespace
 					S->StateName = Def.StateName;
 					S->PlayRate  = Def.PlayRate;
 					S->bLooping  = Def.bLooping;
+					S->StartTime = Def.StartTime;
+					S->EndTime   = Def.EndTime;
 
 					if (Def.SubGraphNodeId != 0 && Def.SubGraphNodeId != Node.NodeId)
 					{

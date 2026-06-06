@@ -6,6 +6,8 @@
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 
+#include <algorithm>
+
 // 외부 public 필드 → 내부 Player 로 동기화.
 static void SyncToPlayer(UAnimState& S, FAnimNode_SequencePlayer& Player)
 {
@@ -16,12 +18,14 @@ static void SyncToPlayer(UAnimState& S, FAnimNode_SequencePlayer& Player)
 	Player.Sequence  = S.Sequence;
 	Player.PlayRate  = S.PlayRate;
 	Player.bLooping  = S.bLooping;
+	Player.StartTime = S.StartTime;
+	Player.EndTime   = S.EndTime;
 	Player.LocalTime = S.GetLocalTime();
 }
 
 void UAnimState::OnEnter(UAnimInstance* Instance)
 {
-	LocalTime = 0.0f;
+	LocalTime = GetEffectiveStartTime();
 
 	FAnimationInitializeContext InitCtx;
 	InitCtx.AnimInstance = Instance;
@@ -33,7 +37,9 @@ void UAnimState::OnEnter(UAnimInstance* Instance)
 	}
 	else
 	{
+		SyncToPlayer(*this, Player);
 		Player.OnBecomeRelevant(InitCtx);
+		LocalTime = Player.LocalTime;
 	}
 }
 
@@ -92,4 +98,39 @@ void UAnimState::AddReferencedObjects(FReferenceCollector& Collector)
 	{
 		SubGraphOverride->AddReferencedObjects(Collector);
 	}
+}
+
+
+float UAnimState::GetEffectiveStartTime() const
+{
+	if (!IsValid(Sequence)) return 0.0f;
+	const float Length = std::max(0.0f, Sequence->GetPlayLength());
+	return std::clamp(StartTime, 0.0f, Length);
+}
+
+float UAnimState::GetEffectiveEndTime() const
+{
+	if (!IsValid(Sequence)) return 0.0f;
+	const float Length = std::max(0.0f, Sequence->GetPlayLength());
+	const float RangeStart = GetEffectiveStartTime();
+	if (EndTime <= RangeStart + 1.0e-4f)
+	{
+		return Length;
+	}
+	return std::clamp(EndTime, RangeStart, Length);
+}
+
+float UAnimState::GetEffectivePlayLength() const
+{
+	return std::max(0.0f, GetEffectiveEndTime() - GetEffectiveStartTime());
+}
+
+float UAnimState::GetElapsedTimeInRange() const
+{
+	return std::max(0.0f, std::clamp(LocalTime, GetEffectiveStartTime(), GetEffectiveEndTime()) - GetEffectiveStartTime());
+}
+
+float UAnimState::GetRemainingTimeInRange() const
+{
+	return std::max(0.0f, GetEffectivePlayLength() - GetElapsedTimeInRange());
 }

@@ -34,9 +34,12 @@ public:
 	FName StateName = FName::None;
 
 	// 이 상태가 재생할 시퀀스. nullptr 이면 ref pose 유지.
-	UAnimSequenceBase* Sequence = nullptr;
-	float              PlayRate = 1.0f;
-	bool               bLooping = true;
+	UAnimSequenceBase* Sequence  = nullptr;
+	float              PlayRate  = 1.0f;
+	bool               bLooping  = true;
+	// Source sequence playback window in seconds. EndTime <= StartTime means use Sequence->GetPlayLength().
+	float              StartTime = 0.0f;
+	float              EndTime   = 0.0f;
 
 	// 후크 — 데이터 기반 FSM 에서는 대부분 기본 구현만으로 충분하지만,
 	// 자식이 진입 효과/특수 평가를 넣을 수 있도록 가상함수로 남긴다.
@@ -50,6 +53,11 @@ public:
 
 	float GetLocalTime() const { return LocalTime; }
 	void  SetLocalTime(float T) { LocalTime = T; }
+	float GetEffectiveStartTime() const;
+	float GetEffectiveEndTime() const;
+	float GetEffectivePlayLength() const;
+	float GetElapsedTimeInRange() const;
+	float GetRemainingTimeInRange() const;
 
 	// Tick 동안 계산된 root motion delta (Sequence 가 bEnableRootMotion 일 때만 의미).
 	// FSM 이 blend 중 두 상태의 delta 를 weight lerp 후 AnimInstance 에 누적.

@@ -119,6 +119,9 @@ struct FAnimGraphState
 	FString  SequencePath; // 이 state 가 재생할 sequence (디스크 path). LoadAnimation 으로 해상.
 	float    PlayRate    = 1.0f;
 	bool     bLooping    = true;
+	// Optional playback window in source sequence seconds. EndTime <= StartTime means "to sequence end".
+	float    StartTime   = 0.0f;
+	float    EndTime     = 0.0f;
 	float    PosX        = 0.0f;
 	float    PosY        = 0.0f;
 	bool     bHasGraphPosition = false;
@@ -163,9 +166,12 @@ struct FAnimGraphNode
 	// empty / "None" 이면 UAnimGraphInstance::DefaultSequencePath 가 fallback.
 	FString                SequencePath;
 
-	// SequencePlayer 옵션. PlayRate / bLooping — 노드 inspector 에서 편집.
+	// SequencePlayer 옵션. PlayRate / bLooping / playback range — 노드 inspector 에서 편집.
 	float                  PlayRate    = 1.0f;
 	bool                   bLooping    = true;
+	// Optional playback window in source sequence seconds. EndTime <= StartTime means "to sequence end".
+	float                  StartTime   = 0.0f;
+	float                  EndTime     = 0.0f;
 
 	// Slot 노드의 montage slot name (비어있으면 컴파일러가 UAnimInstance::DefaultMontageSlot 으로 fallback).
 	FName                  SlotName;
