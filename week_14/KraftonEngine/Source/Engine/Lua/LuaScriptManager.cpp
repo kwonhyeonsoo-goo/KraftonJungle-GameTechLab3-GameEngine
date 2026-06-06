@@ -30,6 +30,7 @@
 #include "Component/ActorComponent.h"
 #include "Component/ActorSequenceComponent.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
+#include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Gameplay/SniperTypes.h"
 #include "Component/PrimitiveComponent.h"
@@ -4803,6 +4804,30 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &UBallisticBulletManagerComponent::GetWeaponComponent
     );
 
+    Lua.new_usertype<USniperDamageReceiverComponent>(
+        "SniperDamageReceiverComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetMaxHP",
+        &USniperDamageReceiverComponent::GetMaxHP,
+        "GetCurrentHP",
+        &USniperDamageReceiverComponent::GetCurrentHP,
+        "IsFriendly",
+        &USniperDamageReceiverComponent::IsFriendly,
+        "HasArmor",
+        &USniperDamageReceiverComponent::HasArmor,
+        "CanRagdoll",
+        &USniperDamageReceiverComponent::CanRagdoll,
+        "IsDead",
+        &USniperDamageReceiverComponent::IsDead,
+        "CanReceiveSniperHit",
+        &USniperDamageReceiverComponent::CanReceiveSniperHit,
+        "ResetHealth",
+        &USniperDamageReceiverComponent::ResetHealth,
+        "ApplySniperHit",
+        &USniperDamageReceiverComponent::ApplySniperHit
+    );
+
     Lua.new_usertype<FSniperHitInfo>(
         "SniperHitInfo",
         "HitActor",
@@ -6863,6 +6888,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         [](AActor& Actor)
         {
             return Actor.GetComponentByClass<UBallisticBulletManagerComponent>();
+        },
+
+        "GetSniperDamageReceiverComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USniperDamageReceiverComponent>();
         },
 
         "GetActorSequenceComponent",

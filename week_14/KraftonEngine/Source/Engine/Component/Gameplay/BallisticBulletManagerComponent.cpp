@@ -1,5 +1,6 @@
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 
+#include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Debug/DrawDebugHelpers.h"
@@ -249,9 +250,18 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			SniperDebugTrailDuration);
 	}
 
+	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);
+	if (AActor* HitActor = HitInfo.HitActor)
+	{
+		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
+		{
+			DamageReceiver->ApplySniperHit(HitInfo);
+		}
+	}
+
 	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
 	{
-		SniperWeapon->NotifySniperHit(BuildSniperHitInfo(Bullet, Hit));
+		SniperWeapon->NotifySniperHit(HitInfo);
 	}
 }
 

@@ -540,6 +540,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\SniperDamageReceiverComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\InputComponent.cpp" />
@@ -1011,6 +1012,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverAgentComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\CombatFlowManagerComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\SniperDamageReceiverComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\SniperTypes.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\SniperWeaponComponent.h" />
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h" />
