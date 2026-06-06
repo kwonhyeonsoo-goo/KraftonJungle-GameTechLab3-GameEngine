@@ -7,7 +7,7 @@ local InGameState = require("Management/States/InGameState")
 local SceneManager = {}
 SceneManager.__index = SceneManager
 
-local DEFAULT_START_STATE = GameState.Intro
+local DEFAULT_START_STATE = GameState.Main
 
 local function log(message)
     if Debug and Debug.Log then
@@ -40,7 +40,7 @@ function SceneManager.new(general)
 end
 
 function SceneManager:Initialize()
-    self.current = self.start_state
+    self.current = self:ResolveStartState(self.start_state)
 
     local scene_path = ""
     if Scene ~= nil and Scene.GetCurrentPath ~= nil then
@@ -60,7 +60,8 @@ function SceneManager:Shutdown()
 end
 
 function SceneManager:SetStartState(state)
-    if not GameState.IsValid(state) then
+    if not self:IsRegisteredState(state) then
+        log("ignored unavailable start state=" .. tostring(state))
         return false
     end
     self.start_state = state
@@ -79,6 +80,21 @@ end
 
 function SceneManager:GetStateObject(state)
     return self.states_by_id[state]
+end
+
+function SceneManager:IsRegisteredState(state)
+    return GameState.IsValid(state) and self:GetStateObject(state) ~= nil
+end
+
+function SceneManager:ResolveStartState(state)
+    if self:IsRegisteredState(state) then
+        return state
+    end
+
+    if state ~= nil then
+        log("fallback start state " .. tostring(state) .. " -> " .. tostring(DEFAULT_START_STATE))
+    end
+    return DEFAULT_START_STATE
 end
 
 function SceneManager:EnterState(from, state, payload)
@@ -141,8 +157,8 @@ function SceneManager:GetHUDForState(state)
 end
 
 function SceneManager:RequestState(next_state, payload)
-    if not GameState.IsValid(next_state) then
-        print("[SceneManager] invalid state: " .. tostring(next_state))
+    if not self:IsRegisteredState(next_state) then
+        print("[SceneManager] unavailable state: " .. tostring(next_state))
         return false
     end
 

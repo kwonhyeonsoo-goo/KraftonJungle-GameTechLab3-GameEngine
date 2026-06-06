@@ -278,6 +278,7 @@ function UIManager:CreateWidget(name, path, z_order)
 
     local existing = self.widgets[name]
     if existing ~= nil then
+        log("reuse widget name=" .. tostring(name) .. " path=" .. tostring(path))
         return existing
     end
 
@@ -301,6 +302,7 @@ function UIManager:CreateWidget(name, path, z_order)
     call_widget(widget, "SetBlocksGameMouseLook", false)
 
     self.widgets[name] = widget
+    log("created widget name=" .. tostring(name) .. " path=" .. tostring(path))
     self.general:Publish("ui.widget_created", { name = name, path = path, widget = widget })
     return widget
 end
@@ -345,12 +347,16 @@ end
 function UIManager:ApplySceneHUDRequest(payload)
     local hud = payload and payload.hud
     if hud == nil then
+        log("clear HUD request")
         self:Clear()
         return
     end
 
     local name = hud.name or "HUD"
     local path = hud.path
+    log("HUD request state=" .. tostring(payload and payload.state) ..
+        " name=" .. tostring(name) .. " path=" .. tostring(path) ..
+        " mode=" .. tostring(hud.mode))
     if path == nil or path == "" then
         self:Clear()
         return
