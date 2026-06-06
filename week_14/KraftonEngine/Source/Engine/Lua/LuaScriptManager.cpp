@@ -7043,7 +7043,21 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetSniperWeaponComponent",
         &ASniperPawn::GetSniperWeaponComponent,
         "GetBallisticBulletManagerComponent",
-        &ASniperPawn::GetBallisticBulletManagerComponent
+        &ASniperPawn::GetBallisticBulletManagerComponent,
+        "IsScoped",
+        &ASniperPawn::IsScoped,
+        "GetScopeBlendAlpha",
+        &ASniperPawn::GetScopeBlendAlpha,
+        "GetCurrentScopeFOV",
+        &ASniperPawn::GetCurrentScopeFOV,
+        "GetCurrentScopeSensitivity",
+        &ASniperPawn::GetCurrentScopeSensitivity,
+        "IsHoldBreathActive",
+        &ASniperPawn::IsHoldBreathActive,
+        "GetHoldBreathGauge",
+        &ASniperPawn::GetHoldBreathGauge,
+        "GetMaxHoldBreathGauge",
+        &ASniperPawn::GetMaxHoldBreathGauge
     );
 
     Lua.new_usertype<AWheeledVehiclePawn>(
