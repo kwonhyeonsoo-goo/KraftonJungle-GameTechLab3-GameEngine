@@ -23,10 +23,11 @@ cbuffer PerShader1 : register(b2)
     float4 SectionColor;
     float HasNormalMap;
     float Opacity;
-    float2 _pad;
+    float Shininess;
+    float _pad;
     float4 EmissiveColor;
     float EmissiveIntensity;
-    float3 _EmissivePad;
+    float3 SpecularColor;
 };
 
 cbuffer ForwardFogParams : register(b7)
@@ -40,8 +41,6 @@ cbuffer ForwardFogParams : register(b7)
     float  FwdFogMaxOpacity;
     float2 _fwdFogPad;
 };
-
-static const float g_DefaultShininess = 32.0f;
 
 float3 GetMaterialEmissive()
 {
@@ -85,7 +84,7 @@ UberTransparentVS_Output BuildVS(float3 position, float3 normal, float4 color, f
 
     float3 V = normalize(CameraWorldPos - output.worldPos);
     output.litDiffuse = AccumulateDiffuseVS(output.worldPos, N);
-    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, g_DefaultShininess);
+    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, Shininess);
 #endif
 
     return output;
@@ -136,12 +135,12 @@ float4 PS(UberTransparentVS_Output input) : SV_TARGET
 
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
     diffuse = input.litDiffuse;
-    specular = input.litSpecular;
+    specular = input.litSpecular * saturate(SpecularColor);
 #elif defined(LIGHTING_MODEL_LAMBERT) && LIGHTING_MODEL_LAMBERT
     diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
 #elif defined(LIGHTING_MODEL_PHONG) && LIGHTING_MODEL_PHONG
     diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
-    specular = AccumulateSpecular(input.worldPos, N, V, g_DefaultShininess, input.position);
+    specular = AccumulateSpecular(input.worldPos, N, V, Shininess, input.position) * saturate(SpecularColor);
 #endif
 
     float3 finalColor = baseColor.rgb * diffuse + specular + GetMaterialEmissive();

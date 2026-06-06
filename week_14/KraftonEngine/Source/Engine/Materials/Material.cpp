@@ -367,7 +367,16 @@ void UMaterial::Serialize(FArchive& Ar, uint32 PackageVersion)
 			auto It = ConstantBufferMap.find(BufferName);
 			if (It != ConstantBufferMap.end())
 			{
-				Ar.Serialize(It->second->CPUData, Size);
+				const uint32 CopySize = Size < It->second->Size ? Size : It->second->Size;
+				if (CopySize > 0)
+				{
+					Ar.Serialize(It->second->CPUData, CopySize);
+				}
+				if (Size > CopySize)
+				{
+					TArray<uint8> Dummy(Size - CopySize);
+					Ar.Serialize(Dummy.data(), Size - CopySize);
+				}
 				It->second->bDirty = true;
 				It->second->Upload(GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext());
 			}

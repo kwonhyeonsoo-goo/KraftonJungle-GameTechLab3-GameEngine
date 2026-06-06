@@ -249,8 +249,12 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
             continue;
         }
 
+        FCombatCoverSlotHandle StartSlot;
+        StartSlot.NodeId = Agent->GetCurrentNodeId();
+        StartSlot.SlotId = Agent->GetCurrentSlotId();
+
         FCombatMovePath MovePath;
-        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, Candidate, MovePath))
+        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, StartSlot, Candidate, MovePath))
         {
             ReleaseAgent(Agent);
             continue;
@@ -879,6 +883,7 @@ bool UCombatFlowManagerComponent::BuildMovePathToSlot(const FCombatCoverSlotHand
     }
 
     OutPath.FinalSlot = SlotHandle;
+    AppendSlotApproachPoint(SlotHandle, false, OutPath.Points);
     OutPath.Points.push_back(TargetNode->GetSlotWorldPosition(SlotIndex));
     return true;
 }
@@ -886,6 +891,7 @@ bool UCombatFlowManagerComponent::BuildMovePathToSlot(const FCombatCoverSlotHand
 bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
     UCombatCoverNodeComponent* FromNode,
     UCombatCoverNodeComponent* ToNode,
+    const FCombatCoverSlotHandle& StartSlot,
     const FCombatCoverSlotHandle& FinalSlot,
     FCombatMovePath& OutPath) const
 {
@@ -894,26 +900,26 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
         return false;
     }
 
+    TArray<FVector> Points;
+    AppendSlotApproachPoint(StartSlot, true, Points);
+
     bool bReverse = false;
     const FCombatCoverLink* Link = FindTraversalLink(FromNode, ToNode, bReverse);
-    if (!Link || Link->PathPoints.empty())
+    if (Link)
     {
-        return true;
-    }
-
-    TArray<FVector> Points;
-    if (bReverse)
-    {
-        for (int32 Index = static_cast<int32>(Link->PathPoints.size()) - 1; Index >= 0; --Index)
+        if (bReverse)
         {
-            Points.push_back(Link->PathPoints[Index]);
+            for (int32 Index = static_cast<int32>(Link->PathPoints.size()) - 1; Index >= 0; --Index)
+            {
+                Points.push_back(Link->PathPoints[Index]);
+            }
         }
-    }
-    else
-    {
-        for (const FVector& Point : Link->PathPoints)
+        else
         {
-            Points.push_back(Point);
+            for (const FVector& Point : Link->PathPoints)
+            {
+                Points.push_back(Point);
+            }
         }
     }
 
@@ -922,6 +928,41 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
         Points.push_back(Point);
     }
     OutPath.Points = Points;
+    return true;
+}
+
+bool UCombatFlowManagerComponent::AppendSlotApproachPoint(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, TArray<FVector>& OutPoints) const
+{
+    if (!SlotHandle.IsValid())
+    {
+        return false;
+    }
+
+    UCombatCoverNodeComponent* Node = FindNode(SlotHandle.NodeId);
+    if (!Node)
+    {
+        return false;
+    }
+
+    const int32 SlotIndex = Node->FindSlotIndexById(SlotHandle.SlotId);
+    if (SlotIndex < 0)
+    {
+        return false;
+    }
+
+    const FCombatCoverSlot* Slot = Node->FindSlotById(SlotHandle.SlotId);
+    if (!Slot)
+    {
+        return false;
+    }
+
+    const bool bUseApproach = bForExit ? Slot->bUseApproachOnExit : Slot->bUseApproachOnEntry;
+    if (!bUseApproach || Slot->LocalApproachOffset.IsNearlyZero())
+    {
+        return false;
+    }
+
+    OutPoints.push_back(Node->GetSlotWorldApproachPosition(SlotIndex));
     return true;
 }
 
