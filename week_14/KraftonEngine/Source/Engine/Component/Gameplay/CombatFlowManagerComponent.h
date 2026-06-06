@@ -90,6 +90,12 @@ public:
     void DrawAllDebugVisuals(bool bIncludeUnselected = true) const;
     void DrawCombatDebugVisuals(float Duration = 0.0f) const;
 
+    UFUNCTION(Pure, Category="CombatFlow|Debug")
+    bool GetDrawAllNodeDebugVisuals() const { return bDrawAllNodeDebugVisuals; }
+
+    UFUNCTION(Callable, Category="CombatFlow|Debug")
+    void SetDrawAllNodeDebugVisuals(bool bEnabled) { bDrawAllNodeDebugVisuals = bEnabled; }
+
     UFUNCTION(Callable, Category="CombatFlow|Combat")
     void UpdateCombatSimulation(float DeltaTime);
 
@@ -174,6 +180,9 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw Fire Ranges")
     bool bDrawFireRanges = false;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw All Node Debug Visuals")
+    bool bDrawAllNodeDebugVisuals = false;
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Debug", DisplayName="Draw Debug During Tick")
     bool bDrawDebugDuringTick = false;

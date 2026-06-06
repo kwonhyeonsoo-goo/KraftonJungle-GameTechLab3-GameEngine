@@ -144,7 +144,6 @@ int32 UCombatCoverNodeComponent::AddSlotAtLocalPosition(const FVector& LocalPosi
     Slot.SlotId = MakeNextSlotId();
     Slot.LocalPosition = LocalPosition;
     Slot.LocalForward = FVector::ForwardVector;
-    Slot.Radius = DebugSlotRadius;
     Slots.push_back(Slot);
     return static_cast<int32>(Slots.size()) - 1;
 }
@@ -240,17 +239,14 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
     }
 
     const FVector NodeLocation = Owner->GetActorLocation();
-    const FColor NodeColor = bSelected ? FColor(255, 230, 0) : FColor(0, 190, 255);
     const FColor SlotColor = bSelected ? FColor(0, 255, 120) : FColor(0, 160, 255);
     const FColor LinkColor = bSelected ? FColor(255, 180, 0) : FColor(120, 180, 255);
-
-    AddDebugCross(Scene, NodeLocation, 50.0f, NodeColor);
 
     for (int32 Index = 0; Index < static_cast<int32>(Slots.size()); ++Index)
     {
         const FVector SlotWorld = GetSlotWorldPosition(Index);
         const FVector SlotForward = GetSlotWorldForward(Index);
-        const float Radius = (std::max)(5.0f, Slots[Index].Radius);
+        const float Radius = (std::max)(0.1f, Slots[Index].Radius);
         AddDebugCross(Scene, SlotWorld, (std::min)(Radius, DebugSlotRadius), SlotColor);
         AddDebugCircleXY(Scene, SlotWorld, Radius, SlotColor);
         AddDebugArrow(Scene, SlotWorld, SlotForward, Radius * 1.4f, SlotColor);
@@ -271,7 +267,7 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         for (const FVector& PathPoint : Link.PathPoints)
         {
             Scene.AddDebugLine(PreviousPoint, PathPoint, LinkColor);
-            AddDebugCross(Scene, PathPoint, 20.0f, FColor(255, 120, 40));
+            AddDebugCross(Scene, PathPoint, 2.0f, FColor(255, 120, 40));
             PreviousPoint = PathPoint;
         }
         Scene.AddDebugLine(PreviousPoint, TargetLocation, LinkColor);
@@ -279,7 +275,9 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         const FVector ToTarget = TargetLocation - PreviousPoint;
         if (!ToTarget.IsNearlyZero())
         {
-            AddDebugArrow(Scene, PreviousPoint + ToTarget * 0.65f, ToTarget.Normalized(), 120.0f, LinkColor);
+            const FVector TargetDirection = ToTarget.Normalized();
+            const float ArrowLength = (std::min)(12.0f, ToTarget.Length());
+            AddDebugArrow(Scene, TargetLocation - TargetDirection * ArrowLength, TargetDirection, ArrowLength, LinkColor);
         }
     }
 }

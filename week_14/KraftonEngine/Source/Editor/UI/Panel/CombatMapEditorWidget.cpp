@@ -437,6 +437,12 @@ void FCombatMapEditorWidget::RenderToolbar()
         {
             Manager->SetDrawFireRanges(bDrawFireRanges);
         }
+        ImGui::SameLine();
+        bool bDrawAllNodeDebugVisuals = Manager->GetDrawAllNodeDebugVisuals();
+        if (ImGui::Checkbox("Show All Nodes", &bDrawAllNodeDebugVisuals))
+        {
+            Manager->SetDrawAllNodeDebugVisuals(bDrawAllNodeDebugVisuals);
+        }
     }
 
     AActor* SelectedActor = GetSelectedActor();
@@ -602,7 +608,7 @@ void FCombatMapEditorWidget::RenderSlotPanel(UCombatCoverNodeComponent* Node)
         return;
     }
 
-    ImGui::BeginChild("CombatSlotList", ImVec2(0.0f, 220.0f), true);
+    ImGui::BeginChild("CombatSlotList", ImVec2(0.0f, 160.0f), true);
     for (int32 Index = 0; Index < static_cast<int32>(Slots.size()); ++Index)
     {
         FCombatCoverSlot& Slot = Slots[Index];
