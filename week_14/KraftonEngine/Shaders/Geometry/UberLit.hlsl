@@ -37,15 +37,12 @@ cbuffer PerShader1 : register(b2)
     float4 SectionColor;
     float HasNormalMap;
     float Opacity;   // 머티리얼 불투명도 [0,1] — _pad.x 재사용(레이아웃 32B 유지). 기본 1, Transparent 블렌드에서만 가시 효과.
-    float2 _pad;
+    float Shininess;
+    float _pad;
     float4 EmissiveColor;
     float EmissiveIntensity;
-    float3 _EmissivePad;
+    float3 SpecularColor;
 };
-
-
-// 머티리얼 확장 파라미터 — 팀원 A CB 시스템 완성 후 b2 확장 예정
-static const float g_DefaultShininess = 32.0f;
 
 float3 GetMaterialEmissive()
 {
@@ -99,7 +96,7 @@ UberVS_Output VS_StaticMesh(VS_Input_PNCTT input)
 
     float3 V = normalize(CameraWorldPos - output.worldPos);
     output.litDiffuse = AccumulateDiffuseVS(output.worldPos, N);
-    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, g_DefaultShininess);
+    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, Shininess);
 
 #endif
 
@@ -145,7 +142,7 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
 
     float3 V = normalize(CameraWorldPos - output.worldPos);
     output.litDiffuse = AccumulateDiffuseVS(output.worldPos, N);
-    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, g_DefaultShininess);
+    output.litSpecular = AccumulateSpecularVS(output.worldPos, N, V, Shininess);
 
 #endif
 
@@ -186,14 +183,14 @@ float4 PS(UberVS_Output input) : SV_TARGET
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
     // Gouraud: VS에서 정점 단위로 계산 → PS에서 보간된 값 사용
     diffuse  = input.litDiffuse;
-    specular = input.litSpecular;
+    specular = input.litSpecular * saturate(SpecularColor);
 
 #elif defined(LIGHTING_MODEL_LAMBERT) && LIGHTING_MODEL_LAMBERT
     diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
 
 #elif defined(LIGHTING_MODEL_PHONG) && LIGHTING_MODEL_PHONG
     diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
-    specular = AccumulateSpecular(input.worldPos, N, V, g_DefaultShininess, input.position);
+    specular = AccumulateSpecular(input.worldPos, N, V, Shininess, input.position) * saturate(SpecularColor);
 
 #endif
 

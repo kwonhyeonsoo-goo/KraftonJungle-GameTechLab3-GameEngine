@@ -4,6 +4,7 @@
 #include "Math/Vector.h"
 
 struct ImVec2;
+struct FCombatCoverLink;
 namespace ax { namespace NodeEditor { struct EditorContext; } }
 
 class AActor;
@@ -42,6 +43,7 @@ private:
     void RenderAgentPanel();
     void RenderRoleStatsPopup();
     void RenderAutoLinkPopup();
+    void RenderGenerateBezierPathPointsPopup();
     void RenderValidationPopup();
     template<typename TComponent>
     TComponent* AddComponentToSelectedActor();
@@ -56,6 +58,9 @@ private:
     void ApplyGraphPositionToScene(UCombatCoverNodeComponent* Node, int32 NodeIndex);
     FVector GraphToWorld(const ImVec2& Position) const;
     ImVec2 WorldToGraph(const FVector& Position) const;
+    UCombatCoverNodeComponent* FindLinkTargetNode(const FCombatCoverLink& Link) const;
+    bool GenerateBezierPathPointsForLink(UCombatCoverNodeComponent* SourceNode, FCombatCoverLink& Link, int32 SampleCount, float Strength);
+    int32 GenerateBezierPathPointsForAllLinks(int32 SampleCount, float Strength);
 
     UCombatCoverNodeComponent* CreateCoverNodeActorFromEditor(const ImVec2* GraphPosition = nullptr);
     UCombatCoverNodeComponent* DuplicateCoverNodeActor(UCombatCoverNodeComponent* SourceNode, const ImVec2* GraphPosition = nullptr);
@@ -85,7 +90,10 @@ private:
 	bool bPendingGraphNavigateToNode = false;
 	uint32 PendingGraphNavigateNodeId = 0;
     bool bPendingOpenAutoLinkPopup = false;
+    bool bPendingOpenGenerateBezierPathPointsPopup = false;
     bool bPendingOpenValidationPopup = false;
     bool bPendingOpenRoleStatsPopup = false;
+    int32 BezierPathSampleCount = 6;
+    float BezierPathStrength = 120.0f;
     float GraphSceneUnitsPerGraphUnit = 1.0f / 15.0f;
 };

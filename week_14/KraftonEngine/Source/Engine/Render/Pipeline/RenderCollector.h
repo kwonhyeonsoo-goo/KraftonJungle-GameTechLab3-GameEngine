@@ -25,4 +25,5 @@ public:
 private:
 	void FilterVisibleProxies(const FFrameContext& Frame, FScene& Scene, FCollectOutput& Output);
 	void CollectSelectedActorVisuals(FScene& Scene);
+	void CollectCombatCoverDebugVisuals(UWorld* World, FScene& Scene);
 };

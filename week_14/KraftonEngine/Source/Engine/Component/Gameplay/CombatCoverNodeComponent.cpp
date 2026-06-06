@@ -138,13 +138,23 @@ FVector UCombatCoverNodeComponent::GetSlotWorldForward(int32 SlotIndex) const
     return TransformLocalVector(GetOwner(), Slots[SlotIndex].LocalForward);
 }
 
+FVector UCombatCoverNodeComponent::GetSlotWorldApproachPosition(int32 SlotIndex) const
+{
+    if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(Slots.size()))
+    {
+        return GetOwnerLocationSafe(this);
+    }
+
+    const FCombatCoverSlot& Slot = Slots[SlotIndex];
+    return TransformLocalPosition(GetOwner(), Slot.LocalPosition + Slot.LocalApproachOffset);
+}
+
 int32 UCombatCoverNodeComponent::AddSlotAtLocalPosition(const FVector& LocalPosition)
 {
     FCombatCoverSlot Slot;
     Slot.SlotId = MakeNextSlotId();
     Slot.LocalPosition = LocalPosition;
     Slot.LocalForward = FVector::ForwardVector;
-    Slot.Radius = DebugSlotRadius;
     Slots.push_back(Slot);
     return static_cast<int32>(Slots.size()) - 1;
 }
@@ -240,21 +250,28 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
     }
 
     const FVector NodeLocation = Owner->GetActorLocation();
-    const FColor NodeColor = bSelected ? FColor(255, 230, 0) : FColor(0, 190, 255);
     const FColor SlotColor = bSelected ? FColor(0, 255, 120) : FColor(0, 160, 255);
+    const FColor ApproachColor = bSelected ? FColor(255, 130, 30) : FColor(255, 95, 20);
     const FColor LinkColor = bSelected ? FColor(255, 180, 0) : FColor(120, 180, 255);
-
-    AddDebugCross(Scene, NodeLocation, 50.0f, NodeColor);
 
     for (int32 Index = 0; Index < static_cast<int32>(Slots.size()); ++Index)
     {
         const FVector SlotWorld = GetSlotWorldPosition(Index);
         const FVector SlotForward = GetSlotWorldForward(Index);
-        const float Radius = (std::max)(5.0f, Slots[Index].Radius);
+        const float Radius = (std::max)(0.1f, Slots[Index].Radius);
         AddDebugCross(Scene, SlotWorld, (std::min)(Radius, DebugSlotRadius), SlotColor);
         AddDebugCircleXY(Scene, SlotWorld, Radius, SlotColor);
         AddDebugArrow(Scene, SlotWorld, SlotForward, Radius * 1.4f, SlotColor);
         Scene.AddDebugLine(NodeLocation, SlotWorld, FColor(80, 80, 80));
+
+        if (Slots[Index].bUseApproachOnExit || Slots[Index].bUseApproachOnEntry)
+        {
+            const FVector ApproachWorld = GetSlotWorldApproachPosition(Index);
+            const float ApproachRadius = (std::max)(2.0f, Radius * 0.5f);
+            AddDebugCross(Scene, ApproachWorld, ApproachRadius, ApproachColor);
+            AddDebugCircleXY(Scene, ApproachWorld, ApproachRadius, ApproachColor);
+            Scene.AddDebugLine(SlotWorld, ApproachWorld, ApproachColor);
+        }
     }
 
     UWorld* World = GetWorld();
@@ -267,12 +284,21 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         }
 
         const FVector TargetLocation = Target->GetOwner()->GetActorLocation();
-        Scene.AddDebugLine(NodeLocation, TargetLocation, LinkColor);
+        FVector PreviousPoint = NodeLocation;
+        for (const FVector& PathPoint : Link.PathPoints)
+        {
+            Scene.AddDebugLine(PreviousPoint, PathPoint, LinkColor);
+            AddDebugCross(Scene, PathPoint, 2.0f, FColor(255, 120, 40));
+            PreviousPoint = PathPoint;
+        }
+        Scene.AddDebugLine(PreviousPoint, TargetLocation, LinkColor);
 
-        const FVector ToTarget = TargetLocation - NodeLocation;
+        const FVector ToTarget = TargetLocation - PreviousPoint;
         if (!ToTarget.IsNearlyZero())
         {
-            AddDebugArrow(Scene, NodeLocation + ToTarget * 0.65f, ToTarget.Normalized(), 120.0f, LinkColor);
+            const FVector TargetDirection = ToTarget.Normalized();
+            const float ArrowLength = (std::min)(12.0f, ToTarget.Length());
+            AddDebugArrow(Scene, TargetLocation - TargetDirection * ArrowLength, TargetDirection, ArrowLength, LinkColor);
         }
     }
 }

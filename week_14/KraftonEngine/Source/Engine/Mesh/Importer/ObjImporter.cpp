@@ -358,16 +358,54 @@ bool FObjImporter::ParseMtl(const FString& MtlFilePath, TArray<FObjMaterialInfo>
 			MaterialInfo.Kd = FallbackColor3;
 			OutMtlInfos.emplace_back(MaterialInfo);
 		}
-		else if (Prefix == "Kd")
+		else if (Prefix == "Ka" || Prefix == "Kd" || Prefix == "Ks")
 		{
 			if (OutMtlInfos.empty())
 			{
 				continue;
 			}
+
+			FVector* TargetColor = nullptr;
 			FObjMaterialInfo& CurrentMaterial = OutMtlInfos.back();
-			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), CurrentMaterial.Kd.X);
-			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), CurrentMaterial.Kd.Y);
-			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), CurrentMaterial.Kd.Z);
+			if (Prefix == "Ka")
+			{
+				TargetColor = &CurrentMaterial.Ka;
+			}
+			else if (Prefix == "Kd")
+			{
+				TargetColor = &CurrentMaterial.Kd;
+			}
+			else
+			{
+				TargetColor = &CurrentMaterial.Ks;
+			}
+
+			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), TargetColor->X);
+			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), TargetColor->Y);
+			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), TargetColor->Z);
+		}
+		else if (Prefix == "Ns" || Prefix == "Ni")
+		{
+			if (OutMtlInfos.empty())
+			{
+				continue;
+			}
+
+			float* TargetScalar = Prefix == "Ns" ? &OutMtlInfos.back().Ns : &OutMtlInfos.back().Ni;
+			FStringParser::ParseFloat(FStringParser::GetNextWhitespaceToken(Line), *TargetScalar);
+		}
+		else if (Prefix == "illum")
+		{
+			if (OutMtlInfos.empty())
+			{
+				continue;
+			}
+
+			int32 Illum = 0;
+			if (FStringParser::ParseInt(FStringParser::GetNextWhitespaceToken(Line), Illum))
+			{
+				OutMtlInfos.back().illum = Illum;
+			}
 		}
 		else if (Prefix == "map_Kd" || Prefix == "map_Bump" || Prefix == "bump" || Prefix == "norm")
 		{
@@ -473,8 +511,15 @@ FString FObjImporter::ConvertMtlInfoToMat(const FObjMaterialInfo* MtlInfo)
 		? FVector4(MtlInfo->Kd.X, MtlInfo->Kd.Y, MtlInfo->Kd.Z, 1.0f)
 		: FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
+	FVector SpecularColor = MtlInfo->Ks;
+	float Shininess = MtlInfo->Ns;
+	if (MtlInfo->illum == 0 || MtlInfo->illum == 1)
+	{
+		SpecularColor = FVector(0.0f, 0.0f, 0.0f);
+	}
+
 	// JSON 없이 머티리얼을 직접 빌드해 .uasset(바이너리)으로 저장.
-	FMaterialManager::Get().CreateImportedMaterialAsset(UassetPath, SectionColor, MtlInfo->map_Kd, MtlInfo->map_Bump);
+	FMaterialManager::Get().CreateImportedMaterialAsset(UassetPath, SectionColor, MtlInfo->map_Kd, MtlInfo->map_Bump, SpecularColor, Shininess);
 	return UassetPath;
 }
 
