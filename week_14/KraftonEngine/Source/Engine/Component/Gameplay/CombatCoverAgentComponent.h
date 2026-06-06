@@ -165,6 +165,9 @@ private:
     void ApplyCombatRoleDefaults();
     void FinishSuppression();
     void TickMoveToTarget(float DeltaTime);
+    void FaceDirection2D(const FVector& Direction, float DeltaTime);
+    void FaceLocation2D(const FVector& WorldLocation, float DeltaTime);
+    void TickFaceCombatTarget(float DeltaTime);
     void SetBlocked();
 
 private:
@@ -197,6 +200,15 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Use Character Movement")
     bool bUseCharacterMovement = true;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Facing", DisplayName="Orient To Combat Direction")
+    bool bOrientToCombatDirection = true;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Facing", DisplayName="Facing Yaw Rate", Min=0.0f, Max=3600.0f, Speed=5.0f)
+    float FacingYawRate = 720.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Facing", DisplayName="Facing Yaw Offset", Min=-180.0f, Max=180.0f, Speed=1.0f)
+    float FacingYawOffset = 0.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Max Health", Min=1.0f, Max=100000.0f, Speed=1.0f)
     float MaxHealth = 100.0f;
