@@ -393,6 +393,7 @@ void FEditorRenderPipeline::RenderScopeLensCapture(FLevelEditorViewportClient* V
 	ScopeFrame.CameraFade.bEnabled = false;
 	ScopeFrame.CameraVignette.bEnabled = false;
 	ScopeFrame.CameraLetterbox.bEnabled = false;
+	ScopeFrame.bRenderScreenUI = false;
 	ScopeFrame.ViewportRTV = MainFrame.ScopeLensRTV;
 	ScopeFrame.SceneColorCopySRV = nullptr;
 	ScopeFrame.SceneColorCopyTexture = nullptr;

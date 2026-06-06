@@ -42,3 +42,14 @@ bool FPostProcessPass::BeginPass(const FPassContext& Ctx)
 	Cache.bForceAll = true;
 	return true;
 }
+
+void FPostProcessPass::EndPass(const FPassContext& Ctx)
+{
+	ID3D11ShaderResourceView* NullSRV = nullptr;
+	ID3D11DeviceContext* DC = Ctx.Device.GetDeviceContext();
+
+	DC->PSSetShaderResources(ESystemTexSlot::Stencil, 1, &NullSRV);
+	DC->PSSetShaderResources(ESystemTexSlot::SceneColor, 1, &NullSRV);
+	DC->PSSetShaderResources(ESystemTexSlot::ScopeLens, 1, &NullSRV);
+	Ctx.Cache.bForceAll = true;
+}

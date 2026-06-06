@@ -3,6 +3,7 @@
 #include "Animation/ActorSequence.h"
 #include "Component/ActorSequenceComponent.h"
 #include "Component/ActorComponent.h"
+#include "Component/Primitive/TextRenderComponent.h"
 #include "Core/Types/PropertyTypes.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Undo/EditorUndoSystem.h"
@@ -379,6 +380,34 @@ namespace
 			OutChannels = { "Value" };
 			break;
 		}
+	}
+
+	bool IsTextOpacityPresetTarget(UObject* Target)
+	{
+		return IsValid(Target)
+			&& Target->IsA<UTextRenderComponent>();
+	}
+
+	UFloatCurveAsset* CreateTwoKeyInlineCurve(UActorSequence* Sequence, float StartValue, float EndValue, float Duration)
+	{
+		if (!Sequence)
+		{
+			return nullptr;
+		}
+
+		UFloatCurveAsset* Curve = Sequence->CreateInlineCurve();
+		if (!Curve)
+		{
+			return nullptr;
+		}
+
+		FFloatCurve& FloatCurve = Curve->GetCurve();
+		FloatCurve.Reset();
+		FloatCurve.AddKey(0.0f, StartValue);
+		FloatCurve.AddKey((std::max)(Duration, MinSequenceDuration), EndValue);
+		FloatCurve.SortKeys();
+		FloatCurve.AutoSetTangents();
+		return Curve;
 	}
 
 	float SequenceTimeToCurveTime(const FActorSequenceSection& Section, const FActorSequenceChannel& Channel, float SequenceTime)
@@ -1028,6 +1057,53 @@ void FActorSequenceEditorWidget::DrawAddTrackPopup(UActorSequenceComponent* Sequ
 		if (ImGui::Button("Cancel"))
 		{
 			ImGui::CloseCurrentPopup();
+		}
+
+		const bool bCanAddTextOpacityPreset = bCanAddTrack
+			&& IsTextOpacityPresetTarget(CurrentTarget);
+		if (bCanAddTextOpacityPreset)
+		{
+			auto AddTextOpacityPreset = [&](const char* Label, float StartValue, float EndValue) -> bool
+			{
+				if (!ImGui::Button(Label))
+				{
+					return false;
+				}
+
+				const float Start = (std::max)(0.0f, PendingTrackStartTime);
+				const float Duration = (std::max)(MinSequenceDuration, PendingTrackDuration);
+				ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Add Text Opacity Preset");
+				UFloatCurveAsset* Curve = CreateTwoKeyInlineCurve(Sequence, StartValue, EndValue, Duration);
+				if (!Curve)
+				{
+					return false;
+				}
+
+				if (!Sequence->AddFloatTrack(CurrentTarget, "Opacity", "Value", Start, Duration, Curve, FString()))
+				{
+					return false;
+				}
+
+				SequenceComp->CommitSequenceEditsForSerialization();
+				SequenceComp->SetPreviewTime(SequenceComp->GetPreviewTime());
+				MarkDirty();
+				ImGui::CloseCurrentPopup();
+				return true;
+			};
+
+			ImGui::Separator();
+			ImGui::TextUnformatted("Text Preset");
+			if (AddTextOpacityPreset("Fade In", 0.0f, 1.0f))
+			{
+				ImGui::EndPopup();
+				return;
+			}
+			ImGui::SameLine();
+			if (AddTextOpacityPreset("Fade Out", 1.0f, 0.0f))
+			{
+				ImGui::EndPopup();
+				return;
+			}
 		}
 	}
 

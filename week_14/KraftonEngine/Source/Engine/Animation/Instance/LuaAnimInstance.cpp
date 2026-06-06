@@ -42,6 +42,7 @@ void ULuaAnimInstance::NativeInitializeAnimation()
 	Super::NativeInitializeAnimation();
 	FLuaScriptManager::UnregisterAnimInstance(this);
 	ClearGraph();
+	bLastScriptLoadSucceeded = false;
 
 	if (ScriptFile.empty() || ScriptFile == "None")
 	{
@@ -85,7 +86,7 @@ void ULuaAnimInstance::NativeInitializeAnimation()
 	LuaUpdate   = Env["update"];
 	LuaOnNotify = Env["on_notify"];
 
-	DispatchLuaInit();
+	const bool bInitOk = DispatchLuaInit();
 
 	// AnimGraph RootNode 확인 — lua 가 Anim.set_root_node 명시 호출 + 트리 안에 Slot 노드 박기
 	// 책임은 사용자. 자동 wrap 안 함 (이전 자동 wrap 가드가 트리 깊이 검사 안 해서 같은
@@ -101,6 +102,7 @@ void ULuaAnimInstance::NativeInitializeAnimation()
 	// Hot-reload 등록 — .lua 파일 변경 시 FLuaScriptManager 가 ReloadScript 호출.
 	// 이미 등록된 경우 set-like 보장 (manager 측).
 	FLuaScriptManager::RegisterAnimInstance(this);
+	bLastScriptLoadSucceeded = bInitOk;
 }
 
 void ULuaAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -180,10 +182,10 @@ void ULuaAnimInstance::ApplyLuaMorphOverrides(FPoseContext& Output) const
 	}
 }
 
-void ULuaAnimInstance::ReloadScript()
+bool ULuaAnimInstance::ReloadScript()
 {
-	ClearGraph();
 	NativeInitializeAnimation();
+	return bLastScriptLoadSucceeded;
 }
 
 void ULuaAnimInstance::ClearGraph()
@@ -211,9 +213,9 @@ void ULuaAnimInstance::ClearGraph()
 	bPendingLuaRuntimeRelease = false;
 }
 
-void ULuaAnimInstance::DispatchLuaInit()
+bool ULuaAnimInstance::DispatchLuaInit()
 {
-	if (!LuaInit.valid()) return;
+	if (!LuaInit.valid()) return true;
 	FLuaCallScope Scope(this);
 	auto R = LuaInit(LuaSelf);
 	if (!R.valid())
@@ -221,7 +223,9 @@ void ULuaAnimInstance::DispatchLuaInit()
 		sol::error Err = R;
 		UE_LOG("[LuaAnimInstance] init() error: %s", Err.what());
 		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
+		return false;
 	}
+	return true;
 }
 
 void ULuaAnimInstance::ReleaseLuaRuntimeForShutdown()

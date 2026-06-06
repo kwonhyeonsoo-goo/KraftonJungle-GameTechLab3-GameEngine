@@ -5,18 +5,39 @@
 #include "Component/ActorComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Runtime/Engine.h"
+#include "UI/CursorSystem.h"
 #include "Viewport/GameViewportClient.h"
 
 namespace
 {
-	void SetViewportInputMode(EGameInputMode InputMode)
+	bool IsRuntimeWorld(const APlayerController* Controller)
 	{
-		if (GEngine)
+		const UWorld* World = Controller ? Controller->GetWorld() : nullptr;
+		if (!World)
 		{
-			if (UGameViewportClient* ViewportClient = GEngine->GetGameViewportClient())
-			{
-				ViewportClient->SetInputMode(InputMode);
-			}
+			return false;
+		}
+
+		const EWorldType WorldType = World->GetWorldType();
+		return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
+	}
+
+	UGameViewportClient* GetRuntimeGameViewportClient(const APlayerController* Controller)
+	{
+		if (!IsRuntimeWorld(Controller) || !GEngine)
+		{
+			return nullptr;
+		}
+
+		UGameViewportClient* ViewportClient = GEngine->GetGameViewportClient();
+		return ViewportClient && ViewportClient->IsPossessed() ? ViewportClient : nullptr;
+	}
+
+	void SetViewportInputMode(const APlayerController* Controller, EGameInputMode InputMode)
+	{
+		if (UGameViewportClient* ViewportClient = GetRuntimeGameViewportClient(Controller))
+		{
+			ViewportClient->SetInputMode(InputMode);
 		}
 	}
 }
@@ -104,15 +125,111 @@ void APlayerController::ProcessPlayerInput(const FInputSystemSnapshot& Snapshot,
 
 void APlayerController::SetInputModeGameOnly()
 {
-	SetViewportInputMode(EGameInputMode::GameOnly);
+	SetViewportInputMode(this, EGameInputMode::GameOnly);
 }
 
 void APlayerController::SetInputModeUIOnly()
 {
-	SetViewportInputMode(EGameInputMode::UIOnly);
+	SetViewportInputMode(this, EGameInputMode::UIOnly);
 }
 
 void APlayerController::SetInputModeGameAndUI()
 {
-	SetViewportInputMode(EGameInputMode::GameAndUI);
+	SetViewportInputMode(this, EGameInputMode::GameAndUI);
+}
+
+void APlayerController::SetShowMouseCursor(bool bShow)
+{
+	if (UGameViewportClient* ViewportClient = GetRuntimeGameViewportClient(this))
+	{
+		ViewportClient->SetCursorVisible(bShow);
+	}
+}
+
+bool APlayerController::IsShowMouseCursor() const
+{
+	if (const UGameViewportClient* ViewportClient = GetRuntimeGameViewportClient(this))
+	{
+		return ViewportClient->IsCursorVisible();
+	}
+
+	return false;
+}
+
+void APlayerController::SetCursorLocked(bool bLocked)
+{
+	if (UGameViewportClient* ViewportClient = GetRuntimeGameViewportClient(this))
+	{
+		ViewportClient->SetCursorLocked(bLocked);
+	}
+}
+
+bool APlayerController::IsCursorLocked() const
+{
+	if (const UGameViewportClient* ViewportClient = GetRuntimeGameViewportClient(this))
+	{
+		return ViewportClient->IsCursorLocked();
+	}
+
+	return false;
+}
+
+void APlayerController::SetSoftwareCursorVisible(bool bVisible)
+{
+	if (GetRuntimeGameViewportClient(this))
+	{
+		FCursorSystem::Get().SetSoftwareCursorVisible(bVisible);
+	}
+}
+
+bool APlayerController::IsSoftwareCursorVisible() const
+{
+	return IsRuntimeWorld(this) && FCursorSystem::Get().IsSoftwareCursorVisible();
+}
+
+bool APlayerController::SetCursorImage(const FString& TexturePath, float Width, float Height, float InHotSpotX, float InHotSpotY)
+{
+	if (!GetRuntimeGameViewportClient(this))
+	{
+		return false;
+	}
+
+	return FCursorSystem::Get().SetCursorImage(TexturePath, Width, Height, InHotSpotX, InHotSpotY);
+}
+
+void APlayerController::ClearCursorImage()
+{
+	if (GetRuntimeGameViewportClient(this))
+	{
+		FCursorSystem::Get().ClearCursorImage();
+	}
+}
+
+void APlayerController::SetCursorHotSpot(float X, float Y)
+{
+	if (GetRuntimeGameViewportClient(this))
+	{
+		FCursorSystem::Get().SetCursorHotSpot(X, Y);
+	}
+}
+
+void APlayerController::SetCursorSize(float Width, float Height)
+{
+	if (GetRuntimeGameViewportClient(this))
+	{
+		FCursorSystem::Get().SetCursorSize(Width, Height);
+	}
+}
+
+void APlayerController::SetCursorHitBox(float OffsetX, float OffsetY, float Width, float Height)
+{
+	if (GetRuntimeGameViewportClient(this))
+	{
+		FCursorSystem::Get().SetCursorHitBox(OffsetX, OffsetY, Width, Height);
+	}
+}
+
+bool APlayerController::IsCursorOverRect(float X, float Y, float Width, float Height) const
+{
+	return IsRuntimeWorld(this) && FCursorSystem::Get().IsCursorOverRect(X, Y, Width, Height);
 }

@@ -207,6 +207,7 @@ void FGameRenderPipeline::RenderScopeLensCapture(FViewport* VP, const FMinimalVi
 	ScopeFrame.CameraFade.bEnabled = false;
 	ScopeFrame.CameraVignette.bEnabled = false;
 	ScopeFrame.CameraLetterbox.bEnabled = false;
+	ScopeFrame.bRenderScreenUI = false;
 	ScopeFrame.ViewportRTV = MainFrame.ScopeLensRTV;
 	ScopeFrame.SceneColorCopySRV = nullptr;
 	ScopeFrame.SceneColorCopyTexture = nullptr;

@@ -21,10 +21,10 @@ public:
 	ULuaScriptComponent();
 	~ULuaScriptComponent();
 
-	void InitializeLua();
+	bool InitializeLua();
 	void ReleaseLuaRuntimeForShutdown();
 	UFUNCTION(Callable, Exec, CallInEditor, Category="Script")
-	void ReloadScript();
+	bool ReloadScript();
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay() override;

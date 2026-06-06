@@ -86,6 +86,7 @@ public:
 		BoxCollider,
 		SphereCollider,
 		CapsuleCollider,
+		Text,
 		TriggerVolume,
 		TriggerVolumeParticle,
 		SkeletalMesh,

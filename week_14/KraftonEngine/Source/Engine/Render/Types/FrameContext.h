@@ -47,6 +47,7 @@ struct FFrameContext
 
 	FViewport* SourceViewport = nullptr;
 	bool bEnableEditorIdPicking = false;
+	bool bRenderScreenUI = true;
 
 	ID3D11RenderTargetView*   ViewportRTV          = nullptr;
 	ID3D11DepthStencilView*   ViewportDSV          = nullptr;
@@ -142,6 +143,7 @@ struct FFrameContext
 		ViewportDSV             = nullptr;
 		SourceViewport          = nullptr;
 		bEnableEditorIdPicking  = false;
+		bRenderScreenUI         = true;
 		SceneColorCopySRV       = nullptr;
 		SceneColorCopyTexture   = nullptr;
 		ViewportRenderTexture   = nullptr;

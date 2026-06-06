@@ -44,6 +44,32 @@ public:
 	UFUNCTION(Callable, Category="Input")
 	void SetInputModeGameAndUI();
 
+	UFUNCTION(Callable, Category="Input")
+	void SetShowMouseCursor(bool bShow);
+	UFUNCTION(Pure, Category="Input")
+	bool IsShowMouseCursor() const;
+	UFUNCTION(Callable, Category="Input")
+	void SetCursorLocked(bool bLocked);
+	UFUNCTION(Pure, Category="Input")
+	bool IsCursorLocked() const;
+
+	UFUNCTION(Callable, Category="Input")
+	void SetSoftwareCursorVisible(bool bVisible);
+	UFUNCTION(Pure, Category="Input")
+	bool IsSoftwareCursorVisible() const;
+	UFUNCTION(Callable, Category="Input")
+	bool SetCursorImage(const FString& TexturePath, float Width = 0.0f, float Height = 0.0f, float HotSpotX = 0.0f, float HotSpotY = 0.0f);
+	UFUNCTION(Callable, Category="Input")
+	void ClearCursorImage();
+	UFUNCTION(Callable, Category="Input")
+	void SetCursorHotSpot(float X, float Y);
+	UFUNCTION(Callable, Category="Input")
+	void SetCursorSize(float Width, float Height);
+	UFUNCTION(Callable, Category="Input")
+	void SetCursorHitBox(float OffsetX, float OffsetY, float Width, float Height);
+	UFUNCTION(Pure, Category="Input")
+	bool IsCursorOverRect(float X, float Y, float Width, float Height) const;
+
 	// ─── Camera Manager ──────────────────────────────────────────
 	// UE: APlayerController::PlayerCameraManager 멤버. 현재는 World 가 owner 이고 PC 는 reference 만 보유.
 	// E.2 청크 3 에서 World 의 CameraManager 멤버가 제거되면 PC 가 직접 SpawnActor 로 owner.

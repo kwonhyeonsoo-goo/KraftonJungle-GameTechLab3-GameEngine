@@ -72,7 +72,7 @@ void FViewport::BeginRender(ID3D11DeviceContext* Ctx, const float ClearColor[4])
 {
 	if (!RTV) return;
 
-	const float DefaultColor[4] = { 0.25f, 0.25f, 0.25f, 1.0f };
+	const float DefaultColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	const float* Color = ClearColor ? ClearColor : DefaultColor;
 	D3D11_VIEWPORT VPRect = GetViewportRect();
 

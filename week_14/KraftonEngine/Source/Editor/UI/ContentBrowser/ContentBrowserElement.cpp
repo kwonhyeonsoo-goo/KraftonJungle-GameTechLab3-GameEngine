@@ -3,6 +3,7 @@
 #include "Asset/AssetPackage.h"
 #include "Editor/EditorEngine.h"
 #include "Core/Logging/Log.h"
+#include "Core/Logging/Notification.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "FloatCurve/FloatCurveManager.h"
 #include "CameraShake/CameraShakeAsset.h"
@@ -33,10 +34,14 @@
 #include "Physics/PhysicsAssetManager.h"
 #include "UI/RuntimeUILayoutAsset.h"
 #include "UI/RuntimeUILayoutManager.h"
+#include "Resource/ResourceManager.h"
+#include "SimpleJSON/json.hpp"
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cstdio>
+#include <fstream>
 #include <filesystem>
 #include <utility>
 
@@ -44,6 +49,8 @@
 #include "Particle/ParticleSystemManager.h"
 #include "Particle/VectorField/VectorFieldAsset.h"
 #include "Particle/VectorField/VectorFieldManager.h"
+
+#define NOMINMAX
 
 static FString FormatBytes(uint64 Bytes)
 {
@@ -109,6 +116,173 @@ static bool ProjectFileExistsForContentBrowser(const FString& Path)
 {
 	const std::filesystem::path FullPath = ResolveProjectPathForContentBrowser(Path);
 	return std::filesystem::exists(FullPath) && std::filesystem::is_regular_file(FullPath);
+}
+
+static FString ToLowerContentBrowserText(FString Value)
+{
+	std::transform(Value.begin(), Value.end(), Value.begin(), [](unsigned char Ch)
+	{
+		return static_cast<char>(std::tolower(Ch));
+	});
+	return Value;
+}
+
+static FString NormalizeResourcePathForContentBrowser(const FString& Path)
+{
+	if (Path.empty())
+	{
+		return {};
+	}
+
+	std::filesystem::path Normalized(FPaths::ToWide(FPaths::MakeProjectRelative(Path)));
+	return ToLowerContentBrowserText(FPaths::ToUtf8(Normalized.lexically_normal().generic_wstring()));
+}
+
+static FString SanitizeFontResourceName(FString Name)
+{
+	if (Name.empty())
+	{
+		return "Font";
+	}
+
+	for (char& Ch : Name)
+	{
+		const unsigned char UCh = static_cast<unsigned char>(Ch);
+		if (!std::isalnum(UCh) && Ch != '_')
+		{
+			Ch = '_';
+		}
+	}
+	return Name.empty() ? FString("Font") : Name;
+}
+
+static FString MakeUniqueFontResourceName(const json::JSON& FontSection, const FString& BaseName)
+{
+	FString Candidate = SanitizeFontResourceName(BaseName);
+	if (!FontSection.hasKey(Candidate))
+	{
+		return Candidate;
+	}
+
+	for (int32 Index = 1; Index < 1000; ++Index)
+	{
+		Candidate = SanitizeFontResourceName(BaseName) + "_" + std::to_string(Index);
+		if (!FontSection.hasKey(Candidate))
+		{
+			return Candidate;
+		}
+	}
+
+	return SanitizeFontResourceName(BaseName) + "_Auto";
+}
+
+static bool RegisterFontResourceMetadata(
+	ContentBrowserContext& Context,
+	const std::filesystem::path& MetadataPath,
+	FString& OutFontName,
+	bool& bOutModifiedSettings,
+	FString& OutError)
+{
+	bOutModifiedSettings = false;
+	OutFontName.clear();
+	OutError.clear();
+
+	const FString MetadataRelPath = FPaths::MakeProjectRelative(FPaths::ToUtf8(MetadataPath.generic_wstring()));
+	if (MetadataRelPath.empty())
+	{
+		OutError = "Invalid font metadata path";
+		return false;
+	}
+
+	const std::filesystem::path SettingsPath(FPaths::ResourceFilePath());
+	std::ifstream InFile(SettingsPath, std::ios::binary);
+	if (!InFile.is_open())
+	{
+		OutError = "Failed to open Resource.ini";
+		return false;
+	}
+
+	const FString Content((std::istreambuf_iterator<char>(InFile)), std::istreambuf_iterator<char>());
+	InFile.close();
+
+	json::JSON Root = json::JSON::Load(Content);
+	json::JSON& FontSection = Root["Font"];
+	const FString NormalizedMetadataPath = NormalizeResourcePathForContentBrowser(MetadataRelPath);
+	for (const auto& Pair : FontSection.ObjectRange())
+	{
+		const json::JSON& Entry = Pair.second;
+		const FString ExistingPath = Entry.hasKey("Path") ? Entry.at("Path").ToString() : FString();
+		const FString ExistingMetadataPath = Entry.hasKey("MetadataPath") ? Entry.at("MetadataPath").ToString() : FString();
+		if (NormalizeResourcePathForContentBrowser(ExistingPath) == NormalizedMetadataPath
+			|| NormalizeResourcePathForContentBrowser(ExistingMetadataPath) == NormalizedMetadataPath)
+		{
+			OutFontName = Pair.first;
+			FResourceManager::Get().RegisterFont(FName(OutFontName), MetadataRelPath, 1, 1);
+			if (Context.EditorEngine)
+			{
+				FResourceManager::Get().LoadGPUResources(Context.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice());
+			}
+			return true;
+		}
+	}
+
+	OutFontName = MakeUniqueFontResourceName(FontSection, FPaths::ToUtf8(MetadataPath.stem().wstring()));
+	FontSection[OutFontName]["Path"] = MetadataRelPath;
+	FontSection[OutFontName]["MetadataPath"] = MetadataRelPath;
+	FontSection[OutFontName]["Columns"] = 1;
+	FontSection[OutFontName]["Rows"] = 1;
+
+	std::ofstream OutFile(SettingsPath, std::ios::binary | std::ios::trunc);
+	if (!OutFile.is_open())
+	{
+		OutError = "Failed to write Resource.ini";
+		return false;
+	}
+
+	OutFile << Root.dump(1, "    ") << "\n";
+	if (!OutFile.good())
+	{
+		OutError = "Failed to flush Resource.ini";
+		return false;
+	}
+
+	bOutModifiedSettings = true;
+	FResourceManager::Get().RegisterFont(FName(OutFontName), MetadataRelPath, 1, 1);
+	if (Context.EditorEngine)
+	{
+		FResourceManager::Get().LoadGPUResources(Context.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice());
+	}
+	return true;
+}
+
+static int32 ReadContentBrowserJsonInt(const json::JSON& Obj, const char* Key, int32 DefaultValue = 0)
+{
+	if (!Obj.hasKey(Key))
+	{
+		return DefaultValue;
+	}
+
+	bool bOk = false;
+	const long IntValue = Obj.at(Key).ToInt(bOk);
+	if (bOk)
+	{
+		return static_cast<int32>(IntValue);
+	}
+
+	const double FloatValue = Obj.at(Key).ToFloat(bOk);
+	return bOk ? static_cast<int32>(FloatValue) : DefaultValue;
+}
+
+static FString ReadContentBrowserJsonString(const json::JSON& Obj, const char* Key, const FString& DefaultValue = {})
+{
+	if (!Obj.hasKey(Key))
+	{
+		return DefaultValue;
+	}
+
+	bool bOk = false;
+	const FString Value = Obj.at(Key).ToString(bOk);
+	return bOk ? Value : DefaultValue;
 }
 
 static FEditorFileSystemState CaptureContentUndoStateForElement(ContentBrowserContext& Context, const FString& Path, const FString& Label)
@@ -832,6 +1006,126 @@ void RuntimeUIElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	}
 
 	Context.EditorEngine->OpenRuntimeUIPreviewDocument(FPaths::ToUtf8(ContentItem.Path.wstring()));
+}
+
+void FontElement::RenderContextMenu(ContentBrowserContext& Context)
+{
+	if (ImGui::MenuItem("Register Font Resource"))
+	{
+		const FString ResourceIniPath = FPaths::ToUtf8(std::filesystem::path(FPaths::ResourceFilePath()).generic_wstring());
+		const FEditorFileSystemState BeforeState = CaptureContentUndoStateForElement(
+			Context,
+			ResourceIniPath,
+			"Register Font Resource");
+
+		FString FontName;
+		FString Error;
+		bool bModifiedSettings = false;
+		if (RegisterFontResourceMetadata(Context, ContentItem.Path, FontName, bModifiedSettings, Error))
+		{
+			if (bModifiedSettings)
+			{
+				RecordContentModifyForElement(Context, BeforeState, ResourceIniPath, "Register Font Resource");
+				Context.bPendingContentRefresh = true;
+			}
+
+			FNotificationManager::Get().AddNotification(
+				"Font registered: " + FontName,
+				ENotificationType::Success,
+				2.5f);
+		}
+		else
+		{
+			FNotificationManager::Get().AddNotification(
+				Error.empty() ? FString("Font registration failed") : Error,
+				ENotificationType::Error,
+				4.0f);
+		}
+	}
+}
+
+void FontElement::RenderDetail()
+{
+	ContentBrowserElement::RenderDetail();
+
+	std::ifstream File(ContentItem.Path, std::ios::binary);
+	if (!File.is_open())
+	{
+		return;
+	}
+
+	const FString Content((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
+	json::JSON Root = json::JSON::Load(Content);
+	FName RegisteredFontName;
+	const bool bRegisteredFont = FResourceManager::Get().ResolveFontNameByPath(
+		FPaths::ToUtf8(ContentItem.Path.generic_wstring()),
+		RegisteredFontName);
+
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+	ImGui::TextUnformatted("Font Metadata");
+
+	if (ImGui::BeginTable("FontMetadataDetailsTable", 2, ImGuiTableFlags_SizingStretchProp))
+	{
+		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 84.0f);
+		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+		if (!Root.hasKey("common") || !Root.hasKey("chars"))
+		{
+			DrawDetailRow("Status", "Invalid BMFont metadata");
+			ImGui::EndTable();
+			return;
+		}
+
+		const json::JSON& Common = Root.at("common");
+		DrawDetailRow("LineHeight", std::to_string(ReadContentBrowserJsonInt(Common, "lineHeight")));
+		DrawDetailRow("Base", std::to_string(ReadContentBrowserJsonInt(Common, "base")));
+
+		char AtlasSize[64];
+		std::snprintf(
+			AtlasSize,
+			sizeof(AtlasSize),
+			"%d x %d",
+			ReadContentBrowserJsonInt(Common, "scaleW"),
+			ReadContentBrowserJsonInt(Common, "scaleH"));
+		DrawDetailRow("Atlas", AtlasSize);
+
+		DrawDetailRow("Glyphs", std::to_string(Root.at("chars").length()));
+		DrawDetailRow("Resource", bRegisteredFont ? RegisteredFontName.ToString() : FString("Unregistered"));
+
+		if (Root.hasKey("pages") && Root.at("pages").length() > 0)
+		{
+			const json::JSON& Page = Root.at("pages").at(0);
+			bool bPageString = false;
+			FString PageFile = Page.ToString(bPageString);
+			if (!bPageString && Page.JSONType() == json::JSON::Class::Object)
+			{
+				PageFile = ReadContentBrowserJsonString(Page, "file");
+			}
+			DrawDetailRow("Page 0", PageFile.empty() ? FString("Unknown") : PageFile);
+			DrawDetailRow("Pages", std::to_string(Root.at("pages").length()));
+		}
+
+		ImGui::EndTable();
+	}
+
+	if (bRegisteredFont)
+	{
+		const FFontResource* Font = FResourceManager::Get().FindFont(RegisteredFontName);
+		if (Font && Font->IsLoaded())
+		{
+			const float AtlasW = Font->Common.ScaleW > 0 ? static_cast<float>(Font->Common.ScaleW) : 256.0f;
+			const float AtlasH = Font->Common.ScaleH > 0 ? static_cast<float>(Font->Common.ScaleH) : 256.0f;
+			const float MaxPreviewW = (std::min)(ImGui::GetContentRegionAvail().x, 240.0f);
+			const float PreviewW = (std::max)(64.0f, MaxPreviewW);
+			const float PreviewH = (std::max)(64.0f, PreviewW * (AtlasH / AtlasW));
+
+			ImGui::Spacing();
+			ImGui::TextUnformatted("Atlas Preview");
+			ImGui::Image(reinterpret_cast<ImTextureID>(Font->SRV), ImVec2(PreviewW, PreviewH));
+		}
+	}
 }
 
 void RuntimeUILayoutElement::OnDoubleLeftClicked(ContentBrowserContext& Context)

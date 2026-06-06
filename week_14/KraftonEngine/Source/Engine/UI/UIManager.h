@@ -2,6 +2,7 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Core/Singleton.h"
+#include "Math/Vector.h"
 #include "Object/GarbageCollection.h"
 #include "Render/Types/RenderTypes.h"
 
@@ -14,15 +15,19 @@
 #include <RmlUi/Core.h>
 
 #include <chrono>
+#include <vector>
 
 class APlayerController;
 class UUserWidget;
 struct FFrameContext;
 struct FPassContext;
 struct ID3D11Buffer;
+struct ID3D11DepthStencilView;
 struct ID3D11Device;
 struct ID3D11RasterizerState;
+struct ID3D11RenderTargetView;
 struct ID3D11ShaderResourceView;
+struct ID3D11Texture2D;
 
 class FRmlSystemInterface final : public Rml::SystemInterface
 {
@@ -82,19 +87,37 @@ public:
 	void EnableScissorRegion(bool Enable) override;
 	void SetScissorRegion(Rml::Rectanglei Region) override;
 	void SetTransform(const Rml::Matrix4f* Transform) override;
+	void EnableClipMask(bool Enable) override;
+	void RenderToClipMask(Rml::ClipMaskOperation Operation, Rml::CompiledGeometryHandle Geometry, Rml::Vector2f Translation) override;
+	Rml::LayerHandle PushLayer() override;
+	void CompositeLayers(Rml::LayerHandle Source, Rml::LayerHandle Destination, Rml::BlendMode BlendMode, Rml::Span<const Rml::CompiledFilterHandle> Filters) override;
+	void PopLayer() override;
+	Rml::TextureHandle SaveLayerAsTexture() override;
+	Rml::CompiledFilterHandle SaveLayerAsMaskImage() override;
+	Rml::CompiledFilterHandle CompileFilter(const Rml::String& Name, const Rml::Dictionary& Parameters) override;
+	void ReleaseFilter(Rml::CompiledFilterHandle Filter) override;
 
 private:
 	void CreateConstantBuffer();
 	void CreateWhiteTexture();
 	void ReleaseWhiteTexture();
+	void ReleaseFrameLayers();
 
 private:
 	ID3D11Device* Device = nullptr;
 	ID3D11Buffer* PerFrameCB = nullptr;
+	ID3D11Buffer* CompositeCB = nullptr;
 	ID3D11ShaderResourceView* WhiteTextureSRV = nullptr;
 	ID3D11RasterizerState* ScissorRasterizerState = nullptr;
+	ID3D11RenderTargetView* CurrentRenderTargetView = nullptr;
+	ID3D11DepthStencilView* CurrentDepthStencilView = nullptr;
+	void* CurrentLayer = nullptr;
 	Rml::Matrix4f CurrentTransform;
 	const FPassContext* Ctx = nullptr;
+	bool bScissorEnabled = false;
+	bool bClipMaskEnabled = false;
+	std::vector<void*> FrameLayers;
+	std::vector<void*> LayerStack;
 };
 
 class UUIManager : public TSingleton<UUIManager>, public FGCObject
@@ -149,6 +172,8 @@ public:
 		bool SetElementEnabled(const FString& ElementId, bool bEnabled);
 		bool SetActionEvent(const FString& ElementId, const FString& EventName);
 		TArray<FString> PollActionEvents();
+		FVector2 GetVirtualViewportSize() const;
+		FVector2 GetPhysicalViewportSize() const;
 
 private:
 	UUIManager() = default;
@@ -172,6 +197,8 @@ private:
 	FRmlFileInterfaceWide* FileInterface = nullptr;
 	FRmlRenderInterfaceD3D11* RenderInterface = nullptr;
 	Rml::Context* RmlContext = nullptr;
+	float LastPhysicalViewportWidth = 0.0f;
+	float LastPhysicalViewportHeight = 0.0f;
 	bool bRmlInitialized = false;
 	bool bDispatchingRmlEvents = false;
 	bool bInputProcessedThisFrame = false;

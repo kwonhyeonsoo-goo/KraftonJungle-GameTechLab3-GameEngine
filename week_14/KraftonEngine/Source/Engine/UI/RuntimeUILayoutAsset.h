@@ -33,8 +33,11 @@ struct FRuntimeUIWidgetNode
 
 	FVector2 Position = FVector2(0.0f, 0.0f);
 	FVector2 Size = FVector2(160.0f, 48.0f);
+	FVector2 PositionPercent = FVector2(0.0f, 0.0f);
+	FVector2 SizePercent = FVector2(0.0f, 0.0f);
 	FString Text;
 	FString ImagePath;
+	FString MaskImagePath;
 	FString StyleClass;
 	FString OnClickAction;
 
@@ -46,8 +49,20 @@ struct FRuntimeUIWidgetNode
 	float BorderRadius = 0.0f;
 	float FontSize = 24.0f;
 	float Opacity = 1.0f;
+	float Right = 0.0f;
+	float Bottom = 0.0f;
+	FString JustifyContent;
+	FString AlignItems;
 	ERuntimeUIImageFit ImageFit = ERuntimeUIImageFit::Stretch;
 	bool bVisible = true;
+	bool bUseLeftPercent = false;
+	bool bUseTopPercent = false;
+	bool bUseWidthPercent = false;
+	bool bUseHeightPercent = false;
+	bool bUseRight = false;
+	bool bUseBottom = false;
+	bool bUseFlexLayout = false;
+	bool bLockAspectRatio = false;
 };
 
 UCLASS()
@@ -56,7 +71,7 @@ class URuntimeUILayoutAsset : public UObject
 public:
 	GENERATED_BODY()
 
-	static constexpr int32 CurrentPayloadVersion = 1;
+	static constexpr int32 CurrentPayloadVersion = 4;
 
 	URuntimeUILayoutAsset();
 

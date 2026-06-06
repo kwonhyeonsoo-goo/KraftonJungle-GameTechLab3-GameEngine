@@ -103,6 +103,18 @@ namespace
 		return PIt == P.end();
 	}
 
+	bool IsContentFontMetadata(const std::filesystem::path& Path, const FString& LowerExtension)
+	{
+		if (LowerExtension != ".font" && LowerExtension != ".fnt")
+		{
+			return false;
+		}
+
+		const std::filesystem::path FontRoot = std::filesystem::path(FPaths::RootDir()) / L"Content" / L"Font";
+		std::error_code Error;
+		return std::filesystem::exists(FontRoot, Error) && IsSubPath(FontRoot, Path.parent_path());
+	}
+
 	FString ToContentUndoPath(const std::filesystem::path& Path)
 	{
 		return FPaths::ToUtf8(Path.wstring());
@@ -196,6 +208,8 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 	IconFileMap[".shake"] = L"StartMerge_42x.png";
 	IconFileMap[".fbx"] = L"icon_MatEd_Mesh_40x.png";
 	IconFileMap[".fga"] = L"StartMerge_42x.png";
+	IconFileMap[".font"] = L"StartMerge_42x.png";
+	IconFileMap[".fnt"] = L"StartMerge_42x.png";
 	IconFileMap[".uasset"] = L"icon_MatEd_Mesh_40x.png";
 
 	ContentBrowserContext Context;
@@ -566,6 +580,10 @@ void FEditorContentBrowserWidget::RefreshContent()
 		{
 			Element = std::make_shared<PNGElement>();
 			Icon = FEditorTextureManager::Get().GetOrLoadThumbnail(FPaths::ToUtf8(Content.Path.lexically_relative(FPaths::RootDir()).generic_wstring()));
+		}
+		else if (IsContentFontMetadata(Content.Path, Extension))
+		{
+			Element = std::make_shared<FontElement>();
 		}
 		else if (Extension == ".rml" || Extension == ".rcss")
 		{

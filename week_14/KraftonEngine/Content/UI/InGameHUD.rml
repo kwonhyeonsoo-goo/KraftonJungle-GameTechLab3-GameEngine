@@ -4,9 +4,18 @@
 </head>
 <body>
     <div id="hudRoot" data-ui-type="Canvas" data-ui-name="In Game HUD">
-        <img id="compassImage" data-ui-type="Image" data-ui-name="Compass Image" src="Image/Hor-Compass/Compass.png" />
+        <img id="compassImage" data-ui-type="Image" data-ui-name="Compass Image" src="Image/Hor-Compass/Window/Compass_Window_000.png" data-ui-fit="contain" />
         <div id="scopeOverlay" data-ui-type="Panel" data-ui-name="Scope Overlay">
-            <img id="scopeImage" data-ui-type="Image" data-ui-name="Scope Image" src="Image/Scope/Scope_3.png" />
+            <img id="scopeImage" data-ui-type="Image" data-ui-name="Scope Image" src="Image/Scope/Scope_3.png" data-ui-fit="fill" />
+        </div>
+        <img id="CompassArrow" data-ui-type="Image" data-ui-name="CompassArrow" src="Image/Hor-Compass/Arrow.png" data-ui-fit="fill" />
+        <img id="crosshairImage" data-ui-type="Image" data-ui-name="Crosshair Image" src="Image/CrossHair/crosshair022.png" data-ui-fit="fill" />
+        <div id="breathPanel" data-ui-type="Panel" data-ui-name="Hold Breath Panel">
+            <div id="breathLabel" data-ui-type="Text" data-ui-name="Hold Breath Label">&amp;#49704;&amp;#52280;&amp;#44592;</div>
+            <div id="breathBarTrack" data-ui-type="Panel" data-ui-name="Hold Breath Track">
+                <div id="breathBarFill" data-ui-type="Panel" data-ui-name="Hold Breath Fill"></div>
+                <div id="breathProgress" data-ui-type="Panel" data-ui-name="Hold Breath Progress"></div>
+            </div>
         </div>
     </div>
 </body>

@@ -21,9 +21,11 @@
 #endif
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
+#include <RmlUi/Core/Factory.h>
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <memory>
 
@@ -48,12 +50,34 @@ namespace
 		ID3D11ShaderResourceView* SRV = nullptr;
 	};
 
+	struct FRmlLayerD3D11
+	{
+		ID3D11Texture2D* Texture = nullptr;
+		ID3D11RenderTargetView* RTV = nullptr;
+		ID3D11ShaderResourceView* SRV = nullptr;
+		UINT Width = 0;
+		UINT Height = 0;
+	};
+
+	struct FRmlFilterD3D11
+	{
+		ID3D11ShaderResourceView* MaskSRV = nullptr;
+	};
+
 	struct FRmlPerFrameCB
 	{
-		float ViewportWidth = 1.0f;
-		float ViewportHeight = 1.0f;
+		float PhysicalViewportWidth = 1.0f;
+		float PhysicalViewportHeight = 1.0f;
+		float VirtualViewportWidth = 1920.0f;
+		float VirtualViewportHeight = 1080.0f;
+		float UIScale = 1.0f;
+		float UIOffsetX = 0.0f;
+		float UIOffsetY = 0.0f;
+		float Padding0 = 0.0f;
 		float TranslationX = 0.0f;
 		float TranslationY = 0.0f;
+		float Padding1 = 0.0f;
+		float Padding2 = 0.0f;
 		float Transform[16] = {
 			1.0f, 0.0f, 0.0f, 0.0f,
 			0.0f, 1.0f, 0.0f, 0.0f,
@@ -61,8 +85,89 @@ namespace
 			0.0f, 0.0f, 0.0f, 1.0f,
 		};
 	};
+	static_assert(sizeof(FRmlPerFrameCB) % 16 == 0, "Rml UI constant buffer must be 16-byte aligned.");
+
+	struct FRmlCompositeCB
+	{
+		float UseMask = 0.0f;
+		float Padding0 = 0.0f;
+		float Padding1 = 0.0f;
+		float Padding2 = 0.0f;
+	};
+	static_assert(sizeof(FRmlCompositeCB) % 16 == 0, "Rml UI composite constant buffer must be 16-byte aligned.");
 
 	constexpr const char* UIShaderPath = "Shaders/UI/RmlUi.hlsl";
+	constexpr float UIVirtualViewportWidth = 1920.0f;
+	constexpr float UIVirtualViewportHeight = 1080.0f;
+
+	struct FUIVirtualViewportLayout
+	{
+		float PhysicalWidth = 1.0f;
+		float PhysicalHeight = 1.0f;
+		float VirtualWidth = UIVirtualViewportWidth;
+		float VirtualHeight = UIVirtualViewportHeight;
+		float Scale = 1.0f;
+		float OffsetX = 0.0f;
+		float OffsetY = 0.0f;
+	};
+
+	FUIVirtualViewportLayout MakeUIVirtualViewportLayout(float PhysicalWidth, float PhysicalHeight)
+	{
+		FUIVirtualViewportLayout Layout;
+		Layout.PhysicalWidth = (std::max)(PhysicalWidth, 1.0f);
+		Layout.PhysicalHeight = (std::max)(PhysicalHeight, 1.0f);
+		Layout.Scale = (std::min)(
+			Layout.PhysicalWidth / Layout.VirtualWidth,
+			Layout.PhysicalHeight / Layout.VirtualHeight);
+		if (Layout.Scale <= 0.0f)
+		{
+			Layout.Scale = 1.0f;
+		}
+		Layout.OffsetX = (Layout.PhysicalWidth - Layout.VirtualWidth * Layout.Scale) * 0.5f;
+		Layout.OffsetY = (Layout.PhysicalHeight - Layout.VirtualHeight * Layout.Scale) * 0.5f;
+		return Layout;
+	}
+
+	bool PhysicalToVirtualUIPosition(const FUIVirtualViewportLayout& Layout, float PhysicalX, float PhysicalY, int32& OutVirtualX, int32& OutVirtualY)
+	{
+		const float VirtualX = (PhysicalX - Layout.OffsetX) / Layout.Scale;
+		const float VirtualY = (PhysicalY - Layout.OffsetY) / Layout.Scale;
+		OutVirtualX = static_cast<int32>(VirtualX);
+		OutVirtualY = static_cast<int32>(VirtualY);
+		return VirtualX >= 0.0f && VirtualY >= 0.0f &&
+			VirtualX < Layout.VirtualWidth && VirtualY < Layout.VirtualHeight;
+	}
+
+	void ReleaseRmlLayer(FRmlLayerD3D11* Layer)
+	{
+		if (!Layer)
+		{
+			return;
+		}
+		if (Layer->SRV)
+		{
+			Layer->SRV->Release();
+		}
+		if (Layer->RTV)
+		{
+			Layer->RTV->Release();
+		}
+		if (Layer->Texture)
+		{
+			Layer->Texture->Release();
+		}
+		delete Layer;
+	}
+
+	FRmlLayerD3D11* ToRmlLayer(Rml::LayerHandle Handle)
+	{
+		return reinterpret_cast<FRmlLayerD3D11*>(Handle);
+	}
+
+	FRmlFilterD3D11* ToRmlFilter(Rml::CompiledFilterHandle Handle)
+	{
+		return reinterpret_cast<FRmlFilterD3D11*>(Handle);
+	}
 
 	std::filesystem::path ToProjectPath(const FString& Path)
 	{
@@ -284,6 +389,7 @@ FRmlRenderInterfaceD3D11::FRmlRenderInterfaceD3D11(ID3D11Device* InDevice)
 
 FRmlRenderInterfaceD3D11::~FRmlRenderInterfaceD3D11()
 {
+	ReleaseFrameLayers();
 	ReleaseWhiteTexture();
 	if (ScissorRasterizerState)
 	{
@@ -295,11 +401,21 @@ FRmlRenderInterfaceD3D11::~FRmlRenderInterfaceD3D11()
 		PerFrameCB->Release();
 		PerFrameCB = nullptr;
 	}
+	if (CompositeCB)
+	{
+		CompositeCB->Release();
+		CompositeCB = nullptr;
+	}
 }
 
 void FRmlRenderInterfaceD3D11::BeginFrame(const FPassContext& InCtx)
 {
 	Ctx = &InCtx;
+	bScissorEnabled = false;
+	bClipMaskEnabled = false;
+	CurrentRenderTargetView = Ctx->Cache.RTV;
+	CurrentDepthStencilView = Ctx->Cache.DSV;
+	CurrentLayer = nullptr;
 
 	ID3D11DeviceContext* DC = Ctx->Device.GetDeviceContext();
 	if (!DC)
@@ -319,7 +435,23 @@ void FRmlRenderInterfaceD3D11::BeginFrame(const FPassContext& InCtx)
 
 void FRmlRenderInterfaceD3D11::EndFrame()
 {
+	bScissorEnabled = false;
+	bClipMaskEnabled = false;
+	CurrentRenderTargetView = nullptr;
+	CurrentDepthStencilView = nullptr;
+	CurrentLayer = nullptr;
+	ReleaseFrameLayers();
 	Ctx = nullptr;
+}
+
+void FRmlRenderInterfaceD3D11::ReleaseFrameLayers()
+{
+	for (void* Layer : FrameLayers)
+	{
+		ReleaseRmlLayer(static_cast<FRmlLayerD3D11*>(Layer));
+	}
+	FrameLayers.clear();
+	LayerStack.clear();
 }
 
 void FRmlRenderInterfaceD3D11::SetTransform(const Rml::Matrix4f* Transform)
@@ -413,15 +545,30 @@ void FRmlRenderInterfaceD3D11::RenderGeometry(Rml::CompiledGeometryHandle Geomet
 
 	Ctx->Resources.SetDepthStencilState(Ctx->Device, EDepthStencilState::NoDepth);
 	Ctx->Resources.SetBlendState(Ctx->Device, EBlendState::AlphaBlend);
-	Ctx->Resources.SetRasterizerState(Ctx->Device, ERasterizerState::SolidNoCull);
+	if (bScissorEnabled && ScissorRasterizerState)
+	{
+		DC->RSSetState(ScissorRasterizerState);
+	}
+	else
+	{
+		Ctx->Resources.SetRasterizerState(Ctx->Device, ERasterizerState::SolidNoCull);
+	}
 
-	DC->OMSetRenderTargets(1, &Ctx->Cache.RTV, Ctx->Cache.DSV);
+	ID3D11RenderTargetView* TargetRTV = CurrentRenderTargetView ? CurrentRenderTargetView : Ctx->Cache.RTV;
+	ID3D11DepthStencilView* TargetDSV = CurrentDepthStencilView;
+	DC->OMSetRenderTargets(1, &TargetRTV, TargetDSV);
 	DC->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	Shader->Bind(DC);
 
 	FRmlPerFrameCB CBData;
-	CBData.ViewportWidth = Ctx->Frame.ViewportWidth;
-	CBData.ViewportHeight = Ctx->Frame.ViewportHeight;
+	const FUIVirtualViewportLayout Layout = MakeUIVirtualViewportLayout(Ctx->Frame.ViewportWidth, Ctx->Frame.ViewportHeight);
+	CBData.PhysicalViewportWidth = Layout.PhysicalWidth;
+	CBData.PhysicalViewportHeight = Layout.PhysicalHeight;
+	CBData.VirtualViewportWidth = Layout.VirtualWidth;
+	CBData.VirtualViewportHeight = Layout.VirtualHeight;
+	CBData.UIScale = Layout.Scale;
+	CBData.UIOffsetX = Layout.OffsetX;
+	CBData.UIOffsetY = Layout.OffsetY;
 	CBData.TranslationX = Translation.x;
 	CBData.TranslationY = Translation.y;
 	const float* TransformData = CurrentTransform.data();
@@ -575,6 +722,8 @@ void FRmlRenderInterfaceD3D11::ReleaseTexture(Rml::TextureHandle Texture)
 
 void FRmlRenderInterfaceD3D11::EnableScissorRegion(bool Enable)
 {
+	bScissorEnabled = Enable;
+
 	if (!Ctx)
 	{
 		return;
@@ -604,11 +753,224 @@ void FRmlRenderInterfaceD3D11::SetScissorRegion(Rml::Rectanglei Region)
 	}
 
 	D3D11_RECT Rect = {};
-	Rect.left = Region.Left();
-	Rect.top = Region.Top();
-	Rect.right = Region.Right();
-	Rect.bottom = Region.Bottom();
+	const FUIVirtualViewportLayout Layout = MakeUIVirtualViewportLayout(Ctx->Frame.ViewportWidth, Ctx->Frame.ViewportHeight);
+	Rect.left = static_cast<LONG>((std::max)(0.0f, std::floor(Layout.OffsetX + static_cast<float>(Region.Left()) * Layout.Scale)));
+	Rect.top = static_cast<LONG>((std::max)(0.0f, std::floor(Layout.OffsetY + static_cast<float>(Region.Top()) * Layout.Scale)));
+	Rect.right = static_cast<LONG>((std::min)(Layout.PhysicalWidth, std::ceil(Layout.OffsetX + static_cast<float>(Region.Right()) * Layout.Scale)));
+	Rect.bottom = static_cast<LONG>((std::min)(Layout.PhysicalHeight, std::ceil(Layout.OffsetY + static_cast<float>(Region.Bottom()) * Layout.Scale)));
 	Ctx->Device.GetDeviceContext()->RSSetScissorRects(1, &Rect);
+}
+
+void FRmlRenderInterfaceD3D11::EnableClipMask(bool Enable)
+{
+	bClipMaskEnabled = Enable;
+}
+
+void FRmlRenderInterfaceD3D11::RenderToClipMask(Rml::ClipMaskOperation, Rml::CompiledGeometryHandle, Rml::Vector2f)
+{
+	// RmlUi clip masks require a stencil or alpha mask target. Scissor clipping is handled
+	// separately above; CSS mask-image support is implemented through layer filters below.
+}
+
+Rml::LayerHandle FRmlRenderInterfaceD3D11::PushLayer()
+{
+	if (!Ctx || !Device)
+	{
+		return 0;
+	}
+
+	const UINT Width = (std::max)(1u, static_cast<UINT>(std::ceil(Ctx->Frame.ViewportWidth)));
+	const UINT Height = (std::max)(1u, static_cast<UINT>(std::ceil(Ctx->Frame.ViewportHeight)));
+
+	D3D11_TEXTURE2D_DESC TextureDesc = {};
+	TextureDesc.Width = Width;
+	TextureDesc.Height = Height;
+	TextureDesc.MipLevels = 1;
+	TextureDesc.ArraySize = 1;
+	TextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	TextureDesc.SampleDesc.Count = 1;
+	TextureDesc.Usage = D3D11_USAGE_DEFAULT;
+	TextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	auto* Layer = new FRmlLayerD3D11();
+	Layer->Width = Width;
+	Layer->Height = Height;
+
+	if (FAILED(Device->CreateTexture2D(&TextureDesc, nullptr, &Layer->Texture)) ||
+		FAILED(Device->CreateRenderTargetView(Layer->Texture, nullptr, &Layer->RTV)) ||
+		FAILED(Device->CreateShaderResourceView(Layer->Texture, nullptr, &Layer->SRV)))
+	{
+		ReleaseRmlLayer(Layer);
+		return 0;
+	}
+
+	Layer->Texture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("RmlLayerTexture")), "RmlLayerTexture");
+	Layer->RTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("RmlLayerRTV")), "RmlLayerRTV");
+	Layer->SRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("RmlLayerSRV")), "RmlLayerSRV");
+
+	FrameLayers.push_back(Layer);
+	LayerStack.push_back(CurrentLayer);
+	CurrentLayer = Layer;
+	CurrentRenderTargetView = Layer->RTV;
+	CurrentDepthStencilView = nullptr;
+
+	ID3D11DeviceContext* DC = Ctx->Device.GetDeviceContext();
+	if (DC)
+	{
+		const float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		DC->ClearRenderTargetView(Layer->RTV, ClearColor);
+		DC->OMSetRenderTargets(1, &Layer->RTV, nullptr);
+	}
+
+	return reinterpret_cast<Rml::LayerHandle>(Layer);
+}
+
+void FRmlRenderInterfaceD3D11::CompositeLayers(Rml::LayerHandle Source, Rml::LayerHandle Destination, Rml::BlendMode BlendMode, Rml::Span<const Rml::CompiledFilterHandle> Filters)
+{
+	if (!Ctx || !Source)
+	{
+		return;
+	}
+
+	FRmlLayerD3D11* SourceLayer = ToRmlLayer(Source);
+	if (!SourceLayer || !SourceLayer->SRV)
+	{
+		return;
+	}
+
+	ID3D11RenderTargetView* DestinationRTV = Ctx->Cache.RTV;
+	if (Destination)
+	{
+		FRmlLayerD3D11* DestinationLayer = ToRmlLayer(Destination);
+		if (!DestinationLayer || !DestinationLayer->RTV)
+		{
+			return;
+		}
+		DestinationRTV = DestinationLayer->RTV;
+	}
+
+	ID3D11DeviceContext* DC = Ctx->Device.GetDeviceContext();
+	if (!DC || !DestinationRTV)
+	{
+		return;
+	}
+
+	FShader* Shader = FShaderManager::Get().GetOrCreate(EShaderPath::RmlUiComposite);
+	if (!Shader || !Shader->IsValid())
+	{
+		return;
+	}
+
+	ID3D11ShaderResourceView* MaskSRV = nullptr;
+	for (Rml::CompiledFilterHandle FilterHandle : Filters)
+	{
+		FRmlFilterD3D11* Filter = ToRmlFilter(FilterHandle);
+		if (Filter && Filter->MaskSRV)
+		{
+			MaskSRV = Filter->MaskSRV;
+			break;
+		}
+	}
+
+	ID3D11ShaderResourceView* NullSRVs[2] = {};
+	DC->PSSetShaderResources(0, 2, NullSRVs);
+	DC->OMSetRenderTargets(1, &DestinationRTV, nullptr);
+	Ctx->Resources.SetDepthStencilState(Ctx->Device, EDepthStencilState::NoDepth);
+	Ctx->Resources.SetBlendState(Ctx->Device, BlendMode == Rml::BlendMode::Replace ? EBlendState::Opaque : EBlendState::AlphaBlend);
+	Ctx->Resources.SetRasterizerState(Ctx->Device, ERasterizerState::SolidNoCull);
+
+	D3D11_VIEWPORT Viewport = {};
+	Viewport.TopLeftX = 0.0f;
+	Viewport.TopLeftY = 0.0f;
+	Viewport.Width = Ctx->Frame.ViewportWidth;
+	Viewport.Height = Ctx->Frame.ViewportHeight;
+	Viewport.MinDepth = 0.0f;
+	Viewport.MaxDepth = 1.0f;
+	DC->RSSetViewports(1, &Viewport);
+
+	FRmlCompositeCB CBData;
+	CBData.UseMask = MaskSRV ? 1.0f : 0.0f;
+	if (CompositeCB)
+	{
+		DC->UpdateSubresource(CompositeCB, 0, nullptr, &CBData, 0, 0);
+		DC->PSSetConstantBuffers(0, 1, &CompositeCB);
+	}
+
+	ID3D11ShaderResourceView* SRVs[2] = { SourceLayer->SRV, MaskSRV ? MaskSRV : WhiteTextureSRV };
+	DC->PSSetShaderResources(0, 2, SRVs);
+	DC->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Shader->Bind(DC);
+	DC->Draw(3, 0);
+	DC->PSSetShaderResources(0, 2, NullSRVs);
+}
+
+void FRmlRenderInterfaceD3D11::PopLayer()
+{
+	void* PreviousLayer = nullptr;
+	if (!LayerStack.empty())
+	{
+		PreviousLayer = LayerStack.back();
+		LayerStack.pop_back();
+	}
+
+	CurrentLayer = PreviousLayer;
+	if (auto* Layer = static_cast<FRmlLayerD3D11*>(CurrentLayer))
+	{
+		CurrentRenderTargetView = Layer->RTV;
+		CurrentDepthStencilView = nullptr;
+	}
+	else
+	{
+		CurrentRenderTargetView = Ctx ? Ctx->Cache.RTV : nullptr;
+		CurrentDepthStencilView = Ctx ? Ctx->Cache.DSV : nullptr;
+	}
+}
+
+Rml::TextureHandle FRmlRenderInterfaceD3D11::SaveLayerAsTexture()
+{
+	auto* Layer = static_cast<FRmlLayerD3D11*>(CurrentLayer);
+	if (!Layer || !Layer->SRV)
+	{
+		return 0;
+	}
+
+	Layer->SRV->AddRef();
+	auto* Texture = new FRmlTextureD3D11();
+	Texture->SRV = Layer->SRV;
+	return reinterpret_cast<Rml::TextureHandle>(Texture);
+}
+
+Rml::CompiledFilterHandle FRmlRenderInterfaceD3D11::SaveLayerAsMaskImage()
+{
+	auto* Layer = static_cast<FRmlLayerD3D11*>(CurrentLayer);
+	if (!Layer || !Layer->SRV)
+	{
+		return 0;
+	}
+
+	Layer->SRV->AddRef();
+	auto* Filter = new FRmlFilterD3D11();
+	Filter->MaskSRV = Layer->SRV;
+	return reinterpret_cast<Rml::CompiledFilterHandle>(Filter);
+}
+
+Rml::CompiledFilterHandle FRmlRenderInterfaceD3D11::CompileFilter(const Rml::String&, const Rml::Dictionary&)
+{
+	return 0;
+}
+
+void FRmlRenderInterfaceD3D11::ReleaseFilter(Rml::CompiledFilterHandle FilterHandle)
+{
+	FRmlFilterD3D11* Filter = ToRmlFilter(FilterHandle);
+	if (!Filter)
+	{
+		return;
+	}
+	if (Filter->MaskSRV)
+	{
+		Filter->MaskSRV->Release();
+	}
+	delete Filter;
 }
 
 void FRmlRenderInterfaceD3D11::CreateConstantBuffer()
@@ -623,7 +985,20 @@ void FRmlRenderInterfaceD3D11::CreateConstantBuffer()
 	Desc.ByteWidth = sizeof(FRmlPerFrameCB);
 	Desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	Device->CreateBuffer(&Desc, nullptr, &PerFrameCB);
-	PerFrameCB->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("RmlPerFrameCB")), "RmlPerFrameCB");
+	if (PerFrameCB)
+	{
+		PerFrameCB->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("RmlPerFrameCB")), "RmlPerFrameCB");
+	}
+
+	D3D11_BUFFER_DESC CompositeDesc = {};
+	CompositeDesc.Usage = D3D11_USAGE_DEFAULT;
+	CompositeDesc.ByteWidth = sizeof(FRmlCompositeCB);
+	CompositeDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	Device->CreateBuffer(&CompositeDesc, nullptr, &CompositeCB);
+	if (CompositeCB)
+	{
+		CompositeCB->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("RmlCompositeCB")), "RmlCompositeCB");
+	}
 
 	CreateWhiteTexture();
 
@@ -701,10 +1076,24 @@ void UUIManager::Initialize(ID3D11Device* InDevice)
 		UE_LOG("[RmlUi] Failed to create GameViewport context.");
 	}
 
-	const std::filesystem::path FontPath = ToProjectPath("Content/Font/Maplestory Bold.ttf");
-	if (!Rml::LoadFontFace(ToRmlPath(FontPath), "Maplestory", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
+	const std::filesystem::path MaplestoryFontPath = ToProjectPath("Content/Font/Maplestory Bold.ttf");
+	if (!Rml::LoadFontFace(ToRmlPath(MaplestoryFontPath), "Maplestory", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
 	{
 		UE_LOG("[RmlUi] Failed to load font: Content/Font/Maplestory Bold.ttf");
+	}
+
+	const std::filesystem::path NexonFontPath = ToProjectPath("Content/UI/Font/NEXON Lv1 Gothic Low_OTF/NEXON Lv1 Gothic Low OTF.otf");
+	if (!Rml::LoadFontFace(ToRmlPath(NexonFontPath), "Nexon", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal))
+	{
+		UE_LOG("[RmlUi] Failed to load font: Content/UI/Font/NEXON Lv1 Gothic Low_OTF/NEXON Lv1 Gothic Low OTF.otf");
+		Rml::LoadFontFace(ToRmlPath(MaplestoryFontPath), "Nexon", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal);
+	}
+
+	const std::filesystem::path NexonBoldFontPath = ToProjectPath("Content/UI/Font/NEXON Lv1 Gothic Low_OTF/NEXON Lv1 Gothic Low OTF Bold.otf");
+	if (!Rml::LoadFontFace(ToRmlPath(NexonBoldFontPath), "Nexon", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold))
+	{
+		UE_LOG("[RmlUi] Failed to load font: Content/UI/Font/NEXON Lv1 Gothic Low_OTF/NEXON Lv1 Gothic Low OTF Bold.otf");
+		Rml::LoadFontFace(ToRmlPath(MaplestoryFontPath), "Nexon", Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Bold);
 	}
 }
 
@@ -794,10 +1183,12 @@ bool UUIManager::PumpViewportInput(uint32 ViewportWidth, uint32 ViewportHeight,
 	ViewportHeight = (std::max)(ViewportHeight, static_cast<uint32>(1));
 	ViewportClientWidth = (std::max)(ViewportClientWidth, static_cast<int32>(1));
 	ViewportClientHeight = (std::max)(ViewportClientHeight, static_cast<int32>(1));
+	LastPhysicalViewportWidth = static_cast<float>(ViewportWidth);
+	LastPhysicalViewportHeight = static_cast<float>(ViewportHeight);
 
 	RmlContext->SetDimensions({
-		static_cast<int>(ViewportWidth),
-		static_cast<int>(ViewportHeight)
+		static_cast<int>(UIVirtualViewportWidth),
+		static_cast<int>(UIVirtualViewportHeight)
 	});
 
 	InputSystem& Input = InputSystem::Get();
@@ -820,14 +1211,20 @@ bool UUIManager::PumpViewportInput(uint32 ViewportWidth, uint32 ViewportHeight,
 		return false;
 	}
 
-	const int32 LocalMouseX = static_cast<int32>(
+	const float PhysicalMouseX =
 		static_cast<float>(ClientMousePos.x - ViewportClientX) * static_cast<float>(ViewportWidth) /
-		static_cast<float>(ViewportClientWidth));
-	const int32 LocalMouseY = static_cast<int32>(
+		static_cast<float>(ViewportClientWidth);
+	const float PhysicalMouseY =
 		static_cast<float>(ClientMousePos.y - ViewportClientY) * static_cast<float>(ViewportHeight) /
-		static_cast<float>(ViewportClientHeight));
+		static_cast<float>(ViewportClientHeight);
+	const FUIVirtualViewportLayout Layout = MakeUIVirtualViewportLayout(
+		static_cast<float>(ViewportWidth),
+		static_cast<float>(ViewportHeight));
+	int32 LocalMouseX = 0;
+	int32 LocalMouseY = 0;
+	const bool bInsideVirtualViewport = PhysicalToVirtualUIPosition(Layout, PhysicalMouseX, PhysicalMouseY, LocalMouseX, LocalMouseY);
 
-	ProcessInputAtPosition(LocalMouseX, LocalMouseY, bInsideViewport);
+	ProcessInputAtPosition(LocalMouseX, LocalMouseY, bInsideViewport && bInsideVirtualViewport);
 	bInputProcessedThisFrame = true;
 	return LastFrameInputCaptureState.bConsumedMouseThisFrame ||
 		LastFrameInputCaptureState.bConsumedKeyboardThisFrame ||
@@ -1274,6 +1671,7 @@ bool UUIManager::LoadDocument(UUserWidget* Widget)
 		return false;
 	}
 
+	Rml::Factory::ClearStyleSheetCache();
 	Rml::ElementDocument* Document = RmlContext->LoadDocument(ToRmlPath(Path));
 	if (!Document)
 	{
@@ -1308,9 +1706,11 @@ void UUIManager::Render(const FPassContext& Ctx)
 	}
 
 	RmlContext->SetDimensions({
-		static_cast<int>(Ctx.Frame.ViewportWidth),
-		static_cast<int>(Ctx.Frame.ViewportHeight)
+		static_cast<int>(UIVirtualViewportWidth),
+		static_cast<int>(UIVirtualViewportHeight)
 	});
+	LastPhysicalViewportWidth = Ctx.Frame.ViewportWidth;
+	LastPhysicalViewportHeight = Ctx.Frame.ViewportHeight;
 
 	ProcessInput(Ctx.Frame);
 	FlushDeferredViewportRemovals();
@@ -1338,19 +1738,38 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	int32 MouseY = 0;
 	if (Frame.CursorViewportX != UINT32_MAX && Frame.CursorViewportY != UINT32_MAX)
 	{
-		MouseX = static_cast<int32>(Frame.CursorViewportX);
-		MouseY = static_cast<int32>(Frame.CursorViewportY);
-		bMouseInsideViewport = true;
+		const FUIVirtualViewportLayout Layout = MakeUIVirtualViewportLayout(Frame.ViewportWidth, Frame.ViewportHeight);
+		bMouseInsideViewport = PhysicalToVirtualUIPosition(
+			Layout,
+			static_cast<float>(Frame.CursorViewportX),
+			static_cast<float>(Frame.CursorViewportY),
+			MouseX,
+			MouseY);
 	}
 	else
 	{
 		const POINT MousePos = Input.GetMouseClientPos();
-		MouseX = MousePos.x;
-		MouseY = MousePos.y;
+		const FUIVirtualViewportLayout Layout = MakeUIVirtualViewportLayout(Frame.ViewportWidth, Frame.ViewportHeight);
+		bMouseInsideViewport = PhysicalToVirtualUIPosition(
+			Layout,
+			static_cast<float>(MousePos.x),
+			static_cast<float>(MousePos.y),
+			MouseX,
+			MouseY);
 	}
 
 	ProcessInputAtPosition(MouseX, MouseY, bMouseInsideViewport);
 	bInputProcessedThisFrame = true;
+}
+
+FVector2 UUIManager::GetVirtualViewportSize() const
+{
+	return FVector2(UIVirtualViewportWidth, UIVirtualViewportHeight);
+}
+
+FVector2 UUIManager::GetPhysicalViewportSize() const
+{
+	return FVector2(LastPhysicalViewportWidth, LastPhysicalViewportHeight);
 }
 
 void UUIManager::ProcessInputAtPosition(int32 MouseX, int32 MouseY, bool bMouseInsideViewport)

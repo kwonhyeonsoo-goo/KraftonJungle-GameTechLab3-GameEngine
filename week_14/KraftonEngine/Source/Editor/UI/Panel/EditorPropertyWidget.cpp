@@ -1116,6 +1116,18 @@ namespace
         return false;
     }
 
+	bool TryAcceptFontResourceDrop(FName& OutFontName)
+	{
+		FString DroppedPath;
+		if (!TryAcceptAssetPathDrop("FontContentItem", DroppedPath)
+			&& !TryAcceptAssetPathDrop("PNGElement", DroppedPath))
+		{
+			return false;
+		}
+
+		return FResourceManager::Get().ResolveFontNameByPath(DroppedPath, OutFontName);
+	}
+
     bool TryRenderRegisteredAssetPicker(
         const FString& AssetType,
         const FString& CurrentPath,
@@ -3513,7 +3525,8 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
             if (TryAcceptAssetPathDrop("ObjectContentItem", DroppedPath) || TryAcceptAssetPathDrop("MaterialContentItem", DroppedPath) || TryAcceptAssetPathDrop("FloatCurveContentItem", DroppedPath) || TryAcceptAssetPathDrop("PNGElement", DroppedPath)
                 || TryAcceptAssetPathDrop("LuaBlueprintContentItem", DroppedPath)
                 || TryAcceptAssetPathDrop("AnimGraphContentItem", DroppedPath)
-                || TryAcceptAssetPathDrop("ParticleSystemContentItem", DroppedPath))
+                || TryAcceptAssetPathDrop("ParticleSystemContentItem", DroppedPath)
+                || TryAcceptAssetPathDrop("FontContentItem", DroppedPath))
             {
                 SetPath(DroppedPath);
                 bChanged = true;
@@ -4855,8 +4868,26 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 		{
 			if (ImGui::BeginCombo("##Value", Current.c_str()))
 			{
+				static char ResourceNameFilter[128] = {};
+				const bool bSearchableResource = (AssetType == "Font");
+				FString LowerFilter;
+				if (bSearchableResource)
+				{
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+					ImGui::InputTextWithHint("##ResourceNameFilter", "Search font...", ResourceNameFilter, sizeof(ResourceNameFilter));
+					LowerFilter = ToLowerPropertyText(ResourceNameFilter);
+					ImGui::Separator();
+				}
+
+				bool bAnyVisible = false;
 				for (const auto& Name : Names)
 				{
+					if (!LowerFilter.empty() && ToLowerPropertyText(Name).find(LowerFilter) == FString::npos)
+					{
+						continue;
+					}
+
+					bAnyVisible = true;
 					bool bSelected = (Current == Name);
 					if (ImGui::Selectable(Name.c_str(), bSelected))
 					{
@@ -4865,6 +4896,14 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 					}
 					if (bSelected)
 						ImGui::SetItemDefaultFocus();
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::SetTooltip("%s", Name.c_str());
+					}
+				}
+				if (!bAnyVisible)
+				{
+					ImGui::TextDisabled("No matching %s", AssetType.c_str());
 				}
 				ImGui::EndCombo();
 			}
@@ -4878,6 +4917,17 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 				*Val = FName(Buf);
 				bChanged = true;
 			}
+		}
+
+		if (AssetType == "Font" && ImGui::BeginDragDropTarget())
+		{
+			FName DroppedFontName;
+			if (TryAcceptFontResourceDrop(DroppedFontName))
+			{
+				*Val = DroppedFontName;
+				bChanged = true;
+			}
+			ImGui::EndDragDropTarget();
 		}
 		break;
 	}

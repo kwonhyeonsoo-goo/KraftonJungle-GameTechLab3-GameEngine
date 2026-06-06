@@ -31,6 +31,7 @@ public:
 	FFontResource* FindFont(const FName& FontName);
 	const FFontResource* FindFont(const FName& FontName) const;
 	void RegisterFont(const FName& FontName, const FString& InPath, uint32 Columns = 16, uint32 Rows = 16);
+	bool ResolveFontNameByPath(const FString& InPath, FName& OutFontName) const;
 
 	// --- Font names ---
 	TArray<FString> GetFontNames() const;

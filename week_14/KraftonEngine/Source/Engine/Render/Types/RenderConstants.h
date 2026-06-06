@@ -328,7 +328,8 @@ struct FCameraLetterboxConstants
 	FVector4 LetterboxColor;  // 16B
 	float LetterboxAmount;    // 4B
 	float LetterboxThickness; // 4B
-	float _pad[2];            // 8B - 16B boundary
+	float ViewportAspect;     // 4B
+	float ReferenceAspect;    // 4B
 };
 
 struct FScopeLensConstants

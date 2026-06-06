@@ -191,6 +191,18 @@ public:
 	virtual const char* GetDragItemType() override { return "PNGElement"; }
 };
 
+class FontElement final : public ContentBrowserElement
+{
+public:
+	const char* GetDragItemType() override { return "FontContentItem"; }
+	void RenderContextMenu(ContentBrowserContext& Context) override;
+	void RenderDetail() override;
+
+protected:
+	const char* GetTypeLabel() const override { return "Font"; }
+	uint32 GetAccentColor() const override { return IM_COL32(120, 190, 230, 255); }
+};
+
 class RuntimeUIElement final : public ContentBrowserElement
 {
 public:
