@@ -108,6 +108,10 @@ void USceneComponent::AttachToComponent(USceneComponent* InParent, const FName& 
 {
 	if (!InParent || InParent == this) return;
 	AttachSocketName = NormalizeSocketAttachmentName(InSocketName);
+	if (IsSocketAttachmentNameSet(AttachSocketName) && InParent->HasSocket(AttachSocketName))
+	{
+		bAbsoluteScale = true;
+	}
 	LastInvalidAttachSocketWarning = FName::None;
 	SetParent(InParent);
 }
@@ -142,6 +146,13 @@ void USceneComponent::PostEditProperty(const char* PropertyName)
 		if (strcmp(PropertyName, "AttachSocketName") == 0 || strcmp(PropertyName, "Attach Socket") == 0)
 		{
 			AttachSocketName = NormalizeSocketAttachmentName(AttachSocketName);
+			if (USceneComponent* Parent = ParentComponent.Get())
+			{
+				if (IsSocketAttachmentNameSet(AttachSocketName) && Parent->HasSocket(AttachSocketName))
+				{
+					bAbsoluteScale = true;
+				}
+			}
 			LastInvalidAttachSocketWarning = FName::None;
 		}
 		MarkTransformDirty();

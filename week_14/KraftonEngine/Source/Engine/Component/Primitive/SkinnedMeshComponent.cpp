@@ -1,4 +1,5 @@
 #include "SkinnedMeshComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/GarbageCollection.h"
 #include "Animation/Skeleton/Skeleton.h"
@@ -1300,6 +1301,10 @@ void USkinnedMeshComponent::MarkSocketAttachedChildrenDirty()
 		if (Child && Child->GetAttachSocketName().IsValid() && Child->GetAttachSocketName() != FName::None)
 		{
 			Child->MarkTransformDirty();
+			if (UPrimitiveComponent* PrimitiveChild = Cast<UPrimitiveComponent>(Child))
+			{
+				PrimitiveChild->MarkWorldBoundsDirty();
+			}
 		}
 	}
 }
