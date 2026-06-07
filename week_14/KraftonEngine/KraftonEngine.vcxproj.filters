@@ -1652,6 +1652,9 @@
     <ClCompile Include="Source\Engine\Mesh\Importer\Fbx\FbxSceneQuery.cpp">
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\Importer\Fbx\FbxScaleBakeUtil.cpp">
+      <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\Importer\Fbx\FbxSkeletalMeshImporter.cpp">
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClCompile>
@@ -3131,6 +3134,9 @@
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\Importer\Fbx\FbxSceneQuery.h">
+      <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Mesh\Importer\Fbx\FbxScaleBakeUtil.h">
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\Importer\Fbx\FbxSkeletalMeshImporter.h">
