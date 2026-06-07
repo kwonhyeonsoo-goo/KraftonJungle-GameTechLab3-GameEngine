@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_48",
+    "Name" : "AStaticMeshActor_46",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -14,9 +14,9 @@
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
           "Slots" : [{
-              "LocalApproachOffset" : [-2.000000, -2.000000, 0.000000],
+              "LocalApproachOffset" : [-1.000000, -1.500000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [2.000000, -2.000000, 0.000000],
+              "LocalPosition" : [1.000000, -1.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 0,
               "SlotType" : 0,
@@ -25,9 +25,9 @@
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
-              "LocalApproachOffset" : [-2.000000, 2.000000, 0.000000],
+              "LocalApproachOffset" : [-1.000000, 1.500000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [2.000000, 2.000000, 0.000000],
+              "LocalPosition" : [1.000000, 1.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 1,
               "SlotType" : 0,
@@ -36,9 +36,9 @@
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
-              "LocalApproachOffset" : [2.000000, -2.000000, 0.000000],
+              "LocalApproachOffset" : [1.000000, -1.500000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-2.000000, -2.000000, 0.000000],
+              "LocalPosition" : [-1.000000, -1.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 2,
               "SlotType" : 0,
@@ -47,9 +47,9 @@
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
-              "LocalApproachOffset" : [2.000000, 2.000000, 0.000000],
+              "LocalApproachOffset" : [1.000000, 1.500000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-2.000000, 2.000000, 0.000000],
+              "LocalPosition" : [-1.000000, 1.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 3,
               "SlotType" : 0,
@@ -57,28 +57,6 @@
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
-            }, {
-              "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-              "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [2.000000, 1.000000, 0.000000],
-              "Radius" : 1.000000,
-              "SlotId" : 0,
-              "SlotType" : 1,
-              "Tags" : "Enemy,Cover",
-              "Weight" : 1.000000,
-              "bUseApproachOnEntry" : false,
-              "bUseApproachOnExit" : false
-            }, {
-              "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-              "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-2.000000, 1.000000, 0.000000],
-              "Radius" : 1.000000,
-              "SlotId" : 0,
-              "SlotType" : 1,
-              "Tags" : "Ally,Cover",
-              "Weight" : 1.000000,
-              "bUseApproachOnEntry" : false,
-              "bUseApproachOnExit" : false
             }],
           "bAutoActivate" : true,
           "bEditorOnly" : false,
@@ -89,7 +67,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
+      "PendingActorLocation" : [-34.361923, 146.971619, 0.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -106,11 +84,11 @@
         "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
         "CollisionEnabled" : 0,
         "Mass" : 1.000000,
-        "MaterialSlots" : ["Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05b.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05c.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05a.uasset"],
+        "MaterialSlots" : ["Content/Material/Auto/Car_Material_8770.uasset", "Content/Material/Auto/Car_Material_9077.uasset", "Content/Material/Auto/Car_Material_9428.uasset", "Content/Material/Auto/Car_Material_9537.uasset", "Content/Material/Auto/Car_Material_9575.uasset"],
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+        "RelativeTransform.Location" : [-34.361923, 146.971619, 0.000000],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -119,7 +97,7 @@
           "Responses[3]" : 2,
           "Responses[4]" : 2
         },
-        "StaticMeshPath" : "Content/Data/Obstacle/Car/Truck_A_StaticMesh.uasset",
+        "StaticMeshPath" : "Content/Data/Obstacle/Car/Car_A_StaticMesh.uasset",
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -135,7 +113,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_48",
+  "SourceActorName" : "AStaticMeshActor_46",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

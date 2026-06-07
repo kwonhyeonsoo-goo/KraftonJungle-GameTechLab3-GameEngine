@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_48",
+    "Name" : "AStaticMeshActor_10",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -60,7 +60,7 @@
             }, {
               "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [2.000000, 1.000000, 0.000000],
+              "LocalPosition" : [2.000000, 0.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 0,
               "SlotType" : 1,
@@ -71,7 +71,7 @@
             }, {
               "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-2.000000, 1.000000, 0.000000],
+              "LocalPosition" : [-2.000000, 0.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 0,
               "SlotType" : 1,
@@ -89,7 +89,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
+      "PendingActorLocation" : [118.164085, 67.786072, 50.648201],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -110,7 +110,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+        "RelativeTransform.Location" : [118.164085, 67.786072, 50.648201],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -135,7 +135,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_48",
+  "SourceActorName" : "AStaticMeshActor_10",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }
