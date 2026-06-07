@@ -74,7 +74,7 @@ struct FAimSwayState
 	float BreathMultiplier = 1.0f;
 	float HoldBreathGauge = 10.0f;
 	float MaxHoldBreathGauge = 10.0f;
-	float HoldBreathRecoverSpeed = 0.8f;
+	float HoldBreathRecoverSpeed = 1.5f;
 	float HoldBreathConsumeSpeed = 1.0f;
 	bool bForcedRecovery = false;
 	bool bRequireHoldBreathRelease = false;

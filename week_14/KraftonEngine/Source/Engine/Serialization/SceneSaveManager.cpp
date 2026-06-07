@@ -88,6 +88,8 @@ namespace SceneKeys
 	static constexpr const char* GameMode = "GameMode";  // legacy / WorldSettings 내부 키
 	static constexpr const char* DefaultPawnPrefabPath = "DefaultPawnPrefabPath";
 	static constexpr const char* Gravity = "Gravity";
+	static constexpr const char* BallisticWindEnabled = "BallisticWindEnabled";
+	static constexpr const char* BallisticWindAcceleration = "BallisticWindAcceleration";
 	static constexpr const char* Actors = "Actors";
 	static constexpr const char* RootComponent = "RootComponent";
 	static constexpr const char* NonSceneComponents = "NonSceneComponents";
@@ -383,6 +385,8 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 		WSObj[SceneKeys::GameMode] = WS.GameModeClassName;
 		WSObj[SceneKeys::DefaultPawnPrefabPath] = WS.DefaultPawnPrefabPath;
 		WriteVec3(WSObj, SceneKeys::Gravity, WS.Gravity);
+		WSObj[SceneKeys::BallisticWindEnabled] = WS.bEnableBallisticWind;
+		WriteVec3(WSObj, SceneKeys::BallisticWindAcceleration, WS.BallisticWindAcceleration);
 		w[SceneKeys::WorldSettings] = WSObj;
 	}
 
@@ -718,6 +722,15 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 			WSObj[SceneKeys::Gravity].JSONType() == JSON::Class::Array)
 		{
 			WorldSettings.Gravity = ReadVec3(WSObj[SceneKeys::Gravity]);
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindEnabled))
+		{
+			WorldSettings.bEnableBallisticWind = WSObj[SceneKeys::BallisticWindEnabled].ToBool();
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindAcceleration) &&
+			WSObj[SceneKeys::BallisticWindAcceleration].JSONType() == JSON::Class::Array)
+		{
+			WorldSettings.BallisticWindAcceleration = ReadVec3(WSObj[SceneKeys::BallisticWindAcceleration]);
 		}
 	}
 	else if (root.hasKey(SceneKeys::GameMode))

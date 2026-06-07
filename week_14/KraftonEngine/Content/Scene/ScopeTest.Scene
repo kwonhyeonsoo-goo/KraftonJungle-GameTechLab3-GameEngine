@@ -143,7 +143,6 @@
             "MaxBallisticSubsteps" : 2,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_1711",
-            "WindAcceleration" : [0.000000, 3.000000, 0.000000],
             "bAutoActivate" : true,
             "bDrawDebugBallistics" : false,
             "bDrawDebugImpactMarker" : false,
@@ -151,7 +150,6 @@
             "bEnableBallisticSubsteps" : true,
             "bEnableBulletVisuals" : true,
             "bEnableImpactVisuals" : false,
-            "bEnableWind" : true,
             "bHiddenInComponentTree" : false,
             "bIsActive" : true,
             "bTickEnable" : true
@@ -993,9 +991,11 @@
   },
   "Version" : 2,
   "WorldSettings" : {
-    "DefaultPawnPrefabPath" : "",
-    "GameMode" : "",
-    "Gravity" : [0.000000, 0.000000, -9.810000]
+      "BallisticWindAcceleration" : [0.000000, 3.000000, 0.000000],
+      "BallisticWindEnabled" : true,
+      "DefaultPawnPrefabPath" : "",
+      "GameMode" : "",
+      "Gravity" : [0.000000, 0.000000, -9.810000]
   },
   "WorldType" : "Editor"
 }

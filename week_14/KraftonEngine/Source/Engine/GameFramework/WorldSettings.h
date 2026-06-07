@@ -25,4 +25,8 @@ struct FWorldSettings
 
 	// World-space gravity in m/s^2. Legacy scenes without this field use earth gravity.
 	FVector Gravity = FVector(0.0f, 0.0f, -9.81f);
+
+	// Scene-wide ballistic wind settings shared by all sniper bullets in this level.
+	bool bEnableBallisticWind = true;
+	FVector BallisticWindAcceleration = FVector(0.0f, 1.5f, 0.0f);
 };

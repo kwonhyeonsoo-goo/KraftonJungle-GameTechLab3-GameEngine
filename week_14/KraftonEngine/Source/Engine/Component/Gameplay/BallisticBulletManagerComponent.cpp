@@ -22,6 +22,8 @@
 
 namespace
 {
+	constexpr bool SniperDefaultWindEnabled = true;
+	const FVector SniperDefaultWindAcceleration = FVector(0.0f, 1.5f, 0.0f);
 	constexpr uint32 SniperBulletQueryObjectMask =
 		ObjectTypeBit(ECollisionChannel::WorldStatic) |
 		ObjectTypeBit(ECollisionChannel::WorldDynamic) |
@@ -102,6 +104,40 @@ void UBallisticBulletManagerComponent::EndPlay()
 	UActorComponent::EndPlay();
 }
 
+bool UBallisticBulletManagerComponent::IsWindEnabled() const
+{
+	const AActor* OwnerActor = GetOwner();
+	const UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	return World ? World->GetWorldSettings().bEnableBallisticWind : SniperDefaultWindEnabled;
+}
+
+void UBallisticBulletManagerComponent::SetWindEnabled(bool bInEnableWind)
+{
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	if (World)
+	{
+		World->GetWorldSettings().bEnableBallisticWind = bInEnableWind;
+	}
+}
+
+FVector UBallisticBulletManagerComponent::GetWindAcceleration() const
+{
+	const AActor* OwnerActor = GetOwner();
+	const UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	return World ? World->GetWorldSettings().BallisticWindAcceleration : SniperDefaultWindAcceleration;
+}
+
+void UBallisticBulletManagerComponent::SetWindAcceleration(const FVector& InWindAcceleration)
+{
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	if (World)
+	{
+		World->GetWorldSettings().BallisticWindAcceleration = InWindAcceleration;
+	}
+}
+
 bool UBallisticBulletManagerComponent::SpawnBullet(const FBallisticBullet& Bullet)
 {
 	if (!Bullet.bIsAlive)
@@ -144,7 +180,9 @@ void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
 	AActor* OwnerActor = GetOwner();
 	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
 	const FVector WorldGravity = World ? World->GetWorldSettings().Gravity : FVector(0.0f, 0.0f, -9.81f);
-	const FVector AppliedWindAcceleration = bEnableWind ? WindAcceleration : FVector::ZeroVector;
+	const bool bWindEnabled = World ? World->GetWorldSettings().bEnableBallisticWind : SniperDefaultWindEnabled;
+	const FVector WorldWindAcceleration = World ? World->GetWorldSettings().BallisticWindAcceleration : SniperDefaultWindAcceleration;
+	const FVector AppliedWindAcceleration = bWindEnabled ? WorldWindAcceleration : FVector::ZeroVector;
 
 	if (World)
 	{
@@ -232,11 +270,12 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 
 void UBallisticBulletManagerComponent::DrawWindDebug(UWorld* World) const
 {
-	if (!World || !bEnableWind)
+	if (!World || !World->GetWorldSettings().bEnableBallisticWind)
 	{
 		return;
 	}
 
+	const FVector WindAcceleration = World->GetWorldSettings().BallisticWindAcceleration;
 	if (WindAcceleration.Length() <= SniperWindDebugMinMagnitude)
 	{
 		return;
