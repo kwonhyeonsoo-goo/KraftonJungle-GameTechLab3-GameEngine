@@ -1553,7 +1553,13 @@ void UCombatFlowManagerComponent::DrawFireDebugLine(UCombatCoverAgentComponent* 
     }
 
     const FVector Start = Shooter->GetOwner()->GetActorLocation();
-    const FVector End = Target->GetOwner()->GetActorLocation();
+    std::uniform_real_distribution<float> HorizontalOffset(-0.2f, 0.2f);
+    std::uniform_real_distribution<float> VerticalOffset(-0.1f, 0.1f);
+    const FVector TargetOffset(
+        HorizontalOffset(GetCombatRandomGenerator()),
+        HorizontalOffset(GetCombatRandomGenerator()),
+        VerticalOffset(GetCombatRandomGenerator()));
+    const FVector End = Target->GetOwner()->GetActorLocation() + TargetOffset;
     DrawDebugLine(World, Start, End, MakeFireLineColor(Shooter), Duration);
 }
 
