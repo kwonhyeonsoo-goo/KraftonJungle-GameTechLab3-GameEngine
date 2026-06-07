@@ -1526,6 +1526,9 @@
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Character.cpp">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\Pawn\CombatCharacter.cpp">
+      <Filter>Source\Engine\GameFramework\Pawn</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\Pawn\LuaCharacter.cpp">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClCompile>
@@ -2981,6 +2984,9 @@
       <Filter>Source\Engine\GameFramework\Light</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Character.h">
+      <Filter>Source\Engine\GameFramework\Pawn</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\Pawn\CombatCharacter.h">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Pawn\LuaCharacter.h">

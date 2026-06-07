@@ -630,6 +630,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\GameFramework\Light\PointLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Light\SpotLightActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Character.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Pawn\CombatCharacter.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\LuaCharacter.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Pawn.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\SniperPawn.cpp" />
@@ -1123,6 +1124,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\GameFramework\Light\PointLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Light\SpotLightActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Character.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Pawn\CombatCharacter.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\LuaCharacter.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Pawn.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\SniperPawn.h" />
