@@ -77,6 +77,19 @@ local function set_initial_variables()
     return true
 end
 
+local function set_graph_trigger(anim, variableName)
+    if anim == nil then
+        return false
+    end
+    if anim.SetGraphVariableTrigger ~= nil then
+        return anim:SetGraphVariableTrigger(variableName)
+    end
+    if anim.SetGraphVariableBool ~= nil then
+        return anim:SetGraphVariableBool(variableName, true)
+    end
+    return false
+end
+
 local function current_move_state(agent)
     if agent == nil then
         return 0.0
@@ -133,7 +146,7 @@ function Tick(dt)
         fireElapsed = fireElapsed + dt
         while fireElapsed >= FIRE_TRIGGER_INTERVAL do
             fireElapsed = fireElapsed - FIRE_TRIGGER_INTERVAL
-            anim:SetGraphVariableTrigger("Fire")
+            set_graph_trigger(anim, "Fire")
         end
     else
         fireElapsed = 0.0

@@ -67,6 +67,9 @@ public:
     UFUNCTION(Callable, Category="CombatFlow")
     bool TryAdvance(UCombatCoverAgentComponent* Agent);
 
+    UFUNCTION(Callable, Category="CombatFlow")
+    bool TryRepositionNearby(UCombatCoverAgentComponent* Agent);
+
     void ConfirmArrived(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle);
 
     UFUNCTION(Callable, Category="CombatFlow")

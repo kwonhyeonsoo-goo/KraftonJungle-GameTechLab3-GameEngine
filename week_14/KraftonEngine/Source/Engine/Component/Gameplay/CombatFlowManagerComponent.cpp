@@ -268,6 +268,21 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
     return false;
 }
 
+bool UCombatFlowManagerComponent::TryRepositionNearby(UCombatCoverAgentComponent* Agent)
+{
+    if (!IsValid(Agent))
+    {
+        return false;
+    }
+
+    if (Agent->IsMovingForCombatRange() && !Agent->GetTargetNodeId().empty() && Agent->GetTargetSlotId() >= 0)
+    {
+        return true;
+    }
+
+    return TryAdvance(Agent);
+}
+
 void UCombatFlowManagerComponent::ConfirmArrived(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle)
 {
     if (!IsValid(Agent) || !SlotHandle.IsValid())
@@ -1110,6 +1125,34 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             Agent->ClearEngagementTarget();
             AttackStateByAgent.erase(Agent);
             continue;
+        }
+
+        if (!Agent->CanFireWhileMoving() && Agent->IsMovingForCombatRange() &&
+            !Agent->GetTargetNodeId().empty() && Agent->GetTargetSlotId() >= 0)
+        {
+            Agent->ClearEngagementTarget();
+            AttackStateByAgent.erase(Agent);
+            continue;
+        }
+
+        if (Agent->CanMakeCombatDecision())
+        {
+            const float RepositionChance = (std::min)((std::max)(0.0f, Agent->GetRepositionChanceWhenInRange()), 1.0f);
+            if (RepositionChance > 0.0f)
+            {
+                Agent->MarkCombatDecisionMade();
+
+                const float Roll = std::uniform_real_distribution<float>(0.0f, 1.0f)(GetCombatRandomGenerator());
+                if (Roll < RepositionChance)
+                {
+                    Agent->ClearEngagementTarget();
+                    if (TryRepositionNearby(Agent))
+                    {
+                        AttackStateByAgent.erase(Agent);
+                        continue;
+                    }
+                }
+            }
         }
 
         Agent->SetEngagementTarget(Target);

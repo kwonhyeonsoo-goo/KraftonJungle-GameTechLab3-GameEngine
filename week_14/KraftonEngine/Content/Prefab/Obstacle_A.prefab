@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_8",
+    "Name" : "AStaticMeshActor_87",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -63,7 +63,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [123.345772, 64.778992, 49.402634],
+      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -80,11 +80,11 @@
         "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
         "CollisionEnabled" : 0,
         "Mass" : 1.000000,
-        "MaterialSlots" : ["Content/Material/Auto/weathered_concrete_barriers.uasset"],
+        "MaterialSlots" : ["Content/Material/Auto/basic_concrete_barriers.uasset"],
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [123.345772, 64.778992, 49.402634],
+        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -93,7 +93,7 @@
           "Responses[3]" : 2,
           "Responses[4]" : 2
         },
-        "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_B_StaticMesh.uasset",
+        "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_A_StaticMesh.uasset",
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -109,7 +109,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_8",
+  "SourceActorName" : "AStaticMeshActor_87",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }
