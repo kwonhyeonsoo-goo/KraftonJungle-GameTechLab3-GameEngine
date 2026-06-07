@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "ACombatCharacter",
-    "Name" : "ACombatCharacter_0",
+    "Name" : "ACombatCharacter_55",
     "NonSceneComponents" : [{
         "ClassName" : "UCharacterMovementComponent",
         "ObjectId" : 5,
@@ -91,7 +91,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [5.815059, 6.523637, 4.123672],
+      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -110,7 +110,7 @@
               "ObjectId" : 4,
               "Properties" : {
                 "AttachSocketName" : "GunSocket",
-                "CachedEditRotator" : [3.914966, -162.719070, 27.527451],
+                "CachedEditRotator" : [13.800004, 169.999985, -6.000000],
                 "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
                 "CollisionEnabled" : 0,
                 "Mass" : 1.000000,
@@ -118,8 +118,8 @@
                 "ObjectType" : 0,
                 "PendingTagsString" : "",
                 "PersistentGuid" : "Component_458",
-                "RelativeTransform.Location" : [-0.012796, 0.105621, -0.051162],
-                "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                "RelativeTransform.Location" : [0.030000, 0.125000, 0.070000],
+                "RelativeTransform.Scale" : [1.100000, 1.100000, 1.100000],
                 "ResponseContainer" : {
                   "Responses[0]" : 2,
                   "Responses[1]" : 2,
@@ -231,7 +231,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_9042",
-        "RelativeTransform.Location" : [5.815059, 6.523637, 4.123672],
+        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -258,7 +258,7 @@
       }
     }
   },
-  "SourceActorName" : "ACombatCharacter_0",
+  "SourceActorName" : "ACombatCharacter_55",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }
