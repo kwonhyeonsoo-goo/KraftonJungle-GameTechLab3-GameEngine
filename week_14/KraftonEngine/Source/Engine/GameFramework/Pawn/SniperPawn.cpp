@@ -231,6 +231,8 @@ void ASniperPawn::SyncSniperRuntimeState()
 	ScopeState.MinZoomMagnification = (std::max)(ScopeState.MinZoomMagnification, 1.0f);
 	ScopeState.MaxZoomMagnification = (std::max)(ScopeState.MaxZoomMagnification, ScopeState.MinZoomMagnification);
 	ScopeState.ZoomStep = (std::max)(ScopeState.ZoomStep, 0.1f);
+	ScopeState.ScopedSensitivity = (std::max)(ScopeState.ScopedSensitivity, 0.01f);
+	ScopeState.MaxZoomScopedSensitivity = (std::max)(ScopeState.MaxZoomScopedSensitivity, 0.01f);
 	ScopeState.DefaultZoomMagnification = ClampScopeZoomMagnification(ScopeState.DefaultZoomMagnification);
 	ScopeState.CurrentZoomMagnification = ScopeState.DefaultZoomMagnification;
 	ScopeState.TargetZoomMagnification = ScopeState.DefaultZoomMagnification;
@@ -284,6 +286,8 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 	ScopeState.TargetZoomMagnification = ClampScopeZoomMagnification(ScopeState.TargetZoomMagnification);
 	ScopeState.CurrentZoomMagnification = ScopeState.TargetZoomMagnification;
 	ScopeState.ScopedFOV = ComputeScopedFOVForMagnification(ScopeState.CurrentZoomMagnification);
+	const float ScopedSensitivityForCurrentZoom =
+		ComputeScopedSensitivityForMagnification(ScopeState.CurrentZoomMagnification);
 	ScopeState.TargetFOV = ScopeState.bIsScoped ? ScopeState.ScopedFOV : ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ExponentialInterpTo(
 		ScopeState.CurrentFOV,
@@ -295,7 +299,7 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 
 	ScopeState.CurrentSensitivity = FMath::Lerp(
 		ScopeState.NormalSensitivity,
-		ScopeState.ScopedSensitivity,
+		ScopedSensitivityForCurrentZoom,
 		ScopeAlpha);
 
 	if (Camera)
@@ -489,8 +493,33 @@ float ASniperPawn::ClampScopeZoomMagnification(float Magnification) const
 float ASniperPawn::ComputeScopedFOVForMagnification(float Magnification) const
 {
 	const float SafeMagnification = (std::max)(ClampScopeZoomMagnification(Magnification), 1.0f);
-	const float ComputedScopedFOV = ScopeState.NormalFOV / SafeMagnification;
+	const float HalfBaseScopedFOV = ScopeState.NormalFOV * 0.5f;
+	const float ZoomedHalfFOVTangent = std::tan(HalfBaseScopedFOV) / SafeMagnification;
+	const float ComputedScopedFOV = std::atan(ZoomedHalfFOVTangent) * 2.0f;
 	return FMath::Clamp(ComputedScopedFOV, 0.01f, ScopeState.NormalFOV);
+}
+
+float ASniperPawn::ComputeScopedSensitivityForMagnification(float Magnification) const
+{
+	const float SafeMinZoomMagnification = (std::max)(ScopeState.MinZoomMagnification, 1.0f);
+	const float SafeMaxZoomMagnification = (std::max)(ScopeState.MaxZoomMagnification, SafeMinZoomMagnification);
+	const float SafeMagnification = ClampScopeZoomMagnification(Magnification);
+	const float ZoomRange = SafeMaxZoomMagnification - SafeMinZoomMagnification;
+	const float ZoomAlpha = ZoomRange > FMath::Epsilon
+		? FMath::Clamp((SafeMagnification - SafeMinZoomMagnification) / ZoomRange, 0.0f, 1.0f)
+		: 0.0f;
+
+	const float MinZoomScopedSensitivity = (std::max)(ScopeState.ScopedSensitivity, 0.01f);
+	const float MaxZoomScopedSensitivity = (std::max)(ScopeState.MaxZoomScopedSensitivity, 0.01f);
+	const float ComputedScopedSensitivity = FMath::Lerp(
+		MinZoomScopedSensitivity,
+		MaxZoomScopedSensitivity,
+		ZoomAlpha);
+
+	return FMath::Clamp(
+		ComputedScopedSensitivity,
+		0.01f,
+		(std::max)(ScopeState.NormalSensitivity, 0.01f));
 }
 
 void ASniperPawn::AdjustScopeZoomStep(int32 StepDelta)
