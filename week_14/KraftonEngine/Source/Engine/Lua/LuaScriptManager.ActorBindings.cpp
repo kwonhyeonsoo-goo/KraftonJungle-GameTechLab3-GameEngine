@@ -379,7 +379,7 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetDoFBokehIntensity",
         &APlayerCameraManager::GetDoFBokehIntensity,
         "SetScopeLens",
-        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime)
+        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             M.SetScopeLens(
                 Radius,
@@ -389,10 +389,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 EdgeBlurRadius.value_or(1.25f),
                 Intensity.value_or(1.0f),
                 LookSensitivityScale.value_or(0.275f),
-                BlendTime.value_or(0.08f));
+                BlendTime.value_or(0.08f),
+                CenterOffsetX.value_or(0.0f),
+                CenterOffsetY.value_or(0.0f));
         },
         "SetScopeLensProfile",
-        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime)
+        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             M.SetScopeLensProfile(
                 Radius,
@@ -402,7 +404,9 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 EdgeBlurRadius.value_or(1.25f),
                 Intensity.value_or(1.0f),
                 LookSensitivityScale.value_or(0.275f),
-                BlendTime.value_or(0.08f));
+                BlendTime.value_or(0.08f),
+                CenterOffsetX.value_or(0.0f),
+                CenterOffsetY.value_or(0.0f));
         },
         "SetScopeZoomEnabled",
         &APlayerCameraManager::SetScopeZoomEnabled,

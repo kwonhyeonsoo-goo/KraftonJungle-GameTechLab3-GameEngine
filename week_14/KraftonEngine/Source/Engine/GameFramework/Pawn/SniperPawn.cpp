@@ -268,7 +268,9 @@ void ASniperPawn::SyncSniperRuntimeState()
 				ScopeLensEdgeBlurRadius,
 				ScopeLensIntensity,
 				ScopeState.CurrentSensitivity,
-				ScopeLensBlendTime);
+				ScopeLensBlendTime,
+				ScopeLensCenterOffsetX,
+				ScopeLensCenterOffsetY);
 			CameraManager->SetScopeZoomEnabled(false);
 		}
 	}
@@ -319,7 +321,9 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 				ScopeLensEdgeBlurRadius,
 				ScopeLensIntensity,
 				ScopeState.CurrentSensitivity,
-				ScopeLensBlendTime);
+				ScopeLensBlendTime,
+				ScopeLensCenterOffsetX,
+				ScopeLensCenterOffsetY);
 			CameraManager->SetScopeZoomEnabled(ScopeState.bIsScoped);
 		}
 	}

@@ -175,6 +175,8 @@
         "ScopeLensEdgeBlurRadius" : 1.500000,
         "ScopeLensFeather" : 0.080000,
         "ScopeLensIntensity" : 1.000000,
+        "ScopeLensCenterOffsetX" : 0.000000,
+        "ScopeLensCenterOffsetY" : -0.105556,
         "ScopeLensOuterBlurRadius" : 4.000000,
         "ScopeLensRadius" : 0.688889,
         "ScopeState.NormalSensitivity" : 1.000000,

@@ -161,6 +161,12 @@ struct FCameraScopeLensState
 	float Intensity = 1.0f;
 
 	UPROPERTY(Save)
+	float CenterOffsetX = 0.0f;
+
+	UPROPERTY(Save)
+	float CenterOffsetY = 0.0f;
+
+	UPROPERTY(Save)
 	float LookSensitivityScale = 0.275f;
 
 	UPROPERTY(Save)

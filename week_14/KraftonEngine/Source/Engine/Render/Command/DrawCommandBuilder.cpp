@@ -1158,6 +1158,8 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			ScopeData.EdgeBlurRadius = Frame.CameraScopeLens.EdgeBlurRadius;
 			ScopeData.Intensity = Frame.CameraScopeLens.Intensity;
 			ScopeData.AspectRatio = AspectRatio;
+			ScopeData.CenterOffset[0] = Frame.CameraScopeLens.CenterOffsetX;
+			ScopeData.CenterOffset[1] = Frame.CameraScopeLens.CenterOffsetY;
 			ScopeLensCB.Update(Ctx, &ScopeData, sizeof(FScopeLensConstants));
 
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();

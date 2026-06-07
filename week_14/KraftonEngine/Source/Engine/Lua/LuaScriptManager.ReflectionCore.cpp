@@ -1783,7 +1783,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
     );
     CameraManager.set_function(
         "SetScopeLens",
-        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime)
+        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             if (!GEngine || !GEngine->GetWorld()) return;
             APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
@@ -1798,13 +1798,15 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                     EdgeBlurRadius.value_or(1.25f),
                     Intensity.value_or(1.0f),
                     LookSensitivityScale.value_or(0.275f),
-                    BlendTime.value_or(0.08f));
+                    BlendTime.value_or(0.08f),
+                    CenterOffsetX.value_or(0.0f),
+                    CenterOffsetY.value_or(0.0f));
             }
         }
     );
     CameraManager.set_function(
         "SetScopeLensProfile",
-        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime)
+        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             if (!GEngine || !GEngine->GetWorld()) return;
             APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
@@ -1819,7 +1821,9 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                     EdgeBlurRadius.value_or(1.25f),
                     Intensity.value_or(1.0f),
                     LookSensitivityScale.value_or(0.275f),
-                    BlendTime.value_or(0.08f));
+                    BlendTime.value_or(0.08f),
+                    CenterOffsetX.value_or(0.0f),
+                    CenterOffsetY.value_or(0.0f));
             }
         }
     );

@@ -122,6 +122,10 @@ public:
 	float ScopeLensEdgeBlurRadius = 1.5f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Intensity", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float ScopeLensIntensity = 1.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Center Offset X", Min=-1.0f, Max=1.0f, Speed=0.001f)
+	float ScopeLensCenterOffsetX = 0.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Center Offset Y", Min=-1.0f, Max=1.0f, Speed=0.001f)
+	float ScopeLensCenterOffsetY = -0.105556f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Blend Time", Min=0.0f, Max=2.0f, Speed=0.01f)
 	float ScopeLensBlendTime = 0.08f;
 

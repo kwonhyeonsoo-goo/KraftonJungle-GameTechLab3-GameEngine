@@ -340,7 +340,7 @@ struct FScopeLensConstants
 	float EdgeBlurRadius;
 	float Intensity;
 	float AspectRatio;
-	float _pad[2];
+	float CenterOffset[2];
 };
 
 // ============================================================
