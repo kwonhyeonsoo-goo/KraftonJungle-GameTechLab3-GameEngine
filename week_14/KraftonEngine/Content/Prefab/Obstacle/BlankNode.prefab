@@ -6,7 +6,7 @@
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
         "Properties" : {
-          "DebugSlotRadius" : 1.500000,
+          "DebugSlotRadius" : 1.000000,
           "DisplayName" : "",
           "Links" : [{
               "PathPoints" : [[0.399028, 40.480465, 0.000000], [3.751410, 34.842373, 0.000000], [7.075802, 27.133137, 0.000000], [10.390865, 18.733528, 0.000000], [13.715258, 11.024295, 0.000000], [17.067640, 5.386200, 0.000000]],
@@ -37,7 +37,7 @@
               "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [0.000000, 1.000000, 0.000000],
-              "Radius" : 2.000000,
+              "Radius" : 1.000000,
               "SlotId" : 0,
               "SlotType" : 2,
               "Tags" : "Ally,Cover",
@@ -48,7 +48,7 @@
               "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [0.000000, -1.000000, 0.000000],
-              "Radius" : 2.000000,
+              "Radius" : 1.000000,
               "SlotId" : 1,
               "SlotType" : 2,
               "Tags" : "Enemy,Cover",

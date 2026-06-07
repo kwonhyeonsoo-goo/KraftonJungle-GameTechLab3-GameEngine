@@ -897,7 +897,7 @@ int32 UCombatFlowManagerComponent::CountNodeClaims(const UCombatCoverNodeCompone
 
 bool UCombatFlowManagerComponent::SlotTagsMatchTeam(const FCombatCoverSlot& Slot, const FString& TeamTag) const
 {
-    if (!bRequireSlotTagMatch || TeamTag.empty())
+    if (TeamTag.empty())
     {
         return true;
     }
@@ -1292,7 +1292,7 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
         IncomingFireCounts[Target] += 1;
         IncomingAttackDamage[Target] += Damage;
 
-        if (bEnableSuppression && Target->IsAlive())
+        if (Target->IsAlive())
         {
             FCombatSuppressionRuntimeState& SuppressionState = SuppressionStateByAgent[Target];
             SuppressionState.IncomingHitCount += 1;
@@ -1319,7 +1319,6 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
         Target->SetIncomingFireStats(IncomingCount, Pair.second);
     }
 
-    if (bEnableSuppression)
     {
         for (auto It = SuppressionStateByAgent.begin(); It != SuppressionStateByAgent.end(); )
         {
@@ -1351,6 +1350,22 @@ void UCombatFlowManagerComponent::DrawCombatDebugVisuals(float Duration) const
     if (bDrawFireRanges)
     {
         DrawFireRanges(Duration);
+    }
+
+    if (bDrawAllNodeDebugVisuals)
+    {
+        UWorld* World = GetWorld();
+        if (World)
+        {
+            FScene& Scene = World->GetScene();
+            for (UCombatCoverNodeComponent* Node : CachedNodes)
+            {
+                if (Node && Node->GetOwner())
+                {
+                    Node->DrawDebugVisuals(Scene, false);
+                }
+            }
+        }
     }
 }
 
