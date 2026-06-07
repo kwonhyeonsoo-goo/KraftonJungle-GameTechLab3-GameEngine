@@ -1154,7 +1154,7 @@ void FCombatMapEditorWidget::RenderRoleStatsPopup()
         ImGui::TextDisabled("Role defaults override direct combat stat edits while Use Role Combat Defaults is on.");
         ImGui::Spacing();
 
-        if (ImGui::BeginTable("##CombatAgentTypeStatsTable", 7,
+        if (ImGui::BeginTable("##CombatAgentTypeStatsTable", 8,
             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
         {
             ImGui::TableSetupColumn("Type");
@@ -1163,10 +1163,11 @@ void FCombatMapEditorWidget::RenderRoleStatsPopup()
             ImGui::TableSetupColumn("Range");
             ImGui::TableSetupColumn("Run Range");
             ImGui::TableSetupColumn("Damage");
-            ImGui::TableSetupColumn("Interval");
+            ImGui::TableSetupColumn("Attack Interval");
+            ImGui::TableSetupColumn("Advance Interval");
             ImGui::TableHeadersRow();
 
-            auto Row = [](const char* Type, const char* Team, const char* Route, const char* Range, const char* MovingRange, const char* Damage, const char* Interval)
+            auto Row = [](const char* Type, const char* Team, const char* Route, const char* Range, const char* MovingRange, const char* Damage, const char* AttackInterval, const char* AdvanceInterval)
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(Type);
@@ -1175,12 +1176,13 @@ void FCombatMapEditorWidget::RenderRoleStatsPopup()
                 ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(Range);
                 ImGui::TableSetColumnIndex(4); ImGui::TextUnformatted(MovingRange);
                 ImGui::TableSetColumnIndex(5); ImGui::TextUnformatted(Damage);
-                ImGui::TableSetColumnIndex(6); ImGui::TextUnformatted(Interval);
+                ImGui::TableSetColumnIndex(6); ImGui::TextUnformatted(AttackInterval);
+                ImGui::TableSetColumnIndex(7); ImGui::TextUnformatted(AdvanceInterval);
             };
 
-            Row("Ally", "Ally", "Outgoing", "50", "30", "5", "1.0-2.0s");
-            Row("EnemyShortRange", "Enemy", "Incoming", "35", "25", "5", "0.8-1.4s");
-            Row("EnemyLongRangeSlow", "Enemy", "Incoming", "80", "30", "7", "2.4-3.6s");
+            Row("Ally", "Ally", "Outgoing", "50", "30", "5", "1.0-2.0s", "20.0-30.0s");
+            Row("EnemyShortRange", "Enemy", "Incoming", "35", "25", "5", "0.8-1.4s", "4.0-6.0s");
+            Row("EnemyLongRangeSlow", "Enemy", "Incoming", "80", "30", "7", "2.4-3.6s", "6.0-8.0s");
 
             ImGui::EndTable();
         }

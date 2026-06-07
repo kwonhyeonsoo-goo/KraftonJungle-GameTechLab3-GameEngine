@@ -1,4 +1,4 @@
-#include "CombatFlowManagerComponent.h"
+﻿#include "CombatFlowManagerComponent.h"
 
 #include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Core/Logging/Log.h"
@@ -99,6 +99,12 @@ namespace
     {
         static std::mt19937 Generator{ std::random_device{}() };
         return Generator;
+    }
+
+    bool RandomChance(float Chance)
+    {
+        Chance = (std::min)((std::max)(0.0f, Chance), 1.0f);
+        return Chance > 0.0f && std::uniform_real_distribution<float>(0.0f, 1.0f)(GetCombatRandomGenerator()) < Chance;
     }
 }
 
@@ -226,6 +232,10 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
     TArray<UCombatCoverNodeComponent*> CandidateNodes;
     GatherAdvanceCandidateNodes(Agent, CurrentNode, CandidateNodes);
 
+    const ECombatSlotQueryPurpose AdvancePurpose = RandomChance(Agent->GetAdvanceFullCoverChance())
+        ? ECombatSlotQueryPurpose::PreferFullCover
+        : ECombatSlotQueryPurpose::Advance;
+
     for (UCombatCoverNodeComponent* NextNode : CandidateNodes)
     {
         if (!NextNode)
@@ -238,7 +248,7 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
             continue;
         }
 
-        const FCombatCoverSlotHandle Candidate = FindFreeSlotInNode(NextNode, Agent->GetTeamTag(), Agent);
+        const FCombatCoverSlotHandle Candidate = FindFreeSlotInNode(NextNode, Agent->GetTeamTag(), Agent, AdvancePurpose);
         if (!Candidate.IsValid())
         {
             continue;
@@ -281,6 +291,16 @@ bool UCombatFlowManagerComponent::TryRepositionNearby(UCombatCoverAgentComponent
     }
 
     return TryAdvance(Agent);
+}
+
+bool UCombatFlowManagerComponent::TryMoveToFullCoverInCurrentNode(UCombatCoverAgentComponent* Agent)
+{
+    return TryMoveToSlotTypeInCurrentNode(Agent, ECombatCoverSlotType::FullCover);
+}
+
+bool UCombatFlowManagerComponent::TryMoveToCombatSlotInCurrentNode(UCombatCoverAgentComponent* Agent)
+{
+    return TryMoveToSlotTypeInCurrentNode(Agent, ECombatCoverSlotType::CombatCover);
 }
 
 void UCombatFlowManagerComponent::ConfirmArrived(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle)
@@ -676,6 +696,31 @@ float UCombatFlowManagerComponent::GetTargetPriorityMultiplierForAgent(const UCo
     return Slot->GetTargetPriorityMultiplierWhileInCover();
 }
 
+bool UCombatFlowManagerComponent::IsAgentInSlotType(const UCombatCoverAgentComponent* Agent, ECombatCoverSlotType SlotType) const
+{
+    const FCombatCoverSlot* Slot = FindCurrentSlot(Agent);
+    return Slot && Slot->SlotType == SlotType;
+}
+
+bool UCombatFlowManagerComponent::HasFreeCombatSlotInCurrentNode(const UCombatCoverAgentComponent* Agent) const
+{
+    if (!Agent || Agent->GetCurrentNodeId().empty())
+    {
+        return false;
+    }
+
+    UCombatCoverNodeComponent* Node = FindNode(Agent->GetCurrentNodeId());
+    if (!Node)
+    {
+        return false;
+    }
+
+    FCombatCoverSlotHandle CurrentSlot;
+    CurrentSlot.NodeId = Agent->GetCurrentNodeId();
+    CurrentSlot.SlotId = Agent->GetCurrentSlotId();
+    return FindFreeSlotInNode(Node, Agent->GetTeamTag(), Agent, ECombatSlotQueryPurpose::CombatCoverOnly, &CurrentSlot).IsValid();
+}
+
 void UCombatFlowManagerComponent::DrawAllDebugVisuals(bool bIncludeUnselected) const
 {
     UWorld* World = GetWorld();
@@ -773,7 +818,9 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindNearestFreeSlot(
 FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
     UCombatCoverNodeComponent* Node,
     const FString& TeamTag,
-    const UCombatCoverAgentComponent* RequestingAgent) const
+    const UCombatCoverAgentComponent* RequestingAgent,
+    ECombatSlotQueryPurpose Purpose,
+    const FCombatCoverSlotHandle* SkipSlotHandle) const
 {
     FCombatCoverSlotHandle BestHandle;
     float BestWeight = -1000000.0f;
@@ -785,9 +832,34 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
 
     for (const FCombatCoverSlot& Slot : Node->GetSlots())
     {
+        if (SkipSlotHandle && SkipSlotHandle->NodeId == Node->GetNodeId() && SkipSlotHandle->SlotId == Slot.SlotId)
+        {
+            continue;
+        }
+
         if (!SlotTagsMatchTeam(Slot, TeamTag))
         {
             continue;
+        }
+
+        switch (Purpose)
+        {
+        case ECombatSlotQueryPurpose::FullCoverOnly:
+            if (Slot.SlotType != ECombatCoverSlotType::FullCover)
+            {
+                continue;
+            }
+            break;
+        case ECombatSlotQueryPurpose::CombatCoverOnly:
+            if (Slot.SlotType != ECombatCoverSlotType::CombatCover)
+            {
+                continue;
+            }
+            break;
+        case ECombatSlotQueryPurpose::Advance:
+        case ECombatSlotQueryPurpose::PreferFullCover:
+        default:
+            break;
         }
 
         FCombatCoverSlotHandle Handle;
@@ -798,7 +870,24 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
             continue;
         }
 
-        const float SlotScore = Slot.GetSlotSelectionScore();
+        float SlotScore = Slot.GetSlotSelectionScore();
+        if (Purpose == ECombatSlotQueryPurpose::PreferFullCover)
+        {
+            switch (Slot.SlotType)
+            {
+            case ECombatCoverSlotType::FullCover:
+                SlotScore += 300.0f;
+                break;
+            case ECombatCoverSlotType::CombatCover:
+                SlotScore += 40.0f;
+                break;
+            case ECombatCoverSlotType::ExposedDummy:
+            default:
+                SlotScore -= 100.0f;
+                break;
+            }
+        }
+
         if (SlotScore > BestWeight)
         {
             BestWeight = SlotScore;
@@ -807,6 +896,51 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
     }
 
     return BestHandle;
+}
+
+bool UCombatFlowManagerComponent::TryMoveToSlotTypeInCurrentNode(UCombatCoverAgentComponent* Agent, ECombatCoverSlotType DesiredSlotType)
+{
+    if (!IsValid(Agent) || Agent->GetCurrentNodeId().empty())
+    {
+        return false;
+    }
+
+    RefreshRegistry();
+
+    UCombatCoverNodeComponent* CurrentNode = FindNode(Agent->GetCurrentNodeId());
+    if (!CurrentNode)
+    {
+        return false;
+    }
+
+    FCombatCoverSlotHandle StartSlot;
+    StartSlot.NodeId = Agent->GetCurrentNodeId();
+    StartSlot.SlotId = Agent->GetCurrentSlotId();
+
+    const ECombatSlotQueryPurpose Purpose = DesiredSlotType == ECombatCoverSlotType::FullCover
+        ? ECombatSlotQueryPurpose::FullCoverOnly
+        : ECombatSlotQueryPurpose::CombatCoverOnly;
+    const FCombatCoverSlotHandle Candidate = FindFreeSlotInNode(CurrentNode, Agent->GetTeamTag(), Agent, Purpose, &StartSlot);
+    if (!Candidate.IsValid())
+    {
+        return false;
+    }
+
+    if (!ReserveSlot(Agent, Candidate))
+    {
+        return false;
+    }
+
+    FCombatMovePath MovePath;
+    if (!BuildMovePathWithinNode(CurrentNode, StartSlot, Candidate, MovePath))
+    {
+        ReleaseAgentExcept(Agent, StartSlot);
+        return false;
+    }
+
+    ReleaseAgentExcept(Agent, Candidate);
+    Agent->MoveToReservedSlot(MovePath, false);
+    return true;
 }
 
 bool UCombatFlowManagerComponent::ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle)
@@ -982,6 +1116,31 @@ bool UCombatFlowManagerComponent::BuildMovePathToSlot(const FCombatCoverSlotHand
     OutPath.FinalSlot = SlotHandle;
     AppendSlotApproachPoint(SlotHandle, false, OutPath.Points);
     OutPath.Points.push_back(TargetNode->GetSlotWorldPosition(SlotIndex));
+    return true;
+}
+
+bool UCombatFlowManagerComponent::BuildMovePathWithinNode(
+    UCombatCoverNodeComponent* Node,
+    const FCombatCoverSlotHandle& StartSlot,
+    const FCombatCoverSlotHandle& FinalSlot,
+    FCombatMovePath& OutPath) const
+{
+    OutPath.Reset();
+    if (!Node || !StartSlot.IsValid() || !FinalSlot.IsValid() || StartSlot.NodeId != FinalSlot.NodeId)
+    {
+        return false;
+    }
+
+    const int32 FinalSlotIndex = Node->FindSlotIndexById(FinalSlot.SlotId);
+    if (FinalSlotIndex < 0)
+    {
+        return false;
+    }
+
+    OutPath.FinalSlot = FinalSlot;
+    AppendSlotApproachPoint(StartSlot, true, OutPath.Points);
+    AppendSlotApproachPoint(FinalSlot, false, OutPath.Points);
+    OutPath.Points.push_back(Node->GetSlotWorldPosition(FinalSlotIndex));
     return true;
 }
 
@@ -1225,6 +1384,22 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             continue;
         }
 
+        if (!Agent->IsMovingForCombatRange() && Agent->CanMakeCombatDecision() && !Agent->GetCurrentNodeId().empty() &&
+            Agent->GetHealthRatio() <= Agent->GetLowHealthFullCoverRatio() &&
+            !IsAgentInSlotType(Agent, ECombatCoverSlotType::FullCover))
+        {
+            Agent->MarkCombatDecisionMade();
+            if (RandomChance(Agent->GetLowHealthFullCoverChance()))
+            {
+                Agent->ClearEngagementTarget();
+                if (TryMoveToFullCoverInCurrentNode(Agent))
+                {
+                    AttackStateByAgent.erase(Agent);
+                    continue;
+                }
+            }
+        }
+
         UCombatCoverAgentComponent* Target = FindBestTargetFor(Agent);
         if (!Target)
         {
@@ -1378,7 +1553,13 @@ void UCombatFlowManagerComponent::DrawFireDebugLine(UCombatCoverAgentComponent* 
     }
 
     const FVector Start = Shooter->GetOwner()->GetActorLocation();
-    const FVector End = Target->GetOwner()->GetActorLocation();
+    std::uniform_real_distribution<float> HorizontalOffset(-0.2f, 0.2f);
+    std::uniform_real_distribution<float> VerticalOffset(-0.1f, 0.1f);
+    const FVector TargetOffset(
+        HorizontalOffset(GetCombatRandomGenerator()),
+        HorizontalOffset(GetCombatRandomGenerator()),
+        VerticalOffset(GetCombatRandomGenerator()));
+    const FVector End = Target->GetOwner()->GetActorLocation() + TargetOffset;
     DrawDebugLine(World, Start, End, MakeFireLineColor(Shooter), Duration);
 }
 

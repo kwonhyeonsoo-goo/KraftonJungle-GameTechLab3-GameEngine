@@ -156,6 +156,15 @@ public:
     float GetInCoverTargetPriorityMultiplier() const { return InCoverTargetPriorityMultiplier; }
 
     UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetAdvanceFullCoverChance() const { return AdvanceFullCoverChance; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetLowHealthFullCoverRatio() const { return LowHealthFullCoverRatio; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetLowHealthFullCoverChance() const { return LowHealthFullCoverChance; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
     bool CanMakeCombatDecision() const { return CombatDecisionCooldownRemaining <= 0.0f; }
 
     UFUNCTION(Pure, Category="CombatAgent|Behavior")
@@ -200,6 +209,9 @@ private:
     UCombatFlowManagerComponent* ResolveManager();
     void ApplyCombatRoleDefaults();
     void ClampRuntimeEditableValues();
+    void PickRandomAdvanceInterval();
+    float PickFullCoverToCombatDelay() const;
+    void HandleArrivedAtCoverSlot(UCombatFlowManagerComponent* Manager);
     void TickCombatDecisionCooldown(float DeltaTime);
     void FinishSuppression();
     void TickMoveToTarget(float DeltaTime);
@@ -229,6 +241,12 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Interval", Min=0.0f, Max=120.0f, Speed=0.1f)
     float AdvanceInterval = 3.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Interval Min", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float AdvanceIntervalMin = 3.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Interval Max", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float AdvanceIntervalMax = 3.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Retry Interval", Min=0.1f, Max=120.0f, Speed=0.1f)
     float RetryInterval = 1.0f;
@@ -302,6 +320,21 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="In Cover Target Priority Multiplier", Min=0.05f, Max=1.0f, Speed=0.01f)
     float InCoverTargetPriorityMultiplier = 0.35f;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Advance Full Cover Chance", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float AdvanceFullCoverChance = 0.85f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Full Cover To Combat Delay Min", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float FullCoverToCombatDelayMin = 0.8f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Full Cover To Combat Delay Max", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float FullCoverToCombatDelayMax = 1.6f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Low Health Full Cover Ratio", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float LowHealthFullCoverRatio = 0.35f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Low Health Full Cover Chance", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float LowHealthFullCoverChance = 0.75f;
+
     ECombatCoverAgentState State = ECombatCoverAgentState::Idle;
     FString CurrentNodeId;
     int32 CurrentSlotId = -1;
@@ -319,6 +352,7 @@ private:
     float SuppressionTimer = 0.0f;
     float CombatDecisionCooldownRemaining = 0.0f;
     float CoverHoldTimer = 0.0f;
+    bool bMoveToCombatSlotAfterCoverHold = false;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
     ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
