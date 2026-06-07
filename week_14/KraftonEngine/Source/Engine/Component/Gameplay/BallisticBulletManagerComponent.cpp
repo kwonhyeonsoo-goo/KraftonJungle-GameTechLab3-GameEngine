@@ -1,8 +1,11 @@
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 
+#include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
+#include "Core/Logging/Log.h"
+#include "GameFramework/Pawn/CombatCharacter.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
@@ -696,6 +699,18 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);
 	if (AActor* HitActor = HitInfo.HitActor)
 	{
+		if (ACombatCharacter* CombatCharacter = Cast<ACombatCharacter>(HitActor))
+		{
+			UCombatCoverAgentComponent* CombatAgent = CombatCharacter->GetCombatCoverAgentComponent();
+			UE_LOG(
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s Health=%.1f Damage=%.1f Outcome=%d",
+				CombatCharacter->GetName().c_str(),
+				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
+				CombatAgent ? CombatAgent->GetHealth() : -1.0f,
+				HitInfo.Damage,
+				static_cast<int32>(HitInfo.HitOutcome));
+		}
+
 		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
 		{
 			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);

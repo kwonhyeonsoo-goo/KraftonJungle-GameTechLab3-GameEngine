@@ -7,6 +7,7 @@ ACombatCharacter::ACombatCharacter()
 {
 	bAutoInputWASD = false;
 	bAutoInputMouseLook = false;
+	bAutoPossessPlayer = false;
 }
 
 void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile)
@@ -27,4 +28,22 @@ void ACombatCharacter::PostDuplicate()
 	Super::PostDuplicate();
 	LuaScriptComponent = GetComponentByClass<ULuaScriptComponent>();
 	CombatCoverAgentComponent = GetComponentByClass<UCombatCoverAgentComponent>();
+}
+
+ULuaScriptComponent* ACombatCharacter::GetLuaScriptComponent() const
+{
+	if (!LuaScriptComponent)
+	{
+		LuaScriptComponent = GetComponentByClass<ULuaScriptComponent>();
+	}
+	return LuaScriptComponent;
+}
+
+UCombatCoverAgentComponent* ACombatCharacter::GetCombatCoverAgentComponent() const
+{
+	if (!CombatCoverAgentComponent)
+	{
+		CombatCoverAgentComponent = GetComponentByClass<UCombatCoverAgentComponent>();
+	}
+	return CombatCoverAgentComponent;
 }

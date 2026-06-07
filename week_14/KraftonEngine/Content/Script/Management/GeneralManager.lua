@@ -26,7 +26,7 @@ local SCENE_START_STATES = {
     ["main.scene"] = GameState.Main,
     ["preingame.scene"] = GameState.PreInGame,
     ["loading.scene"] = GameState.Loading,
-    ["scopetest.scene"] = GameState.InGame
+    ["combattest.scene"] = GameState.InGame
 }
 
 local function log(message)

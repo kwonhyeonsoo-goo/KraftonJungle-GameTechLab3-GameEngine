@@ -26,10 +26,10 @@ public:
 
 	void PostDuplicate() override;
 
-	ULuaScriptComponent* GetLuaScriptComponent() const { return LuaScriptComponent; }
-	UCombatCoverAgentComponent* GetCombatCoverAgentComponent() const { return CombatCoverAgentComponent; }
+	ULuaScriptComponent* GetLuaScriptComponent() const;
+	UCombatCoverAgentComponent* GetCombatCoverAgentComponent() const;
 
 protected:
-	TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
-	TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
+	mutable TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
+	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
 };
