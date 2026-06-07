@@ -1166,6 +1166,44 @@
               "bTickEnable" : true
             },
             "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "ObjectId" : 35,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.uasset",
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_482",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
           }],
         "ClassName" : "UDirectionalLightComponent",
         "ObjectId" : 5,
@@ -1197,7 +1235,7 @@
       "Name" : "Manager",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatFlowManagerComponent",
-          "ObjectId" : 37,
+          "ObjectId" : 38,
           "Properties" : {
             "DebugDrawInterval" : 0.100000,
             "PendingTagsString" : "",
@@ -1206,7 +1244,7 @@
             "SuppressionDuration" : 1.500000,
             "SuppressionIncomingFireThreshold" : 2,
             "bAutoActivate" : true,
-            "bDrawAllNodeDebugVisuals" : true,
+            "bDrawAllNodeDebugVisuals" : false,
             "bDrawDebugDuringTick" : false,
             "bDrawFireDebugLines" : true,
             "bDrawFireRanges" : false,
@@ -1219,7 +1257,7 @@
             "bUseNodeOccupancyLimit" : true
           }
         }],
-      "ObjectId" : 35,
+      "ObjectId" : 36,
       "Properties" : {
         "PendingActorLocation" : [0.000000, 0.000000, 1000.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1231,7 +1269,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 36,
+        "ObjectId" : 37,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1271,21 +1309,22 @@
       "Name" : "ASkeletalMeshActor_1",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 40,
+          "ObjectId" : 41,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 0,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 2.000000,
             "AttackIntervalMin" : 1.000000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 3.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 50.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.450000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 30.000000,
@@ -1293,6 +1332,9 @@
             "PersistentGuid" : "Component_333",
             "RepositionChanceWhenInRange" : 0.000000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.000000,
+            "TakeCoverDurationMax" : 2.000000,
+            "TakeCoverDurationMin" : 1.000000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Ally",
             "bAutoActivate" : true,
@@ -1310,7 +1352,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 41,
+          "ObjectId" : 42,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -1323,7 +1365,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 38,
+      "ObjectId" : 39,
       "Properties" : {
         "PendingActorLocation" : [-57.150703, -17.872810, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1335,7 +1377,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 39,
+        "ObjectId" : 40,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -1413,28 +1455,32 @@
       "Name" : "ASkeletalMeshActor_3",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 44,
+          "ObjectId" : 45,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 1,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 1.400000,
             "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 4.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 35.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.350000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 25.000000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
+            "RepositionChanceWhenInRange" : 0.080000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.350000,
+            "TakeCoverDurationMax" : 3.000000,
+            "TakeCoverDurationMin" : 1.500000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Enemy",
             "bAutoActivate" : true,
@@ -1452,7 +1498,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 45,
+          "ObjectId" : 46,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -1465,7 +1511,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 42,
+      "ObjectId" : 43,
       "Properties" : {
         "PendingActorLocation" : [87.216675, -2.733109, 0.000000],
         "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
@@ -1477,7 +1523,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 43,
+        "ObjectId" : 44,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -1555,28 +1601,32 @@
       "Name" : "ASkeletalMeshActor_6",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 48,
+          "ObjectId" : 49,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 1,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 1.400000,
             "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 4.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 35.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.350000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 25.000000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
+            "RepositionChanceWhenInRange" : 0.080000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.350000,
+            "TakeCoverDurationMax" : 3.000000,
+            "TakeCoverDurationMin" : 1.500000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Enemy",
             "bAutoActivate" : true,
@@ -1594,7 +1644,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 49,
+          "ObjectId" : 50,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -1607,7 +1657,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 46,
+      "ObjectId" : 47,
       "Properties" : {
         "PendingActorLocation" : [78.819382, 14.147606, 0.000000],
         "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
@@ -1619,7 +1669,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 47,
+        "ObjectId" : 48,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -1697,28 +1747,32 @@
       "Name" : "ASkeletalMeshActor_7",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 52,
+          "ObjectId" : 53,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 1,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 1.400000,
             "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 4.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 35.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.350000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 25.000000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
+            "RepositionChanceWhenInRange" : 0.080000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.350000,
+            "TakeCoverDurationMax" : 3.000000,
+            "TakeCoverDurationMin" : 1.500000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Enemy",
             "bAutoActivate" : true,
@@ -1736,7 +1790,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 53,
+          "ObjectId" : 54,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -1749,7 +1803,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 50,
+      "ObjectId" : 51,
       "Properties" : {
         "PendingActorLocation" : [69.587517, 38.634544, 0.000000],
         "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
@@ -1761,7 +1815,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 51,
+        "ObjectId" : 52,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -1839,21 +1893,22 @@
       "Name" : "ASkeletalMeshActor_8",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 56,
+          "ObjectId" : 57,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 0,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 2.000000,
             "AttackIntervalMin" : 1.000000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 3.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 50.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.450000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 30.000000,
@@ -1861,6 +1916,9 @@
             "PersistentGuid" : "Component_333",
             "RepositionChanceWhenInRange" : 0.000000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.000000,
+            "TakeCoverDurationMax" : 2.000000,
+            "TakeCoverDurationMin" : 1.000000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Ally",
             "bAutoActivate" : true,
@@ -1878,7 +1936,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 57,
+          "ObjectId" : 58,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -1891,7 +1949,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 54,
+      "ObjectId" : 55,
       "Properties" : {
         "PendingActorLocation" : [-46.328026, 18.588257, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1903,7 +1961,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 55,
+        "ObjectId" : 56,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -1981,21 +2039,22 @@
       "Name" : "ASkeletalMeshActor_9",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 60,
+          "ObjectId" : 61,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 0,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 2.000000,
             "AttackIntervalMin" : 1.000000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 3.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 50.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.450000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 30.000000,
@@ -2003,6 +2062,9 @@
             "PersistentGuid" : "Component_333",
             "RepositionChanceWhenInRange" : 0.000000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.000000,
+            "TakeCoverDurationMax" : 2.000000,
+            "TakeCoverDurationMin" : 1.000000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Ally",
             "bAutoActivate" : true,
@@ -2020,7 +2082,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 61,
+          "ObjectId" : 62,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -2033,7 +2095,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 58,
+      "ObjectId" : 59,
       "Properties" : {
         "PendingActorLocation" : [-53.813976, 50.978569, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2045,7 +2107,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 59,
+        "ObjectId" : 60,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -2123,28 +2185,32 @@
       "Name" : "ASkeletalMeshActor_12",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 64,
+          "ObjectId" : 65,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 1,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 1.400000,
             "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 4.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 35.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.350000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 25.000000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
+            "RepositionChanceWhenInRange" : 0.080000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.350000,
+            "TakeCoverDurationMax" : 3.000000,
+            "TakeCoverDurationMin" : 1.500000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Enemy",
             "bAutoActivate" : true,
@@ -2162,7 +2228,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 65,
+          "ObjectId" : 66,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -2175,7 +2241,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 62,
+      "ObjectId" : 63,
       "Properties" : {
         "PendingActorLocation" : [69.183640, 30.208450, 0.000000],
         "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
@@ -2187,7 +2253,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 63,
+        "ObjectId" : 64,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -2262,173 +2328,35 @@
       }
     }, {
       "ClassName" : "ASkeletalMeshActor",
-      "Name" : "ASkeletalMeshActor_13",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 68,
-          "Properties" : {
-            "AcceptanceRadius" : 0.000000,
-            "AdvanceInterval" : 3.000000,
-            "AdvanceLinkMode" : 1,
-            "AttackDamage" : 5.000000,
-            "AttackIntervalMax" : 1.400000,
-            "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
-            "CombatRole" : 0,
-            "DeathDebugScaleMultiplier" : 0.100000,
-            "FacingYawOffset" : 0.000000,
-            "FacingYawRate" : 720.000000,
-            "FireRange" : 35.000000,
-            "Health" : 100.000000,
-            "MaxHealth" : 100.000000,
-            "MoveSpeed" : 5.000000,
-            "MovingFireRange" : 25.000000,
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
-            "RetryInterval" : 1.000000,
-            "TargetScanInterval" : 0.200000,
-            "TeamTag" : "Enemy",
-            "bAutoActivate" : true,
-            "bAutoStart" : true,
-            "bCanFireWhileMoving" : false,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bOrientToCombatDirection" : true,
-            "bShrinkActorOnDeath" : false,
-            "bTickEnable" : true,
-            "bUseCharacterMovement" : true,
-            "bUseMovingFireRange" : true,
-            "bUseRoleCombatDefaults" : true
-          }
-        }, {
-          "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 69,
-          "Properties" : {
-            "InitialGameState" : 4,
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_334",
-            "ScriptFile" : "CombatAI_Anim_Test.lua",
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 66,
-      "Properties" : {
-        "PendingActorLocation" : [71.249405, -5.690311, -0.000001],
-        "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 67,
-        "Properties" : {
-          "AnimInstance" : {
-            "ClassName" : "UAnimGraphInstance",
-            "Properties" : {
-              "DefaultSequencePath" : "Content/Data/CombatAI/Rifle_Idle_Anim_Unreal_Take.uasset",
-              "GraphAssetPath" : "Content/Animation/CombatAI.uasset",
-              "RootMotionMode" : 1
-            }
-          },
-          "AnimInstanceClass" : "UAnimGraphInstance",
-          "AnimationData" : {
-            "AnimToPlayPath" : "",
-            "PlayRate" : 1.000000,
-            "bLooping" : true,
-            "bPlaying" : true
-          },
-          "AnimationMode" : 2,
-          "AttachSocketName" : "Name_None",
-          "BackStandUpAnimationPath" : "None",
-          "CachedEditRotator" : [-0.000000, -179.999893, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "DirectHitFullBodyThreshold" : 0.850000,
-          "FrontStandUpAnimationPath" : "None",
-          "FullBodyLaunchImpulseMagnitude" : 900.000000,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_1.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
-          "ObjectType" : 0,
-          "PartialEscalationThreshold" : 0.800000,
-          "PartialFirstValidPoseBlendInTime" : 0.040000,
-          "PartialRagdollBlendInTime" : 0.080000,
-          "PartialRagdollBlendOutTime" : 0.140000,
-          "PartialRagdollHoldTime" : 0.180000,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_332",
-          "PhysicsAssetOverridePath" : "None",
-          "RagdollAdditionalImpulseMagnitude" : 240.000000,
-          "RagdollBaseImpulseMagnitude" : 120.000000,
-          "RagdollBlendInTime" : 0.150000,
-          "RagdollCompletionHoldTime" : 0.050000,
-          "RagdollFallbackHoldTime" : 0.120000,
-          "RagdollFirstValidPoseBlendInTime" : 0.080000,
-          "RagdollOverdriveImpulseMagnitudeScale" : 600.000000,
-          "RagdollRecoveryBlendOutTime" : 0.300000,
-          "RecoveryFullBodyThreshold" : 0.900000,
-          "RecoveryImpulseThreshold" : 0.550000,
-          "RelativeTransform.Location" : [71.249405, -5.690311, -0.000001],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "ShockwaveFullBodyThreshold" : 0.900000,
-          "ShockwaveImpulseThreshold" : 0.450000,
-          "SkeletalMeshPath" : "Content/Data/CombatAI/SK_Bandit_SkeletalMesh.uasset",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "ASkeletalMeshActor",
       "Name" : "ASkeletalMeshActor_14",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 72,
+          "ObjectId" : 69,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 1,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 1.400000,
             "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 4.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 35.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.350000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 25.000000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
+            "RepositionChanceWhenInRange" : 0.080000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.350000,
+            "TakeCoverDurationMax" : 3.000000,
+            "TakeCoverDurationMin" : 1.500000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Enemy",
             "bAutoActivate" : true,
@@ -2446,7 +2374,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 73,
+          "ObjectId" : 70,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -2459,7 +2387,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 70,
+      "ObjectId" : 67,
       "Properties" : {
         "PendingActorLocation" : [69.435448, 11.546452, 0.000000],
         "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
@@ -2471,7 +2399,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 71,
+        "ObjectId" : 68,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -2549,28 +2477,32 @@
       "Name" : "ASkeletalMeshActor_15",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 76,
+          "ObjectId" : 73,
           "Properties" : {
-            "AcceptanceRadius" : 0.000000,
+            "AcceptanceRadius" : 1.000000,
             "AdvanceInterval" : 3.000000,
             "AdvanceLinkMode" : 1,
             "AttackDamage" : 5.000000,
             "AttackIntervalMax" : 1.400000,
             "AttackIntervalMin" : 0.800000,
-            "CombatDecisionCooldown" : 2.000000,
+            "CombatDecisionCooldown" : 4.000000,
             "CombatRole" : 0,
             "DeathDebugScaleMultiplier" : 0.100000,
             "FacingYawOffset" : 0.000000,
             "FacingYawRate" : 720.000000,
             "FireRange" : 35.000000,
             "Health" : 100.000000,
+            "InCoverTargetPriorityMultiplier" : 0.350000,
             "MaxHealth" : 100.000000,
             "MoveSpeed" : 5.000000,
             "MovingFireRange" : 25.000000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_333",
-            "RepositionChanceWhenInRange" : 0.300000,
+            "RepositionChanceWhenInRange" : 0.080000,
             "RetryInterval" : 1.000000,
+            "TakeCoverChanceWhenInRange" : 0.350000,
+            "TakeCoverDurationMax" : 3.000000,
+            "TakeCoverDurationMin" : 1.500000,
             "TargetScanInterval" : 0.200000,
             "TeamTag" : "Enemy",
             "bAutoActivate" : true,
@@ -2588,7 +2520,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 77,
+          "ObjectId" : 74,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -2601,7 +2533,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 74,
+      "ObjectId" : 71,
       "Properties" : {
         "PendingActorLocation" : [81.208969, 44.062065, -0.000002],
         "PendingActorRotation" : [-0.000000, -179.999893, 0.000000],
@@ -2613,7 +2545,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
-        "ObjectId" : 75,
+        "ObjectId" : 72,
         "Properties" : {
           "AnimInstance" : {
             "ClassName" : "UAnimGraphInstance",
@@ -2691,29 +2623,69 @@
       "Name" : "CoverNode_001",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 80,
+          "ObjectId" : 77,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[21.787369, 29.110209, 0.000000], [25.625465, 29.910206, 0.000000], [29.613993, 31.004082, 0.000000], [33.652676, 32.195919, 0.000000], [37.641205, 33.289795, 0.000000], [41.479301, 34.089798, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
+                "PathPoints" : [[7.207970, 8.223713, 0.000000], [9.207971, 10.176095, 0.000000], [10.683187, 12.845675, 0.000000], [11.983480, 15.754327, 0.000000], [13.458698, 18.423906, 0.000000], [15.458698, 20.376289, 0.000000]],
+                "TargetNodeId" : "CoverNode_003",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[21.421770, 29.863562, 0.000000], [24.317011, 32.606419, 0.000000], [27.016325, 36.356850, 0.000000], [29.650343, 40.443153, 0.000000], [32.349659, 44.193584, 0.000000], [35.244900, 46.936443, 0.000000]],
-                "TargetNodeId" : "CoverNode_005",
+                "PathPoints" : [[8.205054, 6.993975, 0.000000], [12.776484, 5.774928, 0.000000], [17.767736, 4.108066, 0.000000], [22.898933, 2.291934, 0.000000], [27.890186, 0.625073, 0.000000], [32.461617, -0.593975, 0.000000]],
+                "TargetNodeId" : "CoverNode_009",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_001",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [-2.000000, -2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, -2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 0,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [-2.000000, 2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 1,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [2.000000, -2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, -2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 2,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [2.000000, 2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 0.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Enemy,Cover",
@@ -2721,11 +2693,11 @@
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : false
               }, {
-                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 0.000000, 0.000000],
                 "Radius" : 2.000000,
-                "SlotId" : 1,
+                "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
@@ -2738,9 +2710,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 78,
+      "ObjectId" : 75,
       "Properties" : {
-        "PendingActorLocation" : [18.200001, 28.800001, 0.000000],
+        "PendingActorLocation" : [4.333333, 7.466667, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -2750,18 +2722,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 79,
+        "ObjectId" : 76,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/small_barricada.uasset"],
+          "MaterialSlots" : ["Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05b.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05c.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05a.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [18.200001, 28.800001, 0.000000],
+          "RelativeTransform.Location" : [4.333333, 7.466667, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -2770,7 +2742,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_C_StaticMesh.uasset",
+          "StaticMeshPath" : "Content/Data/Obstacle/Car/Truck_A_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -2790,29 +2762,69 @@
       "Name" : "CoverNode_002",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 83,
+          "ObjectId" : 80,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[-4.134694, 8.774345, 0.000000], [-0.439456, 11.802918, 0.000000], [3.353742, 15.944022, 0.000000], [7.179593, 20.455978, 0.000000], [10.972789, 24.597084, 0.000000], [14.668028, 27.625656, 0.000000]],
-                "TargetNodeId" : "CoverNode_001",
+                "PathPoints" : [[34.761326, 42.193981, 0.000000], [38.704185, 40.974934, 0.000000], [42.835957, 39.308067, 0.000000], [47.030716, 37.491936, 0.000000], [51.162491, 35.825073, 0.000000], [55.105347, 34.606026, 0.000000]],
+                "TargetNodeId" : "CoverNode_007",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[-3.056365, 7.570457, 0.000000], [3.419827, 7.494268, 0.000000], [11.015550, 7.390087, 0.000000], [18.984453, 7.276580, 0.000000], [26.580175, 7.172400, 0.000000], [33.056366, 7.096210, 0.000000]],
-                "TargetNodeId" : "CoverNode_003",
+                "PathPoints" : [[33.520508, 40.244122, 0.000000], [34.263367, 33.996506, 0.000000], [34.019627, 25.453838, 0.000000], [33.447041, 16.146160, 0.000000], [33.203304, 7.603498, 0.000000], [33.946163, 1.355879, 0.000000]],
+                "TargetNodeId" : "CoverNode_009",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_002",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [-2.000000, -2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, -2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 0,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [-2.000000, 2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 1,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [2.000000, -2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, -2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 2,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [2.000000, 2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 0.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Enemy,Cover",
@@ -2820,11 +2832,11 @@
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : false
               }, {
-                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 0.000000, 0.000000],
                 "Radius" : 2.000000,
-                "SlotId" : 1,
+                "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
@@ -2837,9 +2849,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 81,
+      "ObjectId" : 78,
       "Properties" : {
-        "PendingActorLocation" : [-7.666667, 7.600000, 0.000000],
+        "PendingActorLocation" : [31.133335, 42.666668, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -2849,18 +2861,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 82,
+        "ObjectId" : 79,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/small_barricada.uasset"],
+          "MaterialSlots" : ["Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05b.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05c.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05a.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-7.666667, 7.600000, 0.000000],
+          "RelativeTransform.Location" : [31.133335, 42.666668, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -2869,7 +2881,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_C_StaticMesh.uasset",
+          "StaticMeshPath" : "Content/Data/Obstacle/Car/Truck_A_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -2889,29 +2901,69 @@
       "Name" : "CoverNode_003",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 86,
+          "ObjectId" : 83,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[40.556076, 7.675997, 0.000000], [42.594177, 9.247426, 0.000000], [44.121475, 11.396112, 0.000000], [45.478527, 13.737222, 0.000000], [47.005833, 15.885910, 0.000000], [49.043926, 17.457336, 0.000000]],
-                "TargetNodeId" : "CoverNode_012",
+                "PathPoints" : [[21.141497, 22.326143, 0.000000], [22.970072, 25.402336, 0.000000], [24.210882, 29.608551, 0.000000], [25.255783, 34.191452, 0.000000], [26.496599, 38.397667, 0.000000], [28.325171, 41.473858, 0.000000]],
+                "TargetNodeId" : "CoverNode_002",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[40.175709, 8.580759, 0.000000], [41.232853, 12.485522, 0.000000], [41.418854, 17.824684, 0.000000], [41.314484, 23.641985, 0.000000], [41.500488, 28.981148, 0.000000], [42.557632, 32.885910, 0.000000]],
+                "PathPoints" : [[21.429546, 19.903597, 0.000000], [24.000978, 16.732170, 0.000000], [26.257528, 12.395723, 0.000000], [28.409138, 7.670942, 0.000000], [30.665695, 3.334499, 0.000000], [33.237122, 0.163071, 0.000000]],
                 "TargetNodeId" : "CoverNode_009",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_003",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [-2.000000, -2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, -2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 0,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [-2.000000, 2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 1,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [2.000000, -2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, -2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 2,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [2.000000, 2.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 2.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 0.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Enemy,Cover",
@@ -2919,11 +2971,11 @@
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : false
               }, {
-                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 0.000000, 0.000000],
                 "Radius" : 2.000000,
-                "SlotId" : 1,
+                "SlotId" : 0,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
@@ -2936,9 +2988,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 84,
+      "ObjectId" : 81,
       "Properties" : {
-        "PendingActorLocation" : [37.666668, 7.066667, 0.000000],
+        "PendingActorLocation" : [18.333334, 21.133335, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -2948,18 +3000,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 85,
+        "ObjectId" : 82,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/small_barricada.uasset"],
+          "MaterialSlots" : ["Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05b.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05c.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05a.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [37.666668, 7.066667, 0.000000],
+          "RelativeTransform.Location" : [18.333334, 21.133335, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -2968,7 +3020,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_C_StaticMesh.uasset",
+          "StaticMeshPath" : "Content/Data/Obstacle/Car/Truck_A_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -2988,45 +3040,65 @@
       "Name" : "CoverNode_004",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 89,
+          "ObjectId" : 86,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[-5.255783, 40.038876, 0.000000], [-2.560544, 41.686501, 0.000000], [-0.134694, 43.939358, 0.000000], [2.201361, 46.393982, 0.000000], [4.627211, 48.646847, 0.000000], [7.322449, 50.294460, 0.000000]],
-                "TargetNodeId" : "CoverNode_007",
+                "PathPoints" : [[18.811468, 56.017109, 0.000000], [20.992422, 53.998066, 0.000000], [22.715063, 51.237316, 0.000000], [24.284937, 48.229351, 0.000000], [26.007582, 45.468609, 0.000000], [28.188534, 43.449562, 0.000000]],
+                "TargetNodeId" : "CoverNode_002",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[-4.827405, 38.812828, 0.000000], [-1.027405, 37.298550, 0.000000], [2.909038, 35.227989, 0.000000], [6.890963, 32.972012, 0.000000], [10.827405, 30.901459, 0.000000], [14.627405, 29.387175, 0.000000]],
-                "TargetNodeId" : "CoverNode_001",
+                "PathPoints" : [[18.102432, 54.824299, 0.000000], [18.454813, 49.729069, 0.000000], [17.677162, 42.762100, 0.000000], [16.522839, 35.171234, 0.000000], [15.745190, 28.204273, 0.000000], [16.097570, 23.109039, 0.000000]],
+                "TargetNodeId" : "CoverNode_003",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_004",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
                 "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 1,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }, {
                 "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
-                "SlotId" : 1,
+                "SlotId" : 2,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }],
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -3035,9 +3107,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 87,
+      "ObjectId" : 84,
       "Properties" : {
-        "PendingActorLocation" : [-8.400001, 39.400002, 0.000000],
+        "PendingActorLocation" : [15.866668, 56.800003, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -3047,18 +3119,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 88,
+        "ObjectId" : 85,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/small_barricada.uasset"],
+          "MaterialSlots" : ["Content/Material/Auto/SandSand.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-8.400001, 39.400002, 0.000000],
+          "RelativeTransform.Location" : [15.866668, 56.800003, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -3067,7 +3139,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_C_StaticMesh.uasset",
+          "StaticMeshPath" : "Content/Data/Obstacle/sandbag/sandbag_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -3087,45 +3159,65 @@
       "Name" : "CoverNode_005",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 92,
+          "ObjectId" : 89,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[41.008091, 48.040627, 0.000000], [42.655716, 48.145393, 0.000000], [43.767044, 48.288631, 0.000000], [44.699623, 48.444706, 0.000000], [45.810963, 48.587952, 0.000000], [47.458584, 48.692711, 0.000000]],
-                "TargetNodeId" : "CoverNode_015",
+                "PathPoints" : [[-10.057532, 39.419243, 0.000000], [-5.819437, 42.047821, 0.000000], [-1.283965, 45.641983, 0.000000], [3.350633, 49.558018, 0.000000], [7.886104, 53.152187, 0.000000], [12.124198, 55.780758, 0.000000]],
+                "TargetNodeId" : "CoverNode_004",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[40.923508, 47.246655, 0.000000], [41.866367, 45.303795, 0.000000], [41.900829, 42.647232, 0.000000], [41.632507, 39.752773, 0.000000], [41.666973, 37.096210, 0.000000], [42.609833, 35.153355, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
+                "PathPoints" : [[-10.696404, 36.686497, 0.000000], [-8.105929, 32.267448, 0.000000], [-5.823323, 26.225069, 0.000000], [-3.643343, 19.641592, 0.000000], [-1.360738, 13.599222, 0.000000], [1.229738, 9.180174, 0.000000]],
+                "TargetNodeId" : "CoverNode_001",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_005",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
                 "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 1,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }, {
                 "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-0.750000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
-                "SlotId" : 1,
+                "SlotId" : 2,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }],
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -3134,9 +3226,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 90,
+      "ObjectId" : 87,
       "Properties" : {
-        "PendingActorLocation" : [38.466667, 48.000004, 0.000000],
+        "PendingActorLocation" : [-13.800001, 38.400002, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -3146,18 +3238,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 91,
+        "ObjectId" : 88,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/small_barricada.uasset"],
+          "MaterialSlots" : ["Content/Material/Auto/SandSand.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [38.466667, 48.000004, 0.000000],
+          "RelativeTransform.Location" : [-13.800001, 38.400002, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -3166,7 +3258,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_C_StaticMesh.uasset",
+          "StaticMeshPath" : "Content/Data/Obstacle/sandbag/sandbag_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -3186,65 +3278,65 @@
       "Name" : "CoverNode_006",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 95,
+          "ObjectId" : 92,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[-26.923401, 26.056952, 0.000000], [-27.837687, 28.095047, 0.000000], [-30.346500, 30.881823, 0.000000], [-33.386833, 33.918175, 0.000000], [-35.895653, 36.704960, 0.000000], [-36.809940, 38.743053, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-22.848787, 26.525951, 0.000000], [-13.258309, 29.773571, 0.000000], [-1.404274, 34.214188, 0.000000], [11.204280, 39.052483, 0.000000], [23.058310, 43.493103, 0.000000], [32.648788, 46.740723, 0.000000]],
+                "PathPoints" : [[-44.825081, 55.528873, 0.000000], [-39.815556, 52.938393, 0.000000], [-34.225262, 49.396305, 0.000000], [-28.441401, 45.537025, 0.000000], [-22.851116, 41.994949, 0.000000], [-17.841595, 39.404469, 0.000000]],
                 "TargetNodeId" : "CoverNode_005",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[-26.578623, 22.796116, 0.000000], [-26.607195, 16.424686, 0.000000], [-27.905731, 7.712729, 0.000000], [-29.627602, -1.779400, 0.000000], [-30.926142, -10.491352, 0.000000], [-30.954714, -16.862780, 0.000000]],
+                "PathPoints" : [[-45.763077, 53.756279, 0.000000], [-43.172600, 46.594372, 0.000000], [-40.889988, 36.801552, 0.000000], [-38.710011, 26.131779, 0.000000], [-36.427406, 16.338968, 0.000000], [-33.836929, 9.177066, 0.000000]],
                 "TargetNodeId" : "CoverNode_008",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-22.483189, 25.772598, 0.000000], [-11.949855, 27.077362, 0.000000], [1.193394, 28.861418, 0.000000], [15.206613, 30.805250, 0.000000], [28.349855, 32.589310, 0.000000], [38.883190, 33.894073, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-26.201946, 26.562880, 0.000000], [-25.259092, 29.905739, 0.000000], [-25.229345, 34.476578, 0.000000], [-25.503984, 39.456757, 0.000000], [-25.474249, 44.027599, 0.000000], [-24.531389, 47.370457, 0.000000]],
-                "TargetNodeId" : "CoverNode_011",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-25.444901, 26.049566, 0.000000], [-22.549664, 28.068615, 0.000000], [-19.850336, 30.829348, 0.000000], [-17.216326, 33.837318, 0.000000], [-14.517007, 36.598057, 0.000000], [-11.621769, 38.617104, 0.000000]],
-                "TargetNodeId" : "CoverNode_004",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_006",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
+                "LocalPosition" : [1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
-                "Tags" : "Ally,Cover",
+                "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
               }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
+                "LocalPosition" : [1.000000, 1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 2,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }],
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -3253,10 +3345,10 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 93,
+      "ObjectId" : 90,
       "Properties" : {
-        "PendingActorLocation" : [-28.666668, 25.266668, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
+        "PendingActorLocation" : [-48.866669, 56.533337, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "",
@@ -3265,18 +3357,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 94,
+        "ObjectId" : 91,
         "Properties" : {
           "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
+          "MaterialSlots" : ["Content/Material/Auto/SandSand.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-28.666668, 25.266668, 0.000000],
+          "RelativeTransform.Location" : [-48.866669, 56.533337, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -3285,7 +3377,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "None",
+          "StaticMeshPath" : "Content/Data/Obstacle/sandbag/sandbag_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -3305,65 +3397,55 @@
       "Name" : "CoverNode_007",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 98,
+          "ObjectId" : 95,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
-            "Links" : [{
-                "PathPoints" : [[10.043538, 50.301849, 0.000000], [3.538775, 48.673286, 0.000000], [-6.614966, 46.446449, 0.000000], [-17.985039, 44.020214, 0.000000], [-28.138775, 41.793396, 0.000000], [-34.643536, 40.164822, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[14.116814, 50.770847, 0.000000], [18.116816, 50.351810, 0.000000], [22.326725, 49.778812, 0.000000], [26.606609, 49.154522, 0.000000], [30.816523, 48.581539, 0.000000], [34.816521, 48.162487, 0.000000]],
-                "TargetNodeId" : "CoverNode_005",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[10.386978, 47.041016, 0.000000], [4.767930, 37.002918, 0.000000], [-4.174734, 23.277353, 0.000000], [-14.225270, 8.322640, 0.000000], [-23.167931, -5.402917, 0.000000], [-28.786978, -15.441010, 0.000000]],
-                "TargetNodeId" : "CoverNode_008",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[14.482410, 50.017498, 0.000000], [19.425270, 47.655594, 0.000000], [24.924391, 44.426044, 0.000000], [30.608944, 40.907295, 0.000000], [36.108067, 37.677746, 0.000000], [41.050926, 35.315842, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[12.994170, 49.707291, 0.000000], [14.098932, 46.545391, 0.000000], [14.350047, 42.221962, 0.000000], [14.316619, 37.511372, 0.000000], [14.567736, 33.187950, 0.000000], [15.672499, 30.026047, 0.000000]],
-                "TargetNodeId" : "CoverNode_001",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[14.755686, 50.811474, 0.000000], [20.403307, 50.497192, 0.000000], [26.866081, 50.067444, 0.000000], [33.600586, 49.599220, 0.000000], [40.063366, 49.169483, 0.000000], [45.710983, 48.855202, 0.000000]],
-                "TargetNodeId" : "CoverNode_015",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }],
-            "MaxOccupants" : 1,
+            "Links" : [],
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_007",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
+                "LocalPosition" : [1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
-                "Tags" : "Ally,Cover",
+                "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
               }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
+                "LocalPosition" : [1.000000, 1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 2,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }],
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -3372,10 +3454,10 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 96,
+      "ObjectId" : 93,
       "Properties" : {
-        "PendingActorLocation" : [10.466667, 50.933334, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
+        "PendingActorLocation" : [58.733337, 34.133335, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "",
@@ -3384,18 +3466,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 97,
+        "ObjectId" : 94,
         "Properties" : {
           "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
+          "MaterialSlots" : ["Content/Material/Auto/SandSand.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [10.466667, 50.933334, 0.000000],
+          "RelativeTransform.Location" : [58.733337, 34.133335, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -3404,7 +3486,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "None",
+          "StaticMeshPath" : "Content/Data/Obstacle/sandbag/sandbag_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -3424,65 +3506,65 @@
       "Name" : "CoverNode_008",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 101,
+          "ObjectId" : 98,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[-27.110985, -16.072498, 0.000000], [-27.996700, -7.662974, 0.000000], [-30.467249, 3.835763, 0.000000], [-33.466087, 16.364241, 0.000000], [-35.936638, 27.862976, 0.000000], [-36.822353, 36.272499, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
+                "PathPoints" : [[-26.691742, 6.459087, 0.000000], [-21.682220, 6.611469, 0.000000], [-16.091930, 6.819825, 0.000000], [-10.308065, 7.046842, 0.000000], [-4.717783, 7.255199, 0.000000], [0.291740, 7.407580, 0.000000]],
+                "TargetNodeId" : "CoverNode_001",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }, {
-                "PathPoints" : [[-23.037708, -15.603498, 0.000000], [-13.418659, -5.984451, 0.000000], [-1.525557, 7.168125, 0.000000], [11.125563, 21.498549, 0.000000], [23.018661, 34.651115, 0.000000], [32.637711, 44.270168, 0.000000]],
+                "PathPoints" : [[-27.696211, 8.172596, 0.000000], [-25.277166, 12.744026, 0.000000], [-23.228958, 18.994753, 0.000000], [-21.304373, 25.805250, 0.000000], [-19.256172, 32.055977, 0.000000], [-16.837124, 36.627407, 0.000000]],
                 "TargetNodeId" : "CoverNode_005",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-28.866669, -19.333334, 0.000000], [-28.866673, -19.333336, 0.000000], [-28.866665, -19.333330, 0.000000], [-28.866669, -19.333334, 0.000000], [-28.866669, -19.333334, 0.000000], [-28.866669, -19.333334, 0.000000]],
-                "TargetNodeId" : "CoverNode_008",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-22.672110, -16.356852, 0.000000], [-12.110205, -8.680661, 0.000000], [1.072111, 1.815356, 0.000000], [15.127896, 13.251316, 0.000000], [28.310207, 23.747328, 0.000000], [38.872112, 31.423521, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-25.593201, -17.841398, 0.000000], [-22.564629, -13.993782, 0.000000], [-19.682993, -8.732750, 0.000000], [-16.850340, -3.000582, 0.000000], [-13.968707, 2.260448, 0.000000], [-10.940135, 6.108066, 0.000000]],
-                "TargetNodeId" : "CoverNode_002",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-26.756466, -16.862780, 0.000000], [-26.727894, -10.491353, 0.000000], [-27.948296, -1.779396, 0.000000], [-29.585035, 7.712733, 0.000000], [-30.805443, 16.424685, 0.000000], [-30.776871, 22.796116, 0.000000]],
-                "TargetNodeId" : "CoverNode_006",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
+            "MaxOccupants" : 2,
             "NodeId" : "CoverNode_008",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
+                "LocalPosition" : [1.000000, -1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
-                "Tags" : "Ally,Cover",
+                "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
               }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
+                "LocalPosition" : [1.000000, 1.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Enemy,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 2,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 3,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : true
               }],
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -3491,10 +3573,10 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 99,
+      "ObjectId" : 96,
       "Properties" : {
-        "PendingActorLocation" : [-28.866669, -19.333334, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
+        "PendingActorLocation" : [-30.733335, 6.400001, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "",
@@ -3503,18 +3585,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 100,
+        "ObjectId" : 97,
         "Properties" : {
           "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
+          "MaterialSlots" : ["Content/Material/Auto/SandSand.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-28.866669, -19.333334, 0.000000],
+          "RelativeTransform.Location" : [-30.733335, 6.400001, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -3523,7 +3605,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "None",
+          "StaticMeshPath" : "Content/Data/Obstacle/sandbag/sandbag_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -3543,376 +3625,24 @@
       "Name" : "CoverNode_009",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 104,
+          "ObjectId" : 101,
           "Properties" : {
             "DebugSlotRadius" : 1.500000,
             "DisplayName" : "",
             "Links" : [{
-                "PathPoints" : [[42.726929, 34.684361, 0.000000], [31.279305, 35.417694, 0.000000], [14.366959, 36.420406, 0.000000], [-4.366964, 37.512924, 0.000000], [-21.279303, 38.515648, 0.000000], [-32.726917, 39.248981, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[46.792313, 35.153355, 0.000000], [45.849461, 37.096218, 0.000000], [43.305492, 39.752769, 0.000000], [40.227837, 42.647236, 0.000000], [37.683880, 45.303791, 0.000000], [36.741024, 47.246651, 0.000000]],
-                "TargetNodeId" : "CoverNode_005",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[43.070366, 31.423521, 0.000000], [32.508461, 23.747330, 0.000000], [16.807190, 13.251310, 0.000000], [-0.607196, 1.815352, 0.000000], [-16.308456, -8.680662, 0.000000], [-26.870361, -16.356852, 0.000000]],
-                "TargetNodeId" : "CoverNode_008",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[45.066669, 34.400005, 0.000000], [45.066673, 34.400005, 0.000000], [45.066666, 34.399998, 0.000000], [45.066669, 34.400002, 0.000000], [45.066669, 34.400002, 0.000000], [45.066669, 34.400002, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[47.431915, 35.193981, 0.000000], [48.136681, 37.241600, 0.000000], [47.845142, 40.041401, 0.000000], [47.221523, 43.091938, 0.000000], [46.929996, 45.891743, 0.000000], [47.634762, 47.939358, 0.000000]],
-                "TargetNodeId" : "CoverNode_015",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[47.546165, 33.495243, 0.000000], [48.527119, 31.161909, 0.000000], [48.608936, 27.971426, 0.000000], [48.391060, 24.495241, 0.000000], [48.472885, 21.304762, 0.000000], [49.453838, 18.971428, 0.000000]],
-                "TargetNodeId" : "CoverNode_012",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }],
-            "MaxOccupants" : 1,
-            "NodeId" : "CoverNode_009",
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_337",
-            "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 0,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 1,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }],
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 102,
-      "Properties" : {
-        "PendingActorLocation" : [45.066669, 34.400002, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 103,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
-          "ObjectType" : 0,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [45.066669, 34.400002, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "StaticMeshPath" : "None",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "CoverNode_010",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 107,
-          "Properties" : {
-            "DebugSlotRadius" : 1.500000,
-            "DisplayName" : "",
-            "Links" : [{
-                "PathPoints" : [[35.233047, -12.608941, 0.000000], [24.918760, -4.723227, 0.000000], [9.556072, 6.059282, 0.000000], [-7.489411, 17.807388, 0.000000], [-22.852091, 28.589893, 0.000000], [-33.166374, 36.475609, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[39.306316, -12.139942, 0.000000], [39.496796, -3.044703, 0.000000], [38.497761, 9.391643, 0.000000], [37.102242, 22.941696, 0.000000], [36.103207, 35.378036, 0.000000], [36.293686, 44.473278, 0.000000]],
-                "TargetNodeId" : "CoverNode_005",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[35.576488, -15.869778, 0.000000], [26.147915, -16.393589, 0.000000], [11.996305, -17.109816, 0.000000], [-3.729643, -17.890186, 0.000000], [-17.881247, -18.606413, 0.000000], [-27.309816, -19.130224, 0.000000]],
-                "TargetNodeId" : "CoverNode_008",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[39.671917, -12.893295, 0.000000], [40.805256, -5.740914, 0.000000], [41.095432, 4.038874, 0.000000], [41.104572, 14.694464, 0.000000], [41.394753, 24.474249, 0.000000], [42.528088, 31.626629, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[39.262005, -14.407387, 0.000000], [39.338200, -11.159768, 0.000000], [38.182896, -6.719143, 0.000000], [36.617107, -1.880855, 0.000000], [35.461807, 2.559767, 0.000000], [35.537998, 5.807386, 0.000000]],
-                "TargetNodeId" : "CoverNode_003",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[40.052284, -13.798058, 0.000000], [42.166580, -8.979011, 0.000000], [43.798054, -2.389698, 0.000000], [45.268616, 4.789701, 0.000000], [46.900101, 11.379009, 0.000000], [49.014381, 16.198055, 0.000000]],
-                "TargetNodeId" : "CoverNode_012",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }],
-            "MaxOccupants" : 1,
-            "NodeId" : "CoverNode_010",
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_337",
-            "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 0,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 1,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }],
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 105,
-      "Properties" : {
-        "PendingActorLocation" : [37.133335, -15.666668, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 106,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
-          "ObjectType" : 0,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [37.133335, -15.666668, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "StaticMeshPath" : "None",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "CoverNode_011",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 110,
-          "Properties" : {
-            "DebugSlotRadius" : 1.500000,
-            "DisplayName" : "",
-            "Links" : [{
-                "PathPoints" : [[-20.687786, 48.160744, 0.000000], [-22.544931, 46.855988, 0.000000], [-26.343685, 45.071911, 0.000000], [-30.789650, 43.128086, 0.000000], [-34.588406, 41.344021, 0.000000], [-36.445545, 40.039265, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-16.614384, 48.629742, 0.000000], [-7.966763, 48.534512, 0.000000], [2.598058, 48.404270, 0.000000], [13.801948, 48.262394, 0.000000], [24.366766, 48.132168, 0.000000], [33.014385, 48.036930, 0.000000]],
-                "TargetNodeId" : "CoverNode_005",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-20.344219, 44.899910, 0.000000], [-21.315649, 35.185623, 0.000000], [-23.903399, 21.902813, 0.000000], [-27.029934, 7.430512, 0.000000], [-29.617685, -5.852285, 0.000000], [-30.589117, -15.566570, 0.000000]],
-                "TargetNodeId" : "CoverNode_008",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-16.248787, 47.876392, 0.000000], [-6.658308, 45.838295, 0.000000], [5.195726, 43.051502, 0.000000], [17.804279, 40.015163, 0.000000], [29.658310, 37.228378, 0.000000], [39.248791, 35.190285, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-19.210497, 48.153358, 0.000000], [-17.258116, 46.829552, 0.000000], [-15.848006, 45.019432, 0.000000], [-14.618660, 43.047230, 0.000000], [-13.208551, 41.237125, 0.000000], [-11.256171, 39.913315, 0.000000]],
-                "TargetNodeId" : "CoverNode_004",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-18.165403, 48.792236, 0.000000], [-13.517785, 49.116043, 0.000000], [-8.422351, 49.558792, 0.000000], [-3.177647, 50.041206, 0.000000], [1.917785, 50.483967, 0.000000], [6.565403, 50.807774, 0.000000]],
+                "PathPoints" : [[39.673283, 0.883188, 0.000000], [42.873280, 5.911761, 0.000000], [45.989307, 12.787560, 0.000000], [49.077362, 20.279108, 0.000000], [52.193394, 27.154909, 0.000000], [55.393394, 32.183483, 0.000000]],
                 "TargetNodeId" : "CoverNode_007",
                 "Weight" : 1.000000,
                 "bBidirectional" : false
               }],
-            "MaxOccupants" : 1,
-            "NodeId" : "CoverNode_011",
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_337",
-            "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 0,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 1,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }],
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 108,
-      "Properties" : {
-        "PendingActorLocation" : [-22.066668, 48.666668, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 109,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
-          "ObjectType" : 0,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-22.066668, 48.666668, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "StaticMeshPath" : "None",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "CoverNode_012",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 113,
-          "Properties" : {
-            "DebugSlotRadius" : 1.500000,
-            "DisplayName" : "",
-            "Links" : [],
             "MaxOccupants" : 2,
-            "NodeId" : "CoverNode_012",
+            "NodeId" : "CoverNode_009",
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_337",
             "Slots" : [{
-                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [-2.000000, -2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [1.000000, -1.000000, 0.000000],
+                "LocalPosition" : [2.000000, -2.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 0,
                 "Tags" : "Enemy,Cover",
@@ -3920,9 +3650,9 @@
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : true
               }, {
-                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
+                "LocalApproachOffset" : [-2.000000, 2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [1.000000, 1.000000, 0.000000],
+                "LocalPosition" : [2.000000, 2.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 1,
                 "Tags" : "Enemy,Cover",
@@ -3930,9 +3660,9 @@
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : true
               }, {
-                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
+                "LocalApproachOffset" : [2.000000, -2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
+                "LocalPosition" : [-2.000000, -2.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 2,
                 "Tags" : "Ally,Cover",
@@ -3940,15 +3670,35 @@
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : true
               }, {
-                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
+                "LocalApproachOffset" : [2.000000, 2.000000, 0.000000],
                 "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 2.000000, 0.000000],
                 "Radius" : 2.000000,
                 "SlotId" : 3,
                 "Tags" : "Ally,Cover",
                 "Weight" : 1.000000,
                 "bUseApproachOnEntry" : false,
                 "bUseApproachOnExit" : true
+              }, {
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [2.000000, 0.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 0,
+                "Tags" : "Enemy,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : false
+              }, {
+                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
+                "LocalForward" : [1.000000, 0.000000, 0.000000],
+                "LocalPosition" : [-2.000000, 0.000000, 0.000000],
+                "Radius" : 2.000000,
+                "SlotId" : 0,
+                "Tags" : "Ally,Cover",
+                "Weight" : 1.000000,
+                "bUseApproachOnEntry" : false,
+                "bUseApproachOnExit" : false
               }],
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -3957,9 +3707,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 111,
+      "ObjectId" : 99,
       "Properties" : {
-        "PendingActorLocation" : [51.933334, 18.066668, 0.000000],
+        "PendingActorLocation" : [36.333336, -1.066667, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -3969,18 +3719,18 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 112,
+        "ObjectId" : 100,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/basic_concrete_barriers.uasset"],
+          "MaterialSlots" : ["Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05b.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05c.uasset", "Content/Material/Auto/UBH_Crashed_Vehicle_05_Car05a.uasset"],
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [51.933334, 18.066668, 0.000000],
+          "RelativeTransform.Location" : [36.333336, -1.066667, 0.000000],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -3989,359 +3739,7 @@
             "Responses[3]" : 2,
             "Responses[4]" : 2
           },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_A_StaticMesh.uasset",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "CoverNode_013",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 116,
-          "Properties" : {
-            "DebugSlotRadius" : 1.500000,
-            "DisplayName" : "",
-            "Links" : [{
-                "PathPoints" : [[-34.793781, 12.706513, 0.000000], [-34.517597, 16.763657, 0.000000], [-35.399414, 22.311172, 0.000000], [-36.667255, 28.355494, 0.000000], [-37.549080, 33.903015, 0.000000], [-37.272884, 37.960159, 0.000000]],
-                "TargetNodeId" : "CoverNode_014",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-30.720505, 13.175511, 0.000000], [-19.939554, 18.442181, 0.000000], [-6.457725, 25.643536, 0.000000], [7.924396, 33.489799, 0.000000], [21.406223, 40.691154, 0.000000], [32.187176, 45.957825, 0.000000]],
-                "TargetNodeId" : "CoverNode_005",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-34.450340, 9.445677, 0.000000], [-33.288441, 5.093296, 0.000000], [-32.959183, -0.857921, 0.000000], [-32.907486, -7.342082, 0.000000], [-32.578232, -13.293295, 0.000000], [-31.416327, -17.645676, 0.000000]],
-                "TargetNodeId" : "CoverNode_008",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-30.354906, 12.422159, 0.000000], [-18.631100, 15.745971, 0.000000], [-3.860057, 20.290766, 0.000000], [11.926729, 25.242567, 0.000000], [26.697767, 29.787367, 0.000000], [38.421577, 33.111176, 0.000000]],
-                "TargetNodeId" : "CoverNode_009",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-34.439262, 11.916231, 0.000000], [-33.248791, 13.935280, 0.000000], [-32.880463, 16.696014, 0.000000], [-32.786201, 19.703985, 0.000000], [-32.417881, 22.464724, 0.000000], [-31.227406, 24.483772, 0.000000]],
-                "TargetNodeId" : "CoverNode_006",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-33.275997, 10.937612, 0.000000], [-29.085524, 10.432850, 0.000000], [-24.615160, 9.742662, 0.000000], [-20.051506, 8.990670, 0.000000], [-15.581146, 8.300487, 0.000000], [-11.390671, 7.795724, 0.000000]],
-                "TargetNodeId" : "CoverNode_002",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }],
-            "MaxOccupants" : 1,
-            "NodeId" : "CoverNode_013",
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_337",
-            "Slots" : [{
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 0,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }, {
-                "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [0.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 1,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : false
-              }],
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 114,
-      "Properties" : {
-        "PendingActorLocation" : [-37.000004, 11.133334, 0.000000],
-        "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 115,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 89.999977, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["None"],
-          "ObjectType" : 0,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-37.000004, 11.133334, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "StaticMeshPath" : "None",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "CoverNode_014",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 119,
-          "Properties" : {
-            "DebugSlotRadius" : 1.500000,
-            "DisplayName" : "",
-            "Links" : [{
-                "PathPoints" : [[-32.614361, 38.743057, 0.000000], [-31.700077, 36.704964, 0.000000], [-31.708595, 33.918171, 0.000000], [-32.024734, 30.881830, 0.000000], [-32.033260, 28.095043, 0.000000], [-31.118975, 26.056950, 0.000000]],
-                "TargetNodeId" : "CoverNode_006",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }, {
-                "PathPoints" : [[-32.247555, 40.039265, 0.000000], [-30.390413, 41.344032, 0.000000], [-29.110449, 43.128082, 0.000000], [-28.022886, 45.071918, 0.000000], [-26.742926, 46.855976, 0.000000], [-24.885780, 48.160740, 0.000000]],
-                "TargetNodeId" : "CoverNode_011",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }],
-            "MaxOccupants" : 2,
-            "NodeId" : "CoverNode_014",
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_337",
-            "Slots" : [{
-                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 0,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }, {
-                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 1,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }, {
-                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 2,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }, {
-                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 3,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }],
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 117,
-      "Properties" : {
-        "PendingActorLocation" : [-35.066669, 39.533337, 0.000000],
-        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 118,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/basic_concrete_barriers.uasset"],
-          "ObjectType" : 0,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [-35.066669, 39.533337, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_A_StaticMesh.uasset",
-          "bAutoActivate" : true,
-          "bCastShadow" : true,
-          "bCastShadowAsTwoSided" : false,
-          "bEditorOnly" : false,
-          "bEnableCCD" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "CoverNode_015",
-      "NonSceneComponents" : [{
-          "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 122,
-          "Properties" : {
-            "DebugSlotRadius" : 1.500000,
-            "DisplayName" : "",
-            "Links" : [{
-                "PathPoints" : [[52.206223, 47.034603, 0.000000], [52.482418, 42.653648, 0.000000], [51.600582, 36.663361, 0.000000], [50.332752, 30.136639, 0.000000], [49.450928, 24.146353, 0.000000], [49.727116, 19.765402, 0.000000]],
-                "TargetNodeId" : "CoverNode_012",
-                "Weight" : 1.000000,
-                "bBidirectional" : false
-              }],
-            "MaxOccupants" : 2,
-            "NodeId" : "CoverNode_015",
-            "PendingTagsString" : "",
-            "PersistentGuid" : "Component_337",
-            "Slots" : [{
-                "LocalApproachOffset" : [-1.000000, -1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [1.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 0,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }, {
-                "LocalApproachOffset" : [-1.000000, 1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [1.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 1,
-                "Tags" : "Enemy,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }, {
-                "LocalApproachOffset" : [1.000000, -1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-1.000000, -1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 2,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }, {
-                "LocalApproachOffset" : [1.000000, 1.000000, 0.000000],
-                "LocalForward" : [1.000000, 0.000000, 0.000000],
-                "LocalPosition" : [-1.000000, 1.000000, 0.000000],
-                "Radius" : 2.000000,
-                "SlotId" : 3,
-                "Tags" : "Ally,Cover",
-                "Weight" : 1.000000,
-                "bUseApproachOnEntry" : false,
-                "bUseApproachOnExit" : true
-              }],
-            "bAutoActivate" : true,
-            "bEditorOnly" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bTickEnable" : true
-          }
-        }],
-      "ObjectId" : 120,
-      "Properties" : {
-        "PendingActorLocation" : [50.000004, 48.733337, 0.000000],
-        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
-        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 121,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 0,
-          "Mass" : 1.000000,
-          "MaterialSlots" : ["Content/Material/Auto/weathered_concrete_barriers.uasset"],
-          "ObjectType" : 0,
-          "PendingTagsString" : "",
-          "PersistentGuid" : "Component_333",
-          "RelativeTransform.Location" : [50.000004, 48.733337, 0.000000],
-          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "StaticMeshPath" : "Content/Data/Obstacle/Obstacle_B_StaticMesh.uasset",
+          "StaticMeshPath" : "Content/Data/Obstacle/Car/Truck_A_StaticMesh.uasset",
           "bAutoActivate" : true,
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
@@ -4365,9 +3763,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [26.501993, 105.368690, 50.976830],
+    "Location" : [-26.477467, 93.075951, 45.252911],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 5.414660, -93.901779]
+    "Rotation" : [0.000000, 23.564638, -73.651573]
   },
   "Version" : 2,
   "WorldSettings" : {
