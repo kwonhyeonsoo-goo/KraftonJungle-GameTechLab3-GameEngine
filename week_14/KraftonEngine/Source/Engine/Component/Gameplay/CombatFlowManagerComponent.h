@@ -154,6 +154,7 @@ private:
     void DrawFireDebugLine(UCombatCoverAgentComponent* Shooter, UCombatCoverAgentComponent* Target, float Duration) const;
     void DrawFireRanges(float Duration) const;
     float PickAttackInterval(const UCombatCoverAgentComponent* Agent) const;
+    float PickCoverHoldDuration(const UCombatCoverAgentComponent* Agent) const;
     void RemoveStaleAttackState();
     void EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node);
     void RemoveStaleRuntimeState();

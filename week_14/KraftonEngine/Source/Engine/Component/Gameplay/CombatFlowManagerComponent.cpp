@@ -1022,7 +1022,7 @@ UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UComb
     }
 
     UCombatCoverAgentComponent* BestTarget = nullptr;
-    float BestDistance = 0.0f;
+    float BestScore = 0.0f;
     bool bHasBest = false;
     const FVector AgentLocation = Agent->GetOwner()->GetActorLocation();
 
@@ -1044,9 +1044,16 @@ UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UComb
         }
 
         const float Distance = Dist2D(AgentLocation, Candidate->GetOwner()->GetActorLocation());
-        if (!bHasBest || Distance < BestDistance)
+        float TargetPriorityMultiplier = 1.0f;
+        if (Candidate->IsInCover())
         {
-            BestDistance = Distance;
+            TargetPriorityMultiplier = (std::min)((std::max)(0.05f, Candidate->GetInCoverTargetPriorityMultiplier()), 1.0f);
+        }
+
+        const float Score = Distance / TargetPriorityMultiplier;
+        if (!bHasBest || Score < BestScore)
+        {
+            BestScore = Score;
             BestTarget = Candidate;
             bHasBest = true;
         }
@@ -1119,6 +1126,13 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             continue;
         }
 
+        if (Agent->IsHoldingCoverForCombat())
+        {
+            Agent->ClearEngagementTarget();
+            AttackStateByAgent.erase(Agent);
+            continue;
+        }
+
         UCombatCoverAgentComponent* Target = FindBestTargetFor(Agent);
         if (!Target)
         {
@@ -1137,13 +1151,24 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
 
         if (Agent->CanMakeCombatDecision())
         {
+            const float TakeCoverChance = (std::min)((std::max)(0.0f, Agent->GetTakeCoverChanceWhenInRange()), 1.0f);
             const float RepositionChance = (std::min)((std::max)(0.0f, Agent->GetRepositionChanceWhenInRange()), 1.0f);
-            if (RepositionChance > 0.0f)
+            const float TotalDecisionChance = (std::min)(1.0f, TakeCoverChance + RepositionChance);
+
+            if (TotalDecisionChance > 0.0f)
             {
                 Agent->MarkCombatDecisionMade();
 
                 const float Roll = std::uniform_real_distribution<float>(0.0f, 1.0f)(GetCombatRandomGenerator());
-                if (Roll < RepositionChance)
+                if (Roll < TakeCoverChance)
+                {
+                    Agent->ClearEngagementTarget();
+                    Agent->EnterCombatCoverHold(PickCoverHoldDuration(Agent));
+                    AttackStateByAgent.erase(Agent);
+                    continue;
+                }
+
+                if (Roll < TotalDecisionChance)
                 {
                     Agent->ClearEngagementTarget();
                     if (TryRepositionNearby(Agent))
@@ -1285,6 +1310,23 @@ float UCombatFlowManagerComponent::PickAttackInterval(const UCombatCoverAgentCom
     }
 
     return std::uniform_real_distribution<float>(MinInterval, MaxInterval)(GetCombatRandomGenerator());
+}
+
+float UCombatFlowManagerComponent::PickCoverHoldDuration(const UCombatCoverAgentComponent* Agent) const
+{
+    if (!Agent)
+    {
+        return 1.5f;
+    }
+
+    const float MinDuration = (std::max)(0.0f, Agent->GetTakeCoverDurationMin());
+    const float MaxDuration = (std::max)(MinDuration, Agent->GetTakeCoverDurationMax());
+    if (MaxDuration <= MinDuration)
+    {
+        return MinDuration;
+    }
+
+    return std::uniform_real_distribution<float>(MinDuration, MaxDuration)(GetCombatRandomGenerator());
 }
 
 void UCombatFlowManagerComponent::EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node)

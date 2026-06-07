@@ -61,6 +61,7 @@ void UCombatCoverAgentComponent::BeginPlay()
     IncomingAttackDamage = 0.0f;
     SuppressionTimer = 0.0f;
     CombatDecisionCooldownRemaining = 0.0f;
+    CoverHoldTimer = 0.0f;
     StateBeforeEngage = ECombatCoverAgentState::Idle;
     StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     CurrentTarget.Reset();
@@ -110,6 +111,21 @@ void UCombatCoverAgentComponent::RequestAdvance()
     UCombatFlowManagerComponent* Manager = ResolveManager();
     if (!Manager || !Manager->TryAdvance(this))
     {
+        if (!CurrentNodeId.empty())
+        {
+            CurrentTarget.Reset();
+            TargetNodeId.clear();
+            TargetSlotId = -1;
+            CurrentMovePath.clear();
+            CurrentMovePathIndex = 0;
+            FinalReservedSlot.Reset();
+            LinkedMoveStartDelayRemaining = 0.0f;
+            AdvanceTimer = 0.0f;
+            RetryTimer = 0.0f;
+            State = ECombatCoverAgentState::InCover;
+            return;
+        }
+
         SetBlocked();
     }
 }
@@ -128,6 +144,7 @@ void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatMovePath& MoveP
     CurrentMovePath = MovePath.Points;
     CurrentMovePathIndex = 0;
     LinkedMoveStartDelayRemaining = bInitialMove ? 0.0f : LinkedMoveStartDelaySeconds;
+    CoverHoldTimer = 0.0f;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     State = bInitialMove ? ECombatCoverAgentState::MovingToInitialSlot : ECombatCoverAgentState::MovingToLinkedNode;
@@ -148,6 +165,7 @@ void UCombatCoverAgentComponent::MarkDead()
     IncomingFireCount = 0;
     IncomingAttackDamage = 0.0f;
     SuppressionTimer = 0.0f;
+    CoverHoldTimer = 0.0f;
     Health = 0.0f;
 
     if (UCombatFlowManagerComponent* Manager = ResolveManager())
@@ -202,7 +220,11 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackIntervalMin = 1.0f;
         AttackIntervalMax = 2.0f;
         RepositionChanceWhenInRange = 0.0f;
-        CombatDecisionCooldown = 2.0f;
+        CombatDecisionCooldown = 3.0f;
+        TakeCoverChanceWhenInRange = 0.0f;
+        TakeCoverDurationMin = 1.0f;
+        TakeCoverDurationMax = 2.0f;
+        InCoverTargetPriorityMultiplier = 0.45f;
         break;
 
     case ECombatAgentRole::EnemyLongRangeSlow:
@@ -213,8 +235,12 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 7.0f;
         AttackIntervalMin = 2.4f;
         AttackIntervalMax = 3.6f;
-        RepositionChanceWhenInRange = 0.15f;
-        CombatDecisionCooldown = 2.5f;
+        RepositionChanceWhenInRange = 0.05f;
+        CombatDecisionCooldown = 5.0f;
+        TakeCoverChanceWhenInRange = 0.50f;
+        TakeCoverDurationMin = 2.0f;
+        TakeCoverDurationMax = 4.0f;
+        InCoverTargetPriorityMultiplier = 0.30f;
         break;
 
     case ECombatAgentRole::EnemyShortRange:
@@ -227,8 +253,12 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 0.8f;
         AttackIntervalMax = 1.4f;
-        RepositionChanceWhenInRange = 0.30f;
-        CombatDecisionCooldown = 2.0f;
+        RepositionChanceWhenInRange = 0.08f;
+        CombatDecisionCooldown = 4.0f;
+        TakeCoverChanceWhenInRange = 0.35f;
+        TakeCoverDurationMin = 1.5f;
+        TakeCoverDurationMax = 3.0f;
+        InCoverTargetPriorityMultiplier = 0.35f;
         break;
     }
 
@@ -251,6 +281,35 @@ void UCombatCoverAgentComponent::MarkCombatDecisionMade()
     CombatDecisionCooldownRemaining = (std::max)(0.0f, CombatDecisionCooldown);
 }
 
+void UCombatCoverAgentComponent::EnterCombatCoverHold(float Duration)
+{
+    if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed)
+    {
+        return;
+    }
+
+    CurrentTarget.Reset();
+    AdvanceTimer = 0.0f;
+    RetryTimer = 0.0f;
+    LinkedMoveStartDelayRemaining = 0.0f;
+    CoverHoldTimer = (std::max)(0.0f, Duration);
+
+    if (!CurrentNodeId.empty())
+    {
+        TargetNodeId.clear();
+        TargetSlotId = -1;
+        CurrentMovePath.clear();
+        CurrentMovePathIndex = 0;
+        FinalReservedSlot.Reset();
+        State = ECombatCoverAgentState::InCover;
+    }
+    else
+    {
+        CoverHoldTimer = 0.0f;
+        State = ECombatCoverAgentState::Idle;
+    }
+}
+
 void UCombatCoverAgentComponent::TickCombatDecisionCooldown(float DeltaTime)
 {
     if (CombatDecisionCooldownRemaining <= 0.0f || DeltaTime <= 0.0f)
@@ -264,7 +323,7 @@ void UCombatCoverAgentComponent::TickCombatDecisionCooldown(float DeltaTime)
 void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
 {
     MoveSpeed = (std::max)(0.0f, MoveSpeed);
-    AcceptanceRadius = (std::min)(1.0f, AcceptanceRadius); //너무 커지면 슬롯에서 멀어지다 겹침
+    AcceptanceRadius = (std::max)(1.0f, AcceptanceRadius);
     AdvanceInterval = (std::max)(0.0f, AdvanceInterval);
     RetryInterval = (std::max)(0.1f, RetryInterval);
     MaxHealth = (std::max)(1.0f, MaxHealth);
@@ -279,6 +338,10 @@ void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
     TargetScanInterval = (std::max)(0.01f, TargetScanInterval);
     RepositionChanceWhenInRange = (std::min)((std::max)(0.0f, RepositionChanceWhenInRange), 1.0f);
     CombatDecisionCooldown = (std::max)(0.0f, CombatDecisionCooldown);
+    TakeCoverChanceWhenInRange = (std::min)((std::max)(0.0f, TakeCoverChanceWhenInRange), 1.0f);
+    TakeCoverDurationMin = (std::max)(0.0f, TakeCoverDurationMin);
+    TakeCoverDurationMax = (std::max)(TakeCoverDurationMin, TakeCoverDurationMax);
+    InCoverTargetPriorityMultiplier = (std::min)((std::max)(0.05f, InCoverTargetPriorityMultiplier), 1.0f);
     DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
 }
 
@@ -364,6 +427,7 @@ void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent*
     }
 
     CurrentTarget.Reset(Target);
+    CoverHoldTimer = 0.0f;
 
     if (!bCanFireWhileMoving && State != ECombatCoverAgentState::Engaging)
     {
@@ -450,6 +514,7 @@ void UCombatCoverAgentComponent::ApplySuppression(float Duration)
     }
 
     CurrentTarget.Reset();
+    CoverHoldTimer = 0.0f;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
 
@@ -770,6 +835,13 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
         break;
 
     case ECombatCoverAgentState::InCover:
+        if (CoverHoldTimer > 0.0f)
+        {
+            CoverHoldTimer = (std::max)(0.0f, CoverHoldTimer - DeltaTime);
+            AdvanceTimer = 0.0f;
+            break;
+        }
+
         AdvanceTimer += DeltaTime;
         if (AdvanceTimer >= AdvanceInterval)
         {
