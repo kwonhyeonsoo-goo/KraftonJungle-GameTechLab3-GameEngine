@@ -12,16 +12,19 @@
 #include "Component/Primitive/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
 #include "GameFramework/World.h"
+#include "Serialization/PrefabManager.h"
 
 #include "ImGui/imgui.h"
 #include "imgui_node_editor.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cmath>
 #include <cstring>
 #include <string>
 #include <utility>
+#include <random>
 
 namespace ed = ax::NodeEditor;
 
@@ -444,6 +447,11 @@ void FCombatMapEditorWidget::RenderToolbar()
         bPendingOpenGenerateBezierPathPointsPopup = true;
     }
     ImGui::SameLine();
+    if (ImGui::Button("Generate Random Obstacle Map"))
+    {
+        bPendingOpenProceduralObstacleMapPopup = true;
+    }
+    ImGui::SameLine();
     if (ImGui::Button("Agent Type Stats"))
     {
         bPendingOpenRoleStatsPopup = true;
@@ -493,6 +501,7 @@ void FCombatMapEditorWidget::RenderToolbar()
     RenderRoleStatsPopup();
     RenderAutoLinkPopup();
     RenderGenerateBezierPathPointsPopup();
+    RenderProceduralObstacleMapPopup();
     RenderValidationPopup();
 }
 
@@ -1287,6 +1296,294 @@ void FCombatMapEditorWidget::RenderGenerateBezierPathPointsPopup()
         }
         ImGui::EndPopup();
     }
+}
+
+void FCombatMapEditorWidget::RenderProceduralObstacleMapPopup()
+{
+    if (bPendingOpenProceduralObstacleMapPopup)
+    {
+        ImGui::OpenPopup("Procedural Obstacle Map Settings");
+        bPendingOpenProceduralObstacleMapPopup = false;
+    }
+
+    if (ImGui::BeginPopupModal("Procedural Obstacle Map Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TextWrapped("Spawn hard-coded obstacle prefabs, then optionally generate NodeIds, links, and Bezier path points.");
+        ImGui::Separator();
+
+        ImGui::SeparatorText("Spawn Count");
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragInt("Columns", &ProceduralObstacleColumns, 1.0f, 1, 64);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragInt("Rows", &ProceduralObstacleRows, 1.0f, 1, 16);
+        ImGui::TextDisabled("Total: %d obstacles", (std::max)(1, ProceduralObstacleColumns) * (std::max)(1, ProceduralObstacleRows));
+
+        ImGui::SeparatorText("Placement Bounds");
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Min X", &ProceduralObstacleMinX, 10.0f, -100000.0f, 100000.0f);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Max X", &ProceduralObstacleMaxX, 10.0f, -100000.0f, 100000.0f);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Min Y", &ProceduralObstacleMinY, 10.0f, -100000.0f, 100000.0f);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Max Y", &ProceduralObstacleMaxY, 10.0f, -100000.0f, 100000.0f);
+
+        ImGui::SeparatorText("Randomness");
+        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SliderFloat("Layout Randomness", &ProceduralObstacleLayoutRandomness, 0.0f, 1.0f, "%.2f");
+        ImGui::TextDisabled("0 = layered grid, 1 = fully scattered inside bounds.");
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Local Jitter X", &ProceduralObstacleJitterX, 5.0f, 0.0f, 100000.0f);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Local Jitter Y", &ProceduralObstacleJitterY, 5.0f, 0.0f, 100000.0f);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Yaw Random +/-", &ProceduralObstacleYawJitterDegrees, 0.5f, 0.0f, 180.0f);
+
+        ImGui::SeparatorText("Post Process");
+        ImGui::Checkbox("Clear Previous Procedural Obstacles", &bProceduralObstacleClearPrevious);
+        ImGui::Checkbox("Clear Existing Links Before Auto Link", &bProceduralObstacleClearExistingLinks);
+        ImGui::Checkbox("Run Auto Link After Spawn", &bProceduralObstacleRunAutoLink);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Max Distance", &AutoLinkMaxDistance, 10.0f, 0.0f, 100000.0f);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragInt("Max Links Per Node", &AutoLinkMaxLinksPerNode, 1.0f, 1, 16);
+        ImGui::Checkbox("Directed By +X", &bAutoLinkDirectedByX);
+        ImGui::TextDisabled("These are shared with the Auto Link Nearby button.");
+
+        ImGui::Checkbox("Generate Bezier After Auto Link", &bProceduralObstacleGenerateBezier);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragInt("Bezier Samples", &BezierPathSampleCount, 1.0f, 1, 64);
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::DragFloat("Bezier Strength", &BezierPathStrength, 1.0f, 1.0f, 2000.0f);
+        ImGui::TextDisabled("These are shared with the Generate Bezier Points button.");
+
+        ImGui::Separator();
+        if (ImGui::Button("Generate"))
+        {
+            const int32 Count = GenerateProceduralObstacleMap();
+            UE_LOG("CombatMapEditor: generated procedural obstacle map with %d nodes", Count);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close"))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+int32 FCombatMapEditorWidget::GenerateProceduralObstacleMap()
+{
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        UE_LOG("CombatMapEditor: procedural map generation failed - no editor world");
+        return 0;
+    }
+
+    constexpr const char* ProceduralObstacleTag = "ProceduralCombatObstacle";
+    static constexpr std::array<const char*, 6> ObstaclePrefabPaths =
+    {
+        "Content/Prefab/Obstacle/BlankNode.prefab",
+        "Content/Prefab/Obstacle/Obstacle_A.prefab",
+        "Content/Prefab/Obstacle/Obstacle_B.prefab",
+        "Content/Prefab/Obstacle/Obstacle_C.prefab",
+        "Content/Prefab/Obstacle/Sandbag.prefab",
+        "Content/Prefab/Obstacle/Truck_A.prefab"
+    };
+
+    const int32 Columns = (std::max)(1, ProceduralObstacleColumns);
+    const int32 Rows = (std::max)(1, ProceduralObstacleRows);
+    const float MinX = (std::min)(ProceduralObstacleMinX, ProceduralObstacleMaxX);
+    const float MaxX = (std::max)(ProceduralObstacleMinX, ProceduralObstacleMaxX);
+    const float MinY = (std::min)(ProceduralObstacleMinY, ProceduralObstacleMaxY);
+    const float MaxY = (std::max)(ProceduralObstacleMinY, ProceduralObstacleMaxY);
+    const float LayoutRandomness = (std::max)(0.0f, (std::min)(1.0f, ProceduralObstacleLayoutRandomness));
+    const float JitterX = (std::max)(0.0f, ProceduralObstacleJitterX);
+    const float JitterY = (std::max)(0.0f, ProceduralObstacleJitterY);
+    const float YawJitterDegrees = (std::max)(0.0f, ProceduralObstacleYawJitterDegrees);
+
+    if (bProceduralObstacleClearPrevious)
+    {
+        ClearProceduralObstacleActors(World);
+        ClearCachedRuntimePointers();
+    }
+    Refresh();
+
+    std::random_device RandomDevice;
+    std::mt19937 Random(RandomDevice());
+    std::uniform_int_distribution<int32> PrefabIndexDist(0, static_cast<int32>(ObstaclePrefabPaths.size()) - 1);
+    std::uniform_real_distribution<float> RandomXDist(MinX, MaxX);
+    std::uniform_real_distribution<float> RandomYDist(MinY, MaxY);
+    std::uniform_real_distribution<float> JitterXDist(-JitterX, JitterX);
+    std::uniform_real_distribution<float> JitterYDist(-JitterY, JitterY);
+    std::uniform_real_distribution<float> YawDist(-YawJitterDegrees, YawJitterDegrees);
+
+    auto LerpFloat = [](float A, float B, float Alpha)
+    {
+        return A + (B - A) * Alpha;
+    };
+
+    int32 SpawnedCount = 0;
+    for (int32 Column = 0; Column < Columns; ++Column)
+    {
+        for (int32 Row = 0; Row < Rows; ++Row)
+        {
+            const int32 PrefabIndex = PrefabIndexDist(Random);
+            const float GridAlphaX = Columns > 1 ? static_cast<float>(Column) / static_cast<float>(Columns - 1) : 0.5f;
+            const float GridAlphaY = Rows > 1 ? static_cast<float>(Row) / static_cast<float>(Rows - 1) : 0.5f;
+            const float GridX = LerpFloat(MinX, MaxX, GridAlphaX);
+            const float GridY = LerpFloat(MinY, MaxY, GridAlphaY);
+            const float ScatteredX = RandomXDist(Random);
+            const float ScatteredY = RandomYDist(Random);
+
+            FVector Location(
+                LerpFloat(GridX, ScatteredX, LayoutRandomness) + JitterXDist(Random),
+                LerpFloat(GridY, ScatteredY, LayoutRandomness) + JitterYDist(Random),
+                0.0f);
+
+            AActor* Actor = SpawnProceduralObstaclePrefab(
+                World,
+                FString(ObstaclePrefabPaths[PrefabIndex]),
+                Location,
+                YawDist(Random));
+            if (!IsValid(Actor))
+            {
+                continue;
+            }
+
+            Actor->AddTag(FName(ProceduralObstacleTag));
+            if (UCombatCoverNodeComponent* Node = Actor->GetComponentByClass<UCombatCoverNodeComponent>())
+            {
+                Node->SetNodeId(FString());
+                Node->SetDisplayName(FString());
+                Node->GetMutableLinks().clear();
+            }
+
+            ++SpawnedCount;
+        }
+    }
+
+    Refresh();
+
+    if (bProceduralObstacleClearExistingLinks)
+    {
+        for (UCombatCoverNodeComponent* Node : CachedNodes)
+        {
+            if (IsValidCombatNode(Node))
+            {
+                Node->GetMutableLinks().clear();
+            }
+        }
+    }
+
+    GenerateNodeIdsAndRenameActors();
+    Refresh();
+
+    int32 LinkCount = 0;
+    if (bProceduralObstacleRunAutoLink)
+    {
+        if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
+        {
+            LinkCount = Manager->AutoLinkNearby(
+                AutoLinkMaxDistance,
+                AutoLinkMaxLinksPerNode,
+                bAutoLinkDirectedByX);
+        }
+        else
+        {
+            LinkCount = AutoLinkNearbyFromCachedNodes(
+                AutoLinkMaxDistance,
+                AutoLinkMaxLinksPerNode,
+                bAutoLinkDirectedByX);
+        }
+    }
+
+    Refresh();
+    int32 BezierCount = 0;
+    if (bProceduralObstacleGenerateBezier)
+    {
+        BezierCount = GenerateBezierPathPointsForAllLinks(
+            BezierPathSampleCount,
+            BezierPathStrength);
+    }
+
+    UE_LOG("CombatMapEditor: procedural obstacle map spawned %d actors, linked %d edges, generated %d Bezier paths",
+        SpawnedCount,
+        LinkCount,
+        BezierCount);
+
+    Refresh();
+    ResetGraphLayoutFromScene();
+
+    if (EditorEngine && SpawnedCount > 0 && !CachedNodes.empty())
+    {
+        for (UCombatCoverNodeComponent* Node : CachedNodes)
+        {
+            if (IsValidCombatNode(Node) && IsValid(Node->GetOwner()) && Node->GetOwner()->HasTag(FName(ProceduralObstacleTag)))
+            {
+                SelectNode(Node, true);
+                break;
+            }
+        }
+    }
+
+    World->MarkWorldPrimitivePickingBVHDirty();
+    return SpawnedCount;
+}
+
+int32 FCombatMapEditorWidget::ClearProceduralObstacleActors(UWorld* World) const
+{
+    if (!World)
+    {
+        return 0;
+    }
+
+    constexpr const char* ProceduralObstacleTag = "ProceduralCombatObstacle";
+    TArray<AActor*> ActorsToDestroy;
+    for (AActor* Actor : World->GetActors())
+    {
+        if (IsValid(Actor) && Actor->HasTag(FName(ProceduralObstacleTag)))
+        {
+            ActorsToDestroy.push_back(Actor);
+        }
+    }
+
+    for (AActor* Actor : ActorsToDestroy)
+    {
+        World->DestroyActor(Actor);
+    }
+
+    return static_cast<int32>(ActorsToDestroy.size());
+}
+
+AActor* FCombatMapEditorWidget::SpawnProceduralObstaclePrefab(
+    UWorld* World,
+    const FString& PrefabPath,
+    const FVector& Location,
+    float YawDegrees) const
+{
+    if (!World)
+    {
+        return nullptr;
+    }
+
+    AActor* Actor = FPrefabManager::SpawnActorFromPrefab(World, PrefabPath);
+    if (!IsValid(Actor))
+    {
+        UE_LOG("CombatMapEditor: failed to spawn procedural obstacle prefab: %s", PrefabPath.c_str());
+        return nullptr;
+    }
+
+    Actor->SetActorLocation(Location);
+    Actor->SetActorRotation(FRotator(0.0f, YawDegrees, 0.0f));
+    World->UpdateActorInOctree(Actor);
+    World->MarkWorldPrimitivePickingBVHDirty();
+    return Actor;
 }
 
 void FCombatMapEditorWidget::RenderValidationPopup()

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Editor/UI/EditorWidget.h"
 #include "Math/Vector.h"
@@ -44,7 +44,11 @@ private:
     void RenderRoleStatsPopup();
     void RenderAutoLinkPopup();
     void RenderGenerateBezierPathPointsPopup();
+    void RenderProceduralObstacleMapPopup();
     void RenderValidationPopup();
+    int32 GenerateProceduralObstacleMap();
+    int32 ClearProceduralObstacleActors(UWorld* World) const;
+    AActor* SpawnProceduralObstaclePrefab(UWorld* World, const FString& PrefabPath, const FVector& Location, float YawDegrees) const;
     template<typename TComponent>
     TComponent* AddComponentToSelectedActor();
     void SelectNode(UCombatCoverNodeComponent* Node, bool bNavigateGraphToNode = false);
@@ -91,9 +95,26 @@ private:
 	uint32 PendingGraphNavigateNodeId = 0;
     bool bPendingOpenAutoLinkPopup = false;
     bool bPendingOpenGenerateBezierPathPointsPopup = false;
+    bool bPendingOpenProceduralObstacleMapPopup = false;
     bool bPendingOpenValidationPopup = false;
     bool bPendingOpenRoleStatsPopup = false;
     int32 BezierPathSampleCount = 6;
     float BezierPathStrength = 120.0f;
+
+    int32 ProceduralObstacleColumns = 7;
+    int32 ProceduralObstacleRows = 5;
+    float ProceduralObstacleMinX = -75.0f;
+    float ProceduralObstacleMaxX = 75.0f;
+    float ProceduralObstacleMinY = -40.0f;
+    float ProceduralObstacleMaxY = 40.0f;
+    float ProceduralObstacleLayoutRandomness = 0.20f;
+    float ProceduralObstacleJitterX = 8.0f;
+    float ProceduralObstacleJitterY = 6.0f;
+    float ProceduralObstacleYawJitterDegrees = 8.0f;
+    bool bProceduralObstacleClearPrevious = true;
+    bool bProceduralObstacleClearExistingLinks = true;
+    bool bProceduralObstacleRunAutoLink = true;
+    bool bProceduralObstacleGenerateBezier = true;
+
     float GraphSceneUnitsPerGraphUnit = 1.0f / 15.0f;
 };
