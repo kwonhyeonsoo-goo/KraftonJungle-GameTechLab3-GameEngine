@@ -71,6 +71,12 @@ struct FScopeState
 	float ScopedSensitivity = 0.25f;
 	float CurrentSensitivity = 1.0f;
 	float ScopeBlendSpeed = 12.0f;
+	float MinZoomMagnification = 4.0f;
+	float MaxZoomMagnification = 16.0f;
+	float DefaultZoomMagnification = 4.0f;
+	float CurrentZoomMagnification = 4.0f;
+	float TargetZoomMagnification = 4.0f;
+	float ZoomStep = 1.0f;
 };
 
 USTRUCT()

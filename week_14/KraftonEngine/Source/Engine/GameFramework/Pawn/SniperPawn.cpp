@@ -103,6 +103,7 @@ void ASniperPawn::SetupInputComponent()
 
 	InputComponent->AddMouseAxisMapping("SniperTurn", EInputAxisSourceType::MouseX, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
+	InputComponent->AddMouseAxisMapping("SniperScopeZoom", EInputAxisSourceType::MouseWheel, 1.0f);
 	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
 	InputComponent->AddActionMapping("SniperScope", "RightMouseButton");
 	InputComponent->AddActionMapping("SniperHoldBreath", "Shift");
@@ -119,6 +120,11 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->BindAxis("SniperLookUp", [this](float Value)
 	{
 		HandleLookUpInput(Value);
+	});
+
+	InputComponent->BindAxis("SniperScopeZoom", [this](float Value)
+	{
+		HandleScopeZoomAxis(Value);
 	});
 
 	InputComponent->BindAction("SniperScope", EInputEvent::Pressed, [this]()
@@ -222,6 +228,14 @@ void ASniperPawn::SyncSniperRuntimeState()
 		ScopeState.NormalFOV = Camera->GetFOV();
 	}
 
+	ScopeState.MinZoomMagnification = (std::max)(ScopeState.MinZoomMagnification, 1.0f);
+	ScopeState.MaxZoomMagnification = (std::max)(ScopeState.MaxZoomMagnification, ScopeState.MinZoomMagnification);
+	ScopeState.ZoomStep = (std::max)(ScopeState.ZoomStep, 0.1f);
+	ScopeState.DefaultZoomMagnification = ClampScopeZoomMagnification(ScopeState.DefaultZoomMagnification);
+	ScopeState.CurrentZoomMagnification = ScopeState.DefaultZoomMagnification;
+	ScopeState.TargetZoomMagnification = ScopeState.DefaultZoomMagnification;
+	ScopeState.ScopedFOV = ComputeScopedFOVForMagnification(ScopeState.CurrentZoomMagnification);
+
 	ScopeState.bIsScoped = false;
 	ScopeState.TargetFOV = ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ScopeState.NormalFOV;
@@ -267,6 +281,9 @@ void ASniperPawn::SyncSniperRuntimeState()
 void ASniperPawn::UpdateScopeState(float DeltaTime)
 {
 	ScopeState.bIsScoped = InputState.bScopeHeld;
+	ScopeState.TargetZoomMagnification = ClampScopeZoomMagnification(ScopeState.TargetZoomMagnification);
+	ScopeState.CurrentZoomMagnification = ScopeState.TargetZoomMagnification;
+	ScopeState.ScopedFOV = ComputeScopedFOVForMagnification(ScopeState.CurrentZoomMagnification);
 	ScopeState.TargetFOV = ScopeState.bIsScoped ? ScopeState.ScopedFOV : ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ExponentialInterpTo(
 		ScopeState.CurrentFOV,
@@ -455,6 +472,40 @@ FRotator ASniperPawn::BuildEffectiveAimRotation() const
 	return EffectiveRotation;
 }
 
+float ASniperPawn::ClampScopeZoomMagnification(float Magnification) const
+{
+	float MinZoomMagnification = ScopeState.MinZoomMagnification;
+	float MaxZoomMagnification = ScopeState.MaxZoomMagnification;
+	if (MinZoomMagnification > MaxZoomMagnification)
+	{
+		std::swap(MinZoomMagnification, MaxZoomMagnification);
+	}
+
+	MinZoomMagnification = (std::max)(MinZoomMagnification, 1.0f);
+	MaxZoomMagnification = (std::max)(MaxZoomMagnification, MinZoomMagnification);
+	return FMath::Clamp(Magnification, MinZoomMagnification, MaxZoomMagnification);
+}
+
+float ASniperPawn::ComputeScopedFOVForMagnification(float Magnification) const
+{
+	const float SafeMagnification = (std::max)(ClampScopeZoomMagnification(Magnification), 1.0f);
+	const float ComputedScopedFOV = ScopeState.NormalFOV / SafeMagnification;
+	return FMath::Clamp(ComputedScopedFOV, 0.01f, ScopeState.NormalFOV);
+}
+
+void ASniperPawn::AdjustScopeZoomStep(int32 StepDelta)
+{
+	if (StepDelta == 0)
+	{
+		return;
+	}
+
+	const float SafeZoomStep = (std::max)(ScopeState.ZoomStep, 0.1f);
+	const float NewZoomMagnification =
+		ScopeState.TargetZoomMagnification + static_cast<float>(StepDelta) * SafeZoomStep;
+	ScopeState.TargetZoomMagnification = ClampScopeZoomMagnification(NewZoomMagnification);
+}
+
 void ASniperPawn::HandleTurnInput(float Value)
 {
 	InputState.MouseDeltaX = Value;
@@ -483,6 +534,16 @@ void ASniperPawn::HandleLookUpInput(float Value)
 	Control.Pitch = ClampSniperPitch(Control.Pitch, MinCameraPitch, MaxCameraPitch);
 	SetControlRotation(Control);
 	ApplySniperControlRotation();
+}
+
+void ASniperPawn::HandleScopeZoomAxis(float Value)
+{
+	if (!ScopeState.bIsScoped || std::abs(Value) <= 0.0001f)
+	{
+		return;
+	}
+
+	AdjustScopeZoomStep(Value > 0.0f ? +1 : -1);
 }
 
 void ASniperPawn::HandleScopePressed()

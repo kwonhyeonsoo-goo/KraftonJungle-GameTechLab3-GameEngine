@@ -42,6 +42,12 @@ public:
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetCurrentScopeFOV() const { return ScopeState.CurrentFOV; }
 	UFUNCTION(Pure, Category="Sniper|State")
+	float GetCurrentScopeZoomMagnification() const { return ScopeState.CurrentZoomMagnification; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetMinScopeZoomMagnification() const { return ScopeState.MinZoomMagnification; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetMaxScopeZoomMagnification() const { return ScopeState.MaxZoomMagnification; }
+	UFUNCTION(Pure, Category="Sniper|State")
 	float GetCurrentScopeSensitivity() const { return ScopeState.CurrentSensitivity; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathActive() const;
@@ -81,6 +87,10 @@ public:
 	bool bInvertMouseY = false;
 
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped FOV", Member=ScopeState.ScopedFOV, Type=Float, Min=0.05f, Max=3.14f, Speed=0.01f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Min Zoom Magnification", Member=ScopeState.MinZoomMagnification, Type=Float, Min=1.0f, Max=64.0f, Speed=0.1f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Max Zoom Magnification", Member=ScopeState.MaxZoomMagnification, Type=Float, Min=1.0f, Max=64.0f, Speed=0.1f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Default Zoom Magnification", Member=ScopeState.DefaultZoomMagnification, Type=Float, Min=1.0f, Max=64.0f, Speed=0.1f);
+	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Zoom Step", Member=ScopeState.ZoomStep, Type=Float, Min=0.1f, Max=16.0f, Speed=0.1f);
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Normal Sensitivity", Member=ScopeState.NormalSensitivity, Type=Float, Min=0.0f, Max=10.0f, Speed=0.01f);
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped Sensitivity", Member=ScopeState.ScopedSensitivity, Type=Float, Min=0.0f, Max=10.0f, Speed=0.01f);
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="FOV Blend Speed", Member=ScopeState.ScopeBlendSpeed, Type=Float, Min=0.0f, Max=60.0f, Speed=0.1f);
@@ -123,8 +133,12 @@ private:
 	void UpdateRecoilState(float DeltaTime);
 	void ApplySniperControlRotation();
 	FRotator BuildEffectiveAimRotation() const;
+	float ClampScopeZoomMagnification(float Magnification) const;
+	float ComputeScopedFOVForMagnification(float Magnification) const;
+	void AdjustScopeZoomStep(int32 StepDelta);
 	void HandleTurnInput(float Value);
 	void HandleLookUpInput(float Value);
+	void HandleScopeZoomAxis(float Value);
 	void HandleFirePressed();
 	void HandleScopePressed();
 	void HandleScopeReleased();
