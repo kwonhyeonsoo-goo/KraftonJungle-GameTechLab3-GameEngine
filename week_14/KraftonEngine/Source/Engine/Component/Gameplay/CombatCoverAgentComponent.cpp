@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 namespace
 {
@@ -33,6 +34,23 @@ namespace
         }
         return DeltaYaw;
     }
+
+    std::mt19937& GetAgentRandomGenerator()
+    {
+        static std::mt19937 Generator{ std::random_device{}() };
+        return Generator;
+    }
+
+    float RandomFloatInRange(float MinValue, float MaxValue)
+    {
+        MinValue = (std::max)(0.0f, MinValue);
+        MaxValue = (std::max)(MinValue, MaxValue);
+        if (MaxValue <= MinValue)
+        {
+            return MinValue;
+        }
+        return std::uniform_real_distribution<float>(MinValue, MaxValue)(GetAgentRandomGenerator());
+    }
 }
 
 UCombatCoverAgentComponent::UCombatCoverAgentComponent()
@@ -54,6 +72,7 @@ void UCombatCoverAgentComponent::BeginPlay()
     FinalReservedSlot.Reset();
     ApplyCombatRoleDefaults();
     ClampRuntimeEditableValues();
+    PickRandomAdvanceInterval();
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     TargetScanTimer = 0.0f;
@@ -145,6 +164,7 @@ void UCombatCoverAgentComponent::MoveToReservedSlot(const FCombatMovePath& MoveP
     CurrentMovePathIndex = 0;
     LinkedMoveStartDelayRemaining = bInitialMove ? 0.0f : LinkedMoveStartDelaySeconds;
     CoverHoldTimer = 0.0f;
+    bMoveToCombatSlotAfterCoverHold = false;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     State = bInitialMove ? ECombatCoverAgentState::MovingToInitialSlot : ECombatCoverAgentState::MovingToLinkedNode;
@@ -166,6 +186,7 @@ void UCombatCoverAgentComponent::MarkDead()
     IncomingAttackDamage = 0.0f;
     SuppressionTimer = 0.0f;
     CoverHoldTimer = 0.0f;
+    bMoveToCombatSlotAfterCoverHold = false;
     Health = 0.0f;
 
     if (UCombatFlowManagerComponent* Manager = ResolveManager())
@@ -219,12 +240,19 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 1.0f;
         AttackIntervalMax = 2.0f;
+        AdvanceIntervalMin = 20.0f;
+        AdvanceIntervalMax = 30.0f;
         RepositionChanceWhenInRange = 0.0f;
         CombatDecisionCooldown = 3.0f;
         TakeCoverChanceWhenInRange = 0.0f;
         TakeCoverDurationMin = 1.0f;
         TakeCoverDurationMax = 2.0f;
         InCoverTargetPriorityMultiplier = 0.45f;
+        AdvanceFullCoverChance = 0.45f;
+        FullCoverToCombatDelayMin = 1.0f;
+        FullCoverToCombatDelayMax = 2.0f;
+        LowHealthFullCoverRatio = 0.35f;
+        LowHealthFullCoverChance = 0.80f;
         break;
 
     case ECombatAgentRole::EnemyLongRangeSlow:
@@ -235,12 +263,19 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 7.0f;
         AttackIntervalMin = 2.4f;
         AttackIntervalMax = 3.6f;
+        AdvanceIntervalMin = 6.0f;
+        AdvanceIntervalMax = 8.0f;
         RepositionChanceWhenInRange = 0.05f;
         CombatDecisionCooldown = 5.0f;
         TakeCoverChanceWhenInRange = 0.50f;
         TakeCoverDurationMin = 2.0f;
         TakeCoverDurationMax = 4.0f;
         InCoverTargetPriorityMultiplier = 0.30f;
+        AdvanceFullCoverChance = 0.85f;
+        FullCoverToCombatDelayMin = 1.0f;
+        FullCoverToCombatDelayMax = 2.0f;
+        LowHealthFullCoverRatio = 0.35f;
+        LowHealthFullCoverChance = 0.75f;
         break;
 
     case ECombatAgentRole::EnemyShortRange:
@@ -253,12 +288,19 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 0.8f;
         AttackIntervalMax = 1.4f;
+        AdvanceIntervalMin = 4.0f;
+        AdvanceIntervalMax = 6.0f;
         RepositionChanceWhenInRange = 0.08f;
         CombatDecisionCooldown = 4.0f;
         TakeCoverChanceWhenInRange = 0.35f;
         TakeCoverDurationMin = 1.5f;
         TakeCoverDurationMax = 3.0f;
         InCoverTargetPriorityMultiplier = 0.35f;
+        AdvanceFullCoverChance = 0.85f;
+        FullCoverToCombatDelayMin = 0.8f;
+        FullCoverToCombatDelayMax = 1.6f;
+        LowHealthFullCoverRatio = 0.35f;
+        LowHealthFullCoverChance = 0.75f;
         break;
     }
 
@@ -281,6 +323,33 @@ void UCombatCoverAgentComponent::MarkCombatDecisionMade()
     CombatDecisionCooldownRemaining = (std::max)(0.0f, CombatDecisionCooldown);
 }
 
+void UCombatCoverAgentComponent::PickRandomAdvanceInterval()
+{
+    AdvanceInterval = RandomFloatInRange(AdvanceIntervalMin, AdvanceIntervalMax);
+}
+
+float UCombatCoverAgentComponent::PickFullCoverToCombatDelay() const
+{
+    return RandomFloatInRange(FullCoverToCombatDelayMin, FullCoverToCombatDelayMax);
+}
+
+void UCombatCoverAgentComponent::HandleArrivedAtCoverSlot(UCombatFlowManagerComponent* Manager)
+{
+    PickRandomAdvanceInterval();
+    bMoveToCombatSlotAfterCoverHold = false;
+
+    if (!Manager || CurrentNodeId.empty())
+    {
+        return;
+    }
+
+    if (Manager->IsAgentInSlotType(this, ECombatCoverSlotType::FullCover) && Manager->HasFreeCombatSlotInCurrentNode(this))
+    {
+        CoverHoldTimer = PickFullCoverToCombatDelay();
+        bMoveToCombatSlotAfterCoverHold = true;
+    }
+}
+
 void UCombatCoverAgentComponent::EnterCombatCoverHold(float Duration)
 {
     if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed)
@@ -289,6 +358,7 @@ void UCombatCoverAgentComponent::EnterCombatCoverHold(float Duration)
     }
 
     CurrentTarget.Reset();
+    bMoveToCombatSlotAfterCoverHold = false;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
     LinkedMoveStartDelayRemaining = 0.0f;
@@ -324,7 +394,9 @@ void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
 {
     MoveSpeed = (std::max)(0.0f, MoveSpeed);
     AcceptanceRadius = (std::max)(1.0f, AcceptanceRadius);
-    AdvanceInterval = (std::max)(0.0f, AdvanceInterval);
+    AdvanceIntervalMin = (std::max)(0.0f, AdvanceIntervalMin);
+    AdvanceIntervalMax = (std::max)(AdvanceIntervalMin, AdvanceIntervalMax);
+    AdvanceInterval = (std::min)((std::max)(0.0f, AdvanceInterval), AdvanceIntervalMax);
     RetryInterval = (std::max)(0.1f, RetryInterval);
     MaxHealth = (std::max)(1.0f, MaxHealth);
     Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
@@ -342,6 +414,11 @@ void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
     TakeCoverDurationMin = (std::max)(0.0f, TakeCoverDurationMin);
     TakeCoverDurationMax = (std::max)(TakeCoverDurationMin, TakeCoverDurationMax);
     InCoverTargetPriorityMultiplier = (std::min)((std::max)(0.05f, InCoverTargetPriorityMultiplier), 1.0f);
+    AdvanceFullCoverChance = (std::min)((std::max)(0.0f, AdvanceFullCoverChance), 1.0f);
+    FullCoverToCombatDelayMin = (std::max)(0.0f, FullCoverToCombatDelayMin);
+    FullCoverToCombatDelayMax = (std::max)(FullCoverToCombatDelayMin, FullCoverToCombatDelayMax);
+    LowHealthFullCoverRatio = (std::min)((std::max)(0.0f, LowHealthFullCoverRatio), 1.0f);
+    LowHealthFullCoverChance = (std::min)((std::max)(0.0f, LowHealthFullCoverChance), 1.0f);
     DeathDebugScaleMultiplier = (std::min)((std::max)(0.01f, DeathDebugScaleMultiplier), 1.0f);
 }
 
@@ -515,6 +592,7 @@ void UCombatCoverAgentComponent::ApplySuppression(float Duration)
 
     CurrentTarget.Reset();
     CoverHoldTimer = 0.0f;
+    bMoveToCombatSlotAfterCoverHold = false;
     AdvanceTimer = 0.0f;
     RetryTimer = 0.0f;
 
@@ -653,6 +731,7 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
         AdvanceTimer = 0.0f;
         RetryTimer = 0.0f;
         State = ECombatCoverAgentState::InCover;
+        HandleArrivedAtCoverSlot(Manager);
     };
 
     if (CurrentMovePathIndex >= static_cast<int32>(CurrentMovePath.size()))
@@ -839,7 +918,32 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
         {
             CoverHoldTimer = (std::max)(0.0f, CoverHoldTimer - DeltaTime);
             AdvanceTimer = 0.0f;
+            if (CoverHoldTimer <= 0.0f && bMoveToCombatSlotAfterCoverHold)
+            {
+                bMoveToCombatSlotAfterCoverHold = false;
+                if (UCombatFlowManagerComponent* Manager = ResolveManager())
+                {
+                    if (Manager->TryMoveToCombatSlotInCurrentNode(this))
+                    {
+                        break;
+                    }
+                }
+                PickRandomAdvanceInterval();
+            }
             break;
+        }
+
+        if (bMoveToCombatSlotAfterCoverHold)
+        {
+            bMoveToCombatSlotAfterCoverHold = false;
+            if (UCombatFlowManagerComponent* Manager = ResolveManager())
+            {
+                if (Manager->TryMoveToCombatSlotInCurrentNode(this))
+                {
+                    break;
+                }
+            }
+            PickRandomAdvanceInterval();
         }
 
         AdvanceTimer += DeltaTime;
