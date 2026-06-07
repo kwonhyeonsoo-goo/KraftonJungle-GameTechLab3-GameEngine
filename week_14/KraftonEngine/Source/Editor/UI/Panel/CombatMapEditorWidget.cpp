@@ -1369,14 +1369,16 @@ int32 FCombatMapEditorWidget::GenerateProceduralObstacleMap()
     }
 
     constexpr const char* ProceduralObstacleTag = "ProceduralCombatObstacle";
-    static constexpr std::array<const char*, 6> ObstaclePrefabPaths =
+    static constexpr std::array<const char*, 8> ObstaclePrefabPaths =
     {
         "Content/Prefab/Obstacle/BlankNode.prefab",
         "Content/Prefab/Obstacle/Obstacle_A.prefab",
         "Content/Prefab/Obstacle/Obstacle_B.prefab",
         "Content/Prefab/Obstacle/Obstacle_C.prefab",
+        "Content/Prefab/Obstacle/Car_A.prefab",
         "Content/Prefab/Obstacle/Sandbag.prefab",
-        "Content/Prefab/Obstacle/Truck_A.prefab"
+        "Content/Prefab/Obstacle/Truck_A.prefab",
+        "Content/Prefab/Obstacle/Truck_A_reversed.prefab"
     };
 
     const int32 Columns = (std::max)(1, ProceduralObstacleColumns);
