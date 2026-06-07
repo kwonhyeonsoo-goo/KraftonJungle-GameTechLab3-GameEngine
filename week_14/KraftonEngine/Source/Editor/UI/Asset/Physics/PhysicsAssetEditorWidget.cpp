@@ -49,6 +49,8 @@ namespace
     constexpr float EditorRagdollGrabFollowSpeed = 28.0f;
     constexpr float EditorRagdollGrabMaxLinearVelocity = 240.0f;
     constexpr float EditorRagdollGrabAngularDamping = 0.85f;
+    constexpr float EditorSimulationFrameRateScaleMin = 0.0f;
+    constexpr float EditorSimulationFrameRateScaleMax = 2.0f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
@@ -1813,6 +1815,25 @@ void FPhysicsAssetEditorWidget::RenderSimulationControls(UPhysicsAsset* PhysicsA
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip("Simulate the selected body and its descendant body chain. Other bodies are kept kinematic as anchors.");
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(128.0f);
+    if (ImGui::SliderFloat(
+        "Frame Rate",
+        &EditorSimulationFrameRateScale,
+        EditorSimulationFrameRateScaleMin,
+        EditorSimulationFrameRateScaleMax,
+        "%.2fx"))
+    {
+        EditorSimulationFrameRateScale = FMath::Clamp(
+            EditorSimulationFrameRateScale,
+            EditorSimulationFrameRateScaleMin,
+            EditorSimulationFrameRateScaleMax);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Scale the PhysicsAsset simulation step from frozen to double speed.");
     }
 
     if (!bCanSimulate)
@@ -3735,7 +3756,11 @@ void FPhysicsAssetEditorWidget::TickEditorSimulation(
     {
         if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
         {
-            PhysicsScene->Tick(DeltaTime);
+            EditorSimulationFrameRateScale = FMath::Clamp(
+                EditorSimulationFrameRateScale,
+                EditorSimulationFrameRateScaleMin,
+                EditorSimulationFrameRateScaleMax);
+            PhysicsScene->Tick(DeltaTime * EditorSimulationFrameRateScale);
             PhysicsScene->DispatchPendingEvents();
         }
     }
@@ -3789,6 +3814,7 @@ bool FPhysicsAssetEditorWidget::StartEditorSimulation(
     Options.bNoGravity = bEditorSimulationNoGravity;
     Options.bSelectedOnly = bEditorSimulationSelectedOnly;
     Options.bForceQueryAndPhysicsCollision = true;
+    Options.bDisableSelfCollision = true;
     Options.SelectedBoneName = GetSelectedSimulationRootBoneName(PhysicsAsset);
     if (Options.bSelectedOnly && Options.SelectedBoneName == FName::None)
     {

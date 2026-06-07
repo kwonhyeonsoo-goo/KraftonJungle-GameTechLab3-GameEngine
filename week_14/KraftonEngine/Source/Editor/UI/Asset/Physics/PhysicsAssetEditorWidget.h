@@ -203,6 +203,7 @@ private:
     bool bEditorSimulationNoGravity = false;
     bool bEditorSimulationSelectedOnly = false;
     bool bEditorSimulationRestartRequested = false;
+    float EditorSimulationFrameRateScale = 1.0f;
     bool bEditorRagdollGrabActive = false;
     FPhysicsBodyHandle EditorRagdollGrabBody;
     FName EditorRagdollGrabBoneName = FName::None;

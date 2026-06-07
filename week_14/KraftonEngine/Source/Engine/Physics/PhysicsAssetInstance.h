@@ -17,6 +17,7 @@ struct FPhysicsAssetSimulationOptions
     bool bPartialSimulation = false;
     bool bIncludePartialDescendants = true;
     bool bForceQueryAndPhysicsCollision = false;
+    bool bDisableSelfCollision = false;
     bool bUseIndependentRagdollCollision = false;
     ECollisionEnabled IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
     bool bIndependentGenerateOverlapEvents = false;

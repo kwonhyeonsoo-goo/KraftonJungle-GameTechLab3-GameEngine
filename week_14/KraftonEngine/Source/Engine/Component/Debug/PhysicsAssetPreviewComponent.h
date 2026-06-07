@@ -86,8 +86,8 @@ private:
 	void AppendSphere(const FTransform& ShapeWorld, float Radius, const FVector4& Color);
 	void AppendCapsuleZAxis(const FTransform& ShapeWorld, float Radius, float HalfHeight, const FVector4& Color);
 	void AppendConstraintLimitSurfaces(int32 ConstraintIndex, const FPhysicsAssetPreviewPoseCache& PoseCache);
-	void AppendSwingLimitSurface(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
-	void AppendTwistLimitSurface(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
+	void AppendSwingLimitCone(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& ConeColor, const FVector4& RimColor);
+	void AppendTwistLimitSector(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
 
 	uint32 AddVertexWorld(const FVector& WorldPosition, const FVector4& Color);
 	void ExpandBoundsWorld(const FVector& WorldPosition);

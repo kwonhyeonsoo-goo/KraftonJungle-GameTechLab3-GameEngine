@@ -81,10 +81,27 @@ namespace
         return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
     }
 
+    uint32 GetPhysicsAssetSelfCollisionGroup(const USkeletalMeshComponent* Component)
+    {
+        if (!Component)
+        {
+            return 0;
+        }
+
+        const uint32 ComponentId = Component->GetUUID();
+        if (ComponentId != 0)
+        {
+            return ComponentId;
+        }
+
+        return Component->GetOwner() ? Component->GetOwner()->GetUUID() : 0;
+    }
+
     void FillShapeFilterDataFromComponent(
         FPhysicsFilterData& OutFilterData,
         const USkeletalMeshComponent* Component,
         bool bForceQueryAndPhysicsCollision,
+        bool bDisableSelfCollision,
         bool bUseIndependentRagdollCollision,
         ECollisionEnabled IndependentCollisionEnabled,
         bool bIndependentGenerateOverlapEvents,
@@ -100,13 +117,11 @@ namespace
         OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
-        // Keep ragdoll-vs-ragdoll self-collision decisions at the PhysicsAsset constraint
-        // layer, but still stamp the owning actor so filter policy can reject ragdoll
-        // body vs same-actor character primitive pairs.
-        OutFilterData.IgnoreGroup =
-            (bUseIndependentRagdollCollision && Component->GetOwner())
+        OutFilterData.IgnoreGroup = bDisableSelfCollision
+            ? GetPhysicsAssetSelfCollisionGroup(Component)
+            : ((bUseIndependentRagdollCollision && Component->GetOwner())
                 ? Component->GetOwner()->GetUUID()
-                : 0;
+                : 0);
         OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
             ? IndependentCollisionEnabled
             : (bForceQueryAndPhysicsCollision
@@ -119,6 +134,7 @@ namespace
             : (bForceQueryAndPhysicsCollision
                 ? false
                 : Component->GetGenerateOverlapEvents());
+        OutFilterData.bIgnoreSameActor = bDisableSelfCollision;
         OutFilterData.bIsIndependentRagdoll = bUseIndependentRagdollCollision;
         OutFilterData.bIsPartialRagdoll = bIsPartialRagdollBody;
         OutFilterData.CollisionRole = bIsPartialRagdollBody
@@ -178,6 +194,7 @@ namespace
                 ShapeDesc.FilterData,
                 OwnerComponent,
                 Options.bForceQueryAndPhysicsCollision,
+                Options.bDisableSelfCollision,
                 Options.bUseIndependentRagdollCollision,
                 Options.IndependentCollisionEnabled,
                 Options.bIndependentGenerateOverlapEvents,
