@@ -264,7 +264,7 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
         StartSlot.SlotId = Agent->GetCurrentSlotId();
 
         FCombatMovePath MovePath;
-        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, StartSlot, Candidate, MovePath))
+        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, StartSlot, Candidate, Agent, MovePath))
         {
             ReleaseAgent(Agent);
             continue;
@@ -1093,6 +1093,67 @@ void UCombatFlowManagerComponent::GatherAdvanceCandidateNodes(
     }
 }
 
+FCombatCoverSlotHandle UCombatFlowManagerComponent::FindExitSlotForFullCoverTraversal(
+    UCombatCoverNodeComponent* CurrentNode,
+    const FCombatCoverSlotHandle& StartSlot,
+    const FString& TeamTag,
+    const UCombatCoverAgentComponent* RequestingAgent) const
+{
+    FCombatCoverSlotHandle BestHandle;
+    float BestDistance = 0.0f;
+    bool bHasBest = false;
+
+    if (!CurrentNode || !StartSlot.IsValid() || StartSlot.NodeId != CurrentNode->GetNodeId())
+    {
+        return BestHandle;
+    }
+
+    const int32 StartSlotIndex = CurrentNode->FindSlotIndexById(StartSlot.SlotId);
+    if (StartSlotIndex < 0)
+    {
+        return BestHandle;
+    }
+
+    const FCombatCoverSlot* StartSlotData = CurrentNode->FindSlotById(StartSlot.SlotId);
+    if (!StartSlotData || StartSlotData->SlotType != ECombatCoverSlotType::FullCover)
+    {
+        return BestHandle;
+    }
+
+    const FVector StartPosition = CurrentNode->GetSlotWorldPosition(StartSlotIndex);
+    for (int32 SlotIndex = 0; SlotIndex < static_cast<int32>(CurrentNode->GetSlots().size()); ++SlotIndex)
+    {
+        const FCombatCoverSlot& Slot = CurrentNode->GetSlots()[SlotIndex];
+        if (Slot.SlotId == StartSlot.SlotId || Slot.SlotType == ECombatCoverSlotType::FullCover)
+        {
+            continue;
+        }
+
+        if (!SlotTagsMatchTeam(Slot, TeamTag))
+        {
+            continue;
+        }
+
+        FCombatCoverSlotHandle Handle;
+        Handle.NodeId = CurrentNode->GetNodeId();
+        Handle.SlotId = Slot.SlotId;
+        if (!IsSlotFree(Handle, RequestingAgent))
+        {
+            continue;
+        }
+
+        const float Distance = Dist2D(StartPosition, CurrentNode->GetSlotWorldPosition(SlotIndex));
+        if (!bHasBest || Distance < BestDistance)
+        {
+            BestDistance = Distance;
+            BestHandle = Handle;
+            bHasBest = true;
+        }
+    }
+
+    return BestHandle;
+}
+
 bool UCombatFlowManagerComponent::BuildMovePathToSlot(const FCombatCoverSlotHandle& SlotHandle, FCombatMovePath& OutPath) const
 {
     OutPath.Reset();
@@ -1149,6 +1210,7 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
     UCombatCoverNodeComponent* ToNode,
     const FCombatCoverSlotHandle& StartSlot,
     const FCombatCoverSlotHandle& FinalSlot,
+    UCombatCoverAgentComponent* Agent,
     FCombatMovePath& OutPath) const
 {
     if (!BuildMovePathToSlot(FinalSlot, OutPath))
@@ -1157,7 +1219,24 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
     }
 
     TArray<FVector> Points;
-    AppendSlotApproachPoint(StartSlot, true, Points);
+    const FCombatCoverSlotHandle ExitSlot = FindExitSlotForFullCoverTraversal(
+        FromNode,
+        StartSlot,
+        Agent ? Agent->GetTeamTag() : FString(),
+        Agent);
+    if (ExitSlot.IsValid())
+    {
+        FCombatMovePath ExitPath;
+        if (!BuildMovePathWithinNode(FromNode, StartSlot, ExitSlot, ExitPath))
+        {
+            return false;
+        }
+        Points = ExitPath.Points;
+    }
+    else
+    {
+        AppendSlotApproachPoint(StartSlot, true, Points);
+    }
 
     bool bReverse = false;
     const FCombatCoverLink* Link = FindTraversalLink(FromNode, ToNode, bReverse);
