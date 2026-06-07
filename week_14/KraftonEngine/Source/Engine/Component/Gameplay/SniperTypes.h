@@ -67,13 +67,13 @@ struct FAimSwayState
 	GENERATED_BODY()
 
 	float Time = 0.0f;
-	float BaseSwayAmount = 0.00034907f;
-	float ScopedSwayAmount = 0.00139626f;
+	float BaseSwayAmount = 0.00024f;
+	float ScopedSwayAmount = 0.00095f;
 	float CurrentSwayPitch = 0.0f;
 	float CurrentSwayYaw = 0.0f;
 	float BreathMultiplier = 1.0f;
 	float HoldBreathGauge = 3.0f;
-	float MaxHoldBreathGauge = 3.0f;
+	float MaxHoldBreathGauge = 10.0f;
 	float HoldBreathRecoverSpeed = 0.5f;
 	float HoldBreathConsumeSpeed = 1.0f;
 	bool bForcedRecovery = false;
