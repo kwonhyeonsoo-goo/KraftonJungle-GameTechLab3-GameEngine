@@ -99,6 +99,9 @@ public:
     float GetHealth() const { return Health; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetHealthRatio() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetFireRange() const { return FireRange; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
@@ -134,6 +137,18 @@ public:
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool CanFireWhileMoving() const { return bCanFireWhileMoving; }
 
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetRepositionChanceWhenInRange() const { return RepositionChanceWhenInRange; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetCombatDecisionCooldown() const { return CombatDecisionCooldown; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    bool CanMakeCombatDecision() const { return CombatDecisionCooldownRemaining <= 0.0f; }
+
+    UFUNCTION(Callable, Category="CombatAgent|Behavior")
+    void MarkCombatDecisionMade();
+
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool IsInCover() const { return State == ECombatCoverAgentState::InCover; }
 
@@ -166,6 +181,8 @@ public:
 private:
     UCombatFlowManagerComponent* ResolveManager();
     void ApplyCombatRoleDefaults();
+    void ClampRuntimeEditableValues();
+    void TickCombatDecisionCooldown(float DeltaTime);
     void FinishSuppression();
     void TickMoveToTarget(float DeltaTime);
     void FaceDirection2D(const FVector& Direction, float DeltaTime);
@@ -190,7 +207,7 @@ private:
     float MoveSpeed = 10.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Acceptance Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
-    float AcceptanceRadius = 3.0f;
+    float AcceptanceRadius = 0.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Interval", Min=0.0f, Max=120.0f, Speed=0.1f)
     float AdvanceInterval = 3.0f;
@@ -249,6 +266,12 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Can Fire While Moving")
     bool bCanFireWhileMoving = false;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Reposition Chance When In Range", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float RepositionChanceWhenInRange = 0.25f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Combat Decision Cooldown", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float CombatDecisionCooldown = 2.0f;
+
     ECombatCoverAgentState State = ECombatCoverAgentState::Idle;
     FString CurrentNodeId;
     int32 CurrentSlotId = -1;
@@ -264,6 +287,7 @@ private:
     int32 IncomingFireCount = 0;
     float IncomingAttackDamage = 0.0f;
     float SuppressionTimer = 0.0f;
+    float CombatDecisionCooldownRemaining = 0.0f;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
     ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
