@@ -2806,6 +2806,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &FSniperHitInfo::AmmoType,
         "HitOutcome",
         &FSniperHitInfo::HitOutcome,
+        "HitRegion",
+        &FSniperHitInfo::HitRegion,
         "bIsScopedShot",
         &FSniperHitInfo::bIsScopedShot,
         "bIsHeadshot",
@@ -2835,6 +2837,13 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
     SniperHitOutcome["Blocked"] = ESniperHitOutcome::Blocked;
     SniperHitOutcome["Ricochet"] = ESniperHitOutcome::Ricochet;
     SniperHitOutcome["Penetrated"] = ESniperHitOutcome::Penetrated;
+
+    sol::table SniperHitRegion = Lua.create_named_table("SniperHitRegion");
+    SniperHitRegion["Unknown"] = ESniperHitRegion::Unknown;
+    SniperHitRegion["Head"] = ESniperHitRegion::Head;
+    SniperHitRegion["Torso"] = ESniperHitRegion::Torso;
+    SniperHitRegion["Arm"] = ESniperHitRegion::Arm;
+    SniperHitRegion["Leg"] = ESniperHitRegion::Leg;
 
     // 게임 특화 usertype/enum/global(GetGameState 등) 은 Game 모듈의
     // RegisterGameLuaBindings 가 등록한다. 호출 순서는 GameEngine/EditorEngine::Init

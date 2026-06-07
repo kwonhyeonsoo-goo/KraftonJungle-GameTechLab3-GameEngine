@@ -31,6 +31,18 @@ enum class ESniperHitOutcome : uint8
 	COUNT
 };
 
+UENUM()
+enum class ESniperHitRegion : uint8
+{
+	Unknown = 0,
+	Head = 1,
+	Torso = 2,
+	Arm = 3,
+	Leg = 4,
+
+	COUNT
+};
+
 USTRUCT()
 struct FSniperInputState
 {
@@ -161,6 +173,7 @@ struct FSniperHitInfo
 	float RagdollImpulseStrength = 0.0f;
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
 	ESniperHitOutcome HitOutcome = ESniperHitOutcome::Normal;
+	ESniperHitRegion HitRegion = ESniperHitRegion::Unknown;
 	bool bIsScopedShot = false;
 	bool bIsHeadshot = false;
 	bool bIsArmorPiercing = false;

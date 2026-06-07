@@ -66,6 +66,8 @@ private:
 	FName ResolvePreciseHitBoneName(const struct FHitResult& Hit, bool* bOutUsedFallback = nullptr) const;
 	FString NormalizeBoneNameForHitClassification(const FName& BoneName) const;
 	bool IsAuxiliaryBoneNameNormalized(const FString& BoneName) const;
+	ESniperHitRegion ClassifyHitRegionNormalized(const FString& BoneName) const;
+	ESniperHitRegion ClassifyHitRegion(const FName& BoneName) const;
 	bool IsHeadshotBoneNameNormalized(const FString& BoneName) const;
 	bool IsHeadshotBoneName(const FName& BoneName) const;
 	void CompactDeadBullets();

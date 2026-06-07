@@ -817,13 +817,14 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			}
 
 			UE_LOG(
-				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Killed=%d Headshot=%d RawHitBone=%s HitBone=%s NormalizedHitBone=%s UsedFallbackBone=%d",
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Region=%d Killed=%d Headshot=%d RawHitBone=%s HitBone=%s NormalizedHitBone=%s UsedFallbackBone=%d",
 				CombatCharacter->GetName().c_str(),
 				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
 				HealthBeforeHit,
 				HealthAfterHit,
 				HitInfo.Damage,
 				static_cast<int32>(HitInfo.HitOutcome),
+				static_cast<int32>(HitInfo.HitRegion),
 				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0,
 				HitInfo.bIsHeadshot ? 1 : 0,
 				RawHitBoneName.c_str(),
@@ -843,6 +844,7 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 {
 	FSniperHitInfo HitInfo;
 	const FName ResolvedHitBoneName = ResolvePreciseHitBoneName(Hit);
+	const ESniperHitRegion HitRegion = ClassifyHitRegion(ResolvedHitBoneName);
 	HitInfo.HitActor = Hit.HitActor;
 	HitInfo.HitLocation = Hit.WorldHitLocation;
 	HitInfo.HitNormal = !Hit.ImpactNormal.IsNearlyZero() ? Hit.ImpactNormal : Hit.WorldNormal;
@@ -854,8 +856,9 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.RagdollImpulseStrength = Bullet.Damage + HitInfo.ImpactSpeed * 0.1f;
 	HitInfo.AmmoType = Bullet.AmmoType;
 	HitInfo.HitOutcome = ESniperHitOutcome::Normal;
+	HitInfo.HitRegion = HitRegion;
 	HitInfo.bIsScopedShot = Bullet.bWasScopedShot;
-	HitInfo.bIsHeadshot = IsHeadshotBoneName(ResolvedHitBoneName);
+	HitInfo.bIsHeadshot = HitRegion == ESniperHitRegion::Head;
 	HitInfo.bIsArmorPiercing = Bullet.bCanDamageArmor;
 	HitInfo.bShouldRagdoll = HitInfo.ImpactSpeed >= SniperRagdollImpactSpeedThreshold;
 	HitInfo.bKilled = false;
@@ -1020,6 +1023,61 @@ bool UBallisticBulletManagerComponent::IsAuxiliaryBoneNameNormalized(const FStri
 		HasNormalizedBoneToken(BoneName, "offset") ||
 		HasNormalizedBoneToken(BoneName, "attach") ||
 		HasNormalizedBoneToken(BoneName, "helper");
+}
+
+ESniperHitRegion UBallisticBulletManagerComponent::ClassifyHitRegionNormalized(const FString& BoneName) const
+{
+	if (BoneName.empty())
+	{
+		return ESniperHitRegion::Unknown;
+	}
+
+	if (IsHeadshotBoneNameNormalized(BoneName))
+	{
+		return ESniperHitRegion::Head;
+	}
+
+	if (HasNormalizedBoneToken(BoneName, "spine") ||
+		HasNormalizedBoneToken(BoneName, "pelvis") ||
+		HasNormalizedBoneToken(BoneName, "hips") ||
+		HasNormalizedBoneToken(BoneName, "hip") ||
+		HasNormalizedBoneToken(BoneName, "chest") ||
+		HasNormalizedBoneToken(BoneName, "upperchest") ||
+		HasNormalizedBoneToken(BoneName, "torso") ||
+		HasNormalizedBoneToken(BoneName, "rib") ||
+		HasNormalizedBoneToken(BoneName, "clavicle") ||
+		HasNormalizedBoneToken(BoneName, "neck"))
+	{
+		return ESniperHitRegion::Torso;
+	}
+
+	if (HasNormalizedBoneToken(BoneName, "arm") ||
+		HasNormalizedBoneToken(BoneName, "shoulder") ||
+		HasNormalizedBoneToken(BoneName, "elbow") ||
+		HasNormalizedBoneToken(BoneName, "forearm") ||
+		HasNormalizedBoneToken(BoneName, "hand") ||
+		HasNormalizedBoneToken(BoneName, "wrist"))
+	{
+		return ESniperHitRegion::Arm;
+	}
+
+	if (HasNormalizedBoneToken(BoneName, "leg") ||
+		HasNormalizedBoneToken(BoneName, "thigh") ||
+		HasNormalizedBoneToken(BoneName, "calf") ||
+		HasNormalizedBoneToken(BoneName, "knee") ||
+		HasNormalizedBoneToken(BoneName, "foot") ||
+		HasNormalizedBoneToken(BoneName, "ankle") ||
+		HasNormalizedBoneToken(BoneName, "toe"))
+	{
+		return ESniperHitRegion::Leg;
+	}
+
+	return ESniperHitRegion::Unknown;
+}
+
+ESniperHitRegion UBallisticBulletManagerComponent::ClassifyHitRegion(const FName& BoneName) const
+{
+	return ClassifyHitRegionNormalized(NormalizeBoneNameForHitClassification(BoneName));
 }
 
 bool UBallisticBulletManagerComponent::IsHeadshotBoneNameNormalized(const FString& BoneName) const
