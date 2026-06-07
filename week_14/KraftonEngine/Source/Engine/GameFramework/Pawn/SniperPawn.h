@@ -102,7 +102,7 @@ public:
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Consume Speed", Member=AimSwayState.HoldBreathConsumeSpeed, Type=Float, Min=0.0f, Max=30.0f, Speed=0.1f);
 
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Radius", Min=0.01f, Max=1.0f, Speed=0.01f)
-	float ScopeLensRadius = 0.42f;
+	float ScopeLensRadius = 0.688889f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Feather", Min=0.001f, Max=0.5f, Speed=0.01f)
 	float ScopeLensFeather = 0.08f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Outer Blur Radius", Min=0.0f, Max=32.0f, Speed=0.1f)
