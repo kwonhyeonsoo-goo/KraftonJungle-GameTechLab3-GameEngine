@@ -63,7 +63,10 @@ private:
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	USkeletalMeshComponent* ResolveHitSkeletalMeshComponent(const struct FHitResult& Hit) const;
-	FName ResolvePreciseHitBoneName(const struct FHitResult& Hit) const;
+	FName ResolvePreciseHitBoneName(const struct FHitResult& Hit, bool* bOutUsedFallback = nullptr) const;
+	FString NormalizeBoneNameForHitClassification(const FName& BoneName) const;
+	bool IsAuxiliaryBoneNameNormalized(const FString& BoneName) const;
+	bool IsHeadshotBoneNameNormalized(const FString& BoneName) const;
 	bool IsHeadshotBoneName(const FName& BoneName) const;
 	void CompactDeadBullets();
 	void ResolveWeaponComponent();

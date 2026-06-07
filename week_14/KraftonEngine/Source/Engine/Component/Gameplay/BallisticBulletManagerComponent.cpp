@@ -50,45 +50,51 @@ namespace
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
 
-	bool ContainsIgnoreCase(const FString& Value, const char* Token)
+	bool StartsWithToken(const FString& Value, const char* Prefix)
 	{
-		if (!Token || *Token == '\0' || Value.empty())
+		if (!Prefix)
 		{
 			return false;
 		}
 
-		FString LowerValue = Value;
-		std::transform(
-			LowerValue.begin(),
-			LowerValue.end(),
-			LowerValue.begin(),
-			[](unsigned char Character)
-			{
-				return static_cast<char>(std::tolower(Character));
-			});
-
-		FString LowerToken(Token);
-		std::transform(
-			LowerToken.begin(),
-			LowerToken.end(),
-			LowerToken.begin(),
-			[](unsigned char Character)
-			{
-				return static_cast<char>(std::tolower(Character));
-			});
-
-		return LowerValue.find(LowerToken) != FString::npos;
+		const size_t PrefixLength = std::char_traits<char>::length(Prefix);
+		return Value.size() >= PrefixLength && Value.compare(0, PrefixLength, Prefix) == 0;
 	}
 
-	bool IsAuxiliaryBoneName(const FString& BoneName)
+	bool IsTokenSeparator(char Character)
 	{
-		return ContainsIgnoreCase(BoneName, "ik") ||
-			ContainsIgnoreCase(BoneName, "weapon") ||
-			ContainsIgnoreCase(BoneName, "camera") ||
-			ContainsIgnoreCase(BoneName, "twist") ||
-			ContainsIgnoreCase(BoneName, "socket") ||
-			ContainsIgnoreCase(BoneName, "ctrl") ||
-			ContainsIgnoreCase(BoneName, "helper");
+		return Character == '_';
+	}
+
+	bool HasNormalizedBoneToken(const FString& NormalizedBoneName, const char* Token)
+	{
+		if (!Token || *Token == '\0' || NormalizedBoneName.empty())
+		{
+			return false;
+		}
+
+		size_t SegmentStart = 0;
+		while (SegmentStart < NormalizedBoneName.size())
+		{
+			size_t SegmentEnd = SegmentStart;
+			while (SegmentEnd < NormalizedBoneName.size() && !IsTokenSeparator(NormalizedBoneName[SegmentEnd]))
+			{
+				++SegmentEnd;
+			}
+
+			if (SegmentEnd > SegmentStart)
+			{
+				const FString Segment = NormalizedBoneName.substr(SegmentStart, SegmentEnd - SegmentStart);
+				if (Segment == Token || StartsWithToken(Segment, Token))
+				{
+					return true;
+				}
+			}
+
+			SegmentStart = SegmentEnd + 1;
+		}
+
+		return false;
 	}
 
 	float ComputeMachDragMultiplier(float Speed)
@@ -784,6 +790,11 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	{
 		float HealthBeforeHit = -1.0f;
 		float HealthAfterHit = -1.0f;
+		const FString RawHitBoneName = Hit.HitBoneName.ToString();
+		const FString ResolvedHitBoneName = HitInfo.HitBoneName.ToString();
+		const FString NormalizedHitBoneName = NormalizeBoneNameForHitClassification(HitInfo.HitBoneName);
+		const bool bUsedFallbackBone =
+			Hit.HitBoneName == FName::None || Hit.HitBoneName != HitInfo.HitBoneName;
 		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
 		{
 			HealthBeforeHit = DamageReceiver->GetCurrentHP();
@@ -806,7 +817,7 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			}
 
 			UE_LOG(
-				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Killed=%d Headshot=%d HitBone=%s",
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Killed=%d Headshot=%d RawHitBone=%s HitBone=%s NormalizedHitBone=%s UsedFallbackBone=%d",
 				CombatCharacter->GetName().c_str(),
 				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
 				HealthBeforeHit,
@@ -815,7 +826,10 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 				static_cast<int32>(HitInfo.HitOutcome),
 				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0,
 				HitInfo.bIsHeadshot ? 1 : 0,
-				HitInfo.HitBoneName.ToString().c_str());
+				RawHitBoneName.c_str(),
+				ResolvedHitBoneName.c_str(),
+				NormalizedHitBoneName.c_str(),
+				bUsedFallbackBone ? 1 : 0);
 		}
 	}
 
@@ -868,11 +882,20 @@ USkeletalMeshComponent* UBallisticBulletManagerComponent::ResolveHitSkeletalMesh
 	return nullptr;
 }
 
-FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResult& Hit) const
+FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResult& Hit, bool* bOutUsedFallback) const
 {
+	if (bOutUsedFallback)
+	{
+		*bOutUsedFallback = false;
+	}
+
 	if (Hit.HitBoneName.IsValid() && Hit.HitBoneName != FName::None)
 	{
-		return Hit.HitBoneName;
+		const FString NormalizedRawBoneName = NormalizeBoneNameForHitClassification(Hit.HitBoneName);
+		if (!NormalizedRawBoneName.empty() && !IsAuxiliaryBoneNameNormalized(NormalizedRawBoneName))
+		{
+			return Hit.HitBoneName;
+		}
 	}
 
 	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(Hit);
@@ -890,7 +913,15 @@ FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResu
 				NearestBodyBoneName,
 				NearestBodyLocation))
 		{
-			return NearestBodyBoneName;
+			const FString NormalizedNearestBodyBoneName = NormalizeBoneNameForHitClassification(NearestBodyBoneName);
+			if (!NormalizedNearestBodyBoneName.empty() && !IsAuxiliaryBoneNameNormalized(NormalizedNearestBodyBoneName))
+			{
+				if (bOutUsedFallback)
+				{
+					*bOutUsedFallback = true;
+				}
+				return NearestBodyBoneName;
+			}
 		}
 	}
 
@@ -906,7 +937,13 @@ FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResu
 	for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
 	{
 		const FString& BoneName = MeshAsset->Bones[BoneIndex].Name;
-		if (BoneName.empty() || IsAuxiliaryBoneName(BoneName))
+		if (BoneName.empty())
+		{
+			continue;
+		}
+
+		const FString NormalizedBoneName = NormalizeBoneNameForHitClassification(FName(BoneName));
+		if (NormalizedBoneName.empty() || IsAuxiliaryBoneNameNormalized(NormalizedBoneName))
 		{
 			continue;
 		}
@@ -925,18 +962,78 @@ FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResu
 		return FName::None;
 	}
 
+	if (bOutUsedFallback)
+	{
+		*bOutUsedFallback = true;
+	}
 	return FName(MeshAsset->Bones[BestBoneIndex].Name);
+}
+
+FString UBallisticBulletManagerComponent::NormalizeBoneNameForHitClassification(const FName& BoneName) const
+{
+	if (!BoneName.IsValid() || BoneName == FName::None)
+	{
+		return FString();
+	}
+
+	const FString RawBoneName = BoneName.ToString();
+	FString NormalizedBoneName;
+	NormalizedBoneName.reserve(RawBoneName.size());
+
+	bool bLastCharacterWasSeparator = false;
+	for (char Character : RawBoneName)
+	{
+		const unsigned char UnsignedCharacter = static_cast<unsigned char>(Character);
+		if (std::isalnum(UnsignedCharacter) != 0)
+		{
+			NormalizedBoneName.push_back(static_cast<char>(std::tolower(UnsignedCharacter)));
+			bLastCharacterWasSeparator = false;
+		}
+		else if (!bLastCharacterWasSeparator && !NormalizedBoneName.empty())
+		{
+			NormalizedBoneName.push_back('_');
+			bLastCharacterWasSeparator = true;
+		}
+	}
+
+	while (!NormalizedBoneName.empty() && NormalizedBoneName.back() == '_')
+	{
+		NormalizedBoneName.pop_back();
+	}
+
+	return NormalizedBoneName;
+}
+
+bool UBallisticBulletManagerComponent::IsAuxiliaryBoneNameNormalized(const FString& BoneName) const
+{
+	return HasNormalizedBoneToken(BoneName, "ik") ||
+		HasNormalizedBoneToken(BoneName, "weapon") ||
+		HasNormalizedBoneToken(BoneName, "camera") ||
+		HasNormalizedBoneToken(BoneName, "twist") ||
+		HasNormalizedBoneToken(BoneName, "socket") ||
+		HasNormalizedBoneToken(BoneName, "ctrl") ||
+		HasNormalizedBoneToken(BoneName, "control") ||
+		HasNormalizedBoneToken(BoneName, "target") ||
+		HasNormalizedBoneToken(BoneName, "pole") ||
+		HasNormalizedBoneToken(BoneName, "end") ||
+		HasNormalizedBoneToken(BoneName, "nub") ||
+		HasNormalizedBoneToken(BoneName, "offset") ||
+		HasNormalizedBoneToken(BoneName, "attach") ||
+		HasNormalizedBoneToken(BoneName, "helper");
+}
+
+bool UBallisticBulletManagerComponent::IsHeadshotBoneNameNormalized(const FString& BoneName) const
+{
+	return HasNormalizedBoneToken(BoneName, "head") ||
+		HasNormalizedBoneToken(BoneName, "skull") ||
+		HasNormalizedBoneToken(BoneName, "face") ||
+		HasNormalizedBoneToken(BoneName, "jaw") ||
+		HasNormalizedBoneToken(BoneName, "eye");
 }
 
 bool UBallisticBulletManagerComponent::IsHeadshotBoneName(const FName& BoneName) const
 {
-	if (!BoneName.IsValid() || BoneName == FName::None)
-	{
-		return false;
-	}
-
-	const FString BoneNameString = BoneName.ToString();
-	return ContainsIgnoreCase(BoneNameString, "head") || ContainsIgnoreCase(BoneNameString, "skull");
+	return IsHeadshotBoneNameNormalized(NormalizeBoneNameForHitClassification(BoneName));
 }
 
 void UBallisticBulletManagerComponent::CompactDeadBullets()
