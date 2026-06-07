@@ -467,12 +467,43 @@ FCombatCoverGraphValidationResult UCombatFlowManagerComponent::ValidateGraph(boo
         }
 
         TSet<int32> SlotIds;
+        int32 CombatCoverSlotCount = 0;
+        int32 FullCoverSlotCount = 0;
         for (const FCombatCoverSlot& Slot : Node->GetSlots())
         {
             if (!SlotIds.insert(Slot.SlotId).second)
             {
                 AddValidationMessage(Result, true, MakeNodeDebugName(Node) + ": duplicated SlotId.");
             }
+
+            switch (Slot.SlotType)
+            {
+            case ECombatCoverSlotType::CombatCover:
+                ++CombatCoverSlotCount;
+                break;
+            case ECombatCoverSlotType::FullCover:
+                ++FullCoverSlotCount;
+                break;
+            case ECombatCoverSlotType::ExposedDummy:
+                if (Slot.Weight > 100.0f)
+                {
+                    AddValidationMessage(Result, false, MakeNodeDebugName(Node) + ": ExposedDummy slot has unusually high Weight.");
+                }
+                break;
+            default:
+                AddValidationMessage(Result, false, MakeNodeDebugName(Node) + ": slot has invalid SlotType.");
+                break;
+            }
+        }
+
+        if (!Node->GetSlots().empty() && CombatCoverSlotCount == 0)
+        {
+            AddValidationMessage(Result, false, MakeNodeDebugName(Node) + ": has no CombatCover slots.");
+        }
+
+        if (FullCoverSlotCount > 0 && CombatCoverSlotCount == 0 && Node->GetLinks().empty())
+        {
+            AddValidationMessage(Result, false, MakeNodeDebugName(Node) + ": has only FullCover/Exposed slots and no outgoing links.");
         }
     }
 
@@ -596,6 +627,55 @@ bool UCombatFlowManagerComponent::IsNodeOccupiedOrReserved(const UCombatCoverNod
     return CountNodeClaims(Node, RequestingAgent) >= (std::max)(1, Node->GetMaxOccupants());
 }
 
+const FCombatCoverSlot* UCombatFlowManagerComponent::FindCurrentSlot(const UCombatCoverAgentComponent* Agent) const
+{
+    if (!Agent || Agent->GetCurrentNodeId().empty() || Agent->GetCurrentSlotId() < 0)
+    {
+        return nullptr;
+    }
+
+    const UCombatCoverNodeComponent* Node = FindNode(Agent->GetCurrentNodeId());
+    return Node ? Node->FindSlotById(Agent->GetCurrentSlotId()) : nullptr;
+}
+
+bool UCombatFlowManagerComponent::CanAgentAttackFromCurrentSlot(const UCombatCoverAgentComponent* Agent) const
+{
+    const FCombatCoverSlot* Slot = FindCurrentSlot(Agent);
+    return Slot ? Slot->CanAttackFrom() : true;
+}
+
+bool UCombatFlowManagerComponent::CanAgentBeTargetedInCurrentSlot(const UCombatCoverAgentComponent* Agent) const
+{
+    if (!Agent || !Agent->IsInCover())
+    {
+        return true;
+    }
+
+    const FCombatCoverSlot* Slot = FindCurrentSlot(Agent);
+    return Slot ? Slot->CanBeTargetedWhileInCover() : true;
+}
+
+float UCombatFlowManagerComponent::GetTargetPriorityMultiplierForAgent(const UCombatCoverAgentComponent* Agent) const
+{
+    if (!Agent || !Agent->IsInCover())
+    {
+        return 1.0f;
+    }
+
+    const FCombatCoverSlot* Slot = FindCurrentSlot(Agent);
+    if (!Slot)
+    {
+        return Agent ? Agent->GetInCoverTargetPriorityMultiplier() : 1.0f;
+    }
+
+    if (Slot->SlotType == ECombatCoverSlotType::CombatCover)
+    {
+        return Agent->GetInCoverTargetPriorityMultiplier();
+    }
+
+    return Slot->GetTargetPriorityMultiplierWhileInCover();
+}
+
 void UCombatFlowManagerComponent::DrawAllDebugVisuals(bool bIncludeUnselected) const
 {
     UWorld* World = GetWorld();
@@ -676,7 +756,8 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindNearestFreeSlot(
             }
 
             const float Distance = Dist2D(WorldLocation, Node->GetSlotWorldPosition(SlotIndex));
-            const float WeightedDistance = Slot.Weight > 0.0f ? Distance / Slot.Weight : Distance;
+            const float SlotScore = (std::max)(1.0f, Slot.GetSlotSelectionScore());
+            const float WeightedDistance = Distance / SlotScore;
             if (!bHasBest || WeightedDistance < BestDistance)
             {
                 BestDistance = WeightedDistance;
@@ -695,7 +776,7 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
     const UCombatCoverAgentComponent* RequestingAgent) const
 {
     FCombatCoverSlotHandle BestHandle;
-    float BestWeight = -1.0f;
+    float BestWeight = -1000000.0f;
 
     if (!Node || Node->GetNodeId().empty())
     {
@@ -717,9 +798,10 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
             continue;
         }
 
-        if (BestWeight < 0.0f || Slot.Weight > BestWeight)
+        const float SlotScore = Slot.GetSlotSelectionScore();
+        if (SlotScore > BestWeight)
         {
-            BestWeight = Slot.Weight;
+            BestWeight = SlotScore;
             BestHandle = Handle;
         }
     }
@@ -1043,11 +1125,16 @@ UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UComb
             continue;
         }
 
+        if (!CanAgentBeTargetedInCurrentSlot(Candidate))
+        {
+            continue;
+        }
+
         const float Distance = Dist2D(AgentLocation, Candidate->GetOwner()->GetActorLocation());
         float TargetPriorityMultiplier = 1.0f;
         if (Candidate->IsInCover())
         {
-            TargetPriorityMultiplier = (std::min)((std::max)(0.05f, Candidate->GetInCoverTargetPriorityMultiplier()), 1.0f);
+            TargetPriorityMultiplier = (std::min)((std::max)(0.05f, GetTargetPriorityMultiplierForAgent(Candidate)), 1.0f);
         }
 
         const float Score = Distance / TargetPriorityMultiplier;
@@ -1065,6 +1152,11 @@ UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UComb
 bool UCombatFlowManagerComponent::CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const
 {
     if (!IsValidCombatAgent(Shooter) || !IsValidCombatAgent(Target))
+    {
+        return false;
+    }
+
+    if (!CanAgentAttackFromCurrentSlot(Shooter))
     {
         return false;
     }

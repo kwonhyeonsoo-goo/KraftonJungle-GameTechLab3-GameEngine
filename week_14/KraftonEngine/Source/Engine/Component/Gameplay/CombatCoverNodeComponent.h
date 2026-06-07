@@ -9,6 +9,14 @@ class FScene;
 class UCombatCoverNodeComponent;
 class UWorld;
 
+UENUM()
+enum class ECombatCoverSlotType : uint8
+{
+    CombatCover,
+    FullCover,
+    ExposedDummy
+};
+
 USTRUCT()
 struct FCombatCoverSlot
 {
@@ -16,6 +24,9 @@ struct FCombatCoverSlot
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Slot Id")
     int32 SlotId = 0;
+
+    UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Slot Type", Enum=ECombatCoverSlotType)
+    ECombatCoverSlotType SlotType = ECombatCoverSlotType::CombatCover;
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Local Position", Type=Vec3, Speed=1.0f)
     FVector LocalPosition = FVector::ZeroVector;
@@ -40,6 +51,12 @@ struct FCombatCoverSlot
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Weight", Min=0.0f, Max=1000.0f, Speed=0.1f)
     float Weight = 1.0f;
+
+    bool ProvidesCover() const;
+    bool CanAttackFrom() const;
+    bool CanBeTargetedWhileInCover() const;
+    float GetTargetPriorityMultiplierWhileInCover() const;
+    float GetSlotSelectionScore() const;
 };
 
 USTRUCT()

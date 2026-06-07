@@ -111,11 +111,68 @@ namespace
         std::snprintf(Buffer, sizeof(Buffer), "CoverNode_%03d", (std::max)(1, PreferredIndex));
         return FString(Buffer);
     }
+
+    FColor GetSlotDebugColor(const FCombatCoverSlot& Slot, bool bSelected)
+    {
+        switch (Slot.SlotType)
+        {
+        case ECombatCoverSlotType::FullCover:
+            return bSelected ? FColor(80, 180, 255) : FColor(40, 100, 255);
+        case ECombatCoverSlotType::ExposedDummy:
+            return bSelected ? FColor(255, 220, 60) : FColor(220, 150, 40);
+        case ECombatCoverSlotType::CombatCover:
+        default:
+            return bSelected ? FColor(0, 255, 120) : FColor(0, 160, 255);
+        }
+    }
 }
 
 UCombatCoverNodeComponent::UCombatCoverNodeComponent()
 {
     SetComponentTickEnabled(false);
+}
+
+bool FCombatCoverSlot::ProvidesCover() const
+{
+    return SlotType == ECombatCoverSlotType::CombatCover || SlotType == ECombatCoverSlotType::FullCover;
+}
+
+bool FCombatCoverSlot::CanAttackFrom() const
+{
+    return SlotType != ECombatCoverSlotType::FullCover;
+}
+
+bool FCombatCoverSlot::CanBeTargetedWhileInCover() const
+{
+    return SlotType != ECombatCoverSlotType::FullCover;
+}
+
+float FCombatCoverSlot::GetTargetPriorityMultiplierWhileInCover() const
+{
+    switch (SlotType)
+    {
+    case ECombatCoverSlotType::FullCover:
+        return 0.0f;
+    case ECombatCoverSlotType::ExposedDummy:
+        return 1.0f;
+    case ECombatCoverSlotType::CombatCover:
+    default:
+        return 0.35f;
+    }
+}
+
+float FCombatCoverSlot::GetSlotSelectionScore() const
+{
+    switch (SlotType)
+    {
+    case ECombatCoverSlotType::FullCover:
+        return Weight + 40.0f;
+    case ECombatCoverSlotType::ExposedDummy:
+        return Weight - 100.0f;
+    case ECombatCoverSlotType::CombatCover:
+    default:
+        return Weight + 100.0f;
+    }
 }
 
 FVector UCombatCoverNodeComponent::GetSlotWorldPosition(int32 SlotIndex) const
@@ -250,7 +307,6 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
     }
 
     const FVector NodeLocation = Owner->GetActorLocation();
-    const FColor SlotColor = bSelected ? FColor(0, 255, 120) : FColor(0, 160, 255);
     const FColor ApproachColor = bSelected ? FColor(255, 130, 30) : FColor(255, 95, 20);
     const FColor LinkColor = bSelected ? FColor(255, 180, 0) : FColor(120, 180, 255);
 
@@ -259,6 +315,7 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         const FVector SlotWorld = GetSlotWorldPosition(Index);
         const FVector SlotForward = GetSlotWorldForward(Index);
         const float Radius = (std::max)(0.1f, Slots[Index].Radius);
+        const FColor SlotColor = GetSlotDebugColor(Slots[Index], bSelected);
         AddDebugCross(Scene, SlotWorld, (std::min)(Radius, DebugSlotRadius), SlotColor);
         AddDebugCircleXY(Scene, SlotWorld, Radius, SlotColor);
         AddDebugArrow(Scene, SlotWorld, SlotForward, Radius * 1.4f, SlotColor);

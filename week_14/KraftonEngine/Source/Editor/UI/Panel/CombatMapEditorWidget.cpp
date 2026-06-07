@@ -190,6 +190,47 @@ namespace
         }
         return Label;
     }
+
+    const char* CombatSlotTypeLabel(ECombatCoverSlotType SlotType)
+    {
+        switch (SlotType)
+        {
+        case ECombatCoverSlotType::FullCover:
+            return "Full Cover";
+        case ECombatCoverSlotType::ExposedDummy:
+            return "Exposed Dummy";
+        case ECombatCoverSlotType::CombatCover:
+        default:
+            return "Combat Cover";
+        }
+    }
+
+    void RenderCombatSlotTypeCombo(FCombatCoverSlot& Slot)
+    {
+        if (ImGui::BeginCombo("Slot Type", CombatSlotTypeLabel(Slot.SlotType)))
+        {
+            const ECombatCoverSlotType Values[] =
+            {
+                ECombatCoverSlotType::CombatCover,
+                ECombatCoverSlotType::FullCover,
+                ECombatCoverSlotType::ExposedDummy
+            };
+
+            for (ECombatCoverSlotType Value : Values)
+            {
+                const bool bSelected = Slot.SlotType == Value;
+                if (ImGui::Selectable(CombatSlotTypeLabel(Value), bSelected))
+                {
+                    Slot.SlotType = Value;
+                }
+                if (bSelected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+    }
 }
 
 FCombatMapEditorWidget::~FCombatMapEditorWidget()
@@ -621,6 +662,7 @@ void FCombatMapEditorWidget::RenderSlotPanel(UCombatCoverNodeComponent* Node)
         if (bSelected)
         {
             ImGui::DragInt("SlotId", &Slot.SlotId, 1.0f, 0, 100000);
+            RenderCombatSlotTypeCombo(Slot);
             ImGui::DragFloat3("Local Position", Slot.LocalPosition.Data, 1.0f);
             ImGui::DragFloat3("Local Forward", Slot.LocalForward.Data, 0.05f);
             ImGui::Checkbox("Use Approach On Exit", &Slot.bUseApproachOnExit);
