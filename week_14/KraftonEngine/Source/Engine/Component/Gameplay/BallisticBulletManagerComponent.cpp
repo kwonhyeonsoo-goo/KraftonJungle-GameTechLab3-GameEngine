@@ -4,6 +4,7 @@
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/Pawn/CombatCharacter.h"
 #include "Core/Types/CollisionTypes.h"
@@ -15,8 +16,10 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "Math/Quat.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
 
 #include <cmath>
+#include <cctype>
 
 #include <algorithm>
 
@@ -46,6 +49,47 @@ namespace
 	constexpr float SniperBallisticSubstepMinDeltaTime = 1.0f / 480.0f;
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
+
+	bool ContainsIgnoreCase(const FString& Value, const char* Token)
+	{
+		if (!Token || *Token == '\0' || Value.empty())
+		{
+			return false;
+		}
+
+		FString LowerValue = Value;
+		std::transform(
+			LowerValue.begin(),
+			LowerValue.end(),
+			LowerValue.begin(),
+			[](unsigned char Character)
+			{
+				return static_cast<char>(std::tolower(Character));
+			});
+
+		FString LowerToken(Token);
+		std::transform(
+			LowerToken.begin(),
+			LowerToken.end(),
+			LowerToken.begin(),
+			[](unsigned char Character)
+			{
+				return static_cast<char>(std::tolower(Character));
+			});
+
+		return LowerValue.find(LowerToken) != FString::npos;
+	}
+
+	bool IsAuxiliaryBoneName(const FString& BoneName)
+	{
+		return ContainsIgnoreCase(BoneName, "ik") ||
+			ContainsIgnoreCase(BoneName, "weapon") ||
+			ContainsIgnoreCase(BoneName, "camera") ||
+			ContainsIgnoreCase(BoneName, "twist") ||
+			ContainsIgnoreCase(BoneName, "socket") ||
+			ContainsIgnoreCase(BoneName, "ctrl") ||
+			ContainsIgnoreCase(BoneName, "helper");
+	}
 
 	float ComputeMachDragMultiplier(float Speed)
 	{
@@ -762,14 +806,16 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			}
 
 			UE_LOG(
-				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Killed=%d",
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Killed=%d Headshot=%d HitBone=%s",
 				CombatCharacter->GetName().c_str(),
 				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
 				HealthBeforeHit,
 				HealthAfterHit,
 				HitInfo.Damage,
 				static_cast<int32>(HitInfo.HitOutcome),
-				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0);
+				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0,
+				HitInfo.bIsHeadshot ? 1 : 0,
+				HitInfo.HitBoneName.ToString().c_str());
 		}
 	}
 
@@ -782,6 +828,7 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBallisticBullet& Bullet, const FHitResult& Hit) const
 {
 	FSniperHitInfo HitInfo;
+	const FName ResolvedHitBoneName = ResolvePreciseHitBoneName(Hit);
 	HitInfo.HitActor = Hit.HitActor;
 	HitInfo.HitLocation = Hit.WorldHitLocation;
 	HitInfo.HitNormal = !Hit.ImpactNormal.IsNearlyZero() ? Hit.ImpactNormal : Hit.WorldNormal;
@@ -794,7 +841,7 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.AmmoType = Bullet.AmmoType;
 	HitInfo.HitOutcome = ESniperHitOutcome::Normal;
 	HitInfo.bIsScopedShot = Bullet.bWasScopedShot;
-	HitInfo.bIsHeadshot = false;
+	HitInfo.bIsHeadshot = IsHeadshotBoneName(ResolvedHitBoneName);
 	HitInfo.bIsArmorPiercing = Bullet.bCanDamageArmor;
 	HitInfo.bShouldRagdoll = HitInfo.ImpactSpeed >= SniperRagdollImpactSpeedThreshold;
 	HitInfo.bKilled = false;
@@ -802,7 +849,94 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.Shooter = Bullet.Owner;
 	HitInfo.TargetCurrentHP = 0.0f;
 	HitInfo.TargetMaxHP = 0.0f;
+	HitInfo.HitBoneName = ResolvedHitBoneName;
 	return HitInfo;
+}
+
+USkeletalMeshComponent* UBallisticBulletManagerComponent::ResolveHitSkeletalMeshComponent(const FHitResult& Hit) const
+{
+	if (USkeletalMeshComponent* HitSkeletalMesh = Cast<USkeletalMeshComponent>(Hit.HitComponent))
+	{
+		return HitSkeletalMesh;
+	}
+
+	if (AActor* HitActor = Hit.HitActor)
+	{
+		return HitActor->GetComponentByClass<USkeletalMeshComponent>();
+	}
+
+	return nullptr;
+}
+
+FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResult& Hit) const
+{
+	if (Hit.HitBoneName.IsValid() && Hit.HitBoneName != FName::None)
+	{
+		return Hit.HitBoneName;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(Hit);
+	if (!SkeletalMeshComponent)
+	{
+		return FName::None;
+	}
+
+	if (FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
+	{
+		FName NearestBodyBoneName = FName::None;
+		FVector NearestBodyLocation = FVector::ZeroVector;
+		if (PhysicsAssetInstance->FindNearestBodyToWorldLocation(
+				Hit.WorldHitLocation,
+				NearestBodyBoneName,
+				NearestBodyLocation))
+		{
+			return NearestBodyBoneName;
+		}
+	}
+
+	USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+	FSkeletalMesh* MeshAsset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!MeshAsset || MeshAsset->Bones.empty())
+	{
+		return FName::None;
+	}
+
+	float BestDistanceSquared = 0.0f;
+	int32 BestBoneIndex = -1;
+	for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+	{
+		const FString& BoneName = MeshAsset->Bones[BoneIndex].Name;
+		if (BoneName.empty() || IsAuxiliaryBoneName(BoneName))
+		{
+			continue;
+		}
+
+		const FVector BoneLocation = SkeletalMeshComponent->GetBoneLocationByIndex(BoneIndex);
+		const float DistanceSquared = FVector::DistSquared(Hit.WorldHitLocation, BoneLocation);
+		if (BestBoneIndex < 0 || DistanceSquared < BestDistanceSquared)
+		{
+			BestDistanceSquared = DistanceSquared;
+			BestBoneIndex = BoneIndex;
+		}
+	}
+
+	if (BestBoneIndex < 0 || BestBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+	{
+		return FName::None;
+	}
+
+	return FName(MeshAsset->Bones[BestBoneIndex].Name);
+}
+
+bool UBallisticBulletManagerComponent::IsHeadshotBoneName(const FName& BoneName) const
+{
+	if (!BoneName.IsValid() || BoneName == FName::None)
+	{
+		return false;
+	}
+
+	const FString BoneNameString = BoneName.ToString();
+	return ContainsIgnoreCase(BoneNameString, "head") || ContainsIgnoreCase(BoneNameString, "skull");
 }
 
 void UBallisticBulletManagerComponent::CompactDeadBullets()

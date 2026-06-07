@@ -2320,6 +2320,7 @@ bool FPhysXPhysicsScene::ResolveRaycastResult_GameThread(
     OutHit.WorldHitLocation = PhysicsResult.Location;
     OutHit.ImpactNormal     = PhysicsResult.ImpactNormal;
     OutHit.WorldNormal      = PhysicsResult.Normal;
+    OutHit.HitBoneName      = PhysicsResult.HitBoneName;
     OutHit.HitComponent     = HitComp;
     OutHit.HitActor         = HitComp->GetOwner();
     return true;
@@ -2444,6 +2445,7 @@ bool FPhysXPhysicsScene::ResolveSweepResult_GameThread(
     OutHit.WorldHitLocation  = PhysicsResult.Location;
     OutHit.ImpactNormal      = PhysicsResult.ImpactNormal;
     OutHit.WorldNormal       = PhysicsResult.Normal;
+    OutHit.HitBoneName       = PhysicsResult.HitBoneName;
     OutHit.HitComponent      = HitComp;
     OutHit.HitActor          = HitComp->GetOwner();
     return true;
@@ -2880,6 +2882,17 @@ bool FPhysXPhysicsScene::ExecuteSweep_PhysicsThread(
         OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
         OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
     }
+    FBodyInstance* Body = GetBodyInstance(Block.actor);
+    if (Body && Body->State == EPhysicsRuntimeObjectState::Alive)
+    {
+        OutResult.HitBody     = Body->Handle;
+        OutResult.HitBoneName = Body->BoneName;
+        OutResult.HitDomain   = Body->Domain;
+        if (OutResult.HitActorId == 0)
+        {
+            OutResult.HitActorId = Body->OwnerActorId;
+        }
+    }
     if (OutResult.HitActorId == 0 && Block.actor)
     {
         OutResult.HitActorId = GetActorIdFromActor(Block.actor);
@@ -3014,6 +3027,17 @@ bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
         OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
         OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
         OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
+    }
+    FBodyInstance* Body = GetBodyInstance(Block.actor);
+    if (Body && Body->State == EPhysicsRuntimeObjectState::Alive)
+    {
+        OutResult.HitBody     = Body->Handle;
+        OutResult.HitBoneName = Body->BoneName;
+        OutResult.HitDomain   = Body->Domain;
+        if (OutResult.HitActorId == 0)
+        {
+            OutResult.HitActorId = Body->OwnerActorId;
+        }
     }
     if (OutResult.HitActorId == 0 && Block.actor)
     {

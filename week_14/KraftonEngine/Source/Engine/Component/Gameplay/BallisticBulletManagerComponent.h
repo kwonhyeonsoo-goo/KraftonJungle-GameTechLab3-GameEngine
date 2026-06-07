@@ -9,6 +9,7 @@
 
 class UBillboardComponent;
 class UMaterial;
+class USkeletalMeshComponent;
 class USniperWeaponComponent;
 
 UCLASS()
@@ -61,6 +62,9 @@ private:
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
+	USkeletalMeshComponent* ResolveHitSkeletalMeshComponent(const struct FHitResult& Hit) const;
+	FName ResolvePreciseHitBoneName(const struct FHitResult& Hit) const;
+	bool IsHeadshotBoneName(const FName& BoneName) const;
 	void CompactDeadBullets();
 	void ResolveWeaponComponent();
 
