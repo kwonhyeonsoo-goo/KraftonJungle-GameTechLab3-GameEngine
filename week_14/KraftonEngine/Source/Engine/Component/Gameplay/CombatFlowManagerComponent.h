@@ -89,6 +89,10 @@ public:
 
     bool IsSlotFree(const FCombatCoverSlotHandle& SlotHandle, const UCombatCoverAgentComponent* RequestingAgent = nullptr) const;
     bool IsNodeOccupiedOrReserved(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* RequestingAgent = nullptr) const;
+    const FCombatCoverSlot* FindCurrentSlot(const UCombatCoverAgentComponent* Agent) const;
+    bool CanAgentAttackFromCurrentSlot(const UCombatCoverAgentComponent* Agent) const;
+    bool CanAgentBeTargetedInCurrentSlot(const UCombatCoverAgentComponent* Agent) const;
+    float GetTargetPriorityMultiplierForAgent(const UCombatCoverAgentComponent* Agent) const;
 
     void DrawAllDebugVisuals(bool bIncludeUnselected = true) const;
     void DrawCombatDebugVisuals(float Duration = 0.0f) const;
@@ -154,6 +158,7 @@ private:
     void DrawFireDebugLine(UCombatCoverAgentComponent* Shooter, UCombatCoverAgentComponent* Target, float Duration) const;
     void DrawFireRanges(float Duration) const;
     float PickAttackInterval(const UCombatCoverAgentComponent* Agent) const;
+    float PickCoverHoldDuration(const UCombatCoverAgentComponent* Agent) const;
     void RemoveStaleAttackState();
     void EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node);
     void RemoveStaleRuntimeState();

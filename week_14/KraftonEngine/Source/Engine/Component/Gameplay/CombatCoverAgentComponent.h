@@ -144,10 +144,28 @@ public:
     float GetCombatDecisionCooldown() const { return CombatDecisionCooldown; }
 
     UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetTakeCoverChanceWhenInRange() const { return TakeCoverChanceWhenInRange; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetTakeCoverDurationMin() const { return TakeCoverDurationMin; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetTakeCoverDurationMax() const { return TakeCoverDurationMax; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    float GetInCoverTargetPriorityMultiplier() const { return InCoverTargetPriorityMultiplier; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
     bool CanMakeCombatDecision() const { return CombatDecisionCooldownRemaining <= 0.0f; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Behavior")
+    bool IsHoldingCoverForCombat() const { return State == ECombatCoverAgentState::InCover && CoverHoldTimer > 0.0f; }
 
     UFUNCTION(Callable, Category="CombatAgent|Behavior")
     void MarkCombatDecisionMade();
+
+    UFUNCTION(Callable, Category="CombatAgent|Behavior")
+    void EnterCombatCoverHold(float Duration);
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool IsInCover() const { return State == ECombatCoverAgentState::InCover; }
@@ -272,6 +290,18 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Combat Decision Cooldown", Min=0.0f, Max=120.0f, Speed=0.1f)
     float CombatDecisionCooldown = 2.0f;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Take Cover Chance When In Range", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float TakeCoverChanceWhenInRange = 0.35f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Take Cover Duration Min", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float TakeCoverDurationMin = 1.5f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Take Cover Duration Max", Min=0.0f, Max=120.0f, Speed=0.1f)
+    float TakeCoverDurationMax = 3.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="In Cover Target Priority Multiplier", Min=0.05f, Max=1.0f, Speed=0.01f)
+    float InCoverTargetPriorityMultiplier = 0.35f;
+
     ECombatCoverAgentState State = ECombatCoverAgentState::Idle;
     FString CurrentNodeId;
     int32 CurrentSlotId = -1;
@@ -288,6 +318,7 @@ private:
     float IncomingAttackDamage = 0.0f;
     float SuppressionTimer = 0.0f;
     float CombatDecisionCooldownRemaining = 0.0f;
+    float CoverHoldTimer = 0.0f;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
     ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
