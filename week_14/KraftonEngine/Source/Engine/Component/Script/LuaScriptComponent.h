@@ -9,6 +9,7 @@
 #include <sol/sol.hpp>
 
 class UPrimitiveComponent;
+class USniperDamageReceiverComponent;
 class USniperWeaponComponent;
 struct FHitResult;
 struct FSniperHitInfo;
@@ -99,6 +100,8 @@ private:
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp);
 	void HandleSniperHit(const FSniperHitInfo& HitInfo);
+	void HandleSniperDamaged(const FSniperHitInfo& HitInfo);
+	void HandleSniperKilled(const FSniperHitInfo& HitInfo);
 
 	UPROPERTY(Edit, Save, Category="Script", DisplayName="ScriptFile", AssetType="Script")
 	FString ScriptFile;
@@ -115,6 +118,8 @@ private:
 	sol::protected_function LuaOnHit;
 	sol::protected_function LuaOnEndHit;
 	sol::protected_function LuaOnSniperHit;
+	sol::protected_function LuaOnSniperDamaged;
+	sol::protected_function LuaOnSniperKilled;
 
 	bool bEndPlayRouted = false;
 	bool bHasCalledLuaEndPlay = false;
@@ -156,5 +161,8 @@ private:
 	TArray<FDelegateHandle> HitHandles;
 	TArray<FDelegateHandle> EndHitHandles;
 	TWeakObjectPtr<USniperWeaponComponent> BoundSniperWeaponComponent;
+	TWeakObjectPtr<USniperDamageReceiverComponent> BoundSniperDamageReceiverComponent;
 	FDelegateHandle SniperHitHandle;
+	FDelegateHandle SniperDamagedHandle;
+	FDelegateHandle SniperKilledHandle;
 };

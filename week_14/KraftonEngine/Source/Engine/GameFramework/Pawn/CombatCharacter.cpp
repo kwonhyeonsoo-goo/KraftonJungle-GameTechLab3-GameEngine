@@ -1,6 +1,7 @@
 #include "GameFramework/Pawn/CombatCharacter.h"
 
 #include "Component/Gameplay/CombatCoverAgentComponent.h"
+#include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Script/LuaScriptComponent.h"
 
 ACombatCharacter::ACombatCharacter()
@@ -8,6 +9,20 @@ ACombatCharacter::ACombatCharacter()
 	bAutoInputWASD = false;
 	bAutoInputMouseLook = false;
 	bAutoPossessPlayer = false;
+}
+
+void ACombatCharacter::BeginPlay()
+{
+	if (!SniperDamageReceiverComponent)
+	{
+		SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();
+	}
+	if (!SniperDamageReceiverComponent)
+	{
+		SniperDamageReceiverComponent = AddComponent<USniperDamageReceiverComponent>();
+	}
+
+	Super::BeginPlay();
 }
 
 void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile)
@@ -21,6 +36,7 @@ void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName
 	}
 
 	CombatCoverAgentComponent = AddComponent<UCombatCoverAgentComponent>();
+	SniperDamageReceiverComponent = AddComponent<USniperDamageReceiverComponent>();
 }
 
 void ACombatCharacter::PostDuplicate()
@@ -28,6 +44,7 @@ void ACombatCharacter::PostDuplicate()
 	Super::PostDuplicate();
 	LuaScriptComponent = GetComponentByClass<ULuaScriptComponent>();
 	CombatCoverAgentComponent = GetComponentByClass<UCombatCoverAgentComponent>();
+	SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();
 }
 
 ULuaScriptComponent* ACombatCharacter::GetLuaScriptComponent() const
@@ -46,4 +63,13 @@ UCombatCoverAgentComponent* ACombatCharacter::GetCombatCoverAgentComponent() con
 		CombatCoverAgentComponent = GetComponentByClass<UCombatCoverAgentComponent>();
 	}
 	return CombatCoverAgentComponent;
+}
+
+USniperDamageReceiverComponent* ACombatCharacter::GetSniperDamageReceiverComponent() const
+{
+	if (!SniperDamageReceiverComponent)
+	{
+		SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();
+	}
+	return SniperDamageReceiverComponent;
 }

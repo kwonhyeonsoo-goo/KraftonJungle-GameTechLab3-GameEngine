@@ -738,22 +738,38 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);
 	if (AActor* HitActor = HitInfo.HitActor)
 	{
+		float HealthBeforeHit = -1.0f;
+		float HealthAfterHit = -1.0f;
+		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
+		{
+			HealthBeforeHit = DamageReceiver->GetCurrentHP();
+			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);
+			DamageReceiver->ApplyResolvedSniperHit(HitInfo);
+			HealthAfterHit = DamageReceiver->GetCurrentHP();
+		}
+
 		if (ACombatCharacter* CombatCharacter = Cast<ACombatCharacter>(HitActor))
 		{
 			UCombatCoverAgentComponent* CombatAgent = CombatCharacter->GetCombatCoverAgentComponent();
+			const float FallbackCurrentHealth = CombatAgent ? CombatAgent->GetHealth() : -1.0f;
+			if (HealthBeforeHit < 0.0f)
+			{
+				HealthBeforeHit = FallbackCurrentHealth;
+			}
+			if (HealthAfterHit < 0.0f)
+			{
+				HealthAfterHit = FallbackCurrentHealth;
+			}
+
 			UE_LOG(
-				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s Health=%.1f Damage=%.1f Outcome=%d",
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Killed=%d",
 				CombatCharacter->GetName().c_str(),
 				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
-				CombatAgent ? CombatAgent->GetHealth() : -1.0f,
+				HealthBeforeHit,
+				HealthAfterHit,
 				HitInfo.Damage,
-				static_cast<int32>(HitInfo.HitOutcome));
-		}
-
-		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
-		{
-			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);
-			DamageReceiver->ApplyResolvedSniperHit(HitInfo);
+				static_cast<int32>(HitInfo.HitOutcome),
+				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0);
 		}
 	}
 
@@ -781,7 +797,11 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.bIsHeadshot = false;
 	HitInfo.bIsArmorPiercing = Bullet.bCanDamageArmor;
 	HitInfo.bShouldRagdoll = HitInfo.ImpactSpeed >= SniperRagdollImpactSpeedThreshold;
+	HitInfo.bKilled = false;
+	HitInfo.bFriendlyTarget = false;
 	HitInfo.Shooter = Bullet.Owner;
+	HitInfo.TargetCurrentHP = 0.0f;
+	HitInfo.TargetMaxHP = 0.0f;
 	return HitInfo;
 }
 

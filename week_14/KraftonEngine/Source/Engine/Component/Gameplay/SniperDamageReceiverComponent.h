@@ -2,10 +2,13 @@
 
 #include "Component/ActorComponent.h"
 #include "Component/Gameplay/SniperTypes.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Gameplay/SniperDamageReceiverComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FSniperDamageReceiverEventSignature, const FSniperHitInfo&);
+
+class UCombatCoverAgentComponent;
 
 UCLASS()
 class USniperDamageReceiverComponent : public UActorComponent
@@ -20,9 +23,9 @@ public:
 	void EndPlay() override;
 
 	UFUNCTION(Pure, Category="Sniper|Damage")
-	float GetMaxHP() const { return MaxHP; }
+	float GetMaxHP() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
-	float GetCurrentHP() const { return CurrentHP; }
+	float GetCurrentHP() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool IsFriendly() const { return bIsFriendly; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
@@ -34,7 +37,7 @@ public:
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool CanRagdoll() const { return bCanRagdoll; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
-	bool IsDead() const { return bIsDead; }
+	bool IsDead() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool CanReceiveSniperHit() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
@@ -51,6 +54,8 @@ public:
 
 private:
 	FSniperHitInfo BuildResolvedHitInfo(const FSniperHitInfo& HitInfo) const;
+	UCombatCoverAgentComponent* ResolveCombatCoverAgentComponent() const;
+	bool IsFriendlyTarget() const;
 
 private:
 	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Max HP", Min=1.0f, Max=10000.0f, Speed=1.0f)
@@ -75,4 +80,5 @@ private:
 	bool bCanRagdoll = true;
 
 	bool bIsDead = false;
+	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
 };

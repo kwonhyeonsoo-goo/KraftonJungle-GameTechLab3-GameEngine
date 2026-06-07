@@ -66,6 +66,20 @@ local function get_combat_agent()
     return combatAgent
 end
 
+local function publish_sniper_event(eventName, hitInfo)
+    if GameGeneralManager == nil or GameGeneralManager.Publish == nil then
+        return
+    end
+
+    GameGeneralManager:Publish(eventName, {
+        hit = hitInfo,
+        target = obj,
+        shooter = hitInfo ~= nil and hitInfo.Shooter or nil,
+        killed = hitInfo ~= nil and hitInfo.bKilled == true or false,
+        friendly = hitInfo ~= nil and hitInfo.bFriendlyTarget == true or false
+    })
+end
+
 local function set_initial_variables()
     local anim = get_anim_instance()
     if anim == nil then
@@ -151,4 +165,12 @@ function Tick(dt)
     else
         fireElapsed = 0.0
     end
+end
+
+function OnSniperDamaged(hitInfo)
+    publish_sniper_event("sniper.target_damaged", hitInfo)
+end
+
+function OnSniperKilled(hitInfo)
+    publish_sniper_event("sniper.target_killed", hitInfo)
 end

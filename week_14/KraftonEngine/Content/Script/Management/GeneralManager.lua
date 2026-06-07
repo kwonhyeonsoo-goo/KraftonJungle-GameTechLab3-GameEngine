@@ -206,6 +206,11 @@ function GeneralManager:AddScore(delta)
     self.managers.Data:AddScore(delta)
 end
 
+function GeneralManager:SetScore(score)
+    self:_EnsureInitialized()
+    self.managers.Data:SetScore(score)
+end
+
 function GeneralManager:GetScore()
     self:_EnsureInitialized()
     return self.managers.Data:GetScore()

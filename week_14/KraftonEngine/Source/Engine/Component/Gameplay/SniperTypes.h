@@ -165,7 +165,11 @@ struct FSniperHitInfo
 	bool bIsHeadshot = false;
 	bool bIsArmorPiercing = false;
 	bool bShouldRagdoll = false;
+	bool bKilled = false;
+	bool bFriendlyTarget = false;
 	AActor* Shooter = nullptr;
+	float TargetCurrentHP = 0.0f;
+	float TargetMaxHP = 0.0f;
 	FName HitBoneName = FName::None;
 };
 

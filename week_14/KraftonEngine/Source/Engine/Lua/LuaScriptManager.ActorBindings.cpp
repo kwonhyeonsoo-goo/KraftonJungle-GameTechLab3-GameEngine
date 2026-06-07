@@ -2814,6 +2814,14 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &FSniperHitInfo::bIsArmorPiercing,
         "bShouldRagdoll",
         &FSniperHitInfo::bShouldRagdoll,
+        "bKilled",
+        &FSniperHitInfo::bKilled,
+        "bFriendlyTarget",
+        &FSniperHitInfo::bFriendlyTarget,
+        "TargetCurrentHP",
+        &FSniperHitInfo::TargetCurrentHP,
+        "TargetMaxHP",
+        &FSniperHitInfo::TargetMaxHP,
         "HitBoneName",
         &FSniperHitInfo::HitBoneName
     );
