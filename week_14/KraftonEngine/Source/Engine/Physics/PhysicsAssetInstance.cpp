@@ -107,7 +107,8 @@ namespace
         bool bIndependentGenerateOverlapEvents,
         bool bIsPartialRagdollBody,
         bool bSuppressSameActorPrimitiveCollisionForPartial,
-        bool bSuppressSameActorPrimitiveOverlapForPartial)
+        bool bSuppressSameActorPrimitiveOverlapForPartial,
+        bool bSuppressSameActorRagdollBodyCollision)
     {
         if (!Component)
         {
@@ -150,6 +151,9 @@ namespace
             (!bIsPartialRagdollBody ||
                 bSuppressSameActorPrimitiveCollisionForPartial ||
                 bSuppressSameActorPrimitiveOverlapForPartial);
+        OutFilterData.bSuppressSameActorRagdollPairs =
+            bSuppressSameActorRagdollBodyCollision &&
+            (bUseIndependentRagdollCollision || bIsPartialRagdollBody);
         OutFilterData.GameplayOverlapOwnership =
             GetDefaultGameplayOverlapOwnershipForRole(OutFilterData.CollisionRole);
 
@@ -200,7 +204,8 @@ namespace
                 Options.bIndependentGenerateOverlapEvents,
                 Options.bPartialSimulation,
                 Options.bSuppressSameActorPrimitiveCollisionForPartial,
-                Options.bSuppressSameActorPrimitiveOverlapForPartial);
+                Options.bSuppressSameActorPrimitiveOverlapForPartial,
+                Options.bSuppressSameActorRagdollBodyCollision);
             ShapeDesc.FilterData.bEnableCCD = BodySetup.bEnableCCD;
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
@@ -430,15 +435,20 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
 
-    const bool bStrictPartialSimulation = Options.bPartialSimulation;
-    const bool bRestrictSimulationScope = Options.bPartialSimulation || Options.bSelectedOnly;
+    FPhysicsAssetSimulationOptions EffectiveOptions = Options;
+    EffectiveOptions.bSuppressSameActorRagdollBodyCollision =
+        EffectiveOptions.bSuppressSameActorRagdollBodyCollision ||
+        Asset->ShouldDisableSameActorRagdollBodyCollision();
+
+    const bool bStrictPartialSimulation = EffectiveOptions.bPartialSimulation;
+    const bool bRestrictSimulationScope = EffectiveOptions.bPartialSimulation || EffectiveOptions.bSelectedOnly;
     const FName ScopeRootBoneName =
-        Options.bPartialSimulation
-            ? Options.PartialRootBoneName
-            : Options.SelectedBoneName;
+        EffectiveOptions.bPartialSimulation
+            ? EffectiveOptions.PartialRootBoneName
+            : EffectiveOptions.SelectedBoneName;
     const bool bIncludeScopeDescendants =
-        Options.bPartialSimulation
-            ? Options.bIncludePartialDescendants
+        EffectiveOptions.bPartialSimulation
+            ? EffectiveOptions.bIncludePartialDescendants
             : true;
 
     TArray<uint8> SimulatedBodyMask;
@@ -488,9 +498,9 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
     }
     ResetRuntimeState();
     const bool bRequestedPartialSameActorPrimitiveSuppression =
-        Options.bPartialSimulation &&
-        (Options.bSuppressSameActorPrimitiveCollisionForPartial ||
-            Options.bSuppressSameActorPrimitiveOverlapForPartial);
+        EffectiveOptions.bPartialSimulation &&
+        (EffectiveOptions.bSuppressSameActorPrimitiveCollisionForPartial ||
+            EffectiveOptions.bSuppressSameActorPrimitiveOverlapForPartial);
 
     int32 CreatedBodyCount = 0;
     int32 CreatedConstraintCount = 0;
@@ -517,7 +527,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
                 Owner,
                 BodySetup,
                 BoneWorldTransform,
-                Options,
+                EffectiveOptions,
                 BodyDesc))
         {
             UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",
@@ -535,12 +545,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
             continue;
         }
 
-        if (Options.bSelectedOnly && !Options.bPartialSimulation && !bSimulateThisBody)
+        if (EffectiveOptions.bSelectedOnly && !EffectiveOptions.bPartialSimulation && !bSimulateThisBody)
         {
             BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
             BodyDesc.bEnableGravity = false;
         }
-        else if (Options.bNoGravity)
+        else if (EffectiveOptions.bNoGravity)
         {
             BodyDesc.bEnableGravity = false;
         }
@@ -579,7 +589,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
                 continue;
             }
         }
-        else if (Options.bSelectedOnly)
+        else if (EffectiveOptions.bSelectedOnly)
         {
             const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
             const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
@@ -636,7 +646,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         Owner->GetName().c_str(),
         CreatedBodyCount,
         CreatedConstraintCount,
-        Options.bPartialSimulation ? "true" : "false",
+        EffectiveOptions.bPartialSimulation ? "true" : "false",
         ScopeRootBoneName.ToString().c_str(),
         bPartialSameActorPrimitiveSuppressionActive ? "true" : "false");
 

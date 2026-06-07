@@ -1366,6 +1366,8 @@ bool FPhysicsAssetEditorWidget::ExportPhysicsAssetDebugJson(UPhysicsAsset* Physi
 
     const FSkeletonBinding& Binding = PhysicsAsset->GetSkeletonBinding();
     Root["SkeletonPath"] = Binding.SkeletonPath;
+    Root["DisableSameActorRagdollBodyCollision"] =
+        PhysicsAsset->ShouldDisableSameActorRagdollBodyCollision();
 
     json::JSON EditorState = json::Object();
     EditorState["SelectedBodyIndex"] = SelectedBodyIndex;
@@ -1679,6 +1681,8 @@ void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAs
 
 void FPhysicsAssetEditorWidget::RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset)
 {
+    RenderAssetSummary(PhysicsAsset);
+    ImGui::Separator();
     RenderDetailsPanel(PhysicsAsset);
 
     // Validation is currently unused in the Physics Editor UI.
@@ -2017,6 +2021,17 @@ void FPhysicsAssetEditorWidget::RenderAssetSummary(UPhysicsAsset* PhysicsAsset)
     ImGui::TextUnformatted("Physics Asset");
     ImGui::TextDisabled("Skeleton: %s", Binding.SkeletonPath.c_str());
     ImGui::TextDisabled("Bodies: %d  Constraints: %d", static_cast<int32>(PhysicsAsset->GetBodySetups().size()), static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
+    bool bDisableSameActorRagdollBodyCollision =
+        PhysicsAsset->ShouldDisableSameActorRagdollBodyCollision();
+    if (ImGui::Checkbox("Disable Ragdoll Body Self Collision", &bDisableSameActorRagdollBodyCollision))
+    {
+        PhysicsAsset->SetDisableSameActorRagdollBodyCollision(bDisableSameActorRagdollBodyCollision);
+        MarkPhysicsAssetDirty();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("At runtime, suppress collision only between ragdoll bodies owned by the same actor.");
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh)

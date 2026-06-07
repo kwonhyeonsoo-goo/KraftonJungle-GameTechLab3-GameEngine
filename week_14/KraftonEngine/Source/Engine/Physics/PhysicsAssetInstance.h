@@ -23,6 +23,7 @@ struct FPhysicsAssetSimulationOptions
     bool bIndependentGenerateOverlapEvents = false;
     bool bSuppressSameActorPrimitiveCollisionForPartial = false;
     bool bSuppressSameActorPrimitiveOverlapForPartial = false;
+    bool bSuppressSameActorRagdollBodyCollision = false;
     FName SelectedBoneName = FName::None;
     FName PartialRootBoneName = FName::None;
 };

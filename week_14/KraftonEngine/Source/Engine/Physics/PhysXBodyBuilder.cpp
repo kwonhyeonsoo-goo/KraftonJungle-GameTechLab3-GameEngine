@@ -79,6 +79,10 @@ namespace
         {
             PackedObjectAndFlags |= PhysicsFilter_SuppressSameActorPrimitivePairs;
         }
+        if (In.bSuppressSameActorRagdollPairs)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_SuppressSameActorRagdollPairs;
+        }
         PackedObjectAndFlags |= PackPhysicsCollisionRole(In.CollisionRole);
         if (EffectiveOverlapOwnership == EPhysicsGameplayOverlapOwnership::PrimaryOwner)
         {
