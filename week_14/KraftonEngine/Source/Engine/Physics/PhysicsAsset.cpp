@@ -61,7 +61,7 @@ namespace
 
 void UPhysicsAsset::Serialize(FArchive& Ar)
 {
-    SerializePayload(Ar, true);
+    SerializePayload(Ar, true, FAssetPackageHeader::CurrentVersion);
 }
 
 void UPhysicsAsset::SerializePackagePayload(FArchive& Ar, uint32 PackageVersion)
@@ -70,16 +70,26 @@ void UPhysicsAsset::SerializePackagePayload(FArchive& Ar, uint32 PackageVersion)
         Ar.IsSaving() ||
         PackageVersion >= static_cast<uint32>(EAssetPackageSerializationVersion::PhysicsAssetStringConstraintNames);
 
-    SerializePayload(Ar, bUseStringConstraintNames);
+    SerializePayload(Ar, bUseStringConstraintNames, PackageVersion);
 }
 
-void UPhysicsAsset::SerializePayload(FArchive& Ar, bool bUseStringConstraintNames)
+void UPhysicsAsset::SerializePayload(FArchive& Ar, bool bUseStringConstraintNames, uint32 PackageVersion)
 {
     UObject::Serialize(Ar);
 
     Ar << SkeletonBinding;
     Ar << BodySetups;
     SerializeConstraintSetups(Ar, bUseStringConstraintNames);
+
+    if (Ar.IsSaving() ||
+        PackageVersion >= static_cast<uint32>(EAssetPackageSerializationVersion::PhysicsAssetRagdollSelfCollisionPolicy))
+    {
+        Ar << bDisableSameActorRagdollBodyCollision;
+    }
+    else if (Ar.IsLoading())
+    {
+        bDisableSameActorRagdollBodyCollision = false;
+    }
 }
 
 void UPhysicsAsset::SerializeConstraintSetups(FArchive& Ar, bool bUseStringConstraintNames)

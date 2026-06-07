@@ -1158,6 +1158,11 @@ namespace
         return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SuppressSameActorPrimitivePairs);
     }
 
+    bool SuppressesPackedSameActorRagdollPairs(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SuppressSameActorRagdollPairs);
+    }
+
     bool IsCharacterPrimitiveRole(EPhysicsCollisionRole Role)
     {
         return
@@ -1195,6 +1200,23 @@ namespace
         return ShouldSuppressSameActorRolePair(GetPackedCollisionRole(A), GetPackedCollisionRole(B));
     }
 
+    bool IsSameActorSuppressedRagdollPair(const PxFilterData& A, const PxFilterData& B)
+    {
+        if (A.word3 == 0 || A.word3 != B.word3)
+        {
+            return false;
+        }
+
+        if (!SuppressesPackedSameActorRagdollPairs(A) || !SuppressesPackedSameActorRagdollPairs(B))
+        {
+            return false;
+        }
+
+        return
+            IsCharacterRagdollBodyRole(GetPackedCollisionRole(A)) &&
+            IsCharacterRagdollBodyRole(GetPackedCollisionRole(B));
+    }
+
     bool WantsCCDContact(const PxFilterData& A, const PxFilterData& B)
     {
         return HasPhysicsFilterFlag(A.word0, PhysicsFilter_EnableCCD) ||
@@ -1216,6 +1238,11 @@ static PxFilterFlags KraftonFilterShader(
     }
 
     if (IsSameActorSuppressedRolePair(filterData0, filterData1))
+    {
+        return PxFilterFlag::eKILL;
+    }
+
+    if (IsSameActorSuppressedRagdollPair(filterData0, filterData1))
     {
         return PxFilterFlag::eKILL;
     }

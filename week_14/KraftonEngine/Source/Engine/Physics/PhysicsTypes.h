@@ -125,6 +125,7 @@ constexpr uint32 PhysicsFilter_OverlapOwnerQueryProxy = 1u << 21;
 constexpr uint32 PhysicsFilter_OverlapNonOwningReaction = 1u << 22;
 constexpr uint32 PhysicsFilter_CollisionRoleShift    = 23u;
 constexpr uint32 PhysicsFilter_CollisionRoleMask     = 0xFu << PhysicsFilter_CollisionRoleShift;
+constexpr uint32 PhysicsFilter_SuppressSameActorRagdollPairs = 1u << 27;
 
 inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
 {
@@ -187,6 +188,7 @@ struct FPhysicsFilterData
     bool              bIsIndependentRagdoll  = false;
     bool              bIsPartialRagdoll      = false;
     bool              bSuppressSameActorPrimitivePairs = false;
+    bool              bSuppressSameActorRagdollPairs = false;
     EPhysicsCollisionRole CollisionRole = EPhysicsCollisionRole::None;
     EPhysicsGameplayOverlapOwnership GameplayOverlapOwnership = EPhysicsGameplayOverlapOwnership::None;
 };

@@ -3,13 +3,52 @@
 
 #include <PxPhysicsAPI.h>
 
+#include <algorithm>
+#include <cmath>
+
 namespace
 {
     constexpr float Pi = 3.14159265358979323846f;
+    constexpr float MinAngularLimitWidthRadians = 1.0e-4f;
+    constexpr float HalfMinAngularLimitWidthRadians = MinAngularLimitWidthRadians * 0.5f;
 
     float DegreesToRadians(float Degrees)
     {
         return Degrees * Pi / 180.0f;
+    }
+
+    float FiniteRadiansOr(float Degrees, float FallbackRadians)
+    {
+        const float Radians = DegreesToRadians(Degrees);
+        return std::isfinite(Radians) ? Radians : FallbackRadians;
+    }
+
+    physx::PxJointAngularLimitPair MakeTwistLimitPair(const FConstraintLimitDesc& Limits)
+    {
+        float Lower = FiniteRadiansOr(Limits.TwistLimitMinDegrees, -HalfMinAngularLimitWidthRadians);
+        float Upper = FiniteRadiansOr(Limits.TwistLimitMaxDegrees, HalfMinAngularLimitWidthRadians);
+
+        if (Upper < Lower)
+        {
+            std::swap(Lower, Upper);
+        }
+
+        // PhysX D6 twist limits must have a non-zero angular span. Treat a
+        // zero-width authored limit as an effectively locked twist axis.
+        if (Upper - Lower < MinAngularLimitWidthRadians)
+        {
+            const float Center = (Lower + Upper) * 0.5f;
+            Lower = Center - HalfMinAngularLimitWidthRadians;
+            Upper = Center + HalfMinAngularLimitWidthRadians;
+        }
+
+        return physx::PxJointAngularLimitPair(Lower, Upper);
+    }
+
+    float MakeConeLimitRadians(float Degrees)
+    {
+        const float Radians = FiniteRadiansOr(Degrees, MinAngularLimitWidthRadians);
+        return (std::max)(Radians, MinAngularLimitWidthRadians);
     }
 
     physx::PxD6Motion::Enum ToPxD6Motion(EConstraintMotion Motion)
@@ -62,17 +101,12 @@ physx::PxJoint* FPhysXConstraintBuilder::CreateD6Joint(
     Joint->setMotion(physx::PxD6Axis::eSWING1, ToPxD6Motion(L.Swing1));
     Joint->setMotion(physx::PxD6Axis::eSWING2, ToPxD6Motion(L.Swing2));
 
-    Joint->setTwistLimit(
-        physx::PxJointAngularLimitPair(
-            DegreesToRadians(L.TwistLimitMinDegrees),
-            DegreesToRadians(L.TwistLimitMaxDegrees)
-        )
-    );
+    Joint->setTwistLimit(MakeTwistLimitPair(L));
 
     Joint->setSwingLimit(
         physx::PxJointLimitCone(
-            DegreesToRadians(L.Swing1LimitDegrees),
-            DegreesToRadians(L.Swing2LimitDegrees)
+            MakeConeLimitRadians(L.Swing1LimitDegrees),
+            MakeConeLimitRadians(L.Swing2LimitDegrees)
         )
     );
 
