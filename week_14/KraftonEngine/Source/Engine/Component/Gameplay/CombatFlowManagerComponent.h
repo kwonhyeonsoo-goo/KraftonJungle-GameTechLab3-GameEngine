@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Component/ActorComponent.h"
 #include "Component/Gameplay/CombatCoverNodeComponent.h"
@@ -43,6 +43,14 @@ struct FCombatCoverGraphValidationResult
     TArray<FString> Messages;
 };
 
+enum class ECombatSlotQueryPurpose : uint8
+{
+    Advance,
+    PreferFullCover,
+    FullCoverOnly,
+    CombatCoverOnly
+};
+
 UCLASS()
 class UCombatFlowManagerComponent : public UActorComponent
 {
@@ -70,6 +78,12 @@ public:
     UFUNCTION(Callable, Category="CombatFlow")
     bool TryRepositionNearby(UCombatCoverAgentComponent* Agent);
 
+    UFUNCTION(Callable, Category="CombatFlow")
+    bool TryMoveToFullCoverInCurrentNode(UCombatCoverAgentComponent* Agent);
+
+    UFUNCTION(Callable, Category="CombatFlow")
+    bool TryMoveToCombatSlotInCurrentNode(UCombatCoverAgentComponent* Agent);
+
     void ConfirmArrived(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle);
 
     UFUNCTION(Callable, Category="CombatFlow")
@@ -93,6 +107,8 @@ public:
     bool CanAgentAttackFromCurrentSlot(const UCombatCoverAgentComponent* Agent) const;
     bool CanAgentBeTargetedInCurrentSlot(const UCombatCoverAgentComponent* Agent) const;
     float GetTargetPriorityMultiplierForAgent(const UCombatCoverAgentComponent* Agent) const;
+    bool IsAgentInSlotType(const UCombatCoverAgentComponent* Agent, ECombatCoverSlotType SlotType) const;
+    bool HasFreeCombatSlotInCurrentNode(const UCombatCoverAgentComponent* Agent) const;
 
     void DrawAllDebugVisuals(bool bIncludeUnselected = true) const;
     void DrawCombatDebugVisuals(float Duration = 0.0f) const;
@@ -143,13 +159,15 @@ public:
 
 private:
     FCombatCoverSlotHandle FindNearestFreeSlot(const FVector& WorldLocation, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent) const;
-    FCombatCoverSlotHandle FindFreeSlotInNode(UCombatCoverNodeComponent* Node, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent) const;
+    FCombatCoverSlotHandle FindFreeSlotInNode(UCombatCoverNodeComponent* Node, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent, ECombatSlotQueryPurpose Purpose = ECombatSlotQueryPurpose::Advance, const FCombatCoverSlotHandle* SkipSlotHandle = nullptr) const;
+    bool TryMoveToSlotTypeInCurrentNode(UCombatCoverAgentComponent* Agent, ECombatCoverSlotType DesiredSlotType);
     bool ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle);
     void ReleaseAgentExcept(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& KeepSlotHandle);
     int32 CountNodeClaims(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* IgnoreAgent) const;
     bool SlotTagsMatchTeam(const FCombatCoverSlot& Slot, const FString& TeamTag) const;
     void GatherAdvanceCandidateNodes(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* CurrentNode, TArray<UCombatCoverNodeComponent*>& OutNodes) const;
     bool BuildMovePathToSlot(const FCombatCoverSlotHandle& SlotHandle, FCombatMovePath& OutPath) const;
+    bool BuildMovePathWithinNode(UCombatCoverNodeComponent* Node, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, FCombatMovePath& OutPath) const;
     bool BuildMovePathBetweenNodes(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, FCombatMovePath& OutPath) const;
     bool AppendSlotApproachPoint(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, TArray<FVector>& OutPoints) const;
     const FCombatCoverLink* FindTraversalLink(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, bool& bOutReverse) const;
