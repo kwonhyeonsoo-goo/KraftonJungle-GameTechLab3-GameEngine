@@ -415,16 +415,9 @@ void FCombatMapEditorWidget::RenderToolbar()
     if (ImGui::Button("Refresh"))
     {
         Refresh();
-        ResetGraphLayoutFromScene();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Auto Generate Missing NodeIds"))
-    {
         GenerateNodeIdsAndRenameActors();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Validate Now"))
-    {
+        ResetGraphLayoutFromScene();
+
         LastValidationMessages.clear();
         if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
         {
@@ -458,22 +451,10 @@ void FCombatMapEditorWidget::RenderToolbar()
     }
     if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
     {
-        ImGui::SameLine();
+        Manager->SetRequireSlotTagMatch(true);
+        Manager->SetEnableSuppression(true);
 
-        bool bRequireSlotTags = Manager->GetRequireSlotTagMatch();
-        if (ImGui::Checkbox("Slot Tags", &bRequireSlotTags))
-        {
-            Manager->SetRequireSlotTagMatch(bRequireSlotTags);
-        }
         ImGui::SameLine();
-
-        bool bEnableSuppression = Manager->GetEnableSuppression();
-        if (ImGui::Checkbox("Suppression", &bEnableSuppression))
-        {
-            Manager->SetEnableSuppression(bEnableSuppression);
-        }
-        ImGui::SameLine();
-
         bool bDrawFireLines = Manager->GetDrawFireDebugLines();
         if (ImGui::Checkbox("Show Fire Lines", &bDrawFireLines))
         {

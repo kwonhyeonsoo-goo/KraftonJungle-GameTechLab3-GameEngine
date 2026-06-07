@@ -107,10 +107,10 @@ public:
     void UpdateCombatSimulation(float DeltaTime);
 
     UFUNCTION(Pure, Category="CombatFlow")
-    bool GetRequireSlotTagMatch() const { return bRequireSlotTagMatch; }
+    bool GetRequireSlotTagMatch() const { return true; }
 
     UFUNCTION(Callable, Category="CombatFlow")
-    void SetRequireSlotTagMatch(bool bRequired) { bRequireSlotTagMatch = bRequired; }
+    void SetRequireSlotTagMatch(bool /*bRequired*/) { bRequireSlotTagMatch = true; }
 
     UFUNCTION(Pure, Category="CombatFlow|Debug")
     bool GetDrawFireDebugLines() const { return bDrawFireDebugLines; }
@@ -125,10 +125,10 @@ public:
     void SetDrawFireRanges(bool bEnabled) { bDrawFireRanges = bEnabled; }
 
     UFUNCTION(Pure, Category="CombatFlow|Combat")
-    bool GetEnableSuppression() const { return bEnableSuppression; }
+    bool GetEnableSuppression() const { return true; }
 
     UFUNCTION(Callable, Category="CombatFlow|Combat")
-    void SetEnableSuppression(bool bEnabled) { bEnableSuppression = bEnabled; }
+    void SetEnableSuppression(bool /*bEnabled*/) { bEnableSuppression = true; }
 
     UFUNCTION(Pure, Category="CombatFlow|Combat")
     int32 GetSuppressionIncomingFireThreshold() const { return SuppressionIncomingFireThreshold; }

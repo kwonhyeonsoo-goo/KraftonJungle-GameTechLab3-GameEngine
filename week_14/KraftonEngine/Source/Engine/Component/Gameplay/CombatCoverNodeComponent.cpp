@@ -324,7 +324,7 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         if (Slots[Index].bUseApproachOnExit || Slots[Index].bUseApproachOnEntry)
         {
             const FVector ApproachWorld = GetSlotWorldApproachPosition(Index);
-            const float ApproachRadius = (std::max)(2.0f, Radius * 0.5f);
+            const float ApproachRadius = (std::max)(1.0f, Radius * 0.5f);
             AddDebugCross(Scene, ApproachWorld, ApproachRadius, ApproachColor);
             AddDebugCircleXY(Scene, ApproachWorld, ApproachRadius, ApproachColor);
             Scene.AddDebugLine(SlotWorld, ApproachWorld, ApproachColor);
@@ -345,7 +345,7 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
         for (const FVector& PathPoint : Link.PathPoints)
         {
             Scene.AddDebugLine(PreviousPoint, PathPoint, LinkColor);
-            AddDebugCross(Scene, PathPoint, 2.0f, FColor(255, 120, 40));
+            AddDebugCross(Scene, PathPoint, 1.0f, FColor(255, 120, 40));
             PreviousPoint = PathPoint;
         }
         Scene.AddDebugLine(PreviousPoint, TargetLocation, LinkColor);

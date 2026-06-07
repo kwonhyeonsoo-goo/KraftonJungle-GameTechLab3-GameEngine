@@ -44,7 +44,7 @@ struct FCombatCoverSlot
     FVector LocalApproachOffset = FVector::ZeroVector;
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
-    float Radius = 2.0f;
+    float Radius = 1.0f;
 
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Tags")
     FString Tags = "Enemy,Cover";
@@ -196,5 +196,5 @@ private:
     int32 MaxOccupants = 1;
 
     UPROPERTY(Edit, Save, Category="CombatCover|Debug", DisplayName="Debug Slot Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
-    float DebugSlotRadius = 1.5f;
+    float DebugSlotRadius = 1.0f;
 };
