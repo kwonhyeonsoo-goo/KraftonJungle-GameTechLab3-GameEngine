@@ -2820,6 +2820,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &FSniperHitInfo::bKilled,
         "bFriendlyTarget",
         &FSniperHitInfo::bFriendlyTarget,
+        "RegionDamageMultiplier",
+        &FSniperHitInfo::RegionDamageMultiplier,
         "TargetCurrentHP",
         &FSniperHitInfo::TargetCurrentHP,
         "TargetMaxHP",

@@ -181,6 +181,7 @@ struct FSniperHitInfo
 	bool bKilled = false;
 	bool bFriendlyTarget = false;
 	AActor* Shooter = nullptr;
+	float RegionDamageMultiplier = 1.0f;
 	float TargetCurrentHP = 0.0f;
 	float TargetMaxHP = 0.0f;
 	FName HitBoneName = FName::None;

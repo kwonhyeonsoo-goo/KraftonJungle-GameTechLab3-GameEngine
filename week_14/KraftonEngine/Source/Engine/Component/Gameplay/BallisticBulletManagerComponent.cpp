@@ -817,12 +817,13 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			}
 
 			UE_LOG(
-				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f Outcome=%d Region=%d Killed=%d Headshot=%d RawHitBone=%s HitBone=%s NormalizedHitBone=%s UsedFallbackBone=%d",
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f RegionMultiplier=%.2f Outcome=%d Region=%d Killed=%d Headshot=%d RawHitBone=%s HitBone=%s NormalizedHitBone=%s UsedFallbackBone=%d",
 				CombatCharacter->GetName().c_str(),
 				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
 				HealthBeforeHit,
 				HealthAfterHit,
 				HitInfo.Damage,
+				HitInfo.RegionDamageMultiplier,
 				static_cast<int32>(HitInfo.HitOutcome),
 				static_cast<int32>(HitInfo.HitRegion),
 				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0,
@@ -864,6 +865,7 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.bKilled = false;
 	HitInfo.bFriendlyTarget = false;
 	HitInfo.Shooter = Bullet.Owner;
+	HitInfo.RegionDamageMultiplier = 1.0f;
 	HitInfo.TargetCurrentHP = 0.0f;
 	HitInfo.TargetMaxHP = 0.0f;
 	HitInfo.HitBoneName = ResolvedHitBoneName;

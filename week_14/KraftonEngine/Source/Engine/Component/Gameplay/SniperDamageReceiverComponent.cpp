@@ -195,6 +195,24 @@ bool USniperDamageReceiverComponent::IsFriendlyTarget() const
 	return false;
 }
 
+float USniperDamageReceiverComponent::GetDamageMultiplierForHitRegion(ESniperHitRegion HitRegion) const
+{
+	switch (HitRegion)
+	{
+	case ESniperHitRegion::Head:
+		return SniperHeadDamageMultiplier;
+	case ESniperHitRegion::Torso:
+		return SniperTorsoDamageMultiplier;
+	case ESniperHitRegion::Arm:
+		return SniperArmDamageMultiplier;
+	case ESniperHitRegion::Leg:
+		return SniperLegDamageMultiplier;
+	case ESniperHitRegion::Unknown:
+	default:
+		return 1.0f;
+	}
+}
+
 FSniperHitInfo USniperDamageReceiverComponent::BuildResolvedHitInfo(const FSniperHitInfo& HitInfo) const
 {
 	FSniperHitInfo ResolvedHitInfo = HitInfo;
@@ -207,8 +225,10 @@ FSniperHitInfo USniperDamageReceiverComponent::BuildResolvedHitInfo(const FSnipe
 		: HitInfo.ShotDirection.Normalized();
 	const FVector ReverseIncomingDirection = IncomingDirection * -1.0f;
 	const float SurfaceAlignment = FMath::Clamp(ReverseIncomingDirection.Dot(SurfaceNormal), 0.0f, 1.0f);
+	const float RegionDamageMultiplier = (std::max)(GetDamageMultiplierForHitRegion(HitInfo.HitRegion), 0.0f);
 
 	ResolvedHitInfo.HitOutcome = ESniperHitOutcome::Normal;
+	ResolvedHitInfo.RegionDamageMultiplier = RegionDamageMultiplier;
 	ResolvedHitInfo.bShouldRagdoll = HitInfo.bShouldRagdoll && bCanRagdoll;
 
 	if (bHasArmor)
@@ -237,6 +257,8 @@ FSniperHitInfo USniperDamageReceiverComponent::BuildResolvedHitInfo(const FSnipe
 			ResolvedHitInfo.RagdollImpulseStrength *= 0.35f;
 		}
 	}
+
+	ResolvedHitInfo.Damage *= RegionDamageMultiplier;
 
 	return ResolvedHitInfo;
 }
