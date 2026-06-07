@@ -66,10 +66,10 @@ body {
 
 #scopeImage {
     position: absolute;
-    left: 474.000000px;
-    top: 54.000000px;
-    width: 972.000000px;
-    height: 972.000000px;
+    left: 420.000000px;
+    bottom: 0px;
+    width: 1080.000000px;
+    height: 1080.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;

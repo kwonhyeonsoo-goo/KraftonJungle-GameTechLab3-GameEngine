@@ -1,4 +1,4 @@
-// Generated from C:/development/Jungle_Week14_Team7/KraftonEngine/Content/Material/Custom/BulletTraceSprite.uasset
+// Generated from Content/Material/Custom/BulletTraceSprite.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"

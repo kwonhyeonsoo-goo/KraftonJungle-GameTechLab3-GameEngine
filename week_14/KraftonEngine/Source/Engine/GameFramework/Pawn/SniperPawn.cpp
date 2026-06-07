@@ -566,7 +566,7 @@ bool ASniperPawn::FireCurrentRound()
 		return false;
 	}
 
-	const FVector MuzzlePosition = SniperCamera->GetWorldLocation() + ShotDirection * 10.0f;
+	const FVector MuzzlePosition = SniperCamera->GetWorldLocation() + ShotDirection * 5.0f;
 	const bool bFired = SniperWeapon->RequestFire(
 		MuzzlePosition,
 		ShotDirection,
