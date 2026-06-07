@@ -88,7 +88,11 @@ public:
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Base Sway Amount", Member=AimSwayState.BaseSwayAmount, Type=Float, Min=0.0f, Max=0.05f, Speed=0.0001f);
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Scoped Sway Amount", Member=AimSwayState.ScopedSwayAmount, Type=Float, Min=0.0f, Max=0.05f, Speed=0.0001f);
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Sway Multiplier", Min=0.0f, Max=1.0f, Speed=0.01f)
-	float HoldBreathSwayMultiplier = 0.35f;
+	float HoldBreathSwayMultiplier = 0.01f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Exhausted Sway Multiplier", Min=1.0f, Max=10.0f, Speed=0.1f)
+	float ExhaustedSwayMultiplier = 10.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Sway Blend Speed", Min=0.0f, Max=60.0f, Speed=0.1f)
+	float HoldBreathSwayBlendSpeed = 4.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Pitch Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
 	float SwayPitchFrequency = 1.85f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Yaw Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)

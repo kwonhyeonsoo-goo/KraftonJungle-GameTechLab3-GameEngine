@@ -231,6 +231,8 @@ void ASniperPawn::SyncSniperRuntimeState()
 	AimSwayState.CurrentSwayYaw = 0.0f;
 	AimSwayState.BreathMultiplier = 1.0f;
 	AimSwayState.HoldBreathGauge = AimSwayState.MaxHoldBreathGauge;
+	AimSwayState.bForcedRecovery = false;
+	AimSwayState.bRequireHoldBreathRelease = false;
 	RecoilState = FRecoilState{};
 
 	if (Camera)
@@ -305,9 +307,16 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 
 void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
 {
+	if (!InputState.bHoldBreathHeld)
+	{
+		AimSwayState.bRequireHoldBreathRelease = false;
+	}
+
 	const bool bCanHoldBreath =
 		InputState.bHoldBreathHeld &&
 		ScopeState.bIsScoped &&
+		!AimSwayState.bForcedRecovery &&
+		!AimSwayState.bRequireHoldBreathRelease &&
 		AimSwayState.HoldBreathGauge > 0.0f;
 
 	if (bCanHoldBreath)
@@ -316,6 +325,12 @@ void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
 			AimSwayState.HoldBreathGauge - AimSwayState.HoldBreathConsumeSpeed * DeltaTime,
 			0.0f,
 			AimSwayState.MaxHoldBreathGauge);
+
+		if (AimSwayState.HoldBreathGauge <= 0.0f)
+		{
+			AimSwayState.bForcedRecovery = true;
+			AimSwayState.bRequireHoldBreathRelease = true;
+		}
 	}
 	else
 	{
@@ -325,7 +340,38 @@ void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
 			AimSwayState.MaxHoldBreathGauge);
 	}
 
-	AimSwayState.BreathMultiplier = bCanHoldBreath ? HoldBreathSwayMultiplier : 1.0f;
+	float TargetBreathMultiplier = 1.0f;
+	if (AimSwayState.bForcedRecovery)
+	{
+		const float RecoveryRatio = AimSwayState.MaxHoldBreathGauge > 0.0f
+			? FMath::Clamp(AimSwayState.HoldBreathGauge / AimSwayState.MaxHoldBreathGauge, 0.0f, 1.0f)
+			: 1.0f;
+		TargetBreathMultiplier = FMath::Lerp(ExhaustedSwayMultiplier, 1.0f, RecoveryRatio);
+	}
+	else if (bCanHoldBreath)
+	{
+		TargetBreathMultiplier = HoldBreathSwayMultiplier;
+	}
+
+	if (HoldBreathSwayBlendSpeed <= 0.0f)
+	{
+		AimSwayState.BreathMultiplier = TargetBreathMultiplier;
+	}
+	else
+	{
+		AimSwayState.BreathMultiplier = ExponentialInterpTo(
+			AimSwayState.BreathMultiplier,
+			TargetBreathMultiplier,
+			DeltaTime,
+			HoldBreathSwayBlendSpeed);
+	}
+
+	if (AimSwayState.bForcedRecovery &&
+		AimSwayState.HoldBreathGauge >= AimSwayState.MaxHoldBreathGauge - 0.001f &&
+		std::abs(AimSwayState.BreathMultiplier - 1.0f) <= 0.05f)
+	{
+		AimSwayState.bForcedRecovery = false;
+	}
 }
 
 void ASniperPawn::UpdateAimSwayState(float DeltaTime)
@@ -392,6 +438,8 @@ float ASniperPawn::GetScopeBlendAlpha() const
 bool ASniperPawn::IsHoldBreathActive() const
 {
 	return ScopeState.bIsScoped
+		&& !AimSwayState.bForcedRecovery
+		&& !AimSwayState.bRequireHoldBreathRelease
 		&& InputState.bHoldBreathHeld
 		&& AimSwayState.HoldBreathGauge > 0.0f
 		&& AimSwayState.BreathMultiplier < 1.0f;

@@ -2649,6 +2649,176 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         }
     );
 
+    Lua.new_usertype<ULuaBlueprintComponent>(
+        "LuaBlueprintComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "ReloadBlueprint",
+        &ULuaBlueprintComponent::ReloadBlueprint,
+        "CallFunction",
+        &ULuaBlueprintComponent::CallFunction,
+        "CallLuaBlueprintFileFunction",
+        &ULuaBlueprintComponent::CallLuaBlueprintFileFunction,
+        "CallLuaScriptFileFunction",
+        &ULuaBlueprintComponent::CallLuaScriptFileFunction,
+        "GetBlueprintPath",
+        &ULuaBlueprintComponent::GetBlueprintPath,
+        "SetBlueprintPath",
+        &ULuaBlueprintComponent::SetBlueprintPath
+    );
+
+    Lua.new_usertype<ULuaScriptComponent>(
+        "LuaScriptComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "ReloadScript",
+        &ULuaScriptComponent::ReloadScript,
+        "CallFunction",
+        &ULuaScriptComponent::CallFunction,
+        "GetScriptFile",
+        &ULuaScriptComponent::GetScriptFile,
+        "SetScriptFile",
+        &ULuaScriptComponent::SetScriptFile,
+        "GetInitialGameStateName",
+        &ULuaScriptComponent::GetInitialGameStateName
+    );
+
+    Lua.new_usertype<USniperWeaponComponent>(
+        "SniperWeaponComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetCurrentAmmoType",
+        &USniperWeaponComponent::GetCurrentAmmoType,
+        "SetCurrentAmmoType",
+        &USniperWeaponComponent::SetCurrentAmmoType,
+        "IsZeroingEnabled",
+        &USniperWeaponComponent::IsZeroingEnabled,
+        "GetZeroingEnabled",
+        &USniperWeaponComponent::IsZeroingEnabled,
+        "SetZeroingEnabled",
+        &USniperWeaponComponent::SetZeroingEnabled,
+        "GetZeroRangeMeters",
+        &USniperWeaponComponent::GetZeroRangeMeters,
+        "SetZeroRangeMeters",
+        &USniperWeaponComponent::SetZeroRangeMeters,
+        "CanFire",
+        &USniperWeaponComponent::CanFire,
+        "RequestFire",
+        &USniperWeaponComponent::RequestFire,
+        "GetFireCooldownRemaining",
+        &USniperWeaponComponent::GetFireCooldownRemaining,
+        "GetBulletManagerComponent",
+        &USniperWeaponComponent::GetBulletManagerComponent
+    );
+
+    Lua.new_usertype<UBallisticBulletManagerComponent>(
+        "BallisticBulletManagerComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetAliveBulletCount",
+        &UBallisticBulletManagerComponent::GetAliveBulletCount,
+        "IsWindEnabled",
+        &UBallisticBulletManagerComponent::IsWindEnabled,
+        "GetWindEnabled",
+        &UBallisticBulletManagerComponent::IsWindEnabled,
+        "SetWindEnabled",
+        &UBallisticBulletManagerComponent::SetWindEnabled,
+        "GetWindAcceleration",
+        &UBallisticBulletManagerComponent::GetWindAcceleration,
+        "SetWindAcceleration",
+        &UBallisticBulletManagerComponent::SetWindAcceleration,
+        "GetWeaponComponent",
+        &UBallisticBulletManagerComponent::GetWeaponComponent
+    );
+
+    Lua.new_usertype<USniperDamageReceiverComponent>(
+        "SniperDamageReceiverComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "GetMaxHP",
+        &USniperDamageReceiverComponent::GetMaxHP,
+        "GetCurrentHP",
+        &USniperDamageReceiverComponent::GetCurrentHP,
+        "IsFriendly",
+        &USniperDamageReceiverComponent::IsFriendly,
+        "HasArmor",
+        &USniperDamageReceiverComponent::HasArmor,
+        "GetArmorStrength",
+        &USniperDamageReceiverComponent::GetArmorStrength,
+        "AllowsRicochet",
+        &USniperDamageReceiverComponent::AllowsRicochet,
+        "CanRagdoll",
+        &USniperDamageReceiverComponent::CanRagdoll,
+        "IsDead",
+        &USniperDamageReceiverComponent::IsDead,
+        "CanReceiveSniperHit",
+        &USniperDamageReceiverComponent::CanReceiveSniperHit,
+        "ResolveSniperHit",
+        &USniperDamageReceiverComponent::ResolveSniperHit,
+        "ResetHealth",
+        &USniperDamageReceiverComponent::ResetHealth,
+        "ApplySniperHit",
+        &USniperDamageReceiverComponent::ApplySniperHit,
+        "ApplyResolvedSniperHit",
+        &USniperDamageReceiverComponent::ApplyResolvedSniperHit
+    );
+
+    Lua.new_usertype<FSniperHitInfo>(
+        "SniperHitInfo",
+        "HitActor",
+        sol::property(
+            [](const FSniperHitInfo& HitInfo) -> AActor*
+            {
+                return IsValid(HitInfo.HitActor) ? HitInfo.HitActor : nullptr;
+            }
+        ),
+        "Shooter",
+        sol::property(
+            [](const FSniperHitInfo& HitInfo) -> AActor*
+            {
+                return IsValid(HitInfo.Shooter) ? HitInfo.Shooter : nullptr;
+            }
+        ),
+        "HitLocation",
+        &FSniperHitInfo::HitLocation,
+        "HitNormal",
+        &FSniperHitInfo::HitNormal,
+        "ShotDirection",
+        &FSniperHitInfo::ShotDirection,
+        "Damage",
+        &FSniperHitInfo::Damage,
+        "TravelDistance",
+        &FSniperHitInfo::TravelDistance,
+        "ImpactSpeed",
+        &FSniperHitInfo::ImpactSpeed,
+        "RagdollImpulseStrength",
+        &FSniperHitInfo::RagdollImpulseStrength,
+        "AmmoType",
+        &FSniperHitInfo::AmmoType,
+        "HitOutcome",
+        &FSniperHitInfo::HitOutcome,
+        "bIsScopedShot",
+        &FSniperHitInfo::bIsScopedShot,
+        "bIsHeadshot",
+        &FSniperHitInfo::bIsHeadshot,
+        "bIsArmorPiercing",
+        &FSniperHitInfo::bIsArmorPiercing,
+        "bShouldRagdoll",
+        &FSniperHitInfo::bShouldRagdoll,
+        "HitBoneName",
+        &FSniperHitInfo::HitBoneName
+    );
+
+    sol::table SniperAmmoType = Lua.create_named_table("SniperAmmoType");
+    SniperAmmoType["Normal"] = ESniperAmmoType::Normal;
+    SniperAmmoType["AntiMaterial"] = ESniperAmmoType::AntiMaterial;
+
+    sol::table SniperHitOutcome = Lua.create_named_table("SniperHitOutcome");
+    SniperHitOutcome["Normal"] = ESniperHitOutcome::Normal;
+    SniperHitOutcome["Blocked"] = ESniperHitOutcome::Blocked;
+    SniperHitOutcome["Ricochet"] = ESniperHitOutcome::Ricochet;
+    SniperHitOutcome["Penetrated"] = ESniperHitOutcome::Penetrated;
+
     // 게임 특화 usertype/enum/global(GetGameState 등) 은 Game 모듈의
     // RegisterGameLuaBindings 가 등록한다. 호출 순서는 GameEngine/EditorEngine::Init
     // 에서 UEngine::Init() 직후.

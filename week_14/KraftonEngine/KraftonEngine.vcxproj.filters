@@ -1568,7 +1568,10 @@
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.Math.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ReflectionActor.cpp">
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ReflectionCore.cpp">
+      <Filter>Source\Engine\Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaScriptManager.ReflectionTypes.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.UI.cpp">
