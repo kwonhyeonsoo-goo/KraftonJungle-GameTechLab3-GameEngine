@@ -32,7 +32,7 @@
           "bIsActive" : true,
           "bShrinkActorOnDeath" : false,
           "bTickEnable" : true,
-          "bUseCharacterMovement" : true,
+          "bUseCharacterMovement" : false,
           "bUseMovingFireRange" : true,
           "bUseRoleCombatDefaults" : true
         }

@@ -773,10 +773,13 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
         {
             if (UCharacterMovementComponent* CharacterMovement = Character->GetCharacterMovement())
             {
-                CharacterMovement->MaxWalkSpeed = (std::max)(0.0f, MoveSpeed);
+                if (CharacterMovement->HasValidUpdatedComponent())
+                {
+                    CharacterMovement->MaxWalkSpeed = (std::max)(0.0f, MoveSpeed);
+                    Character->AddMovementInput(Direction, 1.0f);
+                    return;
+                }
             }
-            Character->AddMovementInput(Direction, 1.0f);
-            return;
         }
     }
 
