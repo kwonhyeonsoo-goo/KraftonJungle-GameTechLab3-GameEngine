@@ -33,6 +33,7 @@
 #include "Texture/Texture2D.h"
 #include "Platform/Paths.h"
 #include "Platform/WindowsWindow.h"
+#include "UI/CursorSystem.h"
 #include "UI/UIManager.h"
 #include "Viewport/GameViewportClient.h"
 
@@ -733,6 +734,45 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         )
     );
     Input.set_function(
+        "GetRawKeyDown",
+        sol::overload(
+            [](const FString& KeyName)
+            {
+                return InputSystem::Get().GetKeyDown(ResolveInputKeyCode(KeyName));
+            },
+            [](int VK)
+            {
+                return InputSystem::Get().GetKeyDown(VK);
+            }
+        )
+    );
+    Input.set_function(
+        "GetRawKey",
+        sol::overload(
+            [](const FString& KeyName)
+            {
+                return InputSystem::Get().GetKey(ResolveInputKeyCode(KeyName));
+            },
+            [](int VK)
+            {
+                return InputSystem::Get().GetKey(VK);
+            }
+        )
+    );
+    Input.set_function(
+        "GetRawKeyUp",
+        sol::overload(
+            [](const FString& KeyName)
+            {
+                return InputSystem::Get().GetKeyUp(ResolveInputKeyCode(KeyName));
+            },
+            [](int VK)
+            {
+                return InputSystem::Get().GetKeyUp(VK);
+            }
+        )
+    );
+    Input.set_function(
         "GetMouseDeltaX",
         []()
         {
@@ -744,6 +784,74 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         []()
         {
             return GetLuaInputSnapshot().MouseDeltaY;
+        }
+    );
+    Input.set_function(
+        "IsGamepadConnected",
+        []()
+        {
+            return GetLuaInputSnapshot().bGamepadConnected;
+        }
+    );
+    Input.set_function(
+        "GetLastInputDevice",
+        []()
+        {
+            return InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("Gamepad")
+                : FString("KeyboardMouse");
+        }
+    );
+    Input.set_function(
+        "WasConfirmPressed",
+        []()
+        {
+            const FInputSystemSnapshot& Snapshot = GetLuaInputSnapshot();
+            return Snapshot.WasPressed(VK_SPACE) ||
+                Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
+        }
+    );
+    Input.set_function(
+        "WasPausePressed",
+        []()
+        {
+            const FInputSystemSnapshot& Snapshot = GetLuaInputSnapshot();
+            return Snapshot.WasPressed('Q') ||
+                Snapshot.WasPressed(81) ||
+                Snapshot.WasGamepadButtonPressed(EGamepadButton::Start);
+        }
+    );
+    Input.set_function(
+        "GetConfirmPromptLabel",
+        []()
+        {
+            return InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("A")
+                : FString("Space");
+        }
+    );
+    Input.set_function(
+        "GetPausePromptLabel",
+        []()
+        {
+            return InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("Menu")
+                : FString("Q");
+        }
+    );
+    Input.set_function(
+        "GetConfirmPromptText",
+        [](const FString& ActionText)
+        {
+            const FString Label = InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("A")
+                : FString("Space");
+            if (ActionText.empty())
+            {
+                return Label;
+            }
+
+            return FString("Press ") + Label + " to " + ActionText;
         }
     );
     Input.set_function(
@@ -835,6 +943,38 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             }
 
             return false;
+        }
+    );
+    Input.set_function(
+        "SetCursorImage",
+        [](const FString& TexturePath, float Width, float Height, float HotSpotX, float HotSpotY)
+        {
+            if (!GEngine)
+            {
+                return false;
+            }
+
+            UGameViewportClient* GameViewportClient = GetLuaGameViewportClient();
+            ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+            if (!GameViewportClient || !Device)
+            {
+                return false;
+            }
+
+            return FCursorSystem::Get().SetCursorImage(TexturePath, Width, Height, HotSpotX, HotSpotY);
+        }
+    );
+    Input.set_function(
+        "ClearCursorImage",
+        []()
+        {
+            if (!GEngine || !GetLuaGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().ClearCursorImage();
+            return true;
         }
     );
     Input.set_function(
@@ -1486,6 +1626,45 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             if (GEngine && GEngine->GetWorld())
             {
                 GEngine->GetWorld()->SetBallisticWindAcceleration(WindAcceleration);
+            }
+        }
+    );
+    Engine.set_function(
+        "SetClothWorldWindVelocity",
+        [](const FVector& WindVelocity)
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->SetClothWorldWindVelocity(WindVelocity);
+            }
+        }
+    );
+    Engine.set_function(
+        "SetClothWorldWindVelocityXYZ",
+        [](float X, float Y, float Z)
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->SetClothWorldWindVelocity(FVector(X, Y, Z));
+            }
+        }
+    );
+    Engine.set_function(
+        "GetClothWorldWindVelocity",
+        []()
+        {
+            return GEngine && GEngine->GetWorld()
+                ? GEngine->GetWorld()->GetClothWorldWindVelocityValue()
+                : FVector::ZeroVector;
+        }
+    );
+    Engine.set_function(
+        "ClearClothWorldWindVelocity",
+        []()
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->ClearClothWorldWindVelocity();
             }
         }
     );

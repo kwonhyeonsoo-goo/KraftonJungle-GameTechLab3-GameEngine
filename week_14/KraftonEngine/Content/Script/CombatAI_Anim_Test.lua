@@ -5,9 +5,11 @@ local fireElapsed = 0.0
 local lastMoveState = -1.0
 local lastDeath = false
 local lastEngaging = false
+local hitBoolPulseTime = 0.0
 
 local FIRE_TRIGGER_INTERVAL = 0.45
 local FIRE_SOUND_PATH = "SFX/CombatAI/npc_gun_fire.mp3"
+local HIT_BOOL_PULSE_DURATION = 0.12
 
 local function find_anim_instance()
     if obj == nil then
@@ -161,6 +163,9 @@ local function set_initial_variables()
 
     anim:SetGraphVariableFloat("MoveState", 0.0)
     anim:SetGraphVariableBool("Death", false)
+    if anim.SetGraphVariableBool ~= nil then
+        anim:SetGraphVariableBool("Hit", false)
+    end
     return true
 end
 
@@ -169,7 +174,10 @@ local function set_graph_trigger(anim, variableName)
         return false
     end
     if anim.SetGraphVariableTrigger ~= nil then
-        return anim:SetGraphVariableTrigger(variableName)
+        local ok = anim:SetGraphVariableTrigger(variableName)
+        if ok then
+            return true
+        end
     end
     if anim.SetGraphVariableBool ~= nil then
         return anim:SetGraphVariableBool(variableName, true)
@@ -181,10 +189,16 @@ local function current_move_state(agent)
     if agent == nil then
         return 0.0
     end
+    if agent.GetCombatAnimationMoveState ~= nil then
+        return agent:GetCombatAnimationMoveState()
+    end
     if agent:IsMovingForCombatRange() then
         return 2.0
     end
-    if agent:IsInCover() or agent:IsEngaging() or agent:IsSuppressed() or agent:GetIncomingFireCount() > 0 then
+    if agent.IsInStandingCombatSlot ~= nil and agent:IsInStandingCombatSlot() then
+        return 0.0
+    end
+    if agent:IsInCover() or agent:IsEngaging() then
         return 1.0
     end
     return 0.0
@@ -198,6 +212,7 @@ function BeginPlay()
     lastMoveState = -1.0
     lastDeath = false
     lastEngaging = false
+    hitBoolPulseTime = 0.0
     set_initial_variables()
 end
 
@@ -210,10 +225,30 @@ function Tick(dt)
     local agent = get_combat_agent()
     local isDead = agent ~= nil and not agent:IsAlive()
     local isEngaging = agent ~= nil and agent:IsEngaging()
-    local moveState = current_move_state(agent)
+    local hitTriggered = false
+    if agent ~= nil and not isDead and agent.ConsumeHitReaction ~= nil then
+        hitTriggered = agent:ConsumeHitReaction()
+        if hitTriggered then
+            fireElapsed = 0.0
+            hitBoolPulseTime = HIT_BOOL_PULSE_DURATION
+            set_graph_trigger(anim, "Hit")
+        end
+    end
+
+    local bHitActive = hitTriggered or hitBoolPulseTime > 0.0
+    local moveState = bHitActive and 0.0 or current_move_state(agent)
 
     anim:SetGraphVariableFloat("MoveState", moveState)
     anim:SetGraphVariableBool("Death", isDead)
+    if anim.SetGraphVariableBool ~= nil then
+        if hitBoolPulseTime > 0.0 then
+            hitBoolPulseTime = hitBoolPulseTime - dt
+            anim:SetGraphVariableBool("Hit", true)
+        else
+            hitBoolPulseTime = 0.0
+            anim:SetGraphVariableBool("Hit", false)
+        end
+    end
 
     if moveState ~= lastMoveState or isDead ~= lastDeath then
         fireElapsed = 0.0
@@ -226,7 +261,7 @@ function Tick(dt)
     end
     lastEngaging = isEngaging
 
-    if isDead then
+    if isDead or bHitActive then
         return
     end
 

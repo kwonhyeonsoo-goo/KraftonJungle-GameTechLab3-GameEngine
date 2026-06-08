@@ -20,6 +20,17 @@
                     <img id="scopeZoomIcon" class="scope-info-icon" data-ui-type="Image" data-ui-name="Scope Zoom Icon" src="Image/Scope/Scale.png" data-ui-fit="contain" />
                     <div id="scopeZoomValue" class="scope-info-value" data-ui-type="Text" data-ui-name="Scope Zoom Value">4x</div>
                 </div>
+                <div id="scopeWindBarRow" data-ui-type="Panel" data-ui-name="Scope Wind Bar Row">
+                    <div id="scopeWindGauge" data-ui-type="Panel" data-ui-name="Scope Wind Gauge">
+                        <div id="scopeWindPulseGlow" data-ui-type="Panel" data-ui-name="Scope Wind Pulse Glow"></div>
+                        <div id="scopeWindBarTrack" data-ui-type="Panel" data-ui-name="Scope Wind Bar Track"></div>
+                        <div id="scopeWindBarLeft" data-ui-type="Panel" data-ui-name="Scope Wind Bar Left"></div>
+                        <div id="scopeWindBarRight" data-ui-type="Panel" data-ui-name="Scope Wind Bar Right"></div>
+                        <div id="scopeWindBarLeftTip" data-ui-type="Panel" data-ui-name="Scope Wind Bar Left Tip"></div>
+                        <div id="scopeWindBarRightTip" data-ui-type="Panel" data-ui-name="Scope Wind Bar Right Tip"></div>
+                        <div id="scopeWindCenterLine" data-ui-type="Panel" data-ui-name="Scope Wind Center Line"></div>
+                    </div>
+                </div>
             </div>
         </div>
         <img id="compassImage" data-ui-type="Image" data-ui-name="Compass Image" src="Image/Hor-Compass/Window/Compass_Window_000.png" data-ui-fit="contain" />
@@ -64,6 +75,7 @@
         <div id="radioSubtitlePanel" data-ui-type="Panel" data-ui-name="Radio Subtitle Panel">
             <div id="radioSubtitleText" data-ui-type="Text" data-ui-name="Radio Subtitle Text"></div>
         </div>
+        <div id="radioOpeningSkipPrompt" data-ui-type="Text" data-ui-name="Radio Opening Skip Prompt">Press Space to Skip</div>
         <div id="pauseLayer" data-ui-type="Panel" data-ui-name="Pause Layer">
             <div id="pauseMenuPanel" data-ui-type="Panel" data-ui-name="Pause Menu Panel">
                 <div id="pauseTitle" data-ui-type="Text" data-ui-name="Pause Title">Paused</div>
@@ -97,14 +109,24 @@
                     <div id="pauseMouseValue" data-ui-type="Text" data-ui-name="Mouse Value">1.00x</div>
                     <button id="btnPauseMouseUp" data-ui-type="Button" data-ui-name="Mouse Up"><span>+</span></button>
                 </div>
+                <div id="pauseSettingGamepadRow" data-ui-type="Panel" data-ui-name="Gamepad Row">
+                    <div id="pauseGamepadLabel" data-ui-type="Text" data-ui-name="Gamepad Label">Gamepad Sensitivity</div>
+                    <button id="btnPauseGamepadDown" data-ui-type="Button" data-ui-name="Gamepad Down"><span>-</span></button>
+                    <div id="pauseGamepadValue" data-ui-type="Text" data-ui-name="Gamepad Value">1.00x</div>
+                    <button id="btnPauseGamepadUp" data-ui-type="Button" data-ui-name="Gamepad Up"><span>+</span></button>
+                </div>
             </div>
             <div id="pauseControlsPanel" data-ui-type="Panel" data-ui-name="Pause Controls Panel">
                 <div id="pauseControlsTitle" data-ui-type="Text" data-ui-name="Pause Controls Title">Controls</div>
                 <button id="btnPauseControlsBack" data-ui-type="Button" data-ui-name="Pause Controls Back"><span>Back</span></button>
-                <div id="pauseControlMove" data-ui-type="Text" data-ui-name="Move Control">WASD / Move</div>
-                <div id="pauseControlAim" data-ui-type="Text" data-ui-name="Aim Control">Right Mouse / Scope</div>
-                <div id="pauseControlBreath" data-ui-type="Text" data-ui-name="Breath Control">Shift while scoped / Hold Breath</div>
-                <div id="pauseControlPause" data-ui-type="Text" data-ui-name="Pause Control">Q / Pause Toggle</div>
+                <div id="pauseControlAim" data-ui-type="Text" data-ui-name="Aim Control">Aim : Mouse Move / Left Stick</div>
+                <div id="pauseControlScope" data-ui-type="Text" data-ui-name="Scope Control">Scope : Right Mouse / Left Trigger</div>
+                <div id="pauseControlFire" data-ui-type="Text" data-ui-name="Fire Control">Fire : Left Mouse / Right Trigger</div>
+                <div id="pauseControlBreath" data-ui-type="Text" data-ui-name="Breath Control">Hold Breath : Shift / LB</div>
+                <div id="pauseControlZoom" data-ui-type="Text" data-ui-name="Zoom Control">Zoom : Mouse Wheel / D-Pad Up, Down</div>
+                <div id="pauseControlAmmo" data-ui-type="Text" data-ui-name="Ammo Control">Ammo : 1, 2 / D-Pad Left, Right</div>
+                <div id="pauseControlReload" data-ui-type="Text" data-ui-name="Reload Control">Reload : R / X</div>
+                <div id="pauseControlPause" data-ui-type="Text" data-ui-name="Pause Control">Pause : Q / Menu</div>
             </div>
         </div>
     </div>

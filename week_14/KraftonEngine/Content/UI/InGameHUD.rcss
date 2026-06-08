@@ -85,10 +85,10 @@ body {
 
 #scopeTelemetryPanel {
     position: absolute;
-    left: 490.000000px;
-    top: 340.000000px;
-    width: 330.000000px;
-    height: 230.000000px;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 1920.000000px;
+    height: 1080.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -106,7 +106,7 @@ body {
 
 .scope-info-row {
     position: absolute;
-    height: 52.000000px;
+    height: 42.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -117,36 +117,36 @@ body {
     border-radius: 0px;
     padding: 0px 0px 0px 0px;
     font-family: "Nexon";
-    font-size: 24.000000px;
+    font-size: 22.000000px;
     font-weight: bold;
     text-align: left;
 }
 
 #scopeDistanceRow {
-    left: 22.000000px;
-    top: 0.000000px;
-    width: 210.000000px;
+    left: 598.000000px;
+    top: 300.000000px;
+    width: 142.000000px;
 }
 
 #scopeWindRow {
-    left: 22.000000px;
-    top: 72.000000px;
-    width: 306.000000px;
-    height: 74.000000px;
+    left: 1232.000000px;
+    top: 308.000000px;
+    width: 174.000000px;
+    height: 60.000000px;
 }
 
 #scopeZoomRow {
-    left: 22.000000px;
-    top: 152.000000px;
-    width: 150.000000px;
+    left: 598.000000px;
+    top: 350.000000px;
+    width: 116.000000px;
 }
 
 .scope-info-icon {
     position: absolute;
     left: 0.000000px;
-    top: 10.000000px;
-    width: 28.000000px;
-    height: 28.000000px;
+    top: 7.000000px;
+    width: 24.000000px;
+    height: 24.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -162,8 +162,8 @@ body {
 
 .scope-info-value {
     position: absolute;
-    left: 40.000000px;
-    top: 7.000000px;
+    left: 34.000000px;
+    top: 5.000000px;
     width: 222.000000px;
     height: 34.000000px;
     box-sizing: border-box;
@@ -176,30 +176,30 @@ body {
     border-radius: 0px;
     padding: 0px 0px 0px 0px;
     font-family: "Nexon";
-    font-size: 23.000000px;
+    font-size: 22.000000px;
     font-weight: bold;
     text-align: left;
 }
 
 #scopeDistanceValue {
-    width: 126.000000px;
+    width: 98.000000px;
 }
 
 #scopeWindValue {
-    top: 0.000000px;
-    width: 140.000000px;
+    top: 1.000000px;
+    width: 132.000000px;
     height: 28.000000px;
 }
 
 #scopeWindSpeedValue {
-    top: 29.000000px;
-    width: 140.000000px;
+    top: 27.000000px;
+    width: 132.000000px;
     height: 28.000000px;
-    font-size: 21.000000px;
+    font-size: 18.000000px;
 }
 
 #scopeZoomValue {
-    width: 68.000000px;
+    width: 64.000000px;
 }
 
 #CompassArrow {
@@ -653,10 +653,10 @@ body {
 
 #hitNotifyPanel {
     position: absolute;
-    left: 740.000000px;
-    top: 476.000000px;
-    width: 440.000000px;
-    height: 128.000000px;
+    left: 820.000000px;
+    top: 700.000000px;
+    width: 620.000000px;
+    height: 82.000000px;
     box-sizing: border-box;
     overflow: hidden;
     display: none;
@@ -672,34 +672,36 @@ body {
     text-align: center;
     transform: scale(1.0);
     transform-origin: center center;
-    z-index: 18;
+    z-index: 80;
 }
 
 #hitNotifyTitle {
     position: absolute;
     left: 0.000000px;
-    top: 0.000000px;
-    width: 440.000000px;
-    height: 66.000000px;
+    top: 8.000000px;
+    width: 286.000000px;
+    height: 58.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
-    background-color: rgba(0, 0, 0, 0);
-    color: rgba(255, 245, 218, 255);
+    background-color: rgba(255, 209, 70, 245);
+    color: rgba(32, 27, 15, 255);
+    border-color: rgba(255, 255, 255, 0);
     border-width: 0px;
-    padding: 0px;
+    border-radius: 8px;
+    padding: 10px 18px 8px 18px;
     font-family: "Nexon";
-    font-size: 52.000000px;
+    font-size: 28.000000px;
     font-weight: bold;
     text-align: center;
 }
 
 #hitNotifyMeta {
     position: absolute;
-    left: 30.000000px;
-    top: 72.000000px;
-    width: 380.000000px;
-    height: 50.000000px;
+    left: 314.000000px;
+    top: 7.000000px;
+    width: 268.000000px;
+    height: 66.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 0;
@@ -708,15 +710,15 @@ body {
     padding: 0px;
     font-family: "Nexon";
     font-weight: bold;
-    text-align: right;
+    text-align: left;
 }
 
 #hitNotifyDistance,
 #hitNotifyScore {
     position: absolute;
     left: 0.000000px;
-    width: 380.000000px;
-    height: 24.000000px;
+    width: 268.000000px;
+    height: 30.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -724,19 +726,21 @@ body {
     border-width: 0px;
     padding: 0px;
     font-family: "Nexon";
-    font-size: 19.000000px;
+    font-size: 22.000000px;
     font-weight: bold;
-    text-align: right;
+    text-align: left;
 }
 
 #hitNotifyDistance {
-    top: 0.000000px;
-    color: rgba(225, 232, 235, 230);
+    top: 34.000000px;
+    color: rgba(245, 246, 240, 230);
+    font-size: 18.000000px;
 }
 
 #hitNotifyScore {
-    top: 25.000000px;
-    color: rgba(255, 213, 118, 255);
+    top: 2.000000px;
+    color: rgba(255, 220, 88, 255);
+    font-size: 27.000000px;
 }
 
 #cutsceneLetterboxTop,
@@ -844,6 +848,27 @@ body {
     font-family: "Nexon";
     font-weight: bold;
     text-align: center;
+}
+
+#radioOpeningSkipPrompt {
+    position: absolute;
+    right: 42.000000px;
+    bottom: 36.000000px;
+    width: 320.000000px;
+    height: 32.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(245, 246, 240, 230);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 19.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+    z-index: 51;
 }
 
 #pauseLayer {
@@ -1003,7 +1028,8 @@ body {
 #pauseSettingBgmRow,
 #pauseSettingSfxRow,
 #pauseSettingZoomRow,
-#pauseSettingMouseRow {
+#pauseSettingMouseRow,
+#pauseSettingGamepadRow {
     position: absolute;
     left: 44.000000px;
     width: 382.000000px;
@@ -1021,11 +1047,13 @@ body {
 #pauseSettingSfxRow { top: 232.000000px; }
 #pauseSettingZoomRow { top: 328.000000px; }
 #pauseSettingMouseRow { top: 424.000000px; }
+#pauseSettingGamepadRow { top: 520.000000px; }
 
 #pauseBgmLabel,
 #pauseSfxLabel,
 #pauseZoomLabel,
-#pauseMouseLabel {
+#pauseMouseLabel,
+#pauseGamepadLabel {
     position: absolute;
     left: 22.000000px;
     top: 23.000000px;
@@ -1040,7 +1068,8 @@ body {
 
 #pauseBgmValue,
 #pauseSfxValue,
-#pauseMouseValue {
+#pauseMouseValue,
+#pauseGamepadValue {
     position: absolute;
     left: 274.000000px;
     top: 22.000000px;
@@ -1056,9 +1085,11 @@ body {
 #btnPauseBgmDown,
 #btnPauseSfxDown,
 #btnPauseMouseDown,
+#btnPauseGamepadDown,
 #btnPauseBgmUp,
 #btnPauseSfxUp,
-#btnPauseMouseUp {
+#btnPauseMouseUp,
+#btnPauseGamepadUp {
     position: absolute;
     top: 17.000000px;
     width: 42.000000px;
@@ -1079,18 +1110,22 @@ body {
 
 #btnPauseBgmDown,
 #btnPauseSfxDown,
-#btnPauseMouseDown { left: 226.000000px; }
+#btnPauseMouseDown,
+#btnPauseGamepadDown { left: 226.000000px; }
 
 #btnPauseBgmUp,
 #btnPauseSfxUp,
-#btnPauseMouseUp { left: 338.000000px; }
+#btnPauseMouseUp,
+#btnPauseGamepadUp { left: 338.000000px; }
 
 #btnPauseBgmDown span,
 #btnPauseSfxDown span,
 #btnPauseMouseDown span,
+#btnPauseGamepadDown span,
 #btnPauseBgmUp span,
 #btnPauseSfxUp span,
-#btnPauseMouseUp span {
+#btnPauseMouseUp span,
+#btnPauseGamepadUp span {
     position: absolute;
     left: 0px;
     top: 8.000000px;
@@ -1133,33 +1168,43 @@ body {
 #btnPauseBgmDown:hover,
 #btnPauseSfxDown:hover,
 #btnPauseMouseDown:hover,
+#btnPauseGamepadDown:hover,
 #btnPauseBgmUp:hover,
 #btnPauseSfxUp:hover,
 #btnPauseMouseUp:hover,
+#btnPauseGamepadUp:hover,
 #btnPauseZoomMode:hover {
     background-color: rgba(94, 78, 44, 240);
     color: rgba(255, 223, 134, 255);
 }
 
-#pauseControlMove,
 #pauseControlAim,
+#pauseControlScope,
+#pauseControlFire,
 #pauseControlBreath,
+#pauseControlZoom,
+#pauseControlAmmo,
+#pauseControlReload,
 #pauseControlPause {
     position: absolute;
     left: 44.000000px;
     width: 382.000000px;
-    height: 42.000000px;
+    height: 36.000000px;
     color: rgba(226, 232, 235, 255);
     background-color: rgba(0, 0, 0, 0);
     border-width: 0px;
-    padding: 9.000000px 18.000000px 0px 18.000000px;
+    padding: 6.000000px 18.000000px 0px 18.000000px;
     font-family: "Nexon";
-    font-size: 21.000000px;
+    font-size: 19.000000px;
     font-weight: 700;
     text-align: left;
 }
 
-#pauseControlMove { top: 146.000000px; }
-#pauseControlAim { top: 216.000000px; }
-#pauseControlBreath { top: 286.000000px; }
-#pauseControlPause { top: 356.000000px; }
+#pauseControlAim { top: 132.000000px; }
+#pauseControlScope { top: 184.000000px; }
+#pauseControlFire { top: 236.000000px; }
+#pauseControlBreath { top: 288.000000px; }
+#pauseControlZoom { top: 340.000000px; }
+#pauseControlAmmo { top: 392.000000px; }
+#pauseControlReload { top: 444.000000px; }
+#pauseControlPause { top: 496.000000px; }

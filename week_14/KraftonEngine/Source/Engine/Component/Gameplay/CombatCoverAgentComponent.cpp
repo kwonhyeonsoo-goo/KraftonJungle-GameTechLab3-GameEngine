@@ -80,6 +80,8 @@ void UCombatCoverAgentComponent::BeginPlay()
     IncomingFireCount = 0;
     IncomingAttackDamage = 0.0f;
     SuppressionTimer = 0.0f;
+    HitReactionTimer = 0.0f;
+    bHitReactionPending = false;
     CombatDecisionCooldownRemaining = 0.0f;
     CoverHoldTimer = 0.0f;
     StateBeforeEngage = ECombatCoverAgentState::Idle;
@@ -149,6 +151,11 @@ void UCombatCoverAgentComponent::RecordSniperHit(const FSniperHitInfo& HitInfo)
     LastHitScoreMultiplier = HitInfo.HitScoreMultiplier;
     LastHitScoreValue = HitInfo.HitScoreValue;
     bLastHitKilled = HitInfo.bKilled;
+
+    if (!HitInfo.bKilled)
+    {
+        QueueHitReaction();
+    }
 }
 
 void UCombatCoverAgentComponent::RequestInitialSlot()
@@ -230,6 +237,8 @@ void UCombatCoverAgentComponent::MarkDead()
     IncomingFireCount = 0;
     IncomingAttackDamage = 0.0f;
     SuppressionTimer = 0.0f;
+    HitReactionTimer = 0.0f;
+    bHitReactionPending = false;
     CoverHoldTimer = 0.0f;
     bMoveToCombatSlotAfterCoverHold = false;
     Health = 0.0f;
@@ -472,6 +481,7 @@ void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
     AttackIntervalMin = (std::max)(0.0f, AttackIntervalMin);
     AttackIntervalMax = (std::max)(AttackIntervalMin, AttackIntervalMax);
     TargetScanInterval = (std::max)(0.01f, TargetScanInterval);
+    HitReactionDuration = (std::min)((std::max)(0.0f, HitReactionDuration), 10.0f);
     RepositionChanceWhenInRange = (std::min)((std::max)(0.0f, RepositionChanceWhenInRange), 1.0f);
     CombatDecisionCooldown = (std::max)(0.0f, CombatDecisionCooldown);
     TakeCoverChanceWhenInRange = (std::min)((std::max)(0.0f, TakeCoverChanceWhenInRange), 1.0f);
@@ -500,6 +510,54 @@ float UCombatCoverAgentComponent::GetEffectiveFireRange() const
     }
 
     return (std::max)(0.0f, FireRange);
+}
+
+ECombatCoverSlotType UCombatCoverAgentComponent::GetCurrentSlotType() const
+{
+    UCombatFlowManagerComponent* Manager = const_cast<UCombatCoverAgentComponent*>(this)->ResolveManager();
+    const FCombatCoverSlot* Slot = Manager ? Manager->FindCurrentSlot(this) : nullptr;
+    return Slot ? Slot->SlotType : ECombatCoverSlotType::ExposedDummy;
+}
+
+bool UCombatCoverAgentComponent::IsInStandingCombatSlot() const
+{
+    return GetCurrentSlotType() == ECombatCoverSlotType::StandingCombatCover;
+}
+
+bool UCombatCoverAgentComponent::ShouldUseStandingFire() const
+{
+    return IsInStandingCombatSlot();
+}
+
+float UCombatCoverAgentComponent::GetCombatAnimationMoveState() const
+{
+    if (IsMovingForCombatRange())
+    {
+        return 2.0f;
+    }
+
+    if (ShouldUseStandingFire())
+    {
+        return 0.0f;
+    }
+
+    if (IsInCover() || IsEngaging())
+    {
+        return 1.0f;
+    }
+
+    return 0.0f;
+}
+
+bool UCombatCoverAgentComponent::ConsumeHitReaction()
+{
+    if (State == ECombatCoverAgentState::Dead || !bHitReactionPending || HitReactionTimer <= 0.0f)
+    {
+        return false;
+    }
+
+    bHitReactionPending = false;
+    return true;
 }
 
 const char* UCombatCoverAgentComponent::GetStateName() const
@@ -643,6 +701,7 @@ void UCombatCoverAgentComponent::ApplyDamage(float Damage)
     if (Health <= 0.0f)
     {
         MarkDead();
+        return;
     }
 }
 
@@ -667,6 +726,10 @@ void UCombatCoverAgentComponent::ApplySuppression(float Duration)
     }
 
     SuppressionTimer = (std::max)(SuppressionTimer, Duration);
+    if (bTriggerHitReactionOnSuppression)
+    {
+        QueueHitReaction();
+    }
 }
 
 void UCombatCoverAgentComponent::FinishSuppression()
@@ -730,6 +793,17 @@ UCombatFlowManagerComponent* UCombatCoverAgentComponent::ResolveManager()
         CachedManager.Reset(FoundManager);
     }
     return FoundManager;
+}
+
+void UCombatCoverAgentComponent::QueueHitReaction()
+{
+    if (State == ECombatCoverAgentState::Dead || HitReactionDuration <= 0.0f)
+    {
+        return;
+    }
+
+    HitReactionTimer = (std::max)(HitReactionTimer, HitReactionDuration);
+    bHitReactionPending = true;
 }
 
 void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
@@ -952,6 +1026,15 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
     }
 
     TickCombatDecisionCooldown(DeltaTime);
+
+    if (HitReactionTimer > 0.0f)
+    {
+        HitReactionTimer = (std::max)(0.0f, HitReactionTimer - DeltaTime);
+        if (HitReactionTimer <= 0.0f)
+        {
+            bHitReactionPending = false;
+        }
+    }
 
     if (State != ECombatCoverAgentState::Dead)
     {

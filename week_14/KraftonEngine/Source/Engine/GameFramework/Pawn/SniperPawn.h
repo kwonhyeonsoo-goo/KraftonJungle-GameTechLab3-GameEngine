@@ -10,6 +10,7 @@ class UBallisticBulletManagerComponent;
 class UCameraComponent;
 class USceneComponent;
 class USniperWeaponComponent;
+class UActionComponent;
 
 UCLASS()
 class ASniperPawn : public APawn
@@ -23,6 +24,7 @@ public:
 	void EndPlay() override;
 	void PostDuplicate() override;
 	void SetupInputComponent() override;
+	void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime) override;
 	void Tick(float DeltaTime) override;
 
 	void InitDefaultComponents();
@@ -35,8 +37,16 @@ public:
 	USniperWeaponComponent* GetSniperWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
 	UBallisticBulletManagerComponent* GetBallisticBulletManagerComponent() const { return BulletManagerComponent.Get(); }
+	UFUNCTION(Pure, Category="Sniper|Components")
+	UActionComponent* GetSniperActionComponent() const { return ActionComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsScoped() const { return ScopeState.bIsScoped; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsReloading() const;
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetReloadRemaining() const;
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetReloadProgress() const;
 	UFUNCTION(Callable, Category="Sniper|State")
 	void ForceScopeReleased();
 	UFUNCTION(Pure, Category="Sniper|State")
@@ -51,6 +61,14 @@ public:
 	float GetMaxScopeZoomMagnification() const { return ScopeState.MaxZoomMagnification; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetCurrentScopeSensitivity() const { return ScopeState.CurrentSensitivity; }
+	UFUNCTION(Pure, Category="Sniper|Input")
+	float GetMouseSensitivityMultiplier() const;
+	UFUNCTION(Callable, Category="Sniper|Input")
+	void SetMouseSensitivityMultiplier(float Multiplier);
+	UFUNCTION(Pure, Category="Sniper|Input")
+	float GetGamepadLookSensitivityMultiplier() const;
+	UFUNCTION(Callable, Category="Sniper|Input")
+	void SetGamepadLookSensitivityMultiplier(float Multiplier);
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathActive() const;
 	UFUNCTION(Pure, Category="Sniper|State")
@@ -64,6 +82,10 @@ public:
 	bool IsHoldBreathRecovering() const { return AimSwayState.bForcedRecovery; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathReleaseRequired() const { return AimSwayState.bRequireHoldBreathRelease; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsHoldBreathOnCooldown() const { return AimSwayState.HoldBreathCooldownRemaining > 0.0f; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetHoldBreathCooldownRemaining() const { return AimSwayState.HoldBreathCooldownRemaining; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetHoldBreathDuration() const
 	{
@@ -85,6 +107,10 @@ public:
 
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float MouseSensitivity = 0.2f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Gamepad Look Sensitivity", Min=0.0f, Max=720.0f, Speed=1.0f)
+	float GamepadLookSensitivity = 90.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Gamepad Trigger Press Threshold", Min=0.01f, Max=1.0f, Speed=0.01f)
+	float GamepadTriggerPressThreshold = 0.35f;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Min Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
 	float MinCameraPitch = -80.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Max Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
@@ -110,6 +136,8 @@ public:
 	float ExhaustedSwayMultiplier = 10.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Sway Blend Speed", Min=0.0f, Max=60.0f, Speed=0.1f)
 	float HoldBreathSwayBlendSpeed = 4.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Reentry Delay", Min=0.0f, Max=10.0f, Speed=0.1f)
+	float HoldBreathReentryDelay = 2.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Pitch Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
 	float SwayPitchFrequency = 1.85f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Yaw Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
@@ -139,30 +167,50 @@ public:
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Blend Time", Min=0.0f, Max=2.0f, Speed=0.01f)
 	float ScopeLensBlendTime = 0.08f;
 
+	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Enable Bullet Flight Slomo")
+	bool bEnableBulletFlightSlomo = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Bullet Flight Slomo Duration", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float BulletFlightSlomoDuration = 0.18f;
+	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Bullet Flight Slomo Time Dilation", Min=0.01f, Max=1.0f, Speed=0.01f)
+	float BulletFlightSlomoTimeDilation = 0.22f;
+
 private:
 	void CacheComponentReferences();
+	void CacheInputSensitivityBases();
 	void SyncSniperRuntimeState();
+	void UpdateBulletFlightSlomo(float DeltaTime);
 	void UpdateScopeState(float DeltaTime);
 	void UpdateHoldBreathState(float DeltaTime);
 	void UpdateAimSwayState(float DeltaTime);
 	void UpdateRecoilState(float DeltaTime);
 	void ApplySniperControlRotation();
 	FRotator BuildEffectiveAimRotation() const;
+	bool CanEnterScope() const;
 	float ClampScopeZoomMagnification(float Magnification) const;
 	float ComputeScopedFOVForMagnification(float Magnification) const;
 	float ComputeScopedSensitivityForMagnification(float Magnification) const;
 	void AdjustScopeZoomStep(int32 StepDelta);
 	void HandleTurnInput(float Value);
 	void HandleLookUpInput(float Value);
+	void HandleGamepadTurnInput(float Value);
+	void HandleGamepadLookUpInput(float Value);
 	void HandleScopeZoomAxis(float Value);
+	void HandleGamepadScopeAxis(float Value);
+	void HandleGamepadFireAxis(float Value);
 	void HandleFirePressed();
 	void HandleScopePressed();
 	void HandleScopeReleased();
 	void HandleHoldBreathPressed();
 	void HandleHoldBreathReleased();
+	void HandleGamepadHoldBreathPressed();
+	void HandleGamepadHoldBreathReleased();
 	void HandleSwitchAmmoNormalPressed();
 	void HandleSwitchAmmoAntiMaterialPressed();
+	void HandleScopeZoomInPressed();
+	void HandleScopeZoomOutPressed();
 	void HandleReloadPressed();
+	void RefreshScopeHeldState();
+	void RefreshHoldBreathHeldState();
 	void ApplyFireRecoil();
 	bool FireCurrentRound();
 
@@ -170,9 +218,20 @@ private:
 	TWeakObjectPtr<UCameraComponent> Camera;
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
 	TWeakObjectPtr<UBallisticBulletManagerComponent> BulletManagerComponent;
+	TWeakObjectPtr<UActionComponent> ActionComponent;
 
 	FSniperInputState InputState;
 	FScopeState ScopeState;
 	FAimSwayState AimSwayState;
 	FRecoilState RecoilState;
+	float CachedInputDeltaTime = 1.0f / 60.0f;
+	bool bMouseScopeInputHeld = false;
+	bool bGamepadScopeInputHeld = false;
+	bool bKeyboardHoldBreathInputHeld = false;
+	bool bGamepadHoldBreathInputHeld = false;
+	bool bGamepadFireTriggerHeld = false;
+	bool bBulletFlightSlomoActive = false;
+	bool bInputSensitivityBaseInitialized = false;
+	float BaseMouseSensitivity = 0.2f;
+	float BaseGamepadLookSensitivity = 90.0f;
 };

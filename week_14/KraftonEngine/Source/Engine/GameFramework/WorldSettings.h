@@ -29,11 +29,12 @@ struct FWorldSettings
 	// Scene-wide ballistic wind settings shared by all sniper bullets in this level.
 	bool bEnableBallisticWind = true;
 	FVector BallisticWindAcceleration = FVector(0.0f, 1.5f, 0.0f);
-	bool bEnableDynamicBallisticWind = false;
-	float BallisticWindChangeIntervalMin = 3.0f;
-	float BallisticWindChangeIntervalMax = 7.0f;
-	float BallisticWindDirectionOffsetDegrees = 20.0f;
-	float BallisticWindMagnitudeScaleMin = 0.6f;
-	float BallisticWindMagnitudeScaleMax = 1.4f;
-	float BallisticWindBlendSpeed = 1.5f;
+	bool bEnableDynamicBallisticWind = true;
+	float BallisticWindChangeIntervalMin = 1.2f;
+	float BallisticWindChangeIntervalMax = 3.0f;
+	float BallisticWindDirectionOffsetDegrees = 90.0f;
+	float BallisticWindMagnitudeScaleMin = 0.25f;
+	float BallisticWindMagnitudeScaleMax = 0.90f;
+	float BallisticWindBlendSpeed = 3.0f;
+	float BallisticWindCrossBias = 1.25f;
 };

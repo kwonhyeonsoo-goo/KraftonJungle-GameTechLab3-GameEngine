@@ -97,6 +97,7 @@ namespace SceneKeys
 	static constexpr const char* BallisticWindMagnitudeScaleMin = "BallisticWindMagnitudeScaleMin";
 	static constexpr const char* BallisticWindMagnitudeScaleMax = "BallisticWindMagnitudeScaleMax";
 	static constexpr const char* BallisticWindBlendSpeed = "BallisticWindBlendSpeed";
+	static constexpr const char* BallisticWindCrossBias = "BallisticWindCrossBias";
 	static constexpr const char* Actors = "Actors";
 	static constexpr const char* RootComponent = "RootComponent";
 	static constexpr const char* NonSceneComponents = "NonSceneComponents";
@@ -401,6 +402,7 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 		WSObj[SceneKeys::BallisticWindMagnitudeScaleMin] = WS.BallisticWindMagnitudeScaleMin;
 		WSObj[SceneKeys::BallisticWindMagnitudeScaleMax] = WS.BallisticWindMagnitudeScaleMax;
 		WSObj[SceneKeys::BallisticWindBlendSpeed] = WS.BallisticWindBlendSpeed;
+		WSObj[SceneKeys::BallisticWindCrossBias] = WS.BallisticWindCrossBias;
 		w[SceneKeys::WorldSettings] = WSObj;
 	}
 
@@ -773,6 +775,10 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 		if (WSObj.hasKey(SceneKeys::BallisticWindBlendSpeed))
 		{
 			WorldSettings.BallisticWindBlendSpeed = static_cast<float>(WSObj[SceneKeys::BallisticWindBlendSpeed].ToFloat());
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindCrossBias))
+		{
+			WorldSettings.BallisticWindCrossBias = static_cast<float>(WSObj[SceneKeys::BallisticWindCrossBias].ToFloat());
 		}
 	}
 	else if (root.hasKey(SceneKeys::GameMode))

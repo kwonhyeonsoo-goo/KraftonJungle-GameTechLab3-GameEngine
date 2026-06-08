@@ -8,7 +8,6 @@ local SNIPER_KILLCAM_PRE_IMPACT_FORWARD_DISTANCE = 0.18
 local SNIPER_KILLCAM_POST_IMPACT_FORWARD_DISTANCE = 4.0
 local SNIPER_KILLCAM_IMPACT_BULLET_SCALE = 0.05
 local SNIPER_KILLCAM_TRAVEL_FOV_BOOST = 0.22
-local SNIPER_KILLCAM_SHOOT_SFX = "SFX/Sniper/Shoot1.wav"
 local SNIPER_KILLCAM_SLOWDOWN_SFX = "SFX/Sniper/SlowDown.mp3"
 local SNIPER_KILLCAM_SLOWDOWN_SFX_DELAY = 0.3
 local SNIPER_KILLCAM_BULLET_CAM_SFX = "SFX/Sniper/BulletCam1.mp3"
@@ -65,6 +64,55 @@ local function play_sfx(general, path, volume)
     end
 end
 
+local function play_sfx_handle(general, path, volume)
+    if general ~= nil and general.PlaySFXHandle ~= nil then
+        return general:PlaySFXHandle(path, volume or 1.0) or 0
+    end
+
+    if AudioManager ~= nil and AudioManager.PlaySFXHandle ~= nil then
+        return AudioManager.PlaySFXHandle(path, volume or 1.0) or 0
+    end
+
+    play_sfx(general, path, volume)
+    return 0
+end
+
+local function stop_sfx_handle(general, handle)
+    handle = tonumber(handle) or 0
+    if handle == 0 then
+        return
+    end
+
+    if general ~= nil and general.FadeOutSFX ~= nil then
+        general:FadeOutSFX(handle, 0.05)
+        return
+    end
+
+    if AudioManager ~= nil and AudioManager.FadeOutSFX ~= nil then
+        AudioManager.FadeOutSFX(handle, 0.05)
+        return
+    end
+
+    if general ~= nil and general.StopSound ~= nil then
+        general:StopSound(handle)
+        return
+    end
+
+    if AudioManager ~= nil and AudioManager.StopSound ~= nil then
+        AudioManager.StopSound(handle)
+    end
+end
+
+local function stop_killcam_sfx_handles(general, handles)
+    if type(handles) ~= "table" then
+        return
+    end
+
+    for _, handle in ipairs(handles) do
+        stop_sfx_handle(general, handle)
+    end
+end
+
 local function camera_fade_out(duration)
     if CameraManager ~= nil and CameraManager.FadeOut ~= nil then
         CameraManager.FadeOut(duration)
@@ -75,6 +123,19 @@ local function camera_fade_in(duration)
     if CameraManager ~= nil and CameraManager.FadeIn ~= nil then
         CameraManager.FadeIn(duration)
     end
+end
+
+local function was_confirm_pressed()
+    if Input ~= nil and Input.WasConfirmPressed ~= nil then
+        local ok, value = pcall(function()
+            return Input.WasConfirmPressed()
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
+    return Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space")
 end
 
 local function get_time_dilation()
@@ -1165,10 +1226,10 @@ function CutSceneManager:Initialize()
             current.shockwave_disabled_after_impact = false
             current.impact_time = math.max(0.0, travel_duration)
             current.impact_bullet_forward_offset = nil
+            current.killcam_sfx_handles = {}
             force_scope_released()
             set_time_dilation(0.0)
             set_world_paused(true)
-            play_sfx(self.general, SNIPER_KILLCAM_SHOOT_SFX, 1.0)
             if SniperKillCam ~= nil and SniperKillCam.Start ~= nil then
                 if SniperKillCam.ConfigureBullet ~= nil then
                     SniperKillCam.ConfigureBullet(merge_tables(current.killcam_profile.bullet, payload.bullet))
@@ -1213,24 +1274,31 @@ function CutSceneManager:Initialize()
             if current.slowdown_sfx_played ~= true and
                 (tonumber(current.elapsed) or 0.0) >= SNIPER_KILLCAM_SLOWDOWN_SFX_DELAY then
                 current.slowdown_sfx_played = true
-                play_sfx(self.general, SNIPER_KILLCAM_SLOWDOWN_SFX, 1.0)
+                current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
+                    play_sfx_handle(self.general, SNIPER_KILLCAM_SLOWDOWN_SFX, 1.0)
             end
             if current.bullet_cam_sfx_played ~= true and
                 (tonumber(current.elapsed) or 0.0) >= SNIPER_KILLCAM_BULLET_CAM_SFX_DELAY then
                 current.bullet_cam_sfx_played = true
-                play_sfx(self.general, SNIPER_KILLCAM_BULLET_CAM_SFX, 1.0)
+                current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
+                    play_sfx_handle(self.general, SNIPER_KILLCAM_BULLET_CAM_SFX, 1.0)
             end
             if current.damaged_sfx_played ~= true and
                 (tonumber(current.elapsed) or 0.0) >= (tonumber(current.impact_time) or 0.0) then
                 current.damaged_sfx_played = true
-                play_sfx(self.general, SNIPER_KILLCAM_DAMAGED_SFX, 1.0)
+                current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
+                    play_sfx_handle(self.general, SNIPER_KILLCAM_DAMAGED_SFX, 1.0)
             end
-            if Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space") then
+            if was_confirm_pressed() then
                 current.skipped = true
                 self:Stop("skipped")
             end
         end,
         on_end = function(current)
+            if current.reason == "skipped" then
+                stop_killcam_sfx_handles(self.general, current.killcam_sfx_handles)
+            end
+            current.killcam_sfx_handles = nil
             if SniperKillCam ~= nil and SniperKillCam.Stop ~= nil then
                 SniperKillCam.Stop()
             end
@@ -1355,6 +1423,11 @@ function CutSceneManager:PollSniperKillCam()
         camera_mode = 0,
         profile = take_next_sniper_killcam_profile_id()
     })
+    if self.general ~= nil and self.general.Publish ~= nil then
+        self.general:Publish("sniper.killcam_triggered", {
+            bullet_id = bullet_id
+        })
+    end
 end
 
 return CutSceneManager

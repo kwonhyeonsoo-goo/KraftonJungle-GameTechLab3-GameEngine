@@ -10,9 +10,35 @@ struct FGuiInputState
     bool bUsingTextInput = false;
 };
 
+enum class EGamepadButton : uint8
+{
+    FaceBottom = 0,
+    FaceRight,
+    FaceLeft,
+    FaceTop,
+    LeftShoulder,
+    RightShoulder,
+    Back,
+    Start,
+    LeftThumb,
+    RightThumb,
+    DPadUp,
+    DPadDown,
+    DPadLeft,
+    DPadRight,
+    Count
+};
+
+enum class ELastInputDevice : uint8
+{
+    KeyboardMouse = 0,
+    Gamepad
+};
+
 struct FInputSystemSnapshot
 {
     static constexpr int KeyCount = 256;
+    static constexpr int GamepadButtonCount = static_cast<int>(EGamepadButton::Count);
 
     bool KeyDown[KeyCount] = {};
     bool KeyPressed[KeyCount] = {};
@@ -54,11 +80,39 @@ struct FInputSystemSnapshot
     bool bGuiUsingKeyboard = false;
     bool bGuiUsingTextInput = false;
     bool bWindowFocused = true;
+    bool bGamepadConnected = false;
+
+    bool GamepadButtonDown[GamepadButtonCount] = {};
+    bool GamepadButtonPressed[GamepadButtonCount] = {};
+    bool GamepadButtonReleased[GamepadButtonCount] = {};
+
+    float GamepadLeftStickX = 0.0f;
+    float GamepadLeftStickY = 0.0f;
+    float GamepadRightStickX = 0.0f;
+    float GamepadRightStickY = 0.0f;
+    float GamepadLeftTrigger = 0.0f;
+    float GamepadRightTrigger = 0.0f;
 
     static bool IsValidKeyCode(int VK) { return VK >= 0 && VK < KeyCount; }
     bool IsDown(int VK) const { return IsValidKeyCode(VK) && KeyDown[VK]; }
     bool WasPressed(int VK) const { return IsValidKeyCode(VK) && KeyPressed[VK]; }
     bool WasReleased(int VK) const { return IsValidKeyCode(VK) && KeyReleased[VK]; }
+    static bool IsValidGamepadButtonIndex(int Index) { return Index >= 0 && Index < GamepadButtonCount; }
+    bool IsGamepadButtonDown(EGamepadButton Button) const
+    {
+        const int Index = static_cast<int>(Button);
+        return IsValidGamepadButtonIndex(Index) && GamepadButtonDown[Index];
+    }
+    bool WasGamepadButtonPressed(EGamepadButton Button) const
+    {
+        const int Index = static_cast<int>(Button);
+        return IsValidGamepadButtonIndex(Index) && GamepadButtonPressed[Index];
+    }
+    bool WasGamepadButtonReleased(EGamepadButton Button) const
+    {
+        const int Index = static_cast<int>(Button);
+        return IsValidGamepadButtonIndex(Index) && GamepadButtonReleased[Index];
+    }
 };
 
 class InputSystem : public TSingleton<InputSystem>
@@ -82,6 +136,10 @@ public:
     void ResetWheelDelta();
     void ResetCaptureStateForPIEEnd();
     bool IsWindowFocused() const { return bWindowFocused; }
+    bool IsGamepadConnected() const { return bGamepadConnected; }
+    ELastInputDevice GetLastInputDevice() const { return LastInputDevice; }
+    bool IsLastInputDeviceGamepad() const { return LastInputDevice == ELastInputDevice::Gamepad; }
+    void IgnoreNextMouseMoveForDeviceHeuristics() { bIgnoreNextMouseMoveForDeviceHeuristics = true; }
 
     // Keyboard
     bool GetKeyDown(int VK) const { return FInputSystemSnapshot::IsValidKeyCode(VK) && CurrentStates[VK] && !PrevStates[VK]; }
@@ -142,6 +200,15 @@ public:
 private:
     bool CurrentStates[256] = { false };
     bool PrevStates[256] = { false };
+    bool CurrentGamepadButtons[FInputSystemSnapshot::GamepadButtonCount] = { false };
+    bool PrevGamepadButtons[FInputSystemSnapshot::GamepadButtonCount] = { false };
+    bool bGamepadConnected = false;
+    float GamepadLeftStickX = 0.0f;
+    float GamepadLeftStickY = 0.0f;
+    float GamepadRightStickX = 0.0f;
+    float GamepadRightStickY = 0.0f;
+    float GamepadLeftTrigger = 0.0f;
+    float GamepadRightTrigger = 0.0f;
 
     // Mouse members
     POINT MousePos = { 0, 0 };
@@ -182,6 +249,8 @@ private:
     FGuiInputState GuiState{};
     FInputSystemSnapshot CurrentSnapshot{};
     bool bWindowFocused = true;
+    bool bIgnoreNextMouseMoveForDeviceHeuristics = false;
+    ELastInputDevice LastInputDevice = ELastInputDevice::KeyboardMouse;
 
     static constexpr int DRAG_THRESHOLD = 5;
 
@@ -189,6 +258,9 @@ private:
     void FilterDragThreshold(
         bool& bCandidate, bool& bDragging, bool& bJustStarted,
         const POINT& MouseDownPos, POINT& DragStartPos);
+    void PollGamepadState();
+    void ResetGamepadState();
+    void ResetGamepadTransientState();
     void UpdateCurrentSnapshot();
     void ResetDragState();
 };

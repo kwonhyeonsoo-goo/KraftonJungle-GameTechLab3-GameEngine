@@ -51,10 +51,38 @@ void UInputComponent::AddMouseAxisMapping(const FString& Name, EInputAxisSourceT
 	AddMouseAxisMappingForOwner(nullptr, Name, Axis, Scale);
 }
 
+void UInputComponent::AddGamepadAxisMapping(const FString& Name, EInputAxisSourceType Axis, float Scale)
+{
+	AddGamepadAxisMappingForOwner(nullptr, Name, Axis, Scale);
+}
+
 void UInputComponent::AddMouseAxisMappingForOwner(const void* OwnerKey, const FString& Name, EInputAxisSourceType Axis, float Scale)
 {
 	if (Axis == EInputAxisSourceType::Key)
 	{
+		return;
+	}
+
+	FAxisMapping M;
+	M.Name = Name;
+	M.SourceType = Axis;
+	M.Scale = Scale;
+	M.OwnerKey = OwnerKey;
+	AxisMappings.push_back(std::move(M));
+}
+
+void UInputComponent::AddGamepadAxisMappingForOwner(const void* OwnerKey, const FString& Name, EInputAxisSourceType Axis, float Scale)
+{
+	switch (Axis)
+	{
+	case EInputAxisSourceType::GamepadLeftStickX:
+	case EInputAxisSourceType::GamepadLeftStickY:
+	case EInputAxisSourceType::GamepadRightStickX:
+	case EInputAxisSourceType::GamepadRightStickY:
+	case EInputAxisSourceType::GamepadLeftTrigger:
+	case EInputAxisSourceType::GamepadRightTrigger:
+		break;
+	default:
 		return;
 	}
 
@@ -76,6 +104,11 @@ void UInputComponent::AddActionMapping(const FString& Name, const FString& KeyNa
 	AddActionMappingForOwner(nullptr, Name, KeyName);
 }
 
+void UInputComponent::AddGamepadActionMapping(const FString& Name, EGamepadButton Button)
+{
+	AddGamepadActionMappingForOwner(nullptr, Name, Button);
+}
+
 void UInputComponent::AddActionMappingForOwner(const void* OwnerKey, const FString& Name, const FString& KeyName)
 {
 	AddActionMappingForOwner(OwnerKey, Name, ResolveInputKeyCode(KeyName));
@@ -92,6 +125,16 @@ void UInputComponent::AddActionMappingForOwner(const void* OwnerKey, const FStri
 	FActionMapping M;
 	M.Name = Name;
 	M.VKey = VKey;
+	M.OwnerKey = OwnerKey;
+	ActionMappings.push_back(std::move(M));
+}
+
+void UInputComponent::AddGamepadActionMappingForOwner(const void* OwnerKey, const FString& Name, EGamepadButton Button)
+{
+	FActionMapping M;
+	M.Name = Name;
+	M.bIsGamepadButton = true;
+	M.GamepadButton = Button;
 	M.OwnerKey = OwnerKey;
 	ActionMappings.push_back(std::move(M));
 }
@@ -166,6 +209,18 @@ float UInputComponent::EvaluateAxisMapping(const FAxisMapping& Mapping, const FI
 		return static_cast<float>(Snapshot.MouseDeltaY) * Mapping.Scale;
 	case EInputAxisSourceType::MouseWheel:
 		return static_cast<float>(Snapshot.ScrollDelta) * Mapping.Scale;
+	case EInputAxisSourceType::GamepadLeftStickX:
+		return Snapshot.GamepadLeftStickX * Mapping.Scale;
+	case EInputAxisSourceType::GamepadLeftStickY:
+		return Snapshot.GamepadLeftStickY * Mapping.Scale;
+	case EInputAxisSourceType::GamepadRightStickX:
+		return Snapshot.GamepadRightStickX * Mapping.Scale;
+	case EInputAxisSourceType::GamepadRightStickY:
+		return Snapshot.GamepadRightStickY * Mapping.Scale;
+	case EInputAxisSourceType::GamepadLeftTrigger:
+		return Snapshot.GamepadLeftTrigger * Mapping.Scale;
+	case EInputAxisSourceType::GamepadRightTrigger:
+		return Snapshot.GamepadRightTrigger * Mapping.Scale;
 	default:
 		return 0.0f;
 	}
@@ -194,9 +249,13 @@ void UInputComponent::ProcessInput(const FInputSystemSnapshot& Snapshot, float /
 		for (const FActionMapping& M : ActionMappings)
 		{
 			if (M.Name != B.Name) continue;
-			const bool bFired = (B.Event == EInputEvent::Pressed)
-				? Snapshot.WasPressed(M.VKey)
-				: Snapshot.WasReleased(M.VKey);
+			const bool bFired = M.bIsGamepadButton
+				? ((B.Event == EInputEvent::Pressed)
+					? Snapshot.WasGamepadButtonPressed(M.GamepadButton)
+					: Snapshot.WasGamepadButtonReleased(M.GamepadButton))
+				: ((B.Event == EInputEvent::Pressed)
+					? Snapshot.WasPressed(M.VKey)
+					: Snapshot.WasReleased(M.VKey));
 			if (bFired && B.Callback)
 			{
 				B.Callback();

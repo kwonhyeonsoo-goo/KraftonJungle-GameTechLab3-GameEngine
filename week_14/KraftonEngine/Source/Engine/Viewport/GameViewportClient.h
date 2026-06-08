@@ -59,6 +59,10 @@ public:
 	void SetMouseCaptured(bool bCaptured);
 	bool IsMouseCaptured() const { return bCursorCaptured; }
 	void ReleaseMouseCapture();
+	bool HasVirtualCursorPosition() const { return bVirtualCursorActive; }
+	POINT GetVirtualCursorClientPos() const;
+	bool WasVirtualCursorConfirmPressedThisFrame() const { return bVirtualCursorConfirmPressedThisFrame; }
+	bool WasVirtualCursorConfirmReleasedThisFrame() const { return bVirtualCursorConfirmReleasedThisFrame; }
 
 	// 게임 세션 진입/종료 — viewport attach + 입력 상태 리셋. PIE start/stop 또는
 	// standalone 게임 시작/종료에서 호출.
@@ -79,6 +83,8 @@ private:
 	void ApplyCursorClip();
 	void ReleaseGameCapture();
 	void ApplyGameCapturePolicy(const FUIInputCaptureState& UIState);
+	void UpdateVirtualCursorFromGamepad(const FInputSystemSnapshot& Snapshot, float DeltaTime, const FUIInputCaptureState& UIState);
+	void ResetVirtualCursorState();
 
 	void SetGameInputSnapshot(const FInputSystemSnapshot& Snapshot);
 	void ClearGameInputSnapshot();
@@ -90,6 +96,14 @@ private:
 	bool bInputPossessed = false;
 	bool bCursorCaptured = false;
 	bool bWantsMouseCapture = true;
+	bool bVirtualCursorActive = false;
+	bool bVirtualCursorInitialized = false;
+	bool bVirtualCursorOwnsSoftwareCursor = false;
+	bool bIgnoreNextProgrammaticMouseMove = false;
+	bool bVirtualCursorConfirmPressedThisFrame = false;
+	bool bVirtualCursorConfirmReleasedThisFrame = false;
+	float VirtualCursorClientX = 0.0f;
+	float VirtualCursorClientY = 0.0f;
 	EGameInputMode InputMode = EGameInputMode::GameOnly;
 
 	FInputSystemSnapshot GameInputSnapshot{};

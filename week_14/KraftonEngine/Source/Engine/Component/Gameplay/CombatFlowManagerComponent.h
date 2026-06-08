@@ -48,7 +48,9 @@ enum class ECombatSlotQueryPurpose : uint8
     Advance,
     PreferFullCover,
     FullCoverOnly,
-    CombatCoverOnly
+    CombatCoverOnly,
+    StandingCombatCoverOnly,
+    AttackSlotOnly
 };
 
 UCLASS()
@@ -83,6 +85,9 @@ public:
 
     UFUNCTION(Callable, Category="CombatFlow")
     bool TryMoveToCombatSlotInCurrentNode(UCombatCoverAgentComponent* Agent);
+
+    UFUNCTION(Callable, Category="CombatFlow")
+    bool TryMoveToStandingCombatSlotInCurrentNode(UCombatCoverAgentComponent* Agent);
 
     void ConfirmArrived(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle);
 

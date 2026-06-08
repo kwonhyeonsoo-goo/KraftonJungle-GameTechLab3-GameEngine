@@ -159,9 +159,9 @@ namespace
 			if (HasLegacyAxisHint(HintText, 'x')) return "x";
 			break;
 		case EPropertyType::Rotator:
-			if (HasLegacyAxisHint(HintText, 'z')) return "roll";
-			if (HasLegacyAxisHint(HintText, 'y')) return "yaw";
-			if (HasLegacyAxisHint(HintText, 'x')) return "pitch";
+			if (HasLegacyAxisHint(HintText, 'z')) return "yaw";
+			if (HasLegacyAxisHint(HintText, 'y')) return "pitch";
+			if (HasLegacyAxisHint(HintText, 'x')) return "roll";
 			break;
 		default:
 			break;

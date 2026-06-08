@@ -120,6 +120,8 @@ namespace
             return bSelected ? FColor(80, 180, 255) : FColor(40, 100, 255);
         case ECombatCoverSlotType::ExposedDummy:
             return bSelected ? FColor(255, 220, 60) : FColor(220, 150, 40);
+        case ECombatCoverSlotType::StandingCombatCover:
+            return bSelected ? FColor(120, 255, 180) : FColor(80, 220, 120);
         case ECombatCoverSlotType::CombatCover:
         default:
             return bSelected ? FColor(0, 255, 120) : FColor(0, 160, 255);
@@ -134,7 +136,9 @@ UCombatCoverNodeComponent::UCombatCoverNodeComponent()
 
 bool FCombatCoverSlot::ProvidesCover() const
 {
-    return SlotType == ECombatCoverSlotType::CombatCover || SlotType == ECombatCoverSlotType::FullCover;
+    return SlotType == ECombatCoverSlotType::CombatCover
+        || SlotType == ECombatCoverSlotType::FullCover
+        || SlotType == ECombatCoverSlotType::StandingCombatCover;
 }
 
 bool FCombatCoverSlot::CanAttackFrom() const
@@ -147,6 +151,11 @@ bool FCombatCoverSlot::CanBeTargetedWhileInCover() const
     return SlotType != ECombatCoverSlotType::FullCover;
 }
 
+bool FCombatCoverSlot::RequiresStandingFire() const
+{
+    return SlotType == ECombatCoverSlotType::StandingCombatCover;
+}
+
 float FCombatCoverSlot::GetTargetPriorityMultiplierWhileInCover() const
 {
     switch (SlotType)
@@ -155,6 +164,8 @@ float FCombatCoverSlot::GetTargetPriorityMultiplierWhileInCover() const
         return 0.0f;
     case ECombatCoverSlotType::ExposedDummy:
         return 1.0f;
+    case ECombatCoverSlotType::StandingCombatCover:
+        return 0.55f;
     case ECombatCoverSlotType::CombatCover:
     default:
         return 0.35f;
@@ -169,6 +180,8 @@ float FCombatCoverSlot::GetSlotSelectionScore() const
         return Weight + 40.0f;
     case ECombatCoverSlotType::ExposedDummy:
         return Weight - 100.0f;
+    case ECombatCoverSlotType::StandingCombatCover:
+        return Weight + 85.0f;
     case ECombatCoverSlotType::CombatCover:
     default:
         return Weight + 100.0f;
