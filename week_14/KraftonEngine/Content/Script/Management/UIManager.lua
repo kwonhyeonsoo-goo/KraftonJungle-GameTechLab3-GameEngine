@@ -94,6 +94,7 @@ local CUTSCENE_LETTERBOX_SCREEN_HEIGHT = 1080.0
 local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
 local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
 local SCOPE_DISTANCE_TRACE_METERS = 2000.0
+local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
 
 local function log(message)
     if Debug and Debug.Log then
@@ -323,6 +324,8 @@ function UIManager.new(general)
         main_start_duration = 2.0,
         main_state_requested = false,
         scope_visible = false,
+        scope_distance_last_valid_meters = nil,
+        scope_distance_last_valid_time = -1000.0,
         compass_frame_count = 360,
         compass_last_frame = -1,
         compass_smooth_speed = 18.0,
@@ -1476,6 +1479,45 @@ function UIManager:ConfigureScopeTelemetry(widget)
     })
 end
 
+function UIManager:GetWorldTimeSeconds()
+    if World ~= nil and World.GetTimeSeconds ~= nil then
+        local ok, value = pcall(function()
+            return World.GetTimeSeconds()
+        end)
+        if ok then
+            local seconds = tonumber(value)
+            if seconds ~= nil then
+                return seconds
+            end
+        end
+    end
+
+    return 0.0
+end
+
+function UIManager:RememberScopeDistance(distance_meters)
+    if type(distance_meters) ~= "number" or distance_meters < 0.0 then
+        return
+    end
+
+    self.scope_distance_last_valid_meters = distance_meters
+    self.scope_distance_last_valid_time = self:GetWorldTimeSeconds()
+end
+
+function UIManager:GetHeldScopeDistance()
+    local last_distance = self.scope_distance_last_valid_meters
+    if type(last_distance) ~= "number" then
+        return nil
+    end
+
+    local elapsed = self:GetWorldTimeSeconds() - (self.scope_distance_last_valid_time or -1000.0)
+    if elapsed <= SCOPE_DISTANCE_HOLD_SECONDS then
+        return last_distance
+    end
+
+    return nil
+end
+
 function UIManager:GetScopeTelemetrySnapshot()
     local snapshot = {
         distance_text = "-- m",
@@ -1544,9 +1586,17 @@ function UIManager:GetScopeTelemetrySnapshot()
                     local hit_distance = tonumber(trace_result.Distance)
                     if hit_distance ~= nil and hit_distance >= 0.0 then
                         snapshot.distance_meters = hit_distance
+                        self:RememberScopeDistance(hit_distance)
                     end
                 end
             end
+        end
+    end
+
+    if type(snapshot.distance_meters) ~= "number" then
+        local held_distance = self:GetHeldScopeDistance()
+        if type(held_distance) == "number" then
+            snapshot.distance_meters = held_distance
         end
     end
 
@@ -1666,6 +1716,8 @@ end
 
 function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.scope_visible = false
+    self.scope_distance_last_valid_meters = nil
+    self.scope_distance_last_valid_time = -1000.0
     self.compass_last_frame = -1
     self.smoothed_heading_degrees = nil
     self.breath_visible = false
@@ -1908,6 +1960,8 @@ function UIManager:SetScopeHUDVisible(visible)
         self:SetElementAlpha(widget, "crosshairImage", 0.0)
         self:SetElementVisible(widget, "crosshairImage", false)
     else
+        self.scope_distance_last_valid_meters = nil
+        self.scope_distance_last_valid_time = -1000.0
         self:SetElementAlpha(widget, "scopeOverlay", 0.0)
         self:SetElementVisible(widget, "scopeOverlay", false)
         self:SetElementVisible(widget, "crosshairImage", true)
