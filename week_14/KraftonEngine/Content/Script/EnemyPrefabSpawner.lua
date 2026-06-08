@@ -1,21 +1,55 @@
 -- EnemyPrefabSpawner.lua
 -- 이 스크립트를 가진 액터 위치에 지정 프리팹을 순차 스폰한다.
--- InGame 시작 후 정해진 시간마다 Content/Prefab/Enemy_gun.prefab 을 1초 간격으로 웨이브 스폰한다.
+-- InGame 시작 후 정해진 시간마다 3종 적 프리팹을 1초 간격으로 웨이브 스폰한다.
 
 local Config = {
     PrefabDirectory = "Content/Prefab",
-    PrefabName = "Enemy_gun",
 
     -- 같은 묶음 안에서 한 마리씩 뽑는 간격.
     SpawnIntervalSeconds = 1.0,
 
     -- 게임 시작 후 경과 시간(초) 기준 웨이브. 각 스포너가 이 수량만큼 따로 생성한다.
     WaveSchedule = {
-        { TimeSeconds = 0.0, Count = 3 },
-        { TimeSeconds = 60.0, Count = 5 },
-        { TimeSeconds = 120.0, Count = 8 },
-        { TimeSeconds = 180.0, Count = 10 },
-        { TimeSeconds = 240.0, Count = 15 }
+        {
+            TimeSeconds = 0.0,
+            Enemies = {
+                { PrefabName = "EnemyShortRange", Count = 3 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
+                { PrefabName = "EnemyAssault", Count = 1 }
+            }
+        },
+        {
+            TimeSeconds = 60.0,
+            Enemies = {
+                { PrefabName = "EnemyShortRange", Count = 6 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
+                { PrefabName = "EnemyAssault", Count = 1 }
+            }
+        },
+        {
+            TimeSeconds = 120.0,
+            Enemies = {
+                { PrefabName = "EnemyShortRange", Count = 6 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
+                { PrefabName = "EnemyAssault", Count = 2 }
+            }
+        },
+        {
+            TimeSeconds = 180.0,
+            Enemies = {
+                { PrefabName = "EnemyShortRange", Count = 6 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 2 },
+                { PrefabName = "EnemyAssault", Count = 2 }
+            }
+        },
+        {
+            TimeSeconds = 240.0,
+            Enemies = {
+                { PrefabName = "EnemyShortRange", Count = 9 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 3 },
+                { PrefabName = "EnemyAssault", Count = 3 }
+            }
+        }
     },
 
     -- InGame 상태 / ingame.started 이벤트와 연동해서 시작한다.
@@ -24,7 +58,7 @@ local Config = {
     -- true면 스폰 액터에 스포너의 회전을 적용한다.
     UseSpawnerRotation = true,
 
-    -- 보통 Enemy_gun.prefab의 스케일을 유지하는 게 안전하므로 기본 false.
+    -- 보통 프리팹의 스케일을 유지하는 게 안전하므로 기본 false.
     UseSpawnerScale = false,
 
     -- 스포너 위치 기준 추가 오프셋.
@@ -40,7 +74,7 @@ local requestedStart = false
 local running = false
 local batchActive = false
 local batchIndex = 0
-local currentBatchSpawnCount = 0
+local currentBatchQueue = {}
 local spawnedInBatch = 0
 local timeUntilNextSpawn = 0.0
 local elapsedSinceStart = 0.0
@@ -92,7 +126,7 @@ local function get_spawn_scale_or_nil()
     return get_actor_vec_property(obj, "Scale", Vec3(1.0, 1.0, 1.0))
 end
 
-local function spawn_actor_from_config()
+local function spawn_actor_from_config(prefabName)
     if World == nil then
         log("World binding is nil")
         return nil
@@ -102,22 +136,27 @@ local function spawn_actor_from_config()
     local rotation = get_spawn_rotation()
     local scale = get_spawn_scale_or_nil()
     local actor = nil
+    prefabName = tostring(prefabName or "")
+    if prefabName == "" then
+        log("empty prefab name")
+        return nil
+    end
 
     if World.SpawnActorFromPrefabByName ~= nil then
         if scale ~= nil then
-            actor = World.SpawnActorFromPrefabByName(Config.PrefabDirectory, Config.PrefabName, location, rotation, scale)
+            actor = World.SpawnActorFromPrefabByName(Config.PrefabDirectory, prefabName, location, rotation, scale)
         else
-            actor = World.SpawnActorFromPrefabByName(Config.PrefabDirectory, Config.PrefabName, location, rotation)
+            actor = World.SpawnActorFromPrefabByName(Config.PrefabDirectory, prefabName, location, rotation)
         end
     elseif World.SpawnActorFromPrefabAt ~= nil then
-        local path = tostring(Config.PrefabDirectory) .. "/" .. tostring(Config.PrefabName)
+        local path = tostring(Config.PrefabDirectory) .. "/" .. prefabName
         if scale ~= nil then
             actor = World.SpawnActorFromPrefabAt(path, location, rotation, scale)
         else
             actor = World.SpawnActorFromPrefabAt(path, location, rotation)
         end
     elseif World.SpawnActorFromPrefab ~= nil then
-        local path = tostring(Config.PrefabDirectory) .. "/" .. tostring(Config.PrefabName)
+        local path = tostring(Config.PrefabDirectory) .. "/" .. prefabName
         actor = World.SpawnActorFromPrefab(path)
         if is_valid_actor(actor) then
             actor.Location = location
@@ -136,12 +175,28 @@ local function spawn_actor_from_config()
             actor:AddTag(Config.SpawnedTag)
         end
         table.insert(spawnedActors, actor)
-        log("spawned " .. tostring(Config.PrefabName) .. " count=" .. tostring(#spawnedActors))
+        log("spawned " .. prefabName .. " count=" .. tostring(#spawnedActors))
         return actor
     end
 
-    log("failed to spawn prefab: " .. tostring(Config.PrefabDirectory) .. "/" .. tostring(Config.PrefabName))
+    log("failed to spawn prefab: " .. tostring(Config.PrefabDirectory) .. "/" .. prefabName)
     return nil
+end
+
+local function build_wave_queue(wave)
+    local queue = {}
+    if wave == nil or wave.Enemies == nil then
+        return queue
+    end
+
+    for _, entry in ipairs(wave.Enemies) do
+        local prefabName = tostring(entry.PrefabName or "")
+        local count = math.max(0, math.floor(tonumber(entry.Count) or 0))
+        for _ = 1, count do
+            table.insert(queue, prefabName)
+        end
+    end
+    return queue
 end
 
 local function can_start_new_batch()
@@ -159,11 +214,11 @@ local function start_batch()
         return
     end
 
-    currentBatchSpawnCount = math.max(0, math.floor(tonumber(wave.Count) or 0))
+    currentBatchQueue = build_wave_queue(wave)
     batchActive = true
     spawnedInBatch = 0
     timeUntilNextSpawn = 0.0
-    log("wave start " .. tostring(batchIndex + 1) .. " count=" .. tostring(currentBatchSpawnCount))
+    log("wave start " .. tostring(batchIndex + 1) .. " count=" .. tostring(#currentBatchQueue))
 end
 
 local function request_start(reason)
@@ -175,7 +230,7 @@ local function request_start(reason)
     running = true
     batchActive = false
     batchIndex = 0
-    currentBatchSpawnCount = 0
+    currentBatchQueue = {}
     spawnedInBatch = 0
     timeUntilNextSpawn = 0.0
     elapsedSinceStart = 0.0
@@ -231,7 +286,7 @@ function BeginPlay()
     running = false
     batchActive = false
     batchIndex = 0
-    currentBatchSpawnCount = 0
+    currentBatchQueue = {}
     spawnedInBatch = 0
     timeUntilNextSpawn = 0.0
     elapsedSinceStart = 0.0
@@ -283,7 +338,7 @@ function Tick(dt)
         return
     end
 
-    if currentBatchSpawnCount <= 0 then
+    if #currentBatchQueue <= 0 then
         batchActive = false
         batchIndex = batchIndex + 1
         return
@@ -291,10 +346,11 @@ function Tick(dt)
 
     timeUntilNextSpawn = timeUntilNextSpawn - dt
     if timeUntilNextSpawn <= 0.0 then
-        spawn_actor_from_config()
+        local prefabName = currentBatchQueue[spawnedInBatch + 1]
+        spawn_actor_from_config(prefabName)
         spawnedInBatch = spawnedInBatch + 1
 
-        if spawnedInBatch >= currentBatchSpawnCount then
+        if spawnedInBatch >= #currentBatchQueue then
             batchActive = false
             batchIndex = batchIndex + 1
         else
