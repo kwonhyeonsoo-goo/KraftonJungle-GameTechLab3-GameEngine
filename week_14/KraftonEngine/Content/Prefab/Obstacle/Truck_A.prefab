@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_27",
+    "Name" : "AStaticMeshActor_47",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -10,7 +10,7 @@
           "DisplayName" : "",
           "Links" : [],
           "MaxOccupants" : 2,
-          "NodeId" : "CoverNode_001",
+          "NodeId" : "",
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
           "Slots" : [{
@@ -89,7 +89,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [2.404517, -7.946451, 24.116627],
+      "PendingActorLocation" : [-256.774048, 125.483261, 184.949677],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -110,7 +110,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [2.404517, -7.946451, 24.116627],
+        "RelativeTransform.Location" : [-256.774048, 125.483261, 184.949677],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -136,7 +136,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_27",
+  "SourceActorName" : "AStaticMeshActor_47",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

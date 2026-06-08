@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_25",
+    "Name" : "AStaticMeshActor_144",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -10,7 +10,7 @@
           "DisplayName" : "",
           "Links" : [],
           "MaxOccupants" : 3,
-          "NodeId" : "CoverNode_001",
+          "NodeId" : "",
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
           "Slots" : [{
@@ -84,7 +84,7 @@
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [3.000000, -2.000000, 0.000000],
               "Radius" : 1.000000,
-              "SlotId" : 0,
+              "SlotId" : 6,
               "SlotType" : 1,
               "Tags" : "Enemy,Cover",
               "Weight" : 1.000000,
@@ -95,7 +95,7 @@
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [-3.000000, -2.000000, 0.000000],
               "Radius" : 1.000000,
-              "SlotId" : 0,
+              "SlotId" : 7,
               "SlotType" : 1,
               "Tags" : "Ally,Cover",
               "Weight" : 1.000000,
@@ -111,7 +111,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [11.087675, 17.539883, 11.975876],
+      "PendingActorLocation" : [-72.853378, 142.187820, 99.830643],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -132,7 +132,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [11.087675, 17.539883, 11.975876],
+        "RelativeTransform.Location" : [-72.853378, 142.187820, 99.830643],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -158,7 +158,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_25",
+  "SourceActorName" : "AStaticMeshActor_144",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }
