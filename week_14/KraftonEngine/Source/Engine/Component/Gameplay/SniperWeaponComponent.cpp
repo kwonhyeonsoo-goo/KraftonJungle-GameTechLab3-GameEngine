@@ -129,12 +129,15 @@ USniperWeaponComponent::USniperWeaponComponent()
 void USniperWeaponComponent::BeginPlay()
 {
 	UActorComponent::BeginPlay();
+	NormalizeMagazineState();
 	ResolveBulletManagerComponent();
 }
 
 void USniperWeaponComponent::EndPlay()
 {
 	FireCooldownRemaining = 0.0f;
+	ReloadRemaining = 0.0f;
+	bIsReloading = false;
 	UActorComponent::EndPlay();
 }
 
@@ -174,7 +177,10 @@ const FAmmoBallisticData* USniperWeaponComponent::GetAmmoData(ESniperAmmoType In
 
 bool USniperWeaponComponent::CanFire() const
 {
-	return FireCooldownRemaining <= 0.0f && GetCurrentAmmoData() != nullptr;
+	return FireCooldownRemaining <= 0.0f &&
+		!bIsReloading &&
+		AmmoInMagazine > 0 &&
+		GetCurrentAmmoData() != nullptr;
 }
 
 bool USniperWeaponComponent::RequestFire(
@@ -190,8 +196,22 @@ bool USniperWeaponComponent::RequestFire(
 		return false;
 	}
 
-	if (FireCooldownRemaining > 0.0f || ShotDirection.IsNearlyZero())
+	if (ShotDirection.IsNearlyZero())
 	{
+		return false;
+	}
+
+	if (FireCooldownRemaining > 0.0f || bIsReloading)
+	{
+		return false;
+	}
+
+	if (AmmoInMagazine <= 0)
+	{
+		if (bAutoReloadWhenEmpty)
+		{
+			RequestReload();
+		}
 		return false;
 	}
 
@@ -233,7 +253,53 @@ bool USniperWeaponComponent::RequestFire(
 	}
 
 	FireCooldownRemaining = AmmoData->FireInterval;
+	AmmoInMagazine = (std::max)(0, AmmoInMagazine - 1);
+	if (AmmoInMagazine <= 0 && bAutoReloadWhenEmpty)
+	{
+		RequestReload();
+	}
 	return true;
+}
+
+bool USniperWeaponComponent::RequestReload()
+{
+	NormalizeMagazineState();
+	if (bIsReloading || MagazineCapacity <= 0 || AmmoInMagazine >= MagazineCapacity || ReserveAmmo <= 0)
+	{
+		return false;
+	}
+
+	const float SafeReloadDuration = (std::max)(ReloadDuration, 0.0f);
+	if (SafeReloadDuration <= 0.0f)
+	{
+		CompleteReload();
+		return AmmoInMagazine > 0;
+	}
+
+	bIsReloading = true;
+	ReloadRemaining = SafeReloadDuration;
+	return true;
+}
+
+void USniperWeaponComponent::CancelReload()
+{
+	bIsReloading = false;
+	ReloadRemaining = 0.0f;
+}
+
+float USniperWeaponComponent::GetReloadProgress() const
+{
+	if (!bIsReloading)
+	{
+		return 1.0f;
+	}
+
+	if (ReloadDuration <= 0.0f)
+	{
+		return 1.0f;
+	}
+
+	return FMath::Clamp(1.0f - (ReloadRemaining / ReloadDuration), 0.0f, 1.0f);
 }
 
 void USniperWeaponComponent::NotifySniperHit(const FSniperHitInfo& HitInfo)
@@ -256,6 +322,15 @@ void USniperWeaponComponent::TickComponent(
 		if (FireCooldownRemaining < 0.0f)
 		{
 			FireCooldownRemaining = 0.0f;
+		}
+	}
+
+	if (bIsReloading)
+	{
+		ReloadRemaining -= DeltaTime;
+		if (ReloadRemaining <= 0.0f)
+		{
+			CompleteReload();
 		}
 	}
 }
@@ -341,6 +416,34 @@ FVector USniperWeaponComponent::BuildZeroedShotDirection(const FVector& ShotDire
 	}
 
 	return RotateAroundAxis(BaseDirection, RightAxis, -HighPitch * (3.14159265358979323846f / 180.0f)).Normalized();
+}
+
+void USniperWeaponComponent::NormalizeMagazineState()
+{
+	MagazineCapacity = (std::max)(MagazineCapacity, 1);
+	AmmoInMagazine = (std::max)(0, (std::min)(AmmoInMagazine, MagazineCapacity));
+	ReserveAmmo = (std::max)(ReserveAmmo, 0);
+	ReloadDuration = (std::max)(ReloadDuration, 0.0f);
+	if (!bIsReloading)
+	{
+		ReloadRemaining = 0.0f;
+	}
+	else
+	{
+		ReloadRemaining = FMath::Clamp(ReloadRemaining, 0.0f, ReloadDuration);
+	}
+}
+
+void USniperWeaponComponent::CompleteReload()
+{
+	NormalizeMagazineState();
+	const int32 NeededAmmo = (std::max)(MagazineCapacity - AmmoInMagazine, 0);
+	const int32 LoadedAmmo = (std::min)(NeededAmmo, ReserveAmmo);
+	AmmoInMagazine += LoadedAmmo;
+	ReserveAmmo -= LoadedAmmo;
+	ReloadRemaining = 0.0f;
+	bIsReloading = false;
+	NormalizeMagazineState();
 }
 
 void USniperWeaponComponent::InitializeDefaultAmmoData()
