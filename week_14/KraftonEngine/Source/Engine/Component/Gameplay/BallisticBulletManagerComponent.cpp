@@ -886,34 +886,16 @@ bool UBallisticBulletManagerComponent::EnsurePreciseHitQueryBodies(USkeletalMesh
 		return false;
 	}
 
+	// Do not auto-create temporary PhysicsAsset bodies for precise hit queries.
+	// If the character is not already running with live bodies, we skip the precise pass
+	// and keep the normal broad-hit path so gameplay actors never enter a transient
+	// physics-pose state during ordinary PIE startup or hits.
 	if (FPhysicsAssetInstance* ExistingInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
 	{
-		if (ExistingInstance->HasLivePhysicsObjects())
-		{
-			return true;
-		}
+		return ExistingInstance->HasLivePhysicsObjects();
 	}
 
-	FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetOrCreatePhysicsAssetInstance();
-	if (!PhysicsAssetInstance)
-	{
-		return false;
-	}
-
-	FPhysicsAssetSimulationOptions QueryOnlyOptions;
-	QueryOnlyOptions.bNoGravity = true;
-	QueryOnlyOptions.bCreateKinematicQueryOnlyBodies = true;
-	QueryOnlyOptions.bUseIndependentRagdollCollision = true;
-	QueryOnlyOptions.IndependentCollisionEnabled = ECollisionEnabled::QueryOnly;
-	QueryOnlyOptions.bIndependentGenerateOverlapEvents = false;
-
-	if (!PhysicsAssetInstance->CreateBodiesAndConstraints(QueryOnlyOptions))
-	{
-		return false;
-	}
-
-	bOutCreatedTemporaryBodies = true;
-	return PhysicsAssetInstance->HasLivePhysicsObjects();
+	return false;
 }
 
 bool UBallisticBulletManagerComponent::QueryPreciseCharacterHit(
