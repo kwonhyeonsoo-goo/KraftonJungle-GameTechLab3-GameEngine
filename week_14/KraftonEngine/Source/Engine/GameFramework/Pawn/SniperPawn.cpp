@@ -1,5 +1,6 @@
 ﻿#include "GameFramework/Pawn/SniperPawn.h"
 
+#include "Animation/Sequence/AnimSequenceBase.h"
 #include "Component/Input/ActionComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
@@ -290,6 +291,7 @@ void ASniperPawn::Tick(float DeltaTime)
 	UpdateHoldBreathState(DeltaTime);
 	UpdateAimSwayState(DeltaTime);
 	UpdateRecoilState(DeltaTime);
+	UpdateWeaponHandsReloadAnimation();
 	UpdateBulletFlightSlomo(DeltaTime);
 	ApplySniperControlRotation();
 
@@ -432,6 +434,8 @@ void ASniperPawn::SyncSniperRuntimeState()
 	bGamepadHoldBreathInputHeld = false;
 	bGamepadFireTriggerHeld = false;
 	bBulletFlightSlomoActive = false;
+	bWasWeaponReloading = false;
+	bWeaponHandsReloadAnimationActive = false;
 	bUseControllerRotationPitch = true;
 	bUseControllerRotationYaw = true;
 	CacheInputSensitivityBases();
@@ -526,10 +530,7 @@ void ASniperPawn::SyncWeaponVisualComponent()
 	if (bEnableHandsAndWeapon)
 	{
 		WeaponHandsMesh->SetSkeletalMeshByPath(HandsMeshPath);
-		if (!WeaponHandsIdleAnimationPath.empty() && WeaponHandsIdleAnimationPath != "None")
-		{
-			WeaponHandsMesh->PlayAnimationByPath(WeaponHandsIdleAnimationPath, true);
-		}
+		PlayWeaponHandsIdleAnimation();
 	}
 	else
 	{
@@ -562,6 +563,78 @@ void ASniperPawn::SyncWeaponVisualComponent()
 	}
 
 	UpdateWeaponVisualScopeVisibility();
+}
+
+bool ASniperPawn::PlayWeaponHandsAnimation(const FString& AnimationPath, bool bLooping)
+{
+	USkeletalMeshComponent* WeaponHandsMesh = WeaponHandsMeshComponent.Get();
+	if (!WeaponHandsMesh || AnimationPath.empty() || AnimationPath == "None")
+	{
+		return false;
+	}
+
+	return WeaponHandsMesh->PlayAnimationByPath(AnimationPath, bLooping);
+}
+
+bool ASniperPawn::PlayWeaponHandsAnimationSyncedToDuration(const FString& AnimationPath, float TargetDuration)
+{
+	USkeletalMeshComponent* WeaponHandsMesh = WeaponHandsMeshComponent.Get();
+	if (!PlayWeaponHandsAnimation(AnimationPath, false))
+	{
+		return false;
+	}
+
+	WeaponHandsMesh->SetPlayRate(1.0f);
+
+	if (TargetDuration <= 0.0f)
+	{
+		return true;
+	}
+
+	const UAnimSequenceBase* Animation = WeaponHandsMesh->GetAnimation();
+	if (!Animation)
+	{
+		return true;
+	}
+
+	const float AnimationLength = Animation->GetPlayLength();
+	if (AnimationLength <= 0.0f)
+	{
+		return true;
+	}
+
+	WeaponHandsMesh->SetPlayRate(AnimationLength / TargetDuration);
+	return true;
+}
+
+void ASniperPawn::PlayWeaponHandsIdleAnimation()
+{
+	if (USkeletalMeshComponent* WeaponHandsMesh = WeaponHandsMeshComponent.Get())
+	{
+		WeaponHandsMesh->SetPlayRate(1.0f);
+	}
+	PlayWeaponHandsAnimation(WeaponHandsIdleAnimationPath, true);
+}
+
+void ASniperPawn::UpdateWeaponHandsReloadAnimation()
+{
+	const bool bReloading = IsReloading();
+	if (bReloading && !bWasWeaponReloading)
+	{
+		const USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+		const float ReloadDuration = SniperWeapon ? SniperWeapon->GetReloadDuration() : GetReloadRemaining();
+		bWeaponHandsReloadAnimationActive = PlayWeaponHandsAnimationSyncedToDuration(WeaponHandsReloadAnimationPath, ReloadDuration);
+	}
+	else if (!bReloading && bWasWeaponReloading)
+	{
+		if (bWeaponHandsReloadAnimationActive)
+		{
+			PlayWeaponHandsIdleAnimation();
+		}
+		bWeaponHandsReloadAnimationActive = false;
+	}
+
+	bWasWeaponReloading = bReloading;
 }
 
 void ASniperPawn::UpdateWeaponVisualScopeVisibility()
