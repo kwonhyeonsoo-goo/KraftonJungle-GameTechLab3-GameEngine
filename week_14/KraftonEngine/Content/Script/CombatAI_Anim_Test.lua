@@ -1,11 +1,13 @@
 local animInstance = nil
 local combatAgent = nil
+local soundComponent = nil
 local fireElapsed = 0.0
 local lastMoveState = -1.0
 local lastDeath = false
 local lastEngaging = false
 
 local FIRE_TRIGGER_INTERVAL = 0.45
+local FIRE_SOUND_PATH = "SFX/CombatAI/npc_gun_fire.mp3"
 
 local function find_anim_instance()
     if obj == nil then
@@ -64,6 +66,39 @@ local function get_combat_agent()
         combatAgent = find_combat_agent()
     end
     return combatAgent
+end
+
+local function find_sound_component()
+    if obj == nil or obj.GetSoundComponent == nil then
+        return nil
+    end
+
+    local sound = obj:GetSoundComponent()
+    if sound ~= nil and sound.SetSoundPath ~= nil then
+        sound:SetSoundPath(FIRE_SOUND_PATH)
+    end
+    return sound
+end
+
+local function get_sound_component()
+    if soundComponent == nil then
+        soundComponent = find_sound_component()
+    end
+    return soundComponent
+end
+
+local function play_fire_sound()
+    local sound = get_sound_component()
+    if sound == nil or sound.Play == nil then
+        return false
+    end
+
+    if sound.GetSoundPath ~= nil and sound.SetSoundPath ~= nil and sound:GetSoundPath() ~= FIRE_SOUND_PATH then
+        sound:SetSoundPath(FIRE_SOUND_PATH)
+    end
+
+    sound:Play()
+    return true
 end
 
 local function get_hit_body_name(hitInfo)
@@ -158,6 +193,7 @@ end
 function BeginPlay()
     animInstance = find_anim_instance()
     combatAgent = find_combat_agent()
+    soundComponent = find_sound_component()
     fireElapsed = 0.0
     lastMoveState = -1.0
     lastDeath = false
@@ -199,6 +235,7 @@ function Tick(dt)
         while fireElapsed >= FIRE_TRIGGER_INTERVAL do
             fireElapsed = fireElapsed - FIRE_TRIGGER_INTERVAL
             set_graph_trigger(anim, "Fire")
+            play_fire_sound()
         end
     else
         fireElapsed = 0.0

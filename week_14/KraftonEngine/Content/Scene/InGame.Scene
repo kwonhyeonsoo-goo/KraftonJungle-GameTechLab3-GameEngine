@@ -7752,6 +7752,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 652,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11886",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 197,
@@ -8008,6 +8033,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 653,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11887",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -9725,6 +9775,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 654,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11888",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 251,
@@ -9981,6 +10056,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 655,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11889",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -10241,6 +10341,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 656,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11890",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 265,
@@ -10497,6 +10622,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 657,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11891",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -10757,6 +10907,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 658,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11892",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 279,
@@ -11013,6 +11188,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 659,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11893",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -11273,6 +11473,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 660,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11894",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 293,
@@ -11529,6 +11754,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 661,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11895",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -11789,6 +12039,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 662,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11896",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 307,
@@ -12045,6 +12320,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 663,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11897",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -12305,6 +12605,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 664,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11898",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 321,
@@ -12561,6 +12886,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 665,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11899",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -12821,6 +13171,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 666,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11900",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 335,
@@ -13077,6 +13452,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 667,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11901",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -13337,6 +13737,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 668,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11902",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 349,
@@ -13595,6 +14020,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 669,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11903",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 356,
@@ -13851,6 +14301,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 670,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 3000.000000,
+              "MinDistance" : 100.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_11904",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+              "Volume" : 1.000000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],

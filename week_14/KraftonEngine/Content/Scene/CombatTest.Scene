@@ -7525,6 +7525,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 357,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9043",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 191,
@@ -7781,6 +7806,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 358,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9044",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -9264,6 +9314,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 359,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9045",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 239,
@@ -9520,6 +9595,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 360,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9046",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -9780,6 +9880,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 361,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9047",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 253,
@@ -10036,6 +10161,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 362,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9048",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -10296,6 +10446,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 363,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9049",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 267,
@@ -10552,6 +10727,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 364,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9050",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -10812,6 +11012,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 365,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9051",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 281,
@@ -11068,6 +11293,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 366,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9052",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -11328,6 +11578,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 367,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9053",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 295,
@@ -11584,6 +11859,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 368,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9054",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -11844,6 +12144,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 369,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9055",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 309,
@@ -12100,6 +12425,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 370,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9056",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -12360,6 +12710,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 371,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9057",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 323,
@@ -12616,6 +12991,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 372,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9058",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
@@ -12876,6 +13276,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 373,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9059",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 337,
@@ -13134,6 +13559,31 @@
               "bSimulatePhysics" : false,
               "bTickEnable" : true
             }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 374,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9060",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
+              "bTickEnable" : true
+            }
           }],
         "ClassName" : "UCapsuleComponent",
         "ObjectId" : 344,
@@ -13390,6 +13840,31 @@
               "bIsVisible" : true,
               "bKinematic" : false,
               "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [],
+            "ClassName" : "USoundComponent",
+            "ObjectId" : 375,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "MaxDistance" : 80.000000,
+              "MinDistance" : 1.000000,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_9061",
+              "Pitch" : 1.000000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SoundPath" : "SFX/CombatAI/npc_gun_fire.mp3",
+              "Volume" : 0.500000,
+              "bAutoActivate" : true,
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bLooping" : false,
+              "bPlayOnBeginPlay" : false,
+              "bSpatialized" : true,
               "bTickEnable" : true
             }
           }],
