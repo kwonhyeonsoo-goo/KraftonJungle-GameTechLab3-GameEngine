@@ -685,6 +685,16 @@ void UParticleSystemComponent::DispatchEventsToManager()
 	AParticleEventManager* Manager = GetEventManager();
 	if (!Manager)
 	{
+		if (UWorld* World = GetWorld())
+		{
+			const EWorldType WorldType = World->GetWorldType();
+			if (WorldType == EWorldType::Editor || WorldType == EWorldType::EditorPreview)
+			{
+				PendingEvents = {};
+				return;
+			}
+		}
+
 		const float WarningDelaySeconds = 0.5f;
 		if (!bHasWarnedMissingEventManager &&
 			MissingEventManagerTimeSeconds >= WarningDelaySeconds)
