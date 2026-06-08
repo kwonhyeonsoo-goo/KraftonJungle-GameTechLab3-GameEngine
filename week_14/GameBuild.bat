@@ -12,6 +12,7 @@ if not defined VS_PATH (
     exit /b 1
 )
 call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -no_logo
+set "PATH=%PATH%"
 
 echo ============================================
 echo  Game Build Script
@@ -19,7 +20,7 @@ echo ============================================
 
 echo.
 echo [1/2] Building Game x64...
-msbuild "%SOLUTION_DIR%KraftonEngine.sln" /p:Configuration=Game /p:Platform=x64 /m /nr:false /v:minimal
+"%SOLUTION_DIR%Scripts\python\python.exe" "%SOLUTION_DIR%Scripts\RunProcessCleanEnv.py" msbuild "%SOLUTION_DIR%KraftonEngine.sln" /p:Configuration=Game /p:Platform=x64 /m /nr:false /v:minimal
 if %ERRORLEVEL% neq 0 (
     echo BUILD FAILED
     pause

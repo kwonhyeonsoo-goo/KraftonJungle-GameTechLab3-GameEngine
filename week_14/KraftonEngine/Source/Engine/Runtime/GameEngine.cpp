@@ -109,20 +109,7 @@ void UGameEngine::OnWindowResized(uint32 Width, uint32 Height)
 FString UGameEngine::ResolveSceneFilePath(const FString& InNameOrPath) const
 {
 	// 이미 .Scene 확장자가 붙은 풀 경로면 그대로 사용. 그렇지 않으면 SceneDir 기준 상대로 풀어준다.
-	std::filesystem::path Input(FPaths::ToWide(InNameOrPath));
-	const std::wstring Ext = Input.has_extension() ? Input.extension().wstring() : L"";
-	if (Input.is_absolute() && std::filesystem::exists(Input))
-	{
-		return InNameOrPath;
-	}
-
-	const std::wstring SceneDir = FSceneSaveManager::GetSceneDirectory();
-	std::filesystem::path Resolved = std::filesystem::path(SceneDir) / Input;
-	if (Ext.empty())
-	{
-		Resolved += FSceneSaveManager::SceneExtension;
-	}
-	return FPaths::ToUtf8(Resolved.wstring());
+	return ResolveRuntimeScenePath(InNameOrPath);
 }
 
 void UGameEngine::LoadStartLevel()
@@ -149,8 +136,18 @@ void UGameEngine::RequestTransitionToScene(const FString& InScenePath)
 		return;
 	}
 
-	PendingScenePath = InScenePath;
+	const FString FilePath = ResolveSceneFilePath(InScenePath);
+	if (!std::filesystem::exists(std::filesystem::path(FPaths::ToWide(FilePath))))
+	{
+		UE_LOG("[GameEngine] TransitionToScene rejected: scene file not found input=%s resolved=%s",
+			InScenePath.c_str(), FilePath.c_str());
+		return;
+	}
+
+	PendingScenePath = FilePath;
 	bPendingSceneTransition = true;
+	UE_LOG("[GameEngine] TransitionToScene queued: input=%s resolved=%s",
+		InScenePath.c_str(), FilePath.c_str());
 }
 
 void UGameEngine::ProcessPendingTransition()
@@ -176,6 +173,11 @@ void UGameEngine::ProcessPendingTransition()
 	const FName OldHandle = GetActiveWorldHandle();
 	UActionComponent::ResetGlobalTimeDilationState();
 	DestroyWorldContext(OldHandle);
+	if (IRenderPipeline* Pipeline = GetRenderPipeline())
+	{
+		Pipeline->OnSceneCleared();
+	}
+	Renderer.ResetRenderStateCache();
 
 	// require 캐시된 lua 모듈 (CoroutineManager / ObjRegistry) 이 보유한 죽은-월드 참조 정리.
 	// 안 하면 옛 actor 의 Wait(N) 코루틴이 새 월드 Tick 에서 만료되며 freed actor 를 deref → 크래시.

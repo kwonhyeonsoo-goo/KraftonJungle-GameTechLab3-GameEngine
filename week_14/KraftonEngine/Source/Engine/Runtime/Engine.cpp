@@ -33,11 +33,34 @@
 #include "Animation/AnimationManager.h"
 #include "Materials/MaterialManager.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Serialization/SceneSaveManager.h"
 
 UEngine* GEngine = nullptr;
 
 namespace
 {
+	std::filesystem::path WithSceneExtension(std::filesystem::path Path)
+	{
+		if (!Path.has_extension())
+		{
+			Path += FSceneSaveManager::SceneExtension;
+		}
+		return Path;
+	}
+
+	void AddScenePathCandidate(TArray<std::filesystem::path>& OutCandidates, std::filesystem::path Candidate)
+	{
+		Candidate = Candidate.lexically_normal();
+		for (const std::filesystem::path& Existing : OutCandidates)
+		{
+			if (Existing == Candidate)
+			{
+				return;
+			}
+		}
+		OutCandidates.push_back(Candidate);
+	}
+
 	ELevelTick ToLevelTickType(EWorldType WorldType)
 	{
 		switch (WorldType)
@@ -149,6 +172,56 @@ void UEngine::Shutdown()
 	FMeshBufferManager::Get().Release();
 	Renderer.Release();
 	RemoveFromRoot();
+}
+
+FString UEngine::ResolveRuntimeScenePath(const FString& InNameOrPath) const
+{
+	if (InNameOrPath.empty())
+	{
+		return {};
+	}
+
+	const std::filesystem::path Input(FPaths::ToWide(InNameOrPath));
+	TArray<std::filesystem::path> Candidates;
+
+	if (Input.is_absolute())
+	{
+		AddScenePathCandidate(Candidates, Input);
+		AddScenePathCandidate(Candidates, WithSceneExtension(Input));
+	}
+	else
+	{
+		const std::filesystem::path RootDir(FPaths::RootDir());
+		const std::filesystem::path SceneDir(FSceneSaveManager::GetSceneDirectory());
+
+		AddScenePathCandidate(Candidates, RootDir / Input);
+		AddScenePathCandidate(Candidates, WithSceneExtension(RootDir / Input));
+
+		AddScenePathCandidate(Candidates, SceneDir / Input);
+		AddScenePathCandidate(Candidates, WithSceneExtension(SceneDir / Input));
+
+		// Lua/gameplay code often passes "Content/Scene/Foo.Scene". If that exact
+		// root-relative path is unavailable, never build
+		// "Content/Scene/Content/Scene/Foo.Scene"; fall back to the scene stem.
+		AddScenePathCandidate(Candidates, SceneDir / Input.filename());
+		AddScenePathCandidate(Candidates, WithSceneExtension(SceneDir / Input.filename()));
+	}
+
+	for (const std::filesystem::path& Candidate : Candidates)
+	{
+		if (std::filesystem::exists(Candidate))
+		{
+			return FPaths::ToUtf8(Candidate.wstring());
+		}
+	}
+
+	return Candidates.empty() ? InNameOrPath : FPaths::ToUtf8(Candidates.front().wstring());
+}
+
+bool UEngine::DoesRuntimeSceneExist(const FString& InNameOrPath) const
+{
+	const FString Resolved = ResolveRuntimeScenePath(InNameOrPath);
+	return !Resolved.empty() && std::filesystem::exists(std::filesystem::path(FPaths::ToWide(Resolved)));
 }
 
 void UEngine::BeginPlay()
@@ -307,7 +380,7 @@ void UEngine::DestroyWorldContext(const FName& Handle)
 
 			if (it->World)
 			{
-				it->World->EndPlay();
+				it->World->RouteWorldDestroyed();
 				UObjectManager::Get().DestroyObject(it->World);
 			}
 			WorldList.erase(it);

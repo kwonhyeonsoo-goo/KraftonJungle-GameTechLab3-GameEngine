@@ -154,7 +154,9 @@ body {
     padding: 0px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0px;
-    color: rgba(238, 243, 246, 245);
+    opacity: 1;
+    color: rgba(238, 243, 246, 255);
+    font-weight: 700;
     font-size: 17.000000px;
     line-height: 42.000000px;
     text-align: right;

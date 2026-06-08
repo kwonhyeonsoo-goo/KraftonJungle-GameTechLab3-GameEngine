@@ -37,6 +37,15 @@ local function clamp01(value)
 end
 
 local function is_current_scene(path)
+    if Scene ~= nil and Scene.IsCurrent ~= nil then
+        local ok, value = pcall(function()
+            return Scene.IsCurrent(path)
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
     if Scene == nil or Scene.GetCurrentPath == nil then
         return false
     end
@@ -112,12 +121,19 @@ function MainState:GetHUD()
     return HUD
 end
 
+function MainState:GetScenePath(payload)
+    payload = payload or {}
+    return payload.target_scene or SCENE_PATH
+end
+
 function MainState:Enter(payload)
     payload = payload or {}
-    local scene_path = payload.target_scene or SCENE_PATH
+    local scene_path = self:GetScenePath(payload)
     log("Enter reason=" .. tostring(payload.reason) .. " target_scene=" .. tostring(scene_path))
-    if scene_path ~= nil and scene_path ~= "" and not is_current_scene(scene_path) then
-        transition_to_scene(scene_path)
+    if scene_path ~= nil and scene_path ~= "" and is_current_scene(scene_path) then
+        log("Scene already current; no transition requested")
+    elseif scene_path ~= nil and scene_path ~= "" then
+        log("Scene mismatch on enter; SceneManager owns transition target=" .. tostring(scene_path))
     end
 
     self.main_bgm_fading = false

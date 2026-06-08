@@ -41,6 +41,8 @@ public:
 	virtual bool IsSceneTransitionPending() const { return false; }
 	virtual FString GetCurrentScenePath() const { return {}; }
 	virtual FString GetPendingScenePath() const { return {}; }
+	virtual FString ResolveRuntimeScenePath(const FString& InNameOrPath) const;
+	virtual bool DoesRuntimeSceneExist(const FString& InNameOrPath) const;
 
 	// World context management
 	FWorldContext& CreateWorldContext(EWorldType Type, const FName& Handle, const FString& Name = "");

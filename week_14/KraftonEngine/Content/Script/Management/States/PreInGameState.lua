@@ -50,6 +50,15 @@ local function log(message)
 end
 
 local function is_current_scene(path)
+    if Scene ~= nil and Scene.IsCurrent ~= nil then
+        local ok, value = pcall(function()
+            return Scene.IsCurrent(path)
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
     if Scene == nil or Scene.GetCurrentPath == nil then
         return false
     end
@@ -134,6 +143,10 @@ function PreInGameState:GetHUD()
     return HUD
 end
 
+function PreInGameState:GetScenePath()
+    return SCENE_PATH
+end
+
 function PreInGameState:Enter(payload)
     log("Enter reason=" .. tostring(payload and payload.reason) .. " current=" ..
         tostring(Scene ~= nil and Scene.GetCurrentPath ~= nil and Scene.GetCurrentPath() or ""))
@@ -151,10 +164,10 @@ function PreInGameState:Enter(payload)
     self.opening_handle = 0
     self.script_handle = 0
 
-    if not is_current_scene(SCENE_PATH) then
-        transition_to_scene(SCENE_PATH)
-    else
+    if is_current_scene(SCENE_PATH) then
         log("Scene already current; no transition requested")
+    else
+        log("Scene mismatch on enter; SceneManager owns transition target=" .. tostring(SCENE_PATH))
     end
 
     self:PublishReset()

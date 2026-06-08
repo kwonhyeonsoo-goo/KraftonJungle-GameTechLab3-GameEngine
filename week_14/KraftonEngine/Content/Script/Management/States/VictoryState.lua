@@ -61,6 +61,15 @@ local function log(message)
 end
 
 local function is_current_scene(path)
+    if Scene ~= nil and Scene.IsCurrent ~= nil then
+        local ok, value = pcall(function()
+            return Scene.IsCurrent(path)
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
     if Scene == nil or Scene.GetCurrentPath == nil then
         return false
     end
@@ -315,18 +324,23 @@ function VictoryState:GetHUD()
     return RESULT_HUD
 end
 
+function VictoryState:GetScenePath()
+    return SCENE_PATH
+end
+
 function VictoryState:Enter(payload)
     payload = payload or {}
     payload.result = payload.result or "Victory"
     payload.result_radio_only = true
     self:Reset()
     log("Enter reason=" .. tostring(payload.reason) .. " target_scene=" .. SCENE_PATH)
-    if not is_current_scene(SCENE_PATH) then
+    if is_current_scene(SCENE_PATH) then
+        self.pending_scene = false
+        log("Scene already current; no transition requested")
+    else
         self.pending_scene = true
-        transition_to_scene(SCENE_PATH)
-        return
+        log("Scene mismatch on enter; SceneManager owns transition target=" .. tostring(SCENE_PATH))
     end
-    self.pending_scene = false
 end
 
 function VictoryState:Exit()
