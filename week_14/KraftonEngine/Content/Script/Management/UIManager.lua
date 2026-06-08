@@ -109,6 +109,22 @@ local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
 local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
 local SCOPE_DISTANCE_TRACE_METERS = 2000.0
 local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
+local WIND_UI_MAX_CROSS_DISPLAY = 4.0
+local WIND_UI_MAX_HEAD_DISPLAY = 4.0
+local WIND_UI_SMOOTH_SPEED = 6.0
+local WIND_UI_CALM_CROSS_THRESHOLD = 0.18
+local WIND_UI_PULSE_DECAY_SPEED = 4.5
+local WIND_UI_PULSE_DELTA_SCALE = 1.25
+local WIND_UI_SIDE_SWITCH_PULSE = 0.92
+local WIND_UI_STRENGTH_SWITCH_PULSE = 0.58
+local SCOPE_WIND_BAR_MAX_WIDTH = 150.0
+local SCOPE_WIND_BAR_CENTER_X = 150.0
+local SCOPE_WIND_BAR_TIP_WIDTH = 8.0
+local DEFAULT_CURSOR_IMAGE_PATH = "Content/Texture/Pointer_Main.png"
+local DEFAULT_CURSOR_WIDTH = 64.0
+local DEFAULT_CURSOR_HEIGHT = 64.0
+local DEFAULT_CURSOR_HOTSPOT_X = 2.0
+local DEFAULT_CURSOR_HOTSPOT_Y = 2.0
 local COMBAT_AGENT_ROW_COUNT = 5
 local COMBAT_AGENT_BAR_WIDTH = 210.0
 local HIT_NOTIFY_CENTER_X = 820.0
@@ -119,6 +135,12 @@ local HIT_NOTIFY_DURATION = 4.55
 local HIT_NOTIFY_PENDING_LIMIT = 4
 local HIT_NOTIFY_IMPACT_TIME = 1.08
 local HIT_NOTIFY_IMPACT_SFX = "SFX/Alert.mp3"
+local HIT_NOTIFY_ENEMY_TITLE_BG = "rgba(255, 209, 70, 245)"
+local HIT_NOTIFY_ENEMY_TITLE_COLOR = "rgba(32, 27, 15, 255)"
+local HIT_NOTIFY_ENEMY_SCORE_COLOR = "rgba(255, 220, 88, 255)"
+local HIT_NOTIFY_FRIENDLY_TITLE_BG = "rgba(196, 38, 38, 245)"
+local HIT_NOTIFY_FRIENDLY_TITLE_COLOR = "rgba(255, 255, 255, 255)"
+local HIT_NOTIFY_FRIENDLY_SCORE_COLOR = "rgba(255, 92, 92, 255)"
 
 local function log(message)
     if Debug and Debug.Log then
@@ -203,6 +225,24 @@ local function approach01(current, target, dt, speed)
     return clamp01(result)
 end
 
+local function exp_approach(current, target, dt, speed)
+    current = tonumber(current) or 0.0
+    target = tonumber(target) or 0.0
+    if math.abs(target - current) <= 0.001 then
+        return target
+    end
+    if dt == nil or dt <= 0.0 then
+        return current
+    end
+
+    local alpha = clamp01(1.0 - math.exp(-(speed or 1.0) * dt))
+    local result = current + (target - current) * alpha
+    if math.abs(target - result) <= 0.001 then
+        return target
+    end
+    return result
+end
+
 local function rgba255(color, alpha_scale)
     alpha_scale = clamp01(alpha_scale)
     local alpha = math.floor((color.a or 255) * alpha_scale + 0.5)
@@ -264,6 +304,156 @@ local function atan2_degrees(y, x)
         return -90.0
     end
     return 0.0
+end
+
+local function read_vector_xy(vector)
+    if vector == nil then
+        return 0.0, 0.0
+    end
+
+    local x = tonumber(vector.X or vector.x or 0.0) or 0.0
+    local y = tonumber(vector.Y or vector.y or 0.0) or 0.0
+    return x, y
+end
+
+local function planar_length(x, y)
+    return math.sqrt(x * x + y * y)
+end
+
+local function normalize_planar_xy(x, y)
+    local length = planar_length(x, y)
+    if length <= 0.0001 then
+        return 0.0, 0.0, 0.0
+    end
+
+    return x / length, y / length, length
+end
+
+local function get_camera_planar_forward(camera)
+    if camera == nil or camera.Forward == nil then
+        return nil
+    end
+
+    local x, y = read_vector_xy(camera.Forward)
+    local normalized_x, normalized_y, length = normalize_planar_xy(x, y)
+    if length <= 0.0001 then
+        return nil
+    end
+
+    return normalized_x, normalized_y
+end
+
+local function get_camera_planar_right(camera)
+    if camera ~= nil and camera.Right ~= nil then
+        local x, y = read_vector_xy(camera.Right)
+        local normalized_x, normalized_y, length = normalize_planar_xy(x, y)
+        if length > 0.0001 then
+            return normalized_x, normalized_y
+        end
+    end
+
+    local forward_x, forward_y = get_camera_planar_forward(camera)
+    if forward_x == nil or forward_y == nil then
+        return nil
+    end
+
+    return -forward_y, forward_x
+end
+
+local function classify_crosswind_side(value)
+    local magnitude = math.abs(tonumber(value) or 0.0)
+    if magnitude <= WIND_UI_CALM_CROSS_THRESHOLD then
+        return "Center"
+    end
+
+    if value > 0.0 then
+        return "Right"
+    end
+    return "Left"
+end
+
+local function classify_headwind_state(value)
+    local magnitude = math.abs(tonumber(value) or 0.0)
+    if magnitude <= 0.05 then
+        return "Neutral"
+    end
+
+    if value > 0.0 then
+        return "Head"
+    end
+    return "Tail"
+end
+
+local function classify_wind_strength(normalized_strength)
+    local normalized = clamp01(normalized_strength or 0.0)
+    if normalized < 0.10 then
+        return "Calm"
+    end
+    if normalized < 0.35 then
+        return "Light"
+    end
+    if normalized < 0.70 then
+        return "Medium"
+    end
+    return "Strong"
+end
+
+local function get_wind_strength_color(strength_level)
+    local strength = tostring(strength_level or "Calm")
+    if strength == "Strong" then
+        return "rgba(255, 120, 70, 240)"
+    end
+    if strength == "Medium" then
+        return "rgba(255, 210, 90, 230)"
+    end
+    if strength == "Light" then
+        return "rgba(80, 210, 220, 220)"
+    end
+    return "rgba(120, 145, 150, 140)"
+end
+
+local function compute_relative_wind_snapshot(wind_vector, camera)
+    local result = {
+        wind_degrees = 0.0,
+        wind_mps = 0.0,
+        wind_cross = 0.0,
+        wind_head = 0.0,
+        wind_cross_abs = 0.0,
+        wind_head_abs = 0.0,
+        wind_cross_normalized = 0.0,
+        wind_head_normalized = 0.0,
+        wind_side = "Center",
+        wind_head_state = "Neutral",
+        wind_strength_level = "Calm"
+    }
+
+    if wind_vector == nil then
+        return result
+    end
+
+    local wind_x, wind_y = read_vector_xy(wind_vector)
+    local planar_speed = planar_length(wind_x, wind_y)
+    result.wind_mps = planar_speed
+    if planar_speed > 0.0001 then
+        result.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
+    end
+
+    local forward_x, forward_y = get_camera_planar_forward(camera)
+    local right_x, right_y = get_camera_planar_right(camera)
+    if forward_x == nil or forward_y == nil or right_x == nil or right_y == nil then
+        return result
+    end
+
+    result.wind_cross = wind_x * right_x + wind_y * right_y
+    result.wind_head = wind_x * forward_x + wind_y * forward_y
+    result.wind_cross_abs = math.abs(result.wind_cross)
+    result.wind_head_abs = math.abs(result.wind_head)
+    result.wind_cross_normalized = clamp01(result.wind_cross_abs / WIND_UI_MAX_CROSS_DISPLAY)
+    result.wind_head_normalized = clamp01(result.wind_head_abs / WIND_UI_MAX_HEAD_DISPLAY)
+    result.wind_side = classify_crosswind_side(result.wind_cross)
+    result.wind_head_state = classify_headwind_state(result.wind_head)
+    result.wind_strength_level = classify_wind_strength(result.wind_cross_normalized)
+    return result
 end
 
 local function smooth_heading(current_degrees, target_degrees, dt, speed)
@@ -402,6 +592,13 @@ function UIManager.new(general)
         compass_last_frame = -1,
         compass_smooth_speed = 18.0,
         smoothed_heading_degrees = nil,
+        scope_telemetry_last_update_time = nil,
+        smoothed_scope_wind_cross = 0.0,
+        smoothed_scope_wind_head = 0.0,
+        scope_wind_pulse_alpha = 0.0,
+        scope_wind_last_raw_cross = nil,
+        scope_wind_last_side = nil,
+        scope_wind_last_strength_level = nil,
         sniper_pawn = nil,
         breath_visible = false,
         breath_bar_width = 288.0,
@@ -428,6 +625,7 @@ function UIManager.new(general)
         radio_hud_suppressed = false,
         radio_blackout_alpha = 0.0,
         radio_subtitle_visible = false,
+        radio_subtitle_text = "",
         cutscene_active = false,
         cutscene_letterbox_alpha = 0.0,
         cutscene_letterbox_target = 0.0,
@@ -438,7 +636,8 @@ function UIManager.new(general)
         applied_mouse_sensitivity = nil,
         applied_gamepad_sensitivity = nil,
         result_submitted = false,
-        result_last_input = ""
+        result_last_input = "",
+        result_radio_only = false
     }, UIManager)
 end
 
@@ -632,6 +831,7 @@ function UIManager:Clear()
     self.active_popup = nil
     self.pause_visible = false
     self.pause_panel = "Menu"
+    self.result_radio_only = false
 end
 
 function UIManager:ApplySceneHUDRequest(payload)
@@ -670,6 +870,7 @@ function UIManager:ApplySceneHUDRequest(payload)
         mode = hud.mode
     }
     self.active_hud_mode = hud.mode
+    self:ApplyDefaultCursorImage()
 
     if self.active_hud_mode == MAIN_HUD_MODE then
         self:ConfigureMainHUD(widget)
@@ -679,8 +880,29 @@ function UIManager:ApplySceneHUDRequest(payload)
         self:ConfigurePreInGameHUD(widget)
     end
 
+    local hud_payload = nil
+    if hud ~= nil and type(hud.payload) == "table" then
+        hud_payload = {}
+        for key, value in pairs(hud.payload) do
+            hud_payload[key] = value
+        end
+    end
+    if payload ~= nil and type(payload.payload) == "table" then
+        hud_payload = hud_payload or {}
+        for key, value in pairs(payload.payload) do
+            hud_payload[key] = value
+        end
+    elseif payload ~= nil and payload.payload ~= nil then
+        hud_payload = payload.payload
+    end
+
+    if hud ~= nil and hud.mode == RESULT_HUD_MODE and type(hud_payload) == "table" and hud_payload.result_radio_only == nil then
+        local reason = payload and payload.reason or nil
+        hud_payload.result_radio_only = reason ~= "victory_sequence_complete" and reason ~= "defeat_sequence_complete"
+    end
+
     if self.active_hud_mode == LOADING_HUD_MODE then
-        self:ConfigureLoadingHUD(widget, payload and payload.payload)
+        self:ConfigureLoadingHUD(widget, hud_payload)
     end
 
     if self.active_hud_mode == IN_GAME_HUD_MODE then
@@ -689,8 +911,25 @@ function UIManager:ApplySceneHUDRequest(payload)
     end
 
     if self.active_hud_mode == RESULT_HUD_MODE then
-        self:ConfigureResultHUD(widget, payload and payload.payload)
+        self:ConfigureResultHUD(widget, hud_payload)
     end
+end
+
+function UIManager:ApplyDefaultCursorImage()
+    if Input == nil or Input.SetCursorImage == nil then
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return Input.SetCursorImage(
+            DEFAULT_CURSOR_IMAGE_PATH,
+            DEFAULT_CURSOR_WIDTH,
+            DEFAULT_CURSOR_HEIGHT,
+            DEFAULT_CURSOR_HOTSPOT_X,
+            DEFAULT_CURSOR_HOTSPOT_Y)
+    end)
+
+    return ok and result == true
 end
 
 function UIManager:GetActiveHUDWidget()
@@ -1150,13 +1389,28 @@ function UIManager:SetRadioSubtitle(payload)
     local visible = payload ~= nil and payload.visible == true
     local text = payload ~= nil and payload.text ~= nil and tostring(payload.text) or ""
     self.radio_subtitle_visible = visible
+    self.radio_subtitle_text = visible and text or ""
 
     local widget = self:GetActiveHUDWidget()
-    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+    if widget == nil then
         return
     end
 
-    call_widget(widget, "SetText", "radioSubtitleText", visible and text or "")
+    if self.active_hud_mode ~= IN_GAME_HUD_MODE and self.active_hud_mode ~= RESULT_HUD_MODE then
+        return
+    end
+
+    self:ApplyRadioSubtitle(widget)
+end
+
+function UIManager:ApplyRadioSubtitle(widget)
+    if widget == nil or not self:HasElement(widget, "radioSubtitlePanel") then
+        return
+    end
+
+    local visible = self.radio_subtitle_visible == true
+    local text = visible and (self.radio_subtitle_text or "") or ""
+    call_widget(widget, "SetText", "radioSubtitleText", text)
     self:SetElementVisible(widget, "radioSubtitlePanel", visible)
     self:SetElementStyle(widget, "radioSubtitlePanel", "display", visible and "block" or "none")
     self:SetElementAlpha(widget, "radioSubtitlePanel", visible and 1.0 or 0.0)
@@ -1264,7 +1518,7 @@ function UIManager:GetSettings()
     return {
         bgm_volume = 1.0,
         sfx_volume = 1.0,
-        zoom_toggle = true,
+        zoom_toggle = false,
         mouse_sensitivity = 1.0,
         gamepad_sensitivity = 1.0
     }
@@ -1279,6 +1533,7 @@ function UIManager:ApplySniperInputSettings(force)
     local settings = self:GetSettings()
     local mouse_sensitivity = tonumber(settings.mouse_sensitivity) or 1.0
     local gamepad_sensitivity = tonumber(settings.gamepad_sensitivity) or 1.0
+    local zoom_toggle = settings.zoom_toggle == true
 
     if force or self.applied_mouse_sensitivity ~= mouse_sensitivity then
         if pawn.SetMouseSensitivityMultiplier ~= nil then
@@ -1292,6 +1547,13 @@ function UIManager:ApplySniperInputSettings(force)
             pawn:SetGamepadLookSensitivityMultiplier(gamepad_sensitivity)
         end
         self.applied_gamepad_sensitivity = gamepad_sensitivity
+    end
+
+    if force or self.applied_zoom_toggle ~= zoom_toggle then
+        if pawn.SetRightClickZoomToggleMode ~= nil then
+            pawn:SetRightClickZoomToggleMode(zoom_toggle)
+        end
+        self.applied_zoom_toggle = zoom_toggle
     end
 end
 
@@ -1310,7 +1572,7 @@ function UIManager:SetSetting(key, value)
         end
     end
 
-    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" then
+    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" or key == "zoom_toggle" then
         self:ApplySniperInputSettings(true)
     end
 
@@ -1408,6 +1670,25 @@ function UIManager:ConfigureResultHUD(widget, payload)
     self.result_submitted = false
     self.result_last_input = ""
 
+    local radio_only = payload ~= nil and payload.result_radio_only == true
+    self.result_radio_only = radio_only
+    if radio_only then
+        call_widget(widget, "SetWantsMouse", false)
+        call_widget(widget, "SetWantsKeyboard", false)
+        call_widget(widget, "SetWantsTextInput", false)
+        call_widget(widget, "SetBlocksGameInput", false)
+        call_widget(widget, "SetBlocksGameKeyboard", false)
+        call_widget(widget, "SetBlocksGameMouseLook", false)
+        self:SetElementAlpha(widget, "resultRoot", 1.0)
+        self:SetElementStyle(widget, "resultRoot", "background-color", "rgba(0, 0, 0, 0)")
+        self:SetElementStyle(widget, "resultDim", "background-color", "rgba(0, 0, 0, 0)")
+        self:SetElementDisplay(widget, "resultDim", false)
+        self:SetElementDisplay(widget, "resultEntryPanel", false)
+        self:SetElementDisplay(widget, "resultScorePanel", false)
+        self:ApplyRadioSubtitle(widget)
+        return
+    end
+
     call_widget(widget, "SetWantsMouse", true)
     call_widget(widget, "SetWantsKeyboard", true)
     call_widget(widget, "SetWantsTextInput", true)
@@ -1418,6 +1699,12 @@ function UIManager:ConfigureResultHUD(widget, payload)
     call_widget(widget, "SetElementAttribute", "btnSubmitScore", "data-hover-action", "MainButtonHover")
     call_widget(widget, "SetActionEvent", "btnResultGoMain", "GoToMain")
     call_widget(widget, "SetElementAttribute", "btnResultGoMain", "data-hover-action", "MainButtonHover")
+    self:SetElementStyle(widget, "resultRoot", "background-color", "rgba(0, 0, 0, 0)")
+    self:SetElementStyle(widget, "resultDim", "background-color", "rgba(0, 0, 0, 76)")
+    self:SetElementDisplay(widget, "resultDim", true)
+    self:SetElementDisplay(widget, "resultEntryPanel", true)
+    self:SetElementDisplay(widget, "resultScorePanel", true)
+    self:ApplyRadioSubtitle(widget)
 
     if Input ~= nil then
         if Input.SetInputModeUIOnly ~= nil then
@@ -1598,6 +1885,10 @@ end
 function UIManager:TickResultHUD(dt)
     local widget = self:GetActiveHUDWidget()
     if widget == nil then
+        return
+    end
+
+    if self.result_radio_only then
         return
     end
 
@@ -1885,6 +2176,7 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
     self:SetElementStyle(widget, "hitNotifyTitle", "font-family", "\"Nexon\"")
     self:SetElementStyle(widget, "hitNotifyTitle", "font-weight", "bold")
+    self:SetElementStyle(widget, "hitNotifyTitle", "border-radius", "0px")
     self:SetElementStyle(widget, "hitNotifyDistance", "font-family", "\"Nexon\"")
     self:SetElementStyle(widget, "hitNotifyDistance", "font-weight", "bold")
     self:SetElementStyle(widget, "hitNotifyScore", "font-family", "\"Nexon\"")
@@ -1992,6 +2284,12 @@ function UIManager:SetInGamePauseVisible(visible)
 
     self.pause_visible = visible
     if visible then
+        local pawn = self:GetSniperPawn()
+        if pawn ~= nil and pawn.ForceScopeReleased ~= nil then
+            pawn:ForceScopeReleased()
+        end
+        self:SetScopeHUDVisible(false)
+
         if Input ~= nil and Input.SetInputModeGameAndUI ~= nil then
             Input.SetInputModeGameAndUI()
         end
@@ -2091,12 +2389,25 @@ function UIManager:GetScopeTelemetrySnapshot()
         wind_text = "000 deg  0.0 m/s",
         wind_degrees = 0.0,
         wind_mps = 0.0,
+        wind_cross = 0.0,
+        wind_head = 0.0,
+        wind_cross_abs = 0.0,
+        wind_head_abs = 0.0,
+        wind_cross_normalized = 0.0,
+        wind_head_normalized = 0.0,
+        wind_side = "Center",
+        wind_head_state = "Neutral",
+        wind_strength_level = "Calm",
+        wind_pulse_alpha = 0.0,
         zoom_text = "4x",
         zoom_multiplier = 4.0,
         zoom_min = 4.0,
         zoom_max = 16.0
     }
 
+    local aim_forward_x = nil
+    local aim_forward_y = nil
+    local scope_camera = nil
     local pawn = self:GetSniperPawn()
     if pawn ~= nil then
         local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
@@ -2126,6 +2437,7 @@ function UIManager:GetScopeTelemetrySnapshot()
                 return pawn:GetCamera()
             end)
             if ok_camera and camera ~= nil then
+                scope_camera = camera
                 local ok_trace, trace_result = pcall(function()
                     local trace_start = nil
                     if camera.GetLocation ~= nil then
@@ -2138,6 +2450,9 @@ function UIManager:GetScopeTelemetrySnapshot()
                     if trace_start == nil or trace_direction == nil then
                         return nil
                     end
+
+                    aim_forward_x = tonumber(trace_direction.X or trace_direction.x or 0.0)
+                    aim_forward_y = tonumber(trace_direction.Y or trace_direction.y or 0.0)
 
                     local trace_end = trace_start + trace_direction * SCOPE_DISTANCE_TRACE_METERS
                     if World.LineTraceGameplay ~= nil then
@@ -2194,17 +2509,165 @@ function UIManager:GetScopeTelemetrySnapshot()
         end
     end
 
-    if wind_enabled and current_wind ~= nil then
-        local wind_x = tonumber(current_wind.X or current_wind.x or 0.0) or 0.0
-        local wind_y = tonumber(current_wind.Y or current_wind.y or 0.0) or 0.0
-        local planar_wind_speed = math.sqrt(wind_x * wind_x + wind_y * wind_y)
-        if planar_wind_speed > 0.0001 then
-            snapshot.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
-            snapshot.wind_mps = planar_wind_speed
+    local relative_wind = nil
+    if wind_enabled then
+        relative_wind = compute_relative_wind_snapshot(current_wind, scope_camera)
+    else
+        relative_wind = compute_relative_wind_snapshot(nil, scope_camera)
+    end
+
+    local raw_wind_side = classify_crosswind_side(relative_wind.wind_cross)
+    local raw_wind_strength_level = classify_wind_strength(relative_wind.wind_cross_normalized)
+
+    local current_time = self:GetWorldTimeSeconds()
+    local telemetry_dt = 0.0
+    if type(self.scope_telemetry_last_update_time) == "number" then
+        telemetry_dt = math.max(0.0, current_time - self.scope_telemetry_last_update_time)
+    end
+    self.scope_telemetry_last_update_time = current_time
+
+    if telemetry_dt > 0.0 then
+        self.scope_wind_pulse_alpha = exp_approach(
+            self.scope_wind_pulse_alpha or 0.0,
+            0.0,
+            telemetry_dt,
+            WIND_UI_PULSE_DECAY_SPEED)
+    end
+
+    local pulse_trigger = 0.0
+    if type(self.scope_wind_last_raw_cross) == "number" then
+        pulse_trigger = clamp01(
+            math.abs(relative_wind.wind_cross - self.scope_wind_last_raw_cross) / WIND_UI_PULSE_DELTA_SCALE)
+    end
+    if self.scope_wind_last_side ~= nil and self.scope_wind_last_side ~= raw_wind_side then
+        pulse_trigger = math.max(pulse_trigger, WIND_UI_SIDE_SWITCH_PULSE)
+    end
+    if self.scope_wind_last_strength_level ~= nil and self.scope_wind_last_strength_level ~= raw_wind_strength_level then
+        pulse_trigger = math.max(pulse_trigger, WIND_UI_STRENGTH_SWITCH_PULSE)
+    end
+    if pulse_trigger > (self.scope_wind_pulse_alpha or 0.0) then
+        self.scope_wind_pulse_alpha = pulse_trigger
+    end
+
+    self.scope_wind_last_raw_cross = relative_wind.wind_cross
+    self.scope_wind_last_side = raw_wind_side
+    self.scope_wind_last_strength_level = raw_wind_strength_level
+
+    if telemetry_dt <= 0.0 then
+        self.smoothed_scope_wind_cross = relative_wind.wind_cross
+        self.smoothed_scope_wind_head = relative_wind.wind_head
+    else
+        self.smoothed_scope_wind_cross = exp_approach(
+            self.smoothed_scope_wind_cross,
+            relative_wind.wind_cross,
+            telemetry_dt,
+            WIND_UI_SMOOTH_SPEED)
+        self.smoothed_scope_wind_head = exp_approach(
+            self.smoothed_scope_wind_head,
+            relative_wind.wind_head,
+            telemetry_dt,
+            WIND_UI_SMOOTH_SPEED)
+    end
+
+    snapshot.wind_degrees = relative_wind.wind_degrees
+    snapshot.wind_mps = relative_wind.wind_mps
+    snapshot.wind_cross = self.smoothed_scope_wind_cross
+    snapshot.wind_head = self.smoothed_scope_wind_head
+    snapshot.wind_cross_abs = math.abs(snapshot.wind_cross)
+    snapshot.wind_head_abs = math.abs(snapshot.wind_head)
+    snapshot.wind_cross_normalized = clamp01(snapshot.wind_cross_abs / WIND_UI_MAX_CROSS_DISPLAY)
+    snapshot.wind_head_normalized = clamp01(snapshot.wind_head_abs / WIND_UI_MAX_HEAD_DISPLAY)
+    snapshot.wind_side = classify_crosswind_side(snapshot.wind_cross)
+    snapshot.wind_head_state = classify_headwind_state(snapshot.wind_head)
+    snapshot.wind_strength_level = classify_wind_strength(snapshot.wind_cross_normalized)
+    snapshot.wind_pulse_alpha = clamp01(self.scope_wind_pulse_alpha or 0.0)
+    snapshot.wind_text = string.format(
+        "%s %.2f",
+        snapshot.wind_side,
+        snapshot.wind_cross_abs)
+
+    return snapshot
+end
+
+function UIManager:UpdateScopeWindBar(widget, payload)
+    if widget == nil then
+        return
+    end
+
+    local wind_side = tostring(payload and payload.wind_side or "Center")
+    local wind_strength_level = tostring(payload and payload.wind_strength_level or "Calm")
+    local wind_normalized = clamp01(payload and payload.wind_cross_normalized or 0.0)
+    local wind_pulse_alpha = clamp01(payload and payload.wind_pulse_alpha or 0.0)
+    local active_width = math.floor(SCOPE_WIND_BAR_MAX_WIDTH * wind_normalized + 0.5)
+    local left_width = 0
+    local right_width = 0
+    local left_left = SCOPE_WIND_BAR_CENTER_X
+    local right_left = SCOPE_WIND_BAR_CENTER_X
+    local left_tip_width = 0
+    local right_tip_width = 0
+    local left_tip_left = SCOPE_WIND_BAR_CENTER_X
+    local right_tip_left = SCOPE_WIND_BAR_CENTER_X
+
+    if wind_side == "Left" then
+        left_width = active_width
+        left_left = SCOPE_WIND_BAR_CENTER_X - left_width
+        if left_width > 0 then
+            left_tip_width = math.min(SCOPE_WIND_BAR_TIP_WIDTH, left_width)
+            left_tip_left = left_left
+        end
+    elseif wind_side == "Right" then
+        right_width = active_width
+        if right_width > 0 then
+            right_tip_width = math.min(SCOPE_WIND_BAR_TIP_WIDTH, right_width)
+            right_tip_left = right_left + right_width - right_tip_width
         end
     end
 
-    return snapshot
+    local bar_color = get_wind_strength_color(wind_strength_level)
+    self:SetElementStyle(widget, "scopeWindBarLeft", "left", string.format("%.3fpx", left_left))
+    self:SetElementStyle(widget, "scopeWindBarLeft", "width", string.format("%dpx", left_width))
+    self:SetElementStyle(widget, "scopeWindBarLeft", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindBarRight", "left", string.format("%.3fpx", right_left))
+    self:SetElementStyle(widget, "scopeWindBarRight", "width", string.format("%dpx", right_width))
+    self:SetElementStyle(widget, "scopeWindBarRight", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindBarLeftTip", "left", string.format("%.3fpx", left_tip_left))
+    self:SetElementStyle(widget, "scopeWindBarLeftTip", "width", string.format("%dpx", left_tip_width))
+    self:SetElementStyle(widget, "scopeWindBarLeftTip", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindBarRightTip", "left", string.format("%.3fpx", right_tip_left))
+    self:SetElementStyle(widget, "scopeWindBarRightTip", "width", string.format("%dpx", right_tip_width))
+    self:SetElementStyle(widget, "scopeWindBarRightTip", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindPulseGlow", "background-color", bar_color)
+    self:SetElementStyle(
+        widget,
+        "scopeWindBarTrack",
+        "border-color",
+        wind_strength_level == "Calm" and "rgba(210, 232, 238, 72)" or "rgba(210, 232, 238, 120)")
+    self:SetElementStyle(
+        widget,
+        "scopeWindBarTrack",
+        "background-color",
+        wind_strength_level == "Calm" and "rgba(90, 112, 122, 52)" or "rgba(90, 112, 122, 80)")
+    self:SetElementStyle(
+        widget,
+        "scopeWindCenterLine",
+        "background-color",
+        wind_strength_level == "Calm" and "rgba(240, 248, 252, 150)" or "rgba(240, 248, 252, 220)")
+    self:SetElementAlpha(widget, "scopeWindBarLeft", left_width > 0 and (0.76 + 0.24 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(widget, "scopeWindBarRight", right_width > 0 and (0.76 + 0.24 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(widget, "scopeWindBarLeftTip", left_tip_width > 0 and (0.88 + 0.12 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(widget, "scopeWindBarRightTip", right_tip_width > 0 and (0.88 + 0.12 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(
+        widget,
+        "scopeWindCenterLine",
+        math.min(1.0, wind_strength_level == "Calm" and 0.58 or (0.72 + 0.22 * wind_pulse_alpha)))
+    self:SetElementAlpha(
+        widget,
+        "scopeWindPulseGlow",
+        wind_strength_level == "Calm" and 0.0 or math.min(0.72, 0.16 + 0.42 * wind_pulse_alpha))
+    self:SetElementStyle(widget, "scopeWindValue", "display", "none")
+    self:SetElementStyle(widget, "scopeWindSpeedValue", "display", "block")
+    self:SetElementAlpha(widget, "scopeWindValue", 0.0)
+    self:SetElementAlpha(widget, "scopeWindSpeedValue", 1.0)
 end
 
 function UIManager:SetScopeTelemetry(payload)
@@ -2220,9 +2683,24 @@ function UIManager:SetScopeTelemetry(payload)
     local wind_speed_text = "0.0 m/s"
     local zoom_text = payload.zoom_text or payload.zoom or "4x"
     if type(payload.distance_meters) == "number" then
-        distance_text = string.format("%dm", math.floor(payload.distance_meters + 0.5))
+        distance_text = string.format("%d m", math.floor(payload.distance_meters + 0.5))
     end
-    if type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
+    if payload.wind_side ~= nil or payload.wind_strength_level ~= nil then
+        local side = tostring(payload.wind_side or "Center")
+        if side == "Left" then
+            wind_direction_text = "LEFT"
+        elseif side == "Right" then
+            wind_direction_text = "RIGHT"
+        else
+            wind_direction_text = "CALM"
+        end
+        if type(payload.wind_mps) == "number" then
+            wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
+        else
+            wind_speed_text = tostring(payload.wind_strength_level or "Calm")
+        end
+        wind_text = wind_direction_text .. "  " .. wind_speed_text
+    elseif type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
         wind_direction_text = string.format("%03d deg", math.floor(payload.wind_degrees + 0.5) % 360)
         wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
         wind_text = wind_direction_text .. "  " .. wind_speed_text
@@ -2266,6 +2744,8 @@ function UIManager:SetScopeTelemetry(payload)
         self:SetElementStyle(widget, element_id, "color", "rgba(255, 255, 255, 255)")
         call_widget(widget, "SetText", element_id, text)
     end
+
+    self:UpdateScopeWindBar(widget, payload)
 end
 
 function UIManager:UpdateScopeTelemetryHUD(force)
@@ -2414,6 +2894,126 @@ function UIManager:IsKillHitNotification(payload)
     return hit ~= nil and hit.bKilled == true
 end
 
+local function normalize_hit_notify_team_tag(value)
+    if value == nil then
+        return ""
+    end
+    local text = string.lower(tostring(value))
+    text = string.gsub(text, "^%s+", "")
+    text = string.gsub(text, "%s+$", "")
+    return text
+end
+
+local HIT_NOTIFY_FRIENDLY_TAGS = {
+    ally = true,
+    friendly = true,
+    player = true,
+    bravo = true
+}
+
+local HIT_NOTIFY_ENEMY_TAGS = {
+    enemy = true,
+    hostile = true,
+    opfor = true
+}
+
+local function hit_notify_read_team_tag(object)
+    if object == nil then
+        return nil
+    end
+    if object.GetTeamTag ~= nil then
+        local ok, value = pcall(function()
+            return object:GetTeamTag()
+        end)
+        if ok and value ~= nil and value ~= "" then
+            return value
+        end
+    end
+    if object.GetCombatCoverAgentComponent ~= nil then
+        local ok, agent = pcall(function()
+            return object:GetCombatCoverAgentComponent()
+        end)
+        if ok and agent ~= nil and agent.GetTeamTag ~= nil then
+            local tag_ok, value = pcall(function()
+                return agent:GetTeamTag()
+            end)
+            if tag_ok and value ~= nil and value ~= "" then
+                return value
+            end
+        end
+    end
+    return nil
+end
+
+local function hit_notify_object_has_team_tag(object, tag_map)
+    if object == nil then
+        return false
+    end
+    if object.GetTags ~= nil then
+        local ok, tags = pcall(function()
+            return object:GetTags()
+        end)
+        if ok and type(tags) == "table" then
+            for _, tag in pairs(tags) do
+                if tag_map[normalize_hit_notify_team_tag(tag)] == true then
+                    return true
+                end
+            end
+        end
+    end
+    if object.HasTag ~= nil then
+        for tag, _ in pairs(tag_map) do
+            local ok, has_tag = pcall(function()
+                return object:HasTag(tag)
+            end)
+            if ok and has_tag == true then
+                return true
+            end
+        end
+    end
+    local team_tag = normalize_hit_notify_team_tag(hit_notify_read_team_tag(object))
+    return team_tag ~= "" and tag_map[team_tag] == true
+end
+
+local function hit_notify_get_target(payload, hit)
+    if payload == nil then
+        return nil
+    end
+    if payload.target ~= nil then
+        return payload.target
+    end
+    if type(payload.payload) == "table" and payload.payload.target ~= nil then
+        return payload.payload.target
+    end
+    if hit ~= nil and hit.HitActor ~= nil then
+        return hit.HitActor
+    end
+    return nil
+end
+
+function UIManager:IsFriendlyHitNotification(payload)
+    if payload == nil then
+        return false
+    end
+    local hit = self:GetHitNotifyHitInfo(payload)
+    local target = hit_notify_get_target(payload, hit)
+    if hit_notify_object_has_team_tag(target, HIT_NOTIFY_ENEMY_TAGS) then
+        return false
+    end
+    if hit_notify_object_has_team_tag(target, HIT_NOTIFY_FRIENDLY_TAGS) then
+        return true
+    end
+
+    if payload.friendly == true then
+        return true
+    end
+    if type(payload.payload) == "table" and payload.payload.friendly == true then
+        return true
+    end
+
+    return hit ~= nil and hit.bFriendlyTarget == true
+end
+
 function UIManager:QueueHitNotification(payload)
     if payload == nil then
         return
@@ -2506,7 +3106,12 @@ function UIManager:RenderHitNotification(payload)
 
     local hit = self:GetHitNotifyHitInfo(payload)
     local title = self:GetHitNotifyRegionAlias(hit, payload) .. " " .. self:GetHitNotifyOutcomeAlias(hit)
-    if self:IsKillHitNotification(payload) then
+    local friendly = self:IsFriendlyHitNotification(payload)
+    local killed = self:IsKillHitNotification(payload)
+    local friendly_kill = friendly and killed
+    if friendly_kill then
+        title = utf8_text(236, 149, 132, 234, 181, 176, 32, 236, 130, 172, 236, 130, 180)
+    elseif killed then
         title = title .. " " .. utf8_text(236, 178, 152, 236, 185, 152)
     end
     local distance_text = self:FormatHitNotifyDistance(hit)
@@ -2528,6 +3133,15 @@ function UIManager:RenderHitNotification(payload)
 
     self:SetElementVisible(widget, "hitNotifyPanel", true)
     self:SetElementStyle(widget, "hitNotifyPanel", "display", "block")
+    if friendly then
+        self:SetElementStyle(widget, "hitNotifyTitle", "background-color", HIT_NOTIFY_FRIENDLY_TITLE_BG)
+        self:SetElementStyle(widget, "hitNotifyTitle", "color", HIT_NOTIFY_FRIENDLY_TITLE_COLOR)
+        self:SetElementStyle(widget, "hitNotifyScore", "color", HIT_NOTIFY_FRIENDLY_SCORE_COLOR)
+    else
+        self:SetElementStyle(widget, "hitNotifyTitle", "background-color", HIT_NOTIFY_ENEMY_TITLE_BG)
+        self:SetElementStyle(widget, "hitNotifyTitle", "color", HIT_NOTIFY_ENEMY_TITLE_COLOR)
+        self:SetElementStyle(widget, "hitNotifyScore", "color", HIT_NOTIFY_ENEMY_SCORE_COLOR)
+    end
     self:SetElementAlpha(widget, "hitNotifyPanel", 1.0)
     self:SetElementAlpha(widget, "hitNotifyTitle", 1.0)
     self:SetElementVisible(widget, "hitNotifyMeta", true)
@@ -2621,6 +3235,13 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.scope_distance_last_valid_time = -1000.0
     self.compass_last_frame = -1
     self.smoothed_heading_degrees = nil
+    self.scope_telemetry_last_update_time = nil
+    self.smoothed_scope_wind_cross = 0.0
+    self.smoothed_scope_wind_head = 0.0
+    self.scope_wind_pulse_alpha = 0.0
+    self.scope_wind_last_raw_cross = nil
+    self.scope_wind_last_side = nil
+    self.scope_wind_last_strength_level = nil
     self.breath_visible = false
     self.breath_last_width = -1.0
     self.breath_hide_time_remaining = 0.0
@@ -2638,6 +3259,7 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.radio_hud_suppressed = false
     self.radio_blackout_alpha = 0.0
     self.radio_subtitle_visible = false
+    self.radio_subtitle_text = ""
     self.cutscene_active = false
     self.cutscene_letterbox_alpha = 0.0
     self.cutscene_letterbox_target = 0.0

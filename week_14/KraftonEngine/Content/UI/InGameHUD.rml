@@ -101,7 +101,7 @@
                 </div>
                 <div id="pauseSettingZoomRow" data-ui-type="Panel" data-ui-name="Zoom Row">
                     <div id="pauseZoomLabel" data-ui-type="Text" data-ui-name="Zoom Label">Right Click Zoom</div>
-                    <button id="btnPauseZoomMode" data-ui-type="Button" data-ui-name="Zoom Mode"><span id="pauseZoomModeValue">Toggle</span></button>
+                    <button id="btnPauseZoomMode" data-ui-type="Button" data-ui-name="Zoom Mode"><span id="pauseZoomModeValue">Hold</span></button>
                 </div>
                 <div id="pauseSettingMouseRow" data-ui-type="Panel" data-ui-name="Mouse Row">
                     <div id="pauseMouseLabel" data-ui-type="Text" data-ui-name="Mouse Label">Mouse Sensitivity</div>

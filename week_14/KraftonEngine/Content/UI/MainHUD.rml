@@ -39,7 +39,7 @@
                     </div>
                     <div id="settingsZoomRow" class="setting-row" data-ui-type="Panel" data-ui-name="Zoom Mode Row">
                         <span class="setting-label">Right Click Zoom</span>
-                        <button id="btnZoomMode" class="mode-button" data-ui-type="Button" data-ui-name="Zoom Mode" data-action="ToggleZoomMode"><span id="zoomModeValue">Toggle</span></button>
+                        <button id="btnZoomMode" class="mode-button" data-ui-type="Button" data-ui-name="Zoom Mode" data-action="ToggleZoomMode"><span id="zoomModeValue">Hold</span></button>
                     </div>
                     <div id="settingsMouseRow" class="setting-row" data-ui-type="Panel" data-ui-name="Mouse Sensitivity Row">
                         <span class="setting-label">Mouse Sensitivity</span>

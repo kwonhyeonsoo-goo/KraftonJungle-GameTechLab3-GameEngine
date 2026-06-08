@@ -63,6 +63,26 @@ local COMMENT_DEFINITIONS = {
         duration = 1.997,
         subtitle = nil
     },
+    Mistake1 = {
+        path = "SFX/Mistake/Mistake1.wav",
+        duration = 3.483,
+        subtitle = "야 이 미친 새끼야! 지금 어딜 쏘는 거야?! 아군이라고!"
+    },
+    Mistake2 = {
+        path = "SFX/Mistake/Mistake2.wav",
+        duration = 3.715,
+        subtitle = "젠장, 저격수 새끼 눈이 삐었나! 우리 편을 쏘면 어쩌자는 거야!"
+    },
+    Mistake3 = {
+        path = "SFX/Mistake/Mistake3.wav",
+        duration = 4.644,
+        subtitle = "**, 네가 쐈잖아! 브라보 투 대가리가 날아갔다고, 이 ***야!"
+    },
+    Mistake4 = {
+        path = "SFX/Mistake/Mistake4.wav",
+        duration = 6.594,
+        subtitle = "야 이 ****야, 네가 쐈잖아! 본부, 저격수 저 새끼 미쳤으니까 당장 죽여버려!"
+    },
     SquadClearFront = {
         path = "SFX/Comment/Squad/Clear-front.wav",
         duration = 1.579,
@@ -114,6 +134,10 @@ local COMMENT_DEFINITIONS = {
         subtitle = "브라보, 지원군이 눈앞에 있다. 방어선 유지해라, 앞으로 30초!"
     }
 }
+
+COMMENT_DEFINITIONS.Victory.subtitle = "건십 전장 진입 완료. 전 분대 고개 숙여라(Danger Close). 빗자루질을 시작한다."
+COMMENT_DEFINITIONS.Defeat1.subtitle = "방어선이 완전히... 뚫렸... 으윽..."
+COMMENT_DEFINITIONS.Defeat2.subtitle = "전선이 완전히 붕괴되었다. 작전 실패. 지원 세력을 전 전장에서 회항시킨다."
 
 local TIME_SEQUENCE = {
     { remaining = 180, comments = { "Time3Min1", "Time3Min2" } },
@@ -333,7 +357,9 @@ function RadioManager:Initialize()
             self:ResetRunState()
         elseif payload ~= nil and payload.to == GameState.Victory then
             self:QueueEnding("Victory")
-        elseif payload ~= nil and (payload.to == GameState.Defeat1 or payload.to == GameState.Defeat2) then
+        elseif payload ~= nil and payload.to == GameState.Defeat1 then
+            self:QueueEnding("Defeat")
+        elseif payload ~= nil and payload.to == GameState.Defeat2 then
             self:QueueEnding("Defeat")
         end
     end)
@@ -346,6 +372,10 @@ function RadioManager:Initialize()
 
     self.general:Subscribe("ingame.timer", self, function(payload)
         self:HandleTimer(payload)
+    end)
+
+    self.general:Subscribe("ingame.debug_time_warp", self, function(payload)
+        self:HandleDebugTimeWarp(payload)
     end)
 
     self.general:Subscribe("ingame.sniper_killed", self, function(payload)
@@ -431,7 +461,10 @@ function RadioManager:QueueEnding(result)
 
     if result_text == "Defeat" or result_text == "Defeat1" or result_text == "Defeat2" then
         self.played_result_comment = true
-        local id = random_index(2) == 1 and "Defeat1" or "Defeat2"
+        local id = result_text
+        if result_text == "Defeat" then
+            id = random_index(2) == 1 and "Defeat1" or "Defeat2"
+        end
         return self:Queue(id)
     end
 
@@ -440,6 +473,8 @@ end
 
 function RadioManager:HandleSniperKilled(payload)
     if payload ~= nil and payload.friendly == true then
+        local id = "Mistake" .. tostring(random_index(4))
+        self:Queue(id)
         return
     end
 
@@ -466,6 +501,26 @@ function RadioManager:HandleTimer(payload)
             for _, id in ipairs(marker.comments) do
                 self:Queue(id)
             end
+        end
+    end
+end
+
+function RadioManager:HandleDebugTimeWarp(payload)
+    if payload == nil then
+        return
+    end
+
+    local remaining = tonumber(payload.remaining_time)
+    if remaining == nil and payload.match_duration ~= nil and payload.timer ~= nil then
+        remaining = (tonumber(payload.match_duration) or 0.0) - (tonumber(payload.timer) or 0.0)
+    end
+    if remaining == nil then
+        return
+    end
+
+    for _, marker in ipairs(TIME_SEQUENCE) do
+        if remaining > marker.remaining then
+            self.fired_time_markers[marker.remaining] = nil
         end
     end
 end
@@ -728,7 +783,9 @@ function RadioManager:TickOpeningExitFade(dt)
 end
 
 function RadioManager:FinishCurrent(stop_audio)
-    local was_opening = self.current ~= nil and self.current.comment ~= nil and self.current.comment.opening == true
+    local finished_comment = self.current ~= nil and self.current.comment or nil
+    local finished_id = finished_comment ~= nil and finished_comment.id or nil
+    local was_opening = finished_comment ~= nil and finished_comment.opening == true
     self.current = nil
     if stop_audio == true then
         self:StopActiveRadioSFX()
@@ -746,6 +803,13 @@ function RadioManager:FinishCurrent(stop_audio)
             self.opening_exit_fade_elapsed = 0.0
             self:PublishOpeningPresentation(0.0, false, false, 0.0)
         end
+    end
+    if self.general ~= nil and self.general.Publish ~= nil and finished_id ~= nil then
+        self.general:Publish("radio.comment_finished", {
+            id = finished_id,
+            comment = finished_comment,
+            stopped = stop_audio == true
+        })
     end
     if self.opening_exit_fade_active == true then
         return
