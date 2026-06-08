@@ -133,7 +133,7 @@
             "FrontStandUpAnimationPath" : "None",
             "FullBodyLaunchImpulseMagnitude" : 900.000000,
             "Mass" : 1.000000,
-            "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_1.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
+            "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_Ally.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
             "ObjectType" : 0,
             "PartialEscalationThreshold" : 0.800000,
             "PartialFirstValidPoseBlendInTime" : 0.040000,
