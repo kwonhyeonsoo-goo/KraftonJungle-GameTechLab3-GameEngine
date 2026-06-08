@@ -15,6 +15,8 @@
 #include "Diagnostics/GameViewportInputDiagnostics.h"
 #include "Diagnostics/RuntimeUILayoutDiagnostics.h"
 #include "GameFramework/World.h"
+#include "Materials/MaterialManager.h"
+#include "Particle/ParticleSystemManager.h"
 #include "Render/Scene/FScene.h"
 
 #include <algorithm>
@@ -870,8 +872,11 @@ void FEditorConsoleWidget::HandleContentBrowserRefresh(const TArray<FString>& Ar
 		return;
 	}
 
+	FMaterialManager::Get().ClearCache();
+	FParticleSystemManager::Get().ClearCache();
+
 	EditorEngine->RefreshContentBrowser();
-	AddLog("Content browser refreshed.\n");
+	AddLog("Content browser refreshed and asset caches cleared.\n");
 }
 
 void FEditorConsoleWidget::HandleContentBrowserIconSize(const TArray<FString>& Args)

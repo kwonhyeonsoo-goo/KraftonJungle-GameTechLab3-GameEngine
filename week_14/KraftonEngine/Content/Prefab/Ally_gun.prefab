@@ -30,9 +30,9 @@
         "Properties" : {
           "AcceptanceRadius" : 1.000000,
           "AdvanceFullCoverChance" : 0.450000,
-          "AdvanceInterval" : 3.000000,
-          "AdvanceIntervalMax" : 30.000000,
-          "AdvanceIntervalMin" : 20.000000,
+          "AdvanceInterval" : 12.000000,
+          "AdvanceIntervalMax" : 120.000000,
+          "AdvanceIntervalMin" : 80.000000,
           "AdvanceLinkMode" : 0,
           "AttackDamage" : 5.000000,
           "AttackIntervalMax" : 2.000000,
@@ -215,6 +215,31 @@
             "bIsVisible" : true,
             "bKinematic" : false,
             "bSimulatePhysics" : false,
+            "bTickEnable" : true
+          }
+        }, {
+          "Children" : [],
+          "ClassName" : "USoundComponent",
+          "ObjectId" : 8,
+          "Properties" : {
+            "AttachSocketName" : "Name_None",
+            "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+            "MaxDistance" : 3000.000000,
+            "MinDistance" : 100.000000,
+            "PendingTagsString" : "",
+            "PersistentGuid" : "Component_9048",
+            "Pitch" : 1.000000,
+            "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+            "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+            "SoundPath" : "SFX/CombatAI/AutoGun_3p_01.wav",
+            "Volume" : 1.000000,
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bLooping" : false,
+            "bPlayOnBeginPlay" : false,
+            "bSpatialized" : true,
             "bTickEnable" : true
           }
         }],
