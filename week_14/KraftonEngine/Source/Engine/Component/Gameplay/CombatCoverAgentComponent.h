@@ -211,6 +211,27 @@ public:
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool IsEngaging() const { return State == ECombatCoverAgentState::Engaging || CurrentTarget.Get() != nullptr; }
 
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    ECombatCoverSlotType GetCurrentSlotType() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    bool IsInStandingCombatSlot() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    bool ShouldUseStandingFire() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    float GetCombatAnimationMoveState() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    bool WantsHitReaction() const { return bHitReactionPending && HitReactionTimer > 0.0f; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    float GetHitReactionTimeRemaining() const { return HitReactionTimer; }
+
+    UFUNCTION(Callable, Category="CombatAgent|Animation")
+    bool ConsumeHitReaction();
+
     void RecordSniperHit(const FSniperHitInfo& HitInfo);
 
     UFUNCTION(Pure, Category="CombatAgent|Sniper")
@@ -260,6 +281,7 @@ private:
     void HandleArrivedAtCoverSlot(UCombatFlowManagerComponent* Manager);
     void TickCombatDecisionCooldown(float DeltaTime);
     void FinishSuppression();
+    void QueueHitReaction();
     void TickMoveToTarget(float DeltaTime);
     void FaceDirection2D(const FVector& Direction, float DeltaTime);
     void FaceLocation2D(const FVector& WorldLocation, float DeltaTime);
@@ -351,6 +373,12 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Can Fire While Moving")
     bool bCanFireWhileMoving = false;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Animation", DisplayName="Hit Reaction Duration", Min=0.0f, Max=10.0f, Speed=0.01f)
+    float HitReactionDuration = 0.45f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Animation", DisplayName="Trigger Hit Reaction On Suppression")
+    bool bTriggerHitReactionOnSuppression = true;
+
     UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Reposition Chance When In Range", Min=0.0f, Max=1.0f, Speed=0.01f)
     float RepositionChanceWhenInRange = 0.25f;
 
@@ -399,9 +427,11 @@ private:
     int32 IncomingFireCount = 0;
     float IncomingAttackDamage = 0.0f;
     float SuppressionTimer = 0.0f;
+    float HitReactionTimer = 0.0f;
     float CombatDecisionCooldownRemaining = 0.0f;
     float CoverHoldTimer = 0.0f;
     bool bMoveToCombatSlotAfterCoverHold = false;
+    bool bHitReactionPending = false;
     ECombatCoverAgentState StateBeforeEngage = ECombatCoverAgentState::Idle;
     ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
