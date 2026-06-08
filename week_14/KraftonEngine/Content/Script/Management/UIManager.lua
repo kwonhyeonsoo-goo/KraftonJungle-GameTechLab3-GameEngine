@@ -107,8 +107,14 @@ local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
 local WIND_UI_MAX_CROSS_DISPLAY = 4.0
 local WIND_UI_MAX_HEAD_DISPLAY = 4.0
 local WIND_UI_SMOOTH_SPEED = 6.0
-local SCOPE_WIND_BAR_MAX_WIDTH = 108.0
-local SCOPE_WIND_BAR_CENTER_X = 110.0
+local WIND_UI_CALM_CROSS_THRESHOLD = 0.18
+local WIND_UI_PULSE_DECAY_SPEED = 4.5
+local WIND_UI_PULSE_DELTA_SCALE = 1.25
+local WIND_UI_SIDE_SWITCH_PULSE = 0.92
+local WIND_UI_STRENGTH_SWITCH_PULSE = 0.58
+local SCOPE_WIND_BAR_MAX_WIDTH = 158.0
+local SCOPE_WIND_BAR_CENTER_X = 160.0
+local SCOPE_WIND_BAR_TIP_WIDTH = 8.0
 local COMBAT_AGENT_ROW_COUNT = 5
 local COMBAT_AGENT_BAR_WIDTH = 210.0
 local HIT_NOTIFY_CENTER_X = 740.0
@@ -371,7 +377,7 @@ end
 
 local function classify_crosswind_side(value)
     local magnitude = math.abs(tonumber(value) or 0.0)
-    if magnitude <= 0.05 then
+    if magnitude <= WIND_UI_CALM_CROSS_THRESHOLD then
         return "Center"
     end
 
@@ -592,6 +598,10 @@ function UIManager.new(general)
         scope_telemetry_last_update_time = nil,
         smoothed_scope_wind_cross = 0.0,
         smoothed_scope_wind_head = 0.0,
+        scope_wind_pulse_alpha = 0.0,
+        scope_wind_last_raw_cross = nil,
+        scope_wind_last_side = nil,
+        scope_wind_last_strength_level = nil,
         sniper_pawn = nil,
         breath_visible = false,
         breath_bar_width = 288.0,
@@ -1966,6 +1976,7 @@ function UIManager:GetScopeTelemetrySnapshot()
         wind_side = "Center",
         wind_head_state = "Neutral",
         wind_strength_level = "Calm",
+        wind_pulse_alpha = 0.0,
         zoom_text = "4x",
         zoom_multiplier = 4.0,
         zoom_min = 4.0,
@@ -2078,12 +2089,42 @@ function UIManager:GetScopeTelemetrySnapshot()
         relative_wind = compute_relative_wind_snapshot(nil, scope_camera)
     end
 
+    local raw_wind_side = classify_crosswind_side(relative_wind.wind_cross)
+    local raw_wind_strength_level = classify_wind_strength(relative_wind.wind_cross_normalized)
+
     local current_time = self:GetWorldTimeSeconds()
     local telemetry_dt = 0.0
     if type(self.scope_telemetry_last_update_time) == "number" then
         telemetry_dt = math.max(0.0, current_time - self.scope_telemetry_last_update_time)
     end
     self.scope_telemetry_last_update_time = current_time
+
+    if telemetry_dt > 0.0 then
+        self.scope_wind_pulse_alpha = exp_approach(
+            self.scope_wind_pulse_alpha or 0.0,
+            0.0,
+            telemetry_dt,
+            WIND_UI_PULSE_DECAY_SPEED)
+    end
+
+    local pulse_trigger = 0.0
+    if type(self.scope_wind_last_raw_cross) == "number" then
+        pulse_trigger = clamp01(
+            math.abs(relative_wind.wind_cross - self.scope_wind_last_raw_cross) / WIND_UI_PULSE_DELTA_SCALE)
+    end
+    if self.scope_wind_last_side ~= nil and self.scope_wind_last_side ~= raw_wind_side then
+        pulse_trigger = math.max(pulse_trigger, WIND_UI_SIDE_SWITCH_PULSE)
+    end
+    if self.scope_wind_last_strength_level ~= nil and self.scope_wind_last_strength_level ~= raw_wind_strength_level then
+        pulse_trigger = math.max(pulse_trigger, WIND_UI_STRENGTH_SWITCH_PULSE)
+    end
+    if pulse_trigger > (self.scope_wind_pulse_alpha or 0.0) then
+        self.scope_wind_pulse_alpha = pulse_trigger
+    end
+
+    self.scope_wind_last_raw_cross = relative_wind.wind_cross
+    self.scope_wind_last_side = raw_wind_side
+    self.scope_wind_last_strength_level = raw_wind_strength_level
 
     if telemetry_dt <= 0.0 then
         self.smoothed_scope_wind_cross = relative_wind.wind_cross
@@ -2112,6 +2153,7 @@ function UIManager:GetScopeTelemetrySnapshot()
     snapshot.wind_side = classify_crosswind_side(snapshot.wind_cross)
     snapshot.wind_head_state = classify_headwind_state(snapshot.wind_head)
     snapshot.wind_strength_level = classify_wind_strength(snapshot.wind_cross_normalized)
+    snapshot.wind_pulse_alpha = clamp01(self.scope_wind_pulse_alpha or 0.0)
     snapshot.wind_text = string.format(
         "%s %.2f",
         snapshot.wind_side,
@@ -2137,7 +2179,6 @@ function UIManager:SetScopeTelemetry(payload)
     end
     if payload.wind_side ~= nil or payload.wind_strength_level ~= nil then
         local side = tostring(payload.wind_side or "Center")
-        local strength = tostring(payload.wind_strength_level or "Calm")
         if side == "Left" then
             wind_direction_text = "LEFT"
         elseif side == "Right" then
@@ -2145,7 +2186,11 @@ function UIManager:SetScopeTelemetry(payload)
         else
             wind_direction_text = "CALM"
         end
-        wind_speed_text = string.upper(strength)
+        if type(payload.wind_mps) == "number" then
+            wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
+        else
+            wind_speed_text = tostring(payload.wind_strength_level or "Calm")
+        end
         wind_text = wind_direction_text .. "  " .. wind_speed_text
     elseif type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
         wind_direction_text = string.format("%03d deg", math.floor(payload.wind_degrees + 0.5) % 360)
@@ -2195,17 +2240,30 @@ function UIManager:SetScopeTelemetry(payload)
     local wind_side = tostring(payload.wind_side or "Center")
     local wind_strength_level = tostring(payload.wind_strength_level or "Calm")
     local wind_normalized = clamp01(payload.wind_cross_normalized or 0.0)
+    local wind_pulse_alpha = clamp01(payload.wind_pulse_alpha or 0.0)
     local active_width = math.floor(SCOPE_WIND_BAR_MAX_WIDTH * wind_normalized + 0.5)
     local left_width = 0
     local right_width = 0
     local left_left = SCOPE_WIND_BAR_CENTER_X
     local right_left = SCOPE_WIND_BAR_CENTER_X
+    local left_tip_width = 0
+    local right_tip_width = 0
+    local left_tip_left = SCOPE_WIND_BAR_CENTER_X
+    local right_tip_left = SCOPE_WIND_BAR_CENTER_X
 
     if wind_side == "Left" then
         left_width = active_width
         left_left = SCOPE_WIND_BAR_CENTER_X - left_width
+        if left_width > 0 then
+            left_tip_width = math.min(SCOPE_WIND_BAR_TIP_WIDTH, left_width)
+            left_tip_left = left_left
+        end
     elseif wind_side == "Right" then
         right_width = active_width
+        if right_width > 0 then
+            right_tip_width = math.min(SCOPE_WIND_BAR_TIP_WIDTH, right_width)
+            right_tip_left = right_left + right_width - right_tip_width
+        end
     end
 
     local bar_color = get_wind_strength_color(wind_strength_level)
@@ -2215,6 +2273,13 @@ function UIManager:SetScopeTelemetry(payload)
     self:SetElementStyle(widget, "scopeWindBarRight", "left", string.format("%.3fpx", right_left))
     self:SetElementStyle(widget, "scopeWindBarRight", "width", string.format("%dpx", right_width))
     self:SetElementStyle(widget, "scopeWindBarRight", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindBarLeftTip", "left", string.format("%.3fpx", left_tip_left))
+    self:SetElementStyle(widget, "scopeWindBarLeftTip", "width", string.format("%dpx", left_tip_width))
+    self:SetElementStyle(widget, "scopeWindBarLeftTip", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindBarRightTip", "left", string.format("%.3fpx", right_tip_left))
+    self:SetElementStyle(widget, "scopeWindBarRightTip", "width", string.format("%dpx", right_tip_width))
+    self:SetElementStyle(widget, "scopeWindBarRightTip", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindPulseGlow", "background-color", bar_color)
     self:SetElementStyle(
         widget,
         "scopeWindBarTrack",
@@ -2230,10 +2295,22 @@ function UIManager:SetScopeTelemetry(payload)
         "scopeWindCenterLine",
         "background-color",
         wind_strength_level == "Calm" and "rgba(240, 248, 252, 150)" or "rgba(240, 248, 252, 220)")
+    self:SetElementAlpha(widget, "scopeWindBarLeft", left_width > 0 and (0.76 + 0.24 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(widget, "scopeWindBarRight", right_width > 0 and (0.76 + 0.24 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(widget, "scopeWindBarLeftTip", left_tip_width > 0 and (0.88 + 0.12 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(widget, "scopeWindBarRightTip", right_tip_width > 0 and (0.88 + 0.12 * wind_pulse_alpha) or 0.0)
+    self:SetElementAlpha(
+        widget,
+        "scopeWindCenterLine",
+        math.min(1.0, wind_strength_level == "Calm" and 0.58 or (0.72 + 0.22 * wind_pulse_alpha)))
+    self:SetElementAlpha(
+        widget,
+        "scopeWindPulseGlow",
+        wind_strength_level == "Calm" and 0.0 or math.min(0.72, 0.16 + 0.42 * wind_pulse_alpha))
     self:SetElementStyle(widget, "scopeWindValue", "display", "none")
-    self:SetElementStyle(widget, "scopeWindSpeedValue", "display", "none")
+    self:SetElementStyle(widget, "scopeWindSpeedValue", "display", "block")
     self:SetElementAlpha(widget, "scopeWindValue", 0.0)
-    self:SetElementAlpha(widget, "scopeWindSpeedValue", 0.0)
+    self:SetElementAlpha(widget, "scopeWindSpeedValue", 1.0)
 end
 
 function UIManager:UpdateScopeTelemetryHUD(force)
@@ -2456,6 +2533,10 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.scope_telemetry_last_update_time = nil
     self.smoothed_scope_wind_cross = 0.0
     self.smoothed_scope_wind_head = 0.0
+    self.scope_wind_pulse_alpha = 0.0
+    self.scope_wind_last_raw_cross = nil
+    self.scope_wind_last_side = nil
+    self.scope_wind_last_strength_level = nil
     self.breath_visible = false
     self.breath_last_width = -1.0
     self.breath_hide_time_remaining = 0.0
