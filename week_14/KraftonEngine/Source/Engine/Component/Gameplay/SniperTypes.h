@@ -211,6 +211,9 @@ struct FSniperHitInfo
 	float TargetCurrentHP = 0.0f;
 	float TargetMaxHP = 0.0f;
 	FName HitBoneName = FName::None;
+	bool bHasHitBodyCenterDistance = false;
+	FVector HitBodyCenterLocation = FVector::ZeroVector;
+	float HitBodyCenterDistance = 0.0f;
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FBulletSpawnedEventSignature, const FBulletCinematicSnapshot&);

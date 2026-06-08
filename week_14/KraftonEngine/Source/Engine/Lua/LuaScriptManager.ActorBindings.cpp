@@ -3029,7 +3029,13 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "TargetMaxHP",
         &FSniperHitInfo::TargetMaxHP,
         "HitBoneName",
-        &FSniperHitInfo::HitBoneName
+        &FSniperHitInfo::HitBoneName,
+        "bHasHitBodyCenterDistance",
+        &FSniperHitInfo::bHasHitBodyCenterDistance,
+        "HitBodyCenterLocation",
+        &FSniperHitInfo::HitBodyCenterLocation,
+        "HitBodyCenterDistance",
+        &FSniperHitInfo::HitBodyCenterDistance
     );
 
     sol::table SniperAmmoType = Lua.create_named_table("SniperAmmoType");

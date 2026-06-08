@@ -20,12 +20,15 @@
 #include "Math/Quat.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetInstance.h"
+#include "Physics/PhysicsAssetPreviewUtils.h"
 
 #include <cmath>
 #include <cctype>
 
 #include <algorithm>
+#include <cfloat>
 
 namespace
 {
@@ -53,6 +56,18 @@ namespace
 	constexpr float SniperBallisticSubstepMinDeltaTime = 1.0f / 480.0f;
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
+	constexpr float SniperPhysicsAssetHitMinShapeSize = 0.001f;
+	constexpr float SniperPhysicsAssetHitEpsilon = 1.0e-6f;
+
+	struct FSniperPoseShapeHit
+	{
+		bool bHit = false;
+		float T = FLT_MAX;
+		FName BoneName = FName::None;
+		FVector WorldNormal = FVector::ZeroVector;
+		int32 BodyIndex = -1;
+		int32 ShapeIndex = -1;
+	};
 
 	bool StartsWithToken(const FString& Value, const char* Prefix)
 	{
@@ -137,6 +152,237 @@ namespace
 			* MachFactor
 			* Bullet.DragScale
 			/ SafeBallisticCoefficient;
+	}
+
+	FTransform ComposeSniperPhysicsAssetTransforms(const FTransform& ParentWorld, const FTransform& Local)
+	{
+		FTransform Result = Local;
+		Result.Location = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
+		Result.Rotation = (ParentWorld.Rotation * Local.Rotation).GetNormalized();
+		Result.Scale = FVector::OneVector;
+		return Result;
+	}
+
+	FVector TransformWorldPositionToShapeLocal(const FVector& WorldPosition, const FTransform& ShapeWorld)
+	{
+		const FQuat InverseRotation = ShapeWorld.Rotation.GetNormalized().Inverse();
+		return InverseRotation.RotateVector(WorldPosition - ShapeWorld.Location);
+	}
+
+	float GetAxisValue(const FVector& Value, int32 Axis)
+	{
+		return Value.Data[Axis];
+	}
+
+	float ClampUnit(float Value)
+	{
+		return FMath::Clamp(Value, 0.0f, 1.0f);
+	}
+
+	FVector ComputeBoxNormalLocal(const FVector& LocalPoint, const FVector& HalfExtent)
+	{
+		const float DistToX = std::abs(HalfExtent.X - std::abs(LocalPoint.X));
+		const float DistToY = std::abs(HalfExtent.Y - std::abs(LocalPoint.Y));
+		const float DistToZ = std::abs(HalfExtent.Z - std::abs(LocalPoint.Z));
+		if (DistToX <= DistToY && DistToX <= DistToZ)
+		{
+			return FVector(LocalPoint.X >= 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f);
+		}
+		if (DistToY <= DistToZ)
+		{
+			return FVector(0.0f, LocalPoint.Y >= 0.0f ? 1.0f : -1.0f, 0.0f);
+		}
+		return FVector(0.0f, 0.0f, LocalPoint.Z >= 0.0f ? 1.0f : -1.0f);
+	}
+
+	bool IntersectSegmentLocalBox(const FVector& Start, const FVector& End, const FVector& HalfExtent, float& OutT)
+	{
+		float TMin = 0.0f;
+		float TMax = 1.0f;
+		const FVector Delta = End - Start;
+		const float MinBounds[3] = { -HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z };
+		const float MaxBounds[3] = {  HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z };
+
+		for (int32 Axis = 0; Axis < 3; ++Axis)
+		{
+			const float Origin = GetAxisValue(Start, Axis);
+			const float Direction = GetAxisValue(Delta, Axis);
+			if (std::abs(Direction) < SniperPhysicsAssetHitEpsilon)
+			{
+				if (Origin < MinBounds[Axis] || Origin > MaxBounds[Axis])
+				{
+					return false;
+				}
+				continue;
+			}
+
+			float T1 = (MinBounds[Axis] - Origin) / Direction;
+			float T2 = (MaxBounds[Axis] - Origin) / Direction;
+			if (T1 > T2)
+			{
+				std::swap(T1, T2);
+			}
+
+			TMin = (std::max)(TMin, T1);
+			TMax = (std::min)(TMax, T2);
+			if (TMin > TMax)
+			{
+				return false;
+			}
+		}
+
+		OutT = ClampUnit(TMin);
+		return true;
+	}
+
+	bool IntersectSegmentLocalSphere(const FVector& Start, const FVector& End, float Radius, float& OutT)
+	{
+		const FVector Delta = End - Start;
+		const float A = Delta.Dot(Delta);
+		if (A < SniperPhysicsAssetHitEpsilon)
+		{
+			if (Start.Dot(Start) <= Radius * Radius)
+			{
+				OutT = 0.0f;
+				return true;
+			}
+			return false;
+		}
+
+		const float B = 2.0f * Start.Dot(Delta);
+		const float C = Start.Dot(Start) - Radius * Radius;
+		const float Discriminant = B * B - 4.0f * A * C;
+		if (Discriminant < 0.0f)
+		{
+			return false;
+		}
+
+		const float SqrtDisc = sqrtf(Discriminant);
+		const float InvDenominator = 1.0f / (2.0f * A);
+		const float Candidates[2] = {
+			(-B - SqrtDisc) * InvDenominator,
+			(-B + SqrtDisc) * InvDenominator
+		};
+
+		float BestT = FLT_MAX;
+		for (float T : Candidates)
+		{
+			if (T >= 0.0f && T <= 1.0f)
+			{
+				BestT = (std::min)(BestT, T);
+			}
+		}
+
+		if (BestT == FLT_MAX)
+		{
+			return false;
+		}
+
+		OutT = BestT;
+		return true;
+	}
+
+	bool IntersectSegmentLocalCylinderZ(const FVector& Start, const FVector& End, float Radius, float CylinderHalfHeight, float& OutT)
+	{
+		if (CylinderHalfHeight <= 0.0f)
+		{
+			return false;
+		}
+
+		const FVector Delta = End - Start;
+		const float A = Delta.X * Delta.X + Delta.Y * Delta.Y;
+		if (A < SniperPhysicsAssetHitEpsilon)
+		{
+			return false;
+		}
+
+		const float B = 2.0f * (Start.X * Delta.X + Start.Y * Delta.Y);
+		const float C = Start.X * Start.X + Start.Y * Start.Y - Radius * Radius;
+		const float Discriminant = B * B - 4.0f * A * C;
+		if (Discriminant < 0.0f)
+		{
+			return false;
+		}
+
+		const float SqrtDisc = sqrtf(Discriminant);
+		const float InvDenominator = 1.0f / (2.0f * A);
+		const float Candidates[2] = {
+			(-B - SqrtDisc) * InvDenominator,
+			(-B + SqrtDisc) * InvDenominator
+		};
+
+		float BestT = FLT_MAX;
+		for (float T : Candidates)
+		{
+			if (T < 0.0f || T > 1.0f)
+			{
+				continue;
+			}
+
+			const float Z = Start.Z + Delta.Z * T;
+			if (Z >= -CylinderHalfHeight && Z <= CylinderHalfHeight)
+			{
+				BestT = (std::min)(BestT, T);
+			}
+		}
+
+		if (BestT == FLT_MAX)
+		{
+			return false;
+		}
+
+		OutT = BestT;
+		return true;
+	}
+
+	bool IntersectSegmentLocalCapsuleZ(const FVector& Start, const FVector& End, float Radius, float HalfHeight, float& OutT)
+	{
+		const float SafeRadius = (std::max)(Radius, SniperPhysicsAssetHitMinShapeSize);
+		const float SafeHalfHeight = (std::max)(HalfHeight, SafeRadius);
+		const float CylinderHalfHeight = (std::max)(0.0f, SafeHalfHeight - SafeRadius);
+
+		float BestT = FLT_MAX;
+		float T = 0.0f;
+		if (IntersectSegmentLocalCylinderZ(Start, End, SafeRadius, CylinderHalfHeight, T))
+		{
+			BestT = (std::min)(BestT, T);
+		}
+
+		if (IntersectSegmentLocalSphere(Start - FVector(0.0f, 0.0f, CylinderHalfHeight), End - FVector(0.0f, 0.0f, CylinderHalfHeight), SafeRadius, T))
+		{
+			BestT = (std::min)(BestT, T);
+		}
+
+		if (IntersectSegmentLocalSphere(Start - FVector(0.0f, 0.0f, -CylinderHalfHeight), End - FVector(0.0f, 0.0f, -CylinderHalfHeight), SafeRadius, T))
+		{
+			BestT = (std::min)(BestT, T);
+		}
+
+		if (BestT == FLT_MAX)
+		{
+			return false;
+		}
+
+		OutT = BestT;
+		return true;
+	}
+
+	FVector ComputeCapsuleNormalLocal(const FVector& LocalPoint, float Radius, float HalfHeight)
+	{
+		const float SafeRadius = (std::max)(Radius, SniperPhysicsAssetHitMinShapeSize);
+		const float SafeHalfHeight = (std::max)(HalfHeight, SafeRadius);
+		const float CylinderHalfHeight = (std::max)(0.0f, SafeHalfHeight - SafeRadius);
+		const float ClampedZ = FMath::Clamp(LocalPoint.Z, -CylinderHalfHeight, CylinderHalfHeight);
+		FVector Normal = LocalPoint - FVector(0.0f, 0.0f, ClampedZ);
+		if (Normal.IsNearlyZero())
+		{
+			Normal = LocalPoint.Z >= 0.0f ? FVector::UpVector : FVector::DownVector;
+		}
+		else
+		{
+			Normal.Normalize();
+		}
+		return Normal;
 	}
 }
 
@@ -805,19 +1051,33 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 				return false;
 			}
 
-			if (!ShouldRunPreciseCharacterHitQuery(OutHit))
-			{
-				return true;
-			}
-
 			FHitResult PreciseHit;
-			if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+			if (ShouldRunPreciseCharacterHitQuery(OutHit))
 			{
-				OutHit = PreciseHit;
-				return true;
+				if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+				{
+					OutHit = PreciseHit;
+					return true;
+				}
 			}
 
-			return !bRequirePreciseCharacterHit;
+			if (ShouldRunPosePhysicsAssetHitQuery(OutHit))
+			{
+				if (QueryPosePhysicsAssetCharacterHit(Bullet, OutHit, PreciseHit))
+				{
+					OutHit = PreciseHit;
+					return true;
+				}
+
+				UE_LOG(
+					"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Actor=%s Component=%s Bone=%s",
+					OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
+					OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
+					OutHit.HitBoneName.ToString().c_str());
+				return false;
+			}
+
+			return true;
 		}
 	}
 
@@ -837,19 +1097,33 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 		return false;
 	}
 
-	if (!ShouldRunPreciseCharacterHitQuery(OutHit))
-	{
-		return true;
-	}
-
 	FHitResult PreciseHit;
-	if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+	if (ShouldRunPreciseCharacterHitQuery(OutHit))
 	{
-		OutHit = PreciseHit;
-		return true;
+		if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+		{
+			OutHit = PreciseHit;
+			return true;
+		}
 	}
 
-	return !bRequirePreciseCharacterHit;
+	if (ShouldRunPosePhysicsAssetHitQuery(OutHit))
+	{
+		if (QueryPosePhysicsAssetCharacterHit(Bullet, OutHit, PreciseHit))
+		{
+			OutHit = PreciseHit;
+			return true;
+		}
+
+		UE_LOG(
+			"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Actor=%s Component=%s Bone=%s",
+			OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
+			OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
+			OutHit.HitBoneName.ToString().c_str());
+		return false;
+	}
+
+	return true;
 }
 
 bool UBallisticBulletManagerComponent::ShouldRunPreciseCharacterHitQuery(const FHitResult& BroadHit) const
@@ -861,6 +1135,50 @@ bool UBallisticBulletManagerComponent::ShouldRunPreciseCharacterHitQuery(const F
 
 	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
 	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetPhysicsAssetInstance();
+	if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+	{
+		return false;
+	}
+
+	if (Cast<UCapsuleComponent>(BroadHit.HitComponent))
+	{
+		return true;
+	}
+
+	if (!Cast<USkeletalMeshComponent>(BroadHit.HitComponent))
+	{
+		return true;
+	}
+
+	return BroadHit.HitBoneName == FName::None;
+}
+
+bool UBallisticBulletManagerComponent::ShouldRunPosePhysicsAssetHitQuery(const FHitResult& BroadHit) const
+{
+	if (!bEnablePreciseCharacterHitQuery || !BroadHit.bHit || !BroadHit.HitActor)
+	{
+		return false;
+	}
+
+	if (!Cast<ACombatCharacter>(BroadHit.HitActor) &&
+		!BroadHit.HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetEffectivePhysicsAsset();
+	if (!PhysicsAsset || PhysicsAsset->GetBodySetups().empty())
 	{
 		return false;
 	}
@@ -984,6 +1302,174 @@ bool UBallisticBulletManagerComponent::QueryPreciseCharacterHit(
 	return bPreciseHit;
 }
 
+bool UBallisticBulletManagerComponent::QueryPosePhysicsAssetCharacterHit(
+	const FBallisticBullet& Bullet,
+	const FHitResult& BroadHit,
+	FHitResult& OutPreciseHit) const
+{
+	OutPreciseHit = FHitResult();
+	if (!BroadHit.bHit || !BroadHit.HitActor)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetEffectivePhysicsAsset();
+	if (!PhysicsAsset)
+	{
+		return false;
+	}
+
+	const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
+	const float SegmentLength = Segment.Length();
+	if (SegmentLength <= SniperBulletMinSweepRadius)
+	{
+		return false;
+	}
+
+	FPhysicsAssetPreviewPoseCache PoseCache;
+	if (!PoseCache.Initialize(SkeletalMeshComponent, PhysicsAsset))
+	{
+		UE_LOG(
+			"[SniperDebug] PhysicsAsset precision skipped: pose cache unavailable. Actor=%s Mesh=%s",
+			BroadHit.HitActor ? BroadHit.HitActor->GetName().c_str() : "None",
+			SkeletalMeshComponent->GetName().c_str());
+		return false;
+	}
+
+	const float BulletRadius = (std::max)(Bullet.Radius, 0.0f);
+	const TArray<FPhysicsAssetBodySetup>& BodySetups = PhysicsAsset->GetBodySetups();
+	FSniperPoseShapeHit BestHit;
+
+	for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+	{
+		const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
+		if (!BodySetup.BoneName.IsValid() || BodySetup.BoneName == FName::None || BodySetup.Shapes.empty())
+		{
+			continue;
+		}
+
+		const FString NormalizedBodyBoneName = NormalizeBoneNameForHitClassification(BodySetup.BoneName);
+		if (NormalizedBodyBoneName.empty() || IsAuxiliaryBoneNameNormalized(NormalizedBodyBoneName))
+		{
+			continue;
+		}
+
+		FTransform BodyWorld;
+		if (!PoseCache.ComputeBodyWorldTransform(BodyIndex, BodyWorld))
+		{
+			continue;
+		}
+
+		for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(BodySetup.Shapes.size()); ++ShapeIndex)
+		{
+			const FPhysicsAssetShapeSetup& ShapeSetup = BodySetup.Shapes[ShapeIndex];
+			const FTransform ShapeWorld = ComposeSniperPhysicsAssetTransforms(BodyWorld, ShapeSetup.LocalTransform);
+			const FVector LocalStart = TransformWorldPositionToShapeLocal(Bullet.PreviousPosition, ShapeWorld);
+			const FVector LocalEnd = TransformWorldPositionToShapeLocal(Bullet.Position, ShapeWorld);
+
+			float T = 0.0f;
+			bool bShapeHit = false;
+			FVector LocalNormal = FVector::ZeroVector;
+			switch (ShapeSetup.Type)
+			{
+			case EPhysicsAssetShapeType::Box:
+			{
+				const FVector HalfExtent(
+					(std::max)(ShapeSetup.BoxHalfExtent.X, SniperPhysicsAssetHitMinShapeSize) + BulletRadius,
+					(std::max)(ShapeSetup.BoxHalfExtent.Y, SniperPhysicsAssetHitMinShapeSize) + BulletRadius,
+					(std::max)(ShapeSetup.BoxHalfExtent.Z, SniperPhysicsAssetHitMinShapeSize) + BulletRadius);
+				bShapeHit = IntersectSegmentLocalBox(LocalStart, LocalEnd, HalfExtent, T);
+				if (bShapeHit)
+				{
+					LocalNormal = ComputeBoxNormalLocal(FVector::Lerp(LocalStart, LocalEnd, T), HalfExtent);
+				}
+				break;
+			}
+			case EPhysicsAssetShapeType::Sphere:
+			{
+				const float Radius = (std::max)(ShapeSetup.SphereRadius, SniperPhysicsAssetHitMinShapeSize) + BulletRadius;
+				bShapeHit = IntersectSegmentLocalSphere(LocalStart, LocalEnd, Radius, T);
+				if (bShapeHit)
+				{
+					LocalNormal = FVector::Lerp(LocalStart, LocalEnd, T);
+					if (LocalNormal.IsNearlyZero())
+					{
+						LocalNormal = FVector::ForwardVector;
+					}
+					else
+					{
+						LocalNormal.Normalize();
+					}
+				}
+				break;
+			}
+			case EPhysicsAssetShapeType::Capsule:
+			{
+				const float ShapeRadius = (std::max)(ShapeSetup.CapsuleRadius, SniperPhysicsAssetHitMinShapeSize);
+				const float ShapeHalfHeight = (std::max)(ShapeSetup.CapsuleHalfHeight, ShapeRadius);
+				const float Radius = ShapeRadius + BulletRadius;
+				const float HalfHeight = ShapeHalfHeight + BulletRadius;
+				bShapeHit = IntersectSegmentLocalCapsuleZ(LocalStart, LocalEnd, Radius, HalfHeight, T);
+				if (bShapeHit)
+				{
+					LocalNormal = ComputeCapsuleNormalLocal(FVector::Lerp(LocalStart, LocalEnd, T), Radius, HalfHeight);
+				}
+				break;
+			}
+			default:
+				break;
+			}
+
+			if (!bShapeHit || T < 0.0f || T > 1.0f || T >= BestHit.T)
+			{
+				continue;
+			}
+
+			BestHit.bHit = true;
+			BestHit.T = T;
+			BestHit.BoneName = BodySetup.BoneName;
+			BestHit.WorldNormal = ShapeWorld.Rotation.GetNormalized().RotateVector(LocalNormal);
+			if (!BestHit.WorldNormal.IsNearlyZero())
+			{
+				BestHit.WorldNormal.Normalize();
+			}
+			BestHit.BodyIndex = BodyIndex;
+			BestHit.ShapeIndex = ShapeIndex;
+		}
+	}
+
+	if (!BestHit.bHit)
+	{
+		return false;
+	}
+
+	OutPreciseHit = BroadHit;
+	OutPreciseHit.bHit = true;
+	OutPreciseHit.HitActor = BroadHit.HitActor;
+	OutPreciseHit.HitComponent = SkeletalMeshComponent;
+	OutPreciseHit.HitBoneName = BestHit.BoneName;
+	OutPreciseHit.WorldHitLocation = Bullet.PreviousPosition + Segment * BestHit.T;
+	OutPreciseHit.Distance = SegmentLength * BestHit.T;
+	OutPreciseHit.WorldNormal = !BestHit.WorldNormal.IsNearlyZero() ? BestHit.WorldNormal : BroadHit.WorldNormal;
+	OutPreciseHit.ImpactNormal = !BestHit.WorldNormal.IsNearlyZero() ? BestHit.WorldNormal : BroadHit.ImpactNormal;
+
+	UE_LOG(
+		"[SniperDebug] PhysicsAsset precise hit accepted: Actor=%s Bone=%s Body=%d Shape=%d Distance=%.2f",
+		BroadHit.HitActor ? BroadHit.HitActor->GetName().c_str() : "None",
+		BestHit.BoneName.ToString().c_str(),
+		BestHit.BodyIndex,
+		BestHit.ShapeIndex,
+		OutPreciseHit.Distance);
+
+	return true;
+}
+
 void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet, const FHitResult& Hit, UWorld* World)
 {
 	Bullet.Position = Hit.WorldHitLocation;
@@ -1003,6 +1489,17 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	}
 
 	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);
+	UE_LOG(
+		"[SniperDebug] Bullet hit: Actor=%s Component=%s RawBone=%s ResolvedBone=%s Region=%d Distance=%.2f Speed=%.2f BodyCenterDistance=%.3f HasBodyCenterDistance=%d",
+		HitInfo.HitActor ? HitInfo.HitActor->GetName().c_str() : "None",
+		Hit.HitComponent ? Hit.HitComponent->GetName().c_str() : "None",
+		Hit.HitBoneName.ToString().c_str(),
+		HitInfo.HitBoneName.ToString().c_str(),
+		static_cast<int32>(HitInfo.HitRegion),
+		HitInfo.TravelDistance,
+		HitInfo.ImpactSpeed,
+		HitInfo.HitBodyCenterDistance,
+		HitInfo.bHasHitBodyCenterDistance ? 1 : 0);
 	if (AActor* HitActor = HitInfo.HitActor)
 	{
 		float HealthBeforeHit = -1.0f;
@@ -1057,7 +1554,20 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 		SniperWeapon->NotifySniperHit(HitInfo);
 	}
 
-	ASniperKillCamDirector::NotifyBulletHit(HitInfo);
+	if (ShouldNotifyKillCamForHit(HitInfo))
+	{
+		ASniperKillCamDirector::NotifyBulletHit(HitInfo);
+	}
+	else
+	{
+		UE_LOG(
+			"[SniperDebug] KillCam skipped by precision filter: Actor=%s Bone=%s Distance=%.3f Max=%.3f HasDistance=%d",
+			HitInfo.HitActor ? HitInfo.HitActor->GetName().c_str() : "None",
+			HitInfo.HitBoneName.ToString().c_str(),
+			HitInfo.HitBodyCenterDistance,
+			MaxKillCamBodyCenterDistance,
+			HitInfo.bHasHitBodyCenterDistance ? 1 : 0);
+	}
 }
 
 FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBallisticBullet& Bullet, const FHitResult& Hit) const
@@ -1089,6 +1599,14 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.TargetCurrentHP = 0.0f;
 	HitInfo.TargetMaxHP = 0.0f;
 	HitInfo.HitBoneName = ResolvedHitBoneName;
+	FVector HitBodyCenter = FVector::ZeroVector;
+	float HitBodyCenterDistance = 0.0f;
+	if (ResolveHitBodyCenterMetrics(Hit, ResolvedHitBoneName, HitBodyCenter, HitBodyCenterDistance))
+	{
+		HitInfo.bHasHitBodyCenterDistance = true;
+		HitInfo.HitBodyCenterLocation = HitBodyCenter;
+		HitInfo.HitBodyCenterDistance = HitBodyCenterDistance;
+	}
 	return HitInfo;
 }
 
@@ -1105,6 +1623,88 @@ USkeletalMeshComponent* UBallisticBulletManagerComponent::ResolveHitSkeletalMesh
 	}
 
 	return nullptr;
+}
+
+bool UBallisticBulletManagerComponent::ResolveHitBodyCenterMetrics(
+	const FHitResult& Hit,
+	const FName& HitBoneName,
+	FVector& OutBodyCenter,
+	float& OutDistance) const
+{
+	OutBodyCenter = FVector::ZeroVector;
+	OutDistance = 0.0f;
+	if (!Hit.bHit || !HitBoneName.IsValid() || HitBoneName == FName::None)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(Hit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetEffectivePhysicsAsset();
+	if (!PhysicsAsset)
+	{
+		return false;
+	}
+
+	const int32 BodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(HitBoneName);
+	if (BodyIndex < 0)
+	{
+		return false;
+	}
+
+	FPhysicsAssetPreviewPoseCache PoseCache;
+	if (!PoseCache.Initialize(SkeletalMeshComponent, PhysicsAsset))
+	{
+		return false;
+	}
+
+	FTransform BodyWorld;
+	if (!PoseCache.ComputeBodyWorldTransform(BodyIndex, BodyWorld))
+	{
+		return false;
+	}
+
+	OutBodyCenter = BodyWorld.Location;
+	OutDistance = FVector::Distance(Hit.WorldHitLocation, OutBodyCenter);
+	return true;
+}
+
+bool UBallisticBulletManagerComponent::ShouldNotifyKillCamForHit(const FSniperHitInfo& HitInfo) const
+{
+	if (!bEnableKillCamBodyCenterDistanceFilter)
+	{
+		return true;
+	}
+
+	if (!HitInfo.HitActor)
+	{
+		return false;
+	}
+
+	const bool bCharacterLikeHit =
+		Cast<ACombatCharacter>(HitInfo.HitActor) ||
+		HitInfo.HitActor->GetComponentByClass<USniperDamageReceiverComponent>() != nullptr;
+	if (!bCharacterLikeHit)
+	{
+		return true;
+	}
+
+	const FString NormalizedHitBoneName = NormalizeBoneNameForHitClassification(HitInfo.HitBoneName);
+	const bool bKillCamEligibleBone =
+		HasNormalizedBoneToken(NormalizedHitBoneName, "head") ||
+		HasNormalizedBoneToken(NormalizedHitBoneName, "spine") ||
+		HasNormalizedBoneToken(NormalizedHitBoneName, "pelvis");
+	if (!bKillCamEligibleBone)
+	{
+		return false;
+	}
+
+	return HitInfo.bHasHitBodyCenterDistance &&
+		HitInfo.HitBodyCenterDistance <= (std::max)(MaxKillCamBodyCenterDistance, 0.0f);
 }
 
 FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResult& Hit, bool* bOutUsedFallback) const

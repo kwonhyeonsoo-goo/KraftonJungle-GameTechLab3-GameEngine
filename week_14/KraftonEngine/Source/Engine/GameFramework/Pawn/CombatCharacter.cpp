@@ -3,6 +3,8 @@
 #include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Script/LuaScriptComponent.h"
+#include "Component/Shape/CapsuleComponent.h"
+#include "Core/Types/CollisionTypes.h"
 
 ACombatCharacter::ACombatCharacter()
 {
@@ -13,6 +15,13 @@ ACombatCharacter::ACombatCharacter()
 
 void ACombatCharacter::BeginPlay()
 {
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Capsule->SetCollisionObjectType(ECollisionChannel::Pawn);
+		Capsule->SetKinematic(true);
+	}
+
 	if (!SniperDamageReceiverComponent)
 	{
 		SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();

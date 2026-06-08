@@ -68,11 +68,15 @@ private:
 	void SpawnImpactVisual(const FVector& ImpactLocation);
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	bool ShouldRunPreciseCharacterHitQuery(const struct FHitResult& BroadHit) const;
+	bool ShouldRunPosePhysicsAssetHitQuery(const struct FHitResult& BroadHit) const;
 	bool EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const;
 	bool QueryPreciseCharacterHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
+	bool QueryPosePhysicsAssetCharacterHit(const FBallisticBullet& Bullet, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	USkeletalMeshComponent* ResolveHitSkeletalMeshComponent(const struct FHitResult& Hit) const;
+	bool ResolveHitBodyCenterMetrics(const struct FHitResult& Hit, const FName& HitBoneName, FVector& OutBodyCenter, float& OutDistance) const;
+	bool ShouldNotifyKillCamForHit(const FSniperHitInfo& HitInfo) const;
 	FName ResolvePreciseHitBoneName(const struct FHitResult& Hit, bool* bOutUsedFallback = nullptr) const;
 	FString NormalizeBoneNameForHitClassification(const FName& BoneName) const;
 	bool IsAuxiliaryBoneNameNormalized(const FString& BoneName) const;
@@ -93,9 +97,11 @@ private:
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
 	bool bEnablePreciseCharacterHitQuery = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
-	bool bRequirePreciseCharacterHit = true;
-	UPROPERTY(Edit, Save, Category="Sniper|Hit")
 	float MaxPreciseCharacterHitDistance = 0.25f;
+	UPROPERTY(Edit, Save, Category="Sniper|KillCam")
+	bool bEnableKillCamBodyCenterDistanceFilter = true;
+	UPROPERTY(Edit, Save, Category="Sniper|KillCam", DisplayName="Max KillCam Body Center Distance")
+	float MaxKillCamBodyCenterDistance = 0.18f;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bEnableBulletVisuals = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Head Visual Material", AssetType="Material")
