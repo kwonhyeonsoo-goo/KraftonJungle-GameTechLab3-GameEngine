@@ -1521,7 +1521,10 @@ function UIManager:GetSniperPawn()
     end
 
     local actor = nil
-    if World.FindFirstActorByClass ~= nil then
+    if World.FindFirstSniperPawn ~= nil then
+        actor = World.FindFirstSniperPawn()
+    end
+    if actor == nil and World.FindFirstActorByClass ~= nil then
         actor = World.FindFirstActorByClass("ASniperPawn")
         if actor == nil then
             actor = World.FindFirstActorByClass("SniperPawn")

@@ -2029,6 +2029,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             return IsValid(Actor);
         },
 
+        "AsSniperPawn",
+        [](AActor& Actor) -> ASniperPawn*
+        {
+            return Cast<ASniperPawn>(&Actor);
+        },
+
         "HasTag",
         [](AActor& Actor, const FString& Tag)
         {
@@ -2622,6 +2628,25 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 if (IsValid(Actor) && Actor->GetClass()->IsA(Cls))
                 {
                     return Actor;
+                }
+            }
+            return nullptr;
+        }
+    );
+    World.set_function(
+        "FindFirstSniperPawn",
+        []() -> ASniperPawn*
+        {
+            if (!GEngine || !GEngine->GetWorld()) return nullptr;
+            UWorld* W = GEngine->GetWorld();
+            for (AActor* Actor : W->GetActors())
+            {
+                if (ASniperPawn* SniperPawn = Cast<ASniperPawn>(Actor))
+                {
+                    if (IsValid(SniperPawn))
+                    {
+                        return SniperPawn;
+                    }
                 }
             }
             return nullptr;

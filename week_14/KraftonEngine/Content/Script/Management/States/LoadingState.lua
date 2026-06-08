@@ -5,7 +5,7 @@ LoadingState.__index = LoadingState
 
 local SCENE_PATH = "Content/Scene/Loading.Scene"
 local DEFAULT_TARGET_STATE = GameState.InGame
-local DEFAULT_TARGET_SCENE = "Content/Scene/ScopeTest.Scene"
+local DEFAULT_TARGET_SCENE = "Content/Scene/CombatTest.Scene"
 local HUD = {
     name = "LoadingHUD",
     path = "Content/UI/LoadingHUD.rml",
