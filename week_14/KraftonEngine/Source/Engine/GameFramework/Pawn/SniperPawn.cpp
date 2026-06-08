@@ -5,6 +5,7 @@
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/SceneComponent.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "Math/MathUtils.h"
@@ -51,6 +52,11 @@ namespace
 	{
 		const float Alpha = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
 		return MinValue + (MaxValue - MinValue) * Alpha;
+	}
+
+	bool IsSniperKillCamPlaying(const AActor* Actor)
+	{
+		return Actor && ASniperKillCamDirector::IsPlayingInWorld(Actor->GetWorld());
 	}
 }
 
@@ -103,6 +109,7 @@ void ASniperPawn::SetupInputComponent()
 
 	InputComponent->AddMouseAxisMapping("SniperTurn", EInputAxisSourceType::MouseX, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
+	InputComponent->AddMouseAxisMapping("SniperScopeZoom", EInputAxisSourceType::MouseWheel, 1.0f);
 	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
 	InputComponent->AddActionMapping("SniperScope", "RightMouseButton");
 	InputComponent->AddActionMapping("SniperHoldBreath", "Shift");
@@ -119,6 +126,11 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->BindAxis("SniperLookUp", [this](float Value)
 	{
 		HandleLookUpInput(Value);
+	});
+
+	InputComponent->BindAxis("SniperScopeZoom", [this](float Value)
+	{
+		HandleScopeZoomAxis(Value);
 	});
 
 	InputComponent->BindAction("SniperScope", EInputEvent::Pressed, [this]()
@@ -160,6 +172,11 @@ void ASniperPawn::SetupInputComponent()
 void ASniperPawn::Tick(float DeltaTime)
 {
 	APawn::Tick(DeltaTime);
+
+	if (IsSniperKillCamPlaying(this))
+	{
+		ForceScopeReleased();
+	}
 
 	UpdateScopeState(DeltaTime);
 	UpdateHoldBreathState(DeltaTime);
@@ -222,6 +239,16 @@ void ASniperPawn::SyncSniperRuntimeState()
 		ScopeState.NormalFOV = Camera->GetFOV();
 	}
 
+	ScopeState.MinZoomMagnification = (std::max)(ScopeState.MinZoomMagnification, 1.0f);
+	ScopeState.MaxZoomMagnification = (std::max)(ScopeState.MaxZoomMagnification, ScopeState.MinZoomMagnification);
+	ScopeState.ZoomStep = (std::max)(ScopeState.ZoomStep, 0.1f);
+	ScopeState.ScopedSensitivity = (std::max)(ScopeState.ScopedSensitivity, 0.01f);
+	ScopeState.MaxZoomScopedSensitivity = (std::max)(ScopeState.MaxZoomScopedSensitivity, 0.01f);
+	ScopeState.DefaultZoomMagnification = ClampScopeZoomMagnification(ScopeState.DefaultZoomMagnification);
+	ScopeState.CurrentZoomMagnification = ScopeState.DefaultZoomMagnification;
+	ScopeState.TargetZoomMagnification = ScopeState.DefaultZoomMagnification;
+	ScopeState.ScopedFOV = ComputeScopedFOVForMagnification(ScopeState.CurrentZoomMagnification);
+
 	ScopeState.bIsScoped = false;
 	ScopeState.TargetFOV = ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ScopeState.NormalFOV;
@@ -252,7 +279,11 @@ void ASniperPawn::SyncSniperRuntimeState()
 				ScopeLensEdgeBlurRadius,
 				ScopeLensIntensity,
 				ScopeState.CurrentSensitivity,
-				ScopeLensBlendTime);
+				ScopeLensBlendTime,
+				0.5f,
+				0.5f,
+				ScopeLensCenterOffsetX,
+				ScopeLensCenterOffsetY);
 			CameraManager->SetScopeZoomEnabled(false);
 		}
 	}
@@ -267,6 +298,11 @@ void ASniperPawn::SyncSniperRuntimeState()
 void ASniperPawn::UpdateScopeState(float DeltaTime)
 {
 	ScopeState.bIsScoped = InputState.bScopeHeld;
+	ScopeState.TargetZoomMagnification = ClampScopeZoomMagnification(ScopeState.TargetZoomMagnification);
+	ScopeState.CurrentZoomMagnification = ScopeState.TargetZoomMagnification;
+	ScopeState.ScopedFOV = ComputeScopedFOVForMagnification(ScopeState.CurrentZoomMagnification);
+	const float ScopedSensitivityForCurrentZoom =
+		ComputeScopedSensitivityForMagnification(ScopeState.CurrentZoomMagnification);
 	ScopeState.TargetFOV = ScopeState.bIsScoped ? ScopeState.ScopedFOV : ScopeState.NormalFOV;
 	ScopeState.CurrentFOV = ExponentialInterpTo(
 		ScopeState.CurrentFOV,
@@ -278,7 +314,7 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 
 	ScopeState.CurrentSensitivity = FMath::Lerp(
 		ScopeState.NormalSensitivity,
-		ScopeState.ScopedSensitivity,
+		ScopedSensitivityForCurrentZoom,
 		ScopeAlpha);
 
 	if (Camera)
@@ -298,7 +334,11 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 				ScopeLensEdgeBlurRadius,
 				ScopeLensIntensity,
 				ScopeState.CurrentSensitivity,
-				ScopeLensBlendTime);
+				ScopeLensBlendTime,
+				0.5f,
+				0.5f,
+				ScopeLensCenterOffsetX,
+				ScopeLensCenterOffsetY);
 			CameraManager->SetScopeZoomEnabled(ScopeState.bIsScoped);
 		}
 	}
@@ -435,6 +475,32 @@ float ASniperPawn::GetScopeBlendAlpha() const
 	return ComputeScopeAlpha(ScopeState);
 }
 
+void ASniperPawn::ForceScopeReleased()
+{
+	InputState.bScopeHeld = false;
+	InputState.bHoldBreathHeld = false;
+	ScopeState.bIsScoped = false;
+	ScopeState.TargetFOV = ScopeState.NormalFOV;
+	ScopeState.CurrentFOV = ScopeState.NormalFOV;
+	ScopeState.CurrentSensitivity = ScopeState.NormalSensitivity;
+	AimSwayState.BreathMultiplier = 1.0f;
+	AimSwayState.bRequireHoldBreathRelease = false;
+
+	if (Camera)
+	{
+		Camera->SetFOV(ScopeState.NormalFOV);
+	}
+
+	if (APlayerController* PC = GetController())
+	{
+		if (APlayerCameraManager* CameraManager = PC->GetPlayerCameraManager())
+		{
+			CameraManager->SetScopeZoomEnabled(false);
+			CameraManager->ClearScopeLens();
+		}
+	}
+}
+
 bool ASniperPawn::IsHoldBreathActive() const
 {
 	return ScopeState.bIsScoped
@@ -453,6 +519,65 @@ FRotator ASniperPawn::BuildEffectiveAimRotation() const
 	EffectiveRotation.Pitch = ClampSniperPitch(EffectiveRotation.Pitch, MinCameraPitch, MaxCameraPitch);
 	EffectiveRotation.Roll = 0.0f;
 	return EffectiveRotation;
+}
+
+float ASniperPawn::ClampScopeZoomMagnification(float Magnification) const
+{
+	float MinZoomMagnification = ScopeState.MinZoomMagnification;
+	float MaxZoomMagnification = ScopeState.MaxZoomMagnification;
+	if (MinZoomMagnification > MaxZoomMagnification)
+	{
+		std::swap(MinZoomMagnification, MaxZoomMagnification);
+	}
+
+	MinZoomMagnification = (std::max)(MinZoomMagnification, 1.0f);
+	MaxZoomMagnification = (std::max)(MaxZoomMagnification, MinZoomMagnification);
+	return FMath::Clamp(Magnification, MinZoomMagnification, MaxZoomMagnification);
+}
+
+float ASniperPawn::ComputeScopedFOVForMagnification(float Magnification) const
+{
+	const float SafeMagnification = (std::max)(ClampScopeZoomMagnification(Magnification), 1.0f);
+	const float HalfBaseScopedFOV = ScopeState.NormalFOV * 0.5f;
+	const float ZoomedHalfFOVTangent = std::tan(HalfBaseScopedFOV) / SafeMagnification;
+	const float ComputedScopedFOV = std::atan(ZoomedHalfFOVTangent) * 2.0f;
+	return FMath::Clamp(ComputedScopedFOV, 0.01f, ScopeState.NormalFOV);
+}
+
+float ASniperPawn::ComputeScopedSensitivityForMagnification(float Magnification) const
+{
+	const float SafeMinZoomMagnification = (std::max)(ScopeState.MinZoomMagnification, 1.0f);
+	const float SafeMaxZoomMagnification = (std::max)(ScopeState.MaxZoomMagnification, SafeMinZoomMagnification);
+	const float SafeMagnification = ClampScopeZoomMagnification(Magnification);
+	const float ZoomRange = SafeMaxZoomMagnification - SafeMinZoomMagnification;
+	const float ZoomAlpha = ZoomRange > FMath::Epsilon
+		? FMath::Clamp((SafeMagnification - SafeMinZoomMagnification) / ZoomRange, 0.0f, 1.0f)
+		: 0.0f;
+
+	const float MinZoomScopedSensitivity = (std::max)(ScopeState.ScopedSensitivity, 0.01f);
+	const float MaxZoomScopedSensitivity = (std::max)(ScopeState.MaxZoomScopedSensitivity, 0.01f);
+	const float ComputedScopedSensitivity = FMath::Lerp(
+		MinZoomScopedSensitivity,
+		MaxZoomScopedSensitivity,
+		ZoomAlpha);
+
+	return FMath::Clamp(
+		ComputedScopedSensitivity,
+		0.01f,
+		(std::max)(ScopeState.NormalSensitivity, 0.01f));
+}
+
+void ASniperPawn::AdjustScopeZoomStep(int32 StepDelta)
+{
+	if (StepDelta == 0)
+	{
+		return;
+	}
+
+	const float SafeZoomStep = (std::max)(ScopeState.ZoomStep, 0.1f);
+	const float NewZoomMagnification =
+		ScopeState.TargetZoomMagnification + static_cast<float>(StepDelta) * SafeZoomStep;
+	ScopeState.TargetZoomMagnification = ClampScopeZoomMagnification(NewZoomMagnification);
 }
 
 void ASniperPawn::HandleTurnInput(float Value)
@@ -485,8 +610,24 @@ void ASniperPawn::HandleLookUpInput(float Value)
 	ApplySniperControlRotation();
 }
 
+void ASniperPawn::HandleScopeZoomAxis(float Value)
+{
+	if (!ScopeState.bIsScoped || std::abs(Value) <= 0.0001f)
+	{
+		return;
+	}
+
+	AdjustScopeZoomStep(Value > 0.0f ? +1 : -1);
+}
+
 void ASniperPawn::HandleScopePressed()
 {
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bScopeHeld = false;
+		return;
+	}
+
 	InputState.bScopeHeld = true;
 }
 
@@ -497,6 +638,12 @@ void ASniperPawn::HandleScopeReleased()
 
 void ASniperPawn::HandleHoldBreathPressed()
 {
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bHoldBreathHeld = false;
+		return;
+	}
+
 	InputState.bHoldBreathHeld = true;
 }
 

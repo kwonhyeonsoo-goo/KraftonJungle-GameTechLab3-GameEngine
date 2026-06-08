@@ -9,6 +9,7 @@
 #include <sol/sol.hpp>
 
 class UPrimitiveComponent;
+class USniperDamageReceiverComponent;
 class USniperWeaponComponent;
 struct FHitResult;
 struct FSniperHitInfo;
@@ -52,7 +53,7 @@ public:
 	UFUNCTION(Pure, Category="Script")
 	FString GetScriptFileValue() const { return ScriptFile; }
 	UFUNCTION(Callable, Category="Script")
-	void SetScriptFile(const FString& InScriptFile) { ScriptFile = InScriptFile; }
+	void SetScriptFile(const FString& InScriptFile);
 	UFUNCTION(Pure, Category="General Manager")
 	EGeneralManagerStartState GetInitialGameState() const { return InitialGameState; }
 	UFUNCTION(Pure, Category="General Manager")
@@ -69,6 +70,7 @@ protected:
 
 private:
 	void EnsureDefaultScriptFile();
+	void UpdatePauseTickEligibility();
 	void BindOwnerCollisionEvents();
 	void BindOwnerSniperEvents();
 	void ClearCollisionBindings();
@@ -99,6 +101,8 @@ private:
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp);
 	void HandleSniperHit(const FSniperHitInfo& HitInfo);
+	void HandleSniperDamaged(const FSniperHitInfo& HitInfo);
+	void HandleSniperKilled(const FSniperHitInfo& HitInfo);
 
 	UPROPERTY(Edit, Save, Category="Script", DisplayName="ScriptFile", AssetType="Script")
 	FString ScriptFile;
@@ -115,6 +119,8 @@ private:
 	sol::protected_function LuaOnHit;
 	sol::protected_function LuaOnEndHit;
 	sol::protected_function LuaOnSniperHit;
+	sol::protected_function LuaOnSniperDamaged;
+	sol::protected_function LuaOnSniperKilled;
 
 	bool bEndPlayRouted = false;
 	bool bHasCalledLuaEndPlay = false;
@@ -156,5 +162,8 @@ private:
 	TArray<FDelegateHandle> HitHandles;
 	TArray<FDelegateHandle> EndHitHandles;
 	TWeakObjectPtr<USniperWeaponComponent> BoundSniperWeaponComponent;
+	TWeakObjectPtr<USniperDamageReceiverComponent> BoundSniperDamageReceiverComponent;
 	FDelegateHandle SniperHitHandle;
+	FDelegateHandle SniperDamagedHandle;
+	FDelegateHandle SniperKilledHandle;
 };

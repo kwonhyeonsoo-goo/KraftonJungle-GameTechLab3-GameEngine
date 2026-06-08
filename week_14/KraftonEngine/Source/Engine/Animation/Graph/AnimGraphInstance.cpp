@@ -13,9 +13,11 @@
 #include "Serialization/Archive.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
+#include "Platform/Paths.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace
 {
@@ -35,6 +37,44 @@ namespace
 	}
 }
 
+void UAnimGraphInstance::ResetCompiledTree()
+{
+	RootNode = nullptr;
+	OwnedNodes.clear();
+	CompiledAssetVersion = 0;
+}
+
+bool UAnimGraphInstance::ResolveGraphAssetFromPath()
+{
+	if (bGraphAssetExplicitOverride)
+	{
+		return IsValid(GraphAsset);
+	}
+
+	const FString GraphPathStr = GraphAssetPath.ToString();
+	if (GraphPathStr.empty() || GraphPathStr == "None")
+	{
+		return false;
+	}
+
+	const FString NormalizedPath = FPaths::MakeProjectRelative(GraphPathStr);
+	if (IsValid(GraphAsset) && GraphAsset->GetSourcePath() == NormalizedPath)
+	{
+		return true;
+	}
+
+	UAnimGraphAsset* LoadedAsset = FAnimGraphManager::Get().Load(NormalizedPath);
+	if (!IsValid(LoadedAsset))
+	{
+		UE_LOG("UAnimGraphInstance: AnimGraph load failed; transient fallback. Path=%s", NormalizedPath.c_str());
+		return false;
+	}
+
+	GraphAsset = LoadedAsset;
+	ResetCompiledTree();
+	return true;
+}
+
 void UAnimGraphInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
@@ -50,6 +90,7 @@ void UAnimGraphInstance::NativeInitializeAnimation()
 		GraphAsset = nullptr;
 		CompiledAssetVersion = 0;
 	}
+	ResolveGraphAssetFromPath();
 	if (!GraphAsset)
 	{
 		const FString GraphPathStr = GraphAssetPath.ToString();
@@ -153,7 +194,40 @@ void UAnimGraphInstance::Serialize(FArchive& Ar)
 	{
 		DefaultSequencePath = FSoftObjectPtr(SeqPathStr);
 		GraphAssetPath      = FSoftObjectPtr(GraphPathStr);
+		bGraphAssetExplicitOverride = false;
+		ResetCompiledTree();
 	}
+}
+
+void UAnimGraphInstance::PostEditProperty(const char* PropertyName)
+{
+	Super::PostEditProperty(PropertyName);
+	if (!PropertyName)
+	{
+		return;
+	}
+
+	if (std::strcmp(PropertyName, "GraphAssetPath") == 0)
+	{
+		bGraphAssetExplicitOverride = false;
+		GraphAsset = nullptr;
+		ResetCompiledTree();
+		NativeInitializeAnimation();
+	}
+	else if (std::strcmp(PropertyName, "DefaultSequencePath") == 0)
+	{
+		ResetCompiledTree();
+		NativeInitializeAnimation();
+	}
+}
+
+void UAnimGraphInstance::OnPostLoad(FArchive& Ar)
+{
+	UAnimInstance::OnPostLoad(Ar);
+
+	bGraphAssetExplicitOverride = false;
+	ResolveGraphAssetFromPath();
+	ResetCompiledTree();
 }
 
 
@@ -165,9 +239,12 @@ UAnimGraphAsset* UAnimGraphInstance::GetGraphAsset() const
 void UAnimGraphInstance::SetGraphAsset(UAnimGraphAsset* InAsset)
 {
 	GraphAsset = IsValid(InAsset) ? InAsset : nullptr;
-	CompiledAssetVersion = 0;
-	RootNode = nullptr;
-	OwnedNodes.clear();
+	bGraphAssetExplicitOverride = IsValid(GraphAsset) && GraphAsset->GetSourcePath().empty();
+	if (IsValid(GraphAsset) && !GraphAsset->GetSourcePath().empty())
+	{
+		GraphAssetPath = FSoftObjectPtr(GraphAsset->GetSourcePath());
+	}
+	ResetCompiledTree();
 	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/true);
 }
 

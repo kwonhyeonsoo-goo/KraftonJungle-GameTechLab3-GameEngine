@@ -12,7 +12,7 @@ void EditorWorldSettingsWidget::Render()
 {
 	if (!bOpen) return;
 
-	ImGui::SetNextWindowSize(ImVec2(360, 220), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(360, 300), ImGuiCond_FirstUseEver);
 	if (!ImGui::Begin("World Settings", &bOpen))
 	{
 		ImGui::End();
@@ -81,6 +81,15 @@ void EditorWorldSettingsWidget::Render()
 	{
 		ImGui::DragFloat3("Gravity", WS.Gravity.Data, 0.01f, -100.0f, 100.0f, "%.2f");
 		ImGui::TextDisabled("m/s^2, saved with the current scene.");
+	}
+
+	if (ImGui::CollapsingHeader("Ballistics", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::Checkbox("Enable Ballistic Wind", &WS.bEnableBallisticWind);
+		ImGui::BeginDisabled(!WS.bEnableBallisticWind);
+		ImGui::DragFloat3("Wind Acceleration", WS.BallisticWindAcceleration.Data, 0.01f, -100.0f, 100.0f, "%.2f");
+		ImGui::EndDisabled();
+		ImGui::TextDisabled("Scene-wide wind shared by all sniper bullets.");
 	}
 
 	ImGui::End();

@@ -8,6 +8,7 @@
 #include "Engine/Runtime/EngineInitHooks.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Debug/GizmoComponent.h"
+#include "Component/Input/ActionComponent.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Editor/Viewport/ViewportCameraTransform.h"
 #include "GameFramework/World.h"
@@ -647,6 +648,7 @@ bool UEditorEngine::LoadPIESceneFromPath(const FString& InScenePath)
 	}
 
 	FLuaDebugManager::AbortPauseForPlaySessionEnd();
+	UActionComponent::ResetGlobalTimeDilationState();
 	InputSystem::Get().ResetTransientState();
 	UUIManager::Get().ClearViewport();
 	FLuaScriptManager::FireWorldReset();
@@ -672,6 +674,7 @@ bool UEditorEngine::LoadPIESceneFromPath(const FString& InScenePath)
 
 	SelectionManager.ClearSelection();
 	SelectionManager.SetWorld(PIEWorld);
+	PIEWorld->SetPaused(false);
 
 	if (FLevelEditorViewportClient* ActiveVC = ViewportLayout.GetActiveViewport())
 	{
@@ -907,6 +910,7 @@ void UEditorEngine::EndPlayMap()
 	}
 
 	UUIManager::Get().ClearViewport();
+	FAudioManager::Get().StopAllSounds();
 
 	// PIE WorldContext 제거 전에 require 캐시/코루틴/registry 의 월드 참조를 먼저 끊는다.
 	// DestroyWorldContext 중 Lua EndPlay 가 돌 수 있으므로 stale UObject 를 들고 있는 Lua 전역 상태를 선제 정리한다.

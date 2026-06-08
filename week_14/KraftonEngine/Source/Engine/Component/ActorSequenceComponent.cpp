@@ -117,6 +117,10 @@ void UActorSequenceComponent::Stop()
 UActorSequence* UActorSequenceComponent::GetSequence()
 {
 	EnsureSequence();
+	if (Sequence)
+	{
+		Sequence->RefreshBindingTargetCache(GetOwner());
+	}
 	return Sequence;
 }
 
@@ -142,6 +146,18 @@ bool UActorSequenceComponent::AddFloatTrack(
 {
 	EnsureSequence();
 	UObject* TargetObject = ResolveTargetByName(TargetObjectName);
+	return AddFloatTrack(TargetObject, PropertyName, ChannelName, StartTime, Duration, CurveAssetPath);
+}
+
+bool UActorSequenceComponent::AddFloatTrack(
+	UObject* TargetObject,
+	const FString& PropertyName,
+	const FString& ChannelName,
+	float StartTime,
+	float Duration,
+	const FString& CurveAssetPath)
+{
+	EnsureSequence();
 	if (!IsValid(TargetObject) || !Sequence)
 	{
 		return false;
@@ -159,6 +175,14 @@ bool UActorSequenceComponent::AddFloatTrack(
 	if (bAdded)
 	{
 		SyncSequenceDataFromRuntime();
+		if (SequencePlayer)
+		{
+			SequencePlayer->MarkResolveDirty();
+		}
+		if (PreviewSequencePlayer)
+		{
+			PreviewSequencePlayer->MarkResolveDirty();
+		}
 	}
 	return bAdded;
 }
@@ -212,6 +236,14 @@ void UActorSequenceComponent::SetPreviewTime(float Time)
 void UActorSequenceComponent::CommitSequenceEditsForSerialization()
 {
 	SyncSequenceDataFromRuntime();
+	if (SequencePlayer)
+	{
+		SequencePlayer->MarkResolveDirty();
+	}
+	if (PreviewSequencePlayer)
+	{
+		PreviewSequencePlayer->MarkResolveDirty();
+	}
 }
 
 void UActorSequenceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
@@ -339,5 +371,13 @@ void UActorSequenceComponent::SyncRuntimeFromSequenceData()
 	{
 		Sequence->ImportFromJsonString(SequenceDataJson);
 		Sequence->RefreshBindingTargetCache(GetOwner());
+	}
+	if (SequencePlayer)
+	{
+		SequencePlayer->MarkResolveDirty();
+	}
+	if (PreviewSequencePlayer)
+	{
+		PreviewSequencePlayer->MarkResolveDirty();
 	}
 }

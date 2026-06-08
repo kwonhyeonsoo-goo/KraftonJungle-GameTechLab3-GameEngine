@@ -97,6 +97,15 @@ public:
 	virtual bool RaycastPhysicsByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FPhysicsRaycastResult& OutResult,
 		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) = 0;
 
+	virtual bool RaycastRagdollBodiesByObjectTypes(
+		const FVector& Start,
+		const FVector& Dir,
+		float MaxDist,
+		FHitResult& OutHit,
+		uint32 ObjectTypeMask,
+		const AActor* TargetActor,
+		const AActor* IgnoreActor = nullptr) = 0;
+
     // Shape sweep — Start 위치의 Shape를 End까지 이동시키며 blocking hit을 찾는다.
     // TraceChannel은 "대상 shape가 이 채널을 Block 하는가"를 의미한다.
     // IgnoreActor는 자기 자신/소유 액터를 제외할 때 사용한다.
@@ -107,6 +116,16 @@ public:
     // ObjectType 기반 Shape sweep — 대상 shape의 ObjectType이 ObjectTypeMask에 포함될 때만 hit 후보로 둔다.
     virtual bool SweepByObjectTypes(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
         uint32 ObjectTypeMask,
+        const AActor* IgnoreActor = nullptr) = 0;
+
+    virtual bool SweepRagdollBodiesByObjectTypes(
+        const FVector& Start,
+        const FVector& End,
+        const FQuat& Rotation,
+        const FCollisionShape& Shape,
+        FHitResult& OutHit,
+        uint32 ObjectTypeMask,
+        const AActor* TargetActor,
         const AActor* IgnoreActor = nullptr) = 0;
 
     virtual uint32 GetComponentGeneration_GameThread(uint32 /*ComponentId*/) const

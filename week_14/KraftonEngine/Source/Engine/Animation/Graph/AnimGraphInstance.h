@@ -35,6 +35,7 @@ public:
 	void NativeInitializeAnimation()                override;
 	void NativeUpdateAnimation(float DeltaSeconds)  override;
 	void Serialize(FArchive& Ar)                    override;
+	void PostEditProperty(const char* PropertyName) override;
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	void BeginDestroy() override;
 
@@ -79,6 +80,9 @@ public:
 	FSoftObjectPtr GraphAssetPath;
 
 private:
+	void ResetCompiledTree();
+	bool ResolveGraphAssetFromPath();
+
 	// GraphAsset.Version != CompiledAssetVersion 이면 트리 폐기 + 재컴파일 + 버전 캡쳐.
 	// NativeInitialize / NativeUpdate 양쪽에서 호출 — 동일 코드 경로로 첫 컴파일 / live preview 처리.
 	void RecompileTreeIfDirty();
@@ -88,10 +92,14 @@ private:
 
 	// 자산 슬롯. GraphAssetPath 로 로드된 디스크 자산 또는 자동 생성된 transient 자산.
 	UAnimGraphAsset* GraphAsset = nullptr;
+	bool bGraphAssetExplicitOverride = false;
 
 	// 마지막으로 컴파일했을 때 캡쳐한 GraphAsset.Version. 매 NativeUpdate 시 현재 Version 과
 	// 비교 → 다르면 OwnedNodes clear + 재컴파일 + SetRootNode + 캡쳐 갱신. in-editor live preview.
 	uint32 CompiledAssetVersion = 0;
 
 	TArray<FAnimGraphRuntimeVariable> RuntimeVariables;
+
+protected:
+	void OnPostLoad(FArchive& Ar) override;
 };

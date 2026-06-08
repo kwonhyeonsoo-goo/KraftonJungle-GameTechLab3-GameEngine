@@ -24,6 +24,45 @@
 // UpdateProxyLOD defined in RenderCollector.cpp (shared)
 extern void UpdateProxyLOD(FPrimitiveSceneProxy* Proxy, const FLODUpdateContext& LODCtx);
 
+namespace
+{
+	bool ProjectWorldToScreenUV(
+		const FFrameContext& Frame,
+		const FVector& WorldPosition,
+		FVector2& OutUV,
+		float* OutNdcZ = nullptr)
+	{
+		const FMatrix ViewProj = Frame.View * Frame.Proj;
+		const float X = WorldPosition.X * ViewProj.M[0][0] + WorldPosition.Y * ViewProj.M[1][0] + WorldPosition.Z * ViewProj.M[2][0] + ViewProj.M[3][0];
+		const float Y = WorldPosition.X * ViewProj.M[0][1] + WorldPosition.Y * ViewProj.M[1][1] + WorldPosition.Z * ViewProj.M[2][1] + ViewProj.M[3][1];
+		const float Z = WorldPosition.X * ViewProj.M[0][2] + WorldPosition.Y * ViewProj.M[1][2] + WorldPosition.Z * ViewProj.M[2][2] + ViewProj.M[3][2];
+		const float W = WorldPosition.X * ViewProj.M[0][3] + WorldPosition.Y * ViewProj.M[1][3] + WorldPosition.Z * ViewProj.M[2][3] + ViewProj.M[3][3];
+		if (std::abs(W) <= 0.0001f)
+		{
+			return false;
+		}
+
+		const float InvW = 1.0f / W;
+		const float NdcX = X * InvW;
+		const float NdcY = Y * InvW;
+		const float NdcZ = Z * InvW;
+		if (OutNdcZ)
+		{
+			*OutNdcZ = NdcZ;
+		}
+
+		OutUV = FVector2(NdcX * 0.5f + 0.5f, 0.5f - NdcY * 0.5f);
+		return OutUV.X >= -1.0f && OutUV.X <= 2.0f && OutUV.Y >= -1.0f && OutUV.Y <= 2.0f;
+	}
+
+	FVector2 SafeScreenDirection(const FVector2& From, const FVector2& To)
+	{
+		const FVector2 Delta = To - From;
+		const float Length = std::sqrt(Delta.X * Delta.X + Delta.Y * Delta.Y);
+		return Length > 0.0001f ? Delta / Length : FVector2(1.0f, 0.0f);
+	}
+}
+
 // ============================================================
 // Create / Release
 // ============================================================
@@ -50,6 +89,7 @@ void FDrawCommandBuilder::Create(ID3D11Device* InDevice, ID3D11DeviceContext* In
 	CameraVignetteCB.Create(InDevice, sizeof(FCameraVignetteConstants), "CameraVignetteCB");
 	CameraLetterboxCB.Create(InDevice, sizeof(FCameraLetterboxConstants), "CameraLetterboxCB");
 	ScopeLensCB.Create(InDevice, sizeof(FScopeLensConstants), "ScopeLensCB");
+	CameraShockWaveCB.Create(InDevice, sizeof(FCameraShockWaveConstants), "CameraShockWaveCB");
 	MeshScalarOverlayCB.Create(InDevice, sizeof(FMeshScalarOverlayConstants), "MeshScalarOverlayCB");
 	MeshScalarOverlayWireCB.Create(InDevice, sizeof(FMeshScalarOverlayConstants), "MeshScalarOverlayWireCB");
 }
@@ -82,6 +122,7 @@ void FDrawCommandBuilder::Release()
 	CameraVignetteCB.Release();
 	CameraLetterboxCB.Release();
 	ScopeLensCB.Release();
+	CameraShockWaveCB.Release();
 	MeshScalarOverlayCB.Release();
 	MeshScalarOverlayWireCB.Release();
 }
@@ -1102,6 +1143,72 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		}
 	}
 
+	if (!bPureDebugView && !Frame.CameraShockWaves.empty())
+	{
+		FShader* ShockWaveShader = FShaderManager::Get().GetOrCreate(EShaderPath::WorldAnchoredShockWave);
+		if (ShockWaveShader)
+		{
+			FCameraShockWaveConstants ShockWaveData = {};
+			ShockWaveData.InvViewportSize = FVector2(
+				Frame.ViewportWidth > 0.0f ? 1.0f / Frame.ViewportWidth : 1.0f,
+				Frame.ViewportHeight > 0.0f ? 1.0f / Frame.ViewportHeight : 1.0f);
+
+			for (const FCameraShockWaveState& Wave : Frame.CameraShockWaves)
+			{
+				if (!Wave.bEnabled || Wave.Strength <= 0.0f || Wave.Radius <= 0.0f ||
+					ShockWaveData.Count >= MAX_CAMERA_SHOCK_WAVES)
+				{
+					continue;
+				}
+
+				FVector2 CenterUV;
+				if (!ProjectWorldToScreenUV(Frame, Wave.WorldPosition, CenterUV))
+				{
+					continue;
+				}
+
+				FVector2 DirectionUV;
+				const FVector WaveDirection = Wave.WorldDirection.IsNearlyZero()
+					? FVector::ForwardVector
+					: Wave.WorldDirection.Normalized();
+				const FVector DirectionEnd = Wave.WorldPosition + WaveDirection;
+				if (ProjectWorldToScreenUV(Frame, DirectionEnd, DirectionUV))
+				{
+					DirectionUV = SafeScreenDirection(CenterUV, DirectionUV);
+				}
+				else
+				{
+					DirectionUV = FVector2(1.0f, 0.0f);
+				}
+
+				const float NormalizedAge = Wave.Duration > 0.0f
+					? std::clamp(Wave.Age / Wave.Duration, 0.0f, 1.0f)
+					: 0.0f;
+				FCameraShockWaveGPU& GPUWave = ShockWaveData.Waves[ShockWaveData.Count++];
+				GPUWave.CenterAndRadius = FVector4(CenterUV.X, CenterUV.Y, Wave.Radius, Wave.Width);
+				GPUWave.DirectionAndStrength = FVector4(
+					DirectionUV.X,
+					DirectionUV.Y,
+					Wave.Strength,
+					Wave.DirectionalStretch);
+				GPUWave.FalloffAgeDuration = FVector4(Wave.Falloff, NormalizedAge, Wave.Duration, 1.0f);
+			}
+
+			if (ShockWaveData.Count > 0)
+			{
+				CameraShockWaveCB.Update(Ctx, &ShockWaveData, sizeof(FCameraShockWaveConstants));
+
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(
+					ShockWaveShader,
+					ERenderPass::WorldAnchoredShockWave,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::WorldAnchoredShockWave, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &CameraShockWaveCB;
+				Cmd.BuildSortKey();
+			}
+		}
+	}
+
 	// Camera Fade
 	if (!bPureDebugView && Frame.CameraFade.bEnabled && Frame.CameraFade.Amount > 0.0f)
 	{
@@ -1117,7 +1224,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
 			Cmd.InitFullscreenTriangle(FadeShader, ERenderPass::PostProcess, PPRS);
 			Cmd.Bindings.PerShaderCB[0] = &CameraFadeCB;
-			Cmd.BuildSortKey(5);
+			Cmd.BuildSortKey(6);
 		}
 	}
 
@@ -1138,7 +1245,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
 			Cmd.InitFullscreenTriangle(VignetteShader, ERenderPass::PostProcess, PPRS);
 			Cmd.Bindings.PerShaderCB[0] = &CameraVignetteCB;
-			Cmd.BuildSortKey(6);
+			Cmd.BuildSortKey(7);
 		}
 	}
 
@@ -1158,6 +1265,10 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			ScopeData.EdgeBlurRadius = Frame.CameraScopeLens.EdgeBlurRadius;
 			ScopeData.Intensity = Frame.CameraScopeLens.Intensity;
 			ScopeData.AspectRatio = AspectRatio;
+			ScopeData.CenterX = std::clamp(Frame.CameraScopeLens.CenterX, 0.0f, 1.0f);
+			ScopeData.CenterY = std::clamp(Frame.CameraScopeLens.CenterY, 0.0f, 1.0f);
+			ScopeData.CenterOffset[0] = Frame.CameraScopeLens.CenterOffsetX;
+			ScopeData.CenterOffset[1] = Frame.CameraScopeLens.CenterOffsetY;
 			ScopeLensCB.Update(Ctx, &ScopeData, sizeof(FScopeLensConstants));
 
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
@@ -1191,7 +1302,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
 			Cmd.InitFullscreenTriangle(LetterboxShader, ERenderPass::PostProcess, PPRS);
 			Cmd.Bindings.PerShaderCB[0] = &CameraLetterboxCB;
-			Cmd.BuildSortKey(7);
+			Cmd.BuildSortKey(8);
 		}
 	}
 

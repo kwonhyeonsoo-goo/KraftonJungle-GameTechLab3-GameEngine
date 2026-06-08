@@ -500,23 +500,36 @@ namespace
 
 bool FActorSequenceEditorWidget::CanEdit(UObject* Object) const
 {
-	if (!IsValid(Object) || !Object->IsA<UActorSequence>())
+	if (!IsValid(Object))
 	{
 		return false;
 	}
-	return IsValid(Cast<UActorSequenceComponent>(Object->GetOuter()));
+
+	if (UActorSequence* Sequence = Cast<UActorSequence>(Object))
+	{
+		return IsValid(Cast<UActorSequenceComponent>(Sequence->GetOuter()));
+	}
+
+	if (UActorSequenceComponent* SequenceComp = Cast<UActorSequenceComponent>(Object))
+	{
+		return IsValid(SequenceComp->GetSequence());
+	}
+
+	return false;
 }
 
 void FActorSequenceEditorWidget::Open(UObject* Object)
 {
-	FAssetEditorWidget::Open(Object);
-	SequenceComponent = ResolveSequenceComponent();
+	UActorSequenceComponent* DirectSequenceComp = Cast<UActorSequenceComponent>(Object);
+	UObject* ObjectToEdit = DirectSequenceComp ? static_cast<UObject*>(DirectSequenceComp->GetSequence()) : Object;
+	FAssetEditorWidget::Open(ObjectToEdit);
+	SequenceComponent = DirectSequenceComp ? DirectSequenceComp : ResolveSequenceComponent();
 	char Buffer[64] = {};
 	std::snprintf(
 		Buffer,
 		sizeof(Buffer),
 		"%p",
-		static_cast<const void*>(SequenceComponent.Get() ? SequenceComponent.Get() : Object));
+		static_cast<const void*>(SequenceComponent.Get() ? SequenceComponent.Get() : ObjectToEdit));
 	DocumentPayloadId = Buffer;
 	SelectedBindingIndex = -1;
 	SelectedTrackIndex = -1;
@@ -588,11 +601,40 @@ void FActorSequenceEditorWidget::Tick(float DeltaTime)
 void FActorSequenceEditorWidget::Render(float DeltaTime)
 {
 	(void)DeltaTime;
+	const FString WindowTitle = GetDocumentTitle() + "###ActorSequenceDock_" + GetDocumentPayloadId();
+	bool bWindowOpen = IsOpen();
+	if (!bRenderingDocument)
+	{
+		ImGui::SetNextWindowSize(ImVec2(1280.0f, 540.0f), ImGuiCond_Once);
+		if (!ImGui::Begin(WindowTitle.c_str(), &bWindowOpen))
+		{
+			ImGui::End();
+			if (!bWindowOpen)
+			{
+				Close();
+			}
+			return;
+		}
+	}
+
+	if (ConsumeFocusRequest())
+	{
+		ImGui::SetWindowFocus();
+	}
+
 	UActorSequenceComponent* SequenceComp = ResolveSequenceComponent();
 	UActorSequence* Sequence = Cast<UActorSequence>(EditedObject);
 	if (!SequenceComp || !Sequence)
 	{
 		ImGui::TextDisabled("Actor Sequence target is no longer valid.");
+		if (!bRenderingDocument)
+		{
+			ImGui::End();
+			if (!bWindowOpen)
+			{
+				Close();
+			}
+		}
 		return;
 	}
 
@@ -615,6 +657,22 @@ void FActorSequenceEditorWidget::Render(float DeltaTime)
 		RenderKeyTable(SequenceComp);
 	}
 	ImGui::EndChild();
+
+	if (!bRenderingDocument)
+	{
+		ImGui::End();
+		if (!bWindowOpen)
+		{
+			Close();
+		}
+	}
+}
+
+void FActorSequenceEditorWidget::RenderDocument(float DeltaTime)
+{
+	bRenderingDocument = true;
+	Render(DeltaTime);
+	bRenderingDocument = false;
 }
 
 void FActorSequenceEditorWidget::AddReferencedObjects(FReferenceCollector& Collector)
@@ -989,14 +1047,11 @@ void FActorSequenceEditorWidget::DrawAddTrackPopup(UActorSequenceComponent* Sequ
 		}
 		if (ImGui::Button("Add Track"))
 		{
-			const FString TargetName = CurrentTarget == Owner
-				? FString("Owner")
-				: CurrentTarget->GetFName().ToString();
 			const FString CurveAssetPath = PendingTrackCurveAssetPath;
 			ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Add Actor Sequence Track");
 
 			if (SequenceComp->AddFloatTrack(
-				TargetName,
+				CurrentTarget,
 				CurrentProperty->Name,
 				ChannelPreview,
 				(std::max)(0.0f, PendingTrackStartTime),

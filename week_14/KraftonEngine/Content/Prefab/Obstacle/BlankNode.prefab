@@ -1,34 +1,14 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_9",
+    "Name" : "AStaticMeshActor_62",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
         "Properties" : {
           "DebugSlotRadius" : 1.000000,
           "DisplayName" : "",
-          "Links" : [{
-              "PathPoints" : [[0.399028, 40.480465, 0.000000], [3.751410, 34.842373, 0.000000], [7.075802, 27.133137, 0.000000], [10.390865, 18.733528, 0.000000], [13.715258, 11.024295, 0.000000], [17.067640, 5.386200, 0.000000]],
-              "TargetNodeId" : "CoverNode_014",
-              "Weight" : 1.000000,
-              "bBidirectional" : false
-            }, {
-              "PathPoints" : [[1.817105, 42.193981, 0.000000], [8.826630, 40.974934, 0.000000], [17.151604, 39.308067, 0.000000], [25.915068, 37.491936, 0.000000], [34.240040, 35.825073, 0.000000], [41.249561, 34.606026, 0.000000]],
-              "TargetNodeId" : "CoverNode_005",
-              "Weight" : 1.000000,
-              "bBidirectional" : false
-            }, {
-              "PathPoints" : [[3.331196, 45.207386, 0.000000], [14.245485, 51.759777, 0.000000], [27.909618, 60.719143, 0.000000], [42.490383, 70.480865, 0.000000], [56.154518, 79.440239, 0.000000], [67.068810, 85.992615, 0.000000]],
-              "TargetNodeId" : "CoverNode_008",
-              "Weight" : 1.000000,
-              "bBidirectional" : false
-            }, {
-              "PathPoints" : [[0.399028, 42.072109, 0.000000], [3.751410, 40.538780, 0.000000], [7.075802, 38.442177, 0.000000], [10.390865, 36.157825, 0.000000], [13.715258, 34.061226, 0.000000], [17.067640, 32.527889, 0.000000]],
-              "TargetNodeId" : "CoverNode_009",
-              "Weight" : 1.000000,
-              "bBidirectional" : false
-            }],
+          "Links" : [],
           "MaxOccupants" : 1,
           "NodeId" : "",
           "PendingTagsString" : "",
@@ -65,7 +45,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [124.350281, 70.485458, 49.957829],
+      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
       "PendingActorRotation" : [-0.000000, 89.999977, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -86,7 +66,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [124.350281, 70.485458, 49.957829],
+        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -96,6 +76,7 @@
           "Responses[4]" : 2
         },
         "StaticMeshPath" : "None",
+        "bAbsoluteScale" : false,
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -111,7 +92,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_9",
+  "SourceActorName" : "AStaticMeshActor_62",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

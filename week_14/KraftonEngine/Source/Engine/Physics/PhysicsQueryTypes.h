@@ -66,6 +66,9 @@ struct FPhysicsSweepResult
     uint32 HitActorId     = 0;
     uint32 HitComponentId = 0;
     uint32 HitGeneration  = 0;
+    FPhysicsBodyHandle HitBody;
+    FName HitBoneName = FName::None;
+    EPhysicsBodyDomain HitDomain = EPhysicsBodyDomain::ActorComponent;
 
     FVector Location     = FVector::ZeroVector;
     FVector ImpactPoint  = FVector::ZeroVector;

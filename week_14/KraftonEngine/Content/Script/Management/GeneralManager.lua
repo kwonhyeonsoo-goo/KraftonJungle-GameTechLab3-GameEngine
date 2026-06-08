@@ -144,6 +144,19 @@ function GeneralManager:Shutdown()
     self.event_bus = nil
 end
 
+function GeneralManager.OnWorldReset()
+    local instance = GeneralManager._instance
+    if instance ~= nil then
+        instance.runtime_active = false
+        instance.initializing = false
+        instance:Shutdown()
+        instance.context = nil
+    end
+
+    GeneralManager._instance = nil
+    _G.GameGeneralManager = nil
+end
+
 function GeneralManager:Tick(dt)
     if not self.initialized then
         if self.runtime_active and self.context ~= nil then
@@ -206,14 +219,53 @@ function GeneralManager:AddScore(delta)
     self.managers.Data:AddScore(delta)
 end
 
+function GeneralManager:SetScore(score)
+    self:_EnsureInitialized()
+    self.managers.Data:SetScore(score)
+end
+
 function GeneralManager:GetScore()
     self:_EnsureInitialized()
     return self.managers.Data:GetScore()
 end
 
+function GeneralManager:GetSettings()
+    self:_EnsureInitialized()
+    return self.managers.Data:GetSettings()
+end
+
+function GeneralManager:SetSetting(key, value)
+    self:_EnsureInitialized()
+    local result = self.managers.Data:SetSetting(key, value)
+    if result then
+        if key == "bgm_volume" then
+            self.managers.Audio:SetBGMVolume(value)
+        elseif key == "sfx_volume" then
+            self.managers.Audio:SetSFXVolume(value)
+        end
+    end
+    return result
+end
+
 function GeneralManager:CommitRun(result)
     self:_EnsureInitialized()
     self.managers.Data:CommitRun(result)
+end
+
+function GeneralManager:SetInGameMatchDuration(seconds)
+    self:_EnsureInitialized()
+    if self.managers.InGame ~= nil and self.managers.InGame.SetMatchDuration ~= nil then
+        return self.managers.InGame:SetMatchDuration(seconds)
+    end
+    return false
+end
+
+function GeneralManager:RequestVictory(reason)
+    self:_EnsureInitialized()
+    if self.managers.InGame ~= nil and self.managers.InGame.RequestVictory ~= nil then
+        return self.managers.InGame:RequestVictory(reason)
+    end
+    return false
 end
 
 function GeneralManager:PlaySFX(path_or_key, volume)

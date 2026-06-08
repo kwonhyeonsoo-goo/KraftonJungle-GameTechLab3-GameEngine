@@ -2,6 +2,7 @@
 #include "Math/Vector.h"
 #include "Core/Types/CoreTypes.h"
 #include "Core/Types/PropertyTypes.h"
+#include "Object/FName.h"
 #include "Object/Reflection/ObjectMacros.h"
 #include "Object/Reflection/UStruct.h"
 
@@ -179,6 +180,7 @@ struct FHitResult
 	FVector WorldHitLocation = { 0, 0, 0 };
 	FVector WorldNormal = { 0, 0, 0 };
 	FVector ImpactNormal = { 0, 0, 0 };
+	FName HitBoneName = FName::None;
 	int FaceIndex = -1;
 
 	bool bStartPenetrating = false;

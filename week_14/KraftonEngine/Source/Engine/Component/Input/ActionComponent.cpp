@@ -340,6 +340,18 @@ void UActionComponent::StopAllActions()
 	UnregisterTimeDilationComponent();
 }
 
+void UActionComponent::ResetGlobalTimeDilationState()
+{
+	TimeDilationComponents.clear();
+	bHasCapturedGlobalBaseTimeDilation = false;
+	GlobalBaseTimeDilation = 1.0f;
+
+	if (GEngine && GEngine->GetTimer())
+	{
+		GEngine->GetTimer()->SetTimeDilation(1.0f);
+	}
+}
+
 float UActionComponent::GetRawDeltaTime(float FallbackDeltaTime) const
 {
 	if (GEngine && GEngine->GetTimer())

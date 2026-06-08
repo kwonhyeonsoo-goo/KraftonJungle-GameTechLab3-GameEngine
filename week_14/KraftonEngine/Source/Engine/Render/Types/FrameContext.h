@@ -111,6 +111,7 @@ struct FFrameContext
 	FCameraVignetteState CameraVignette;
 	FCameraLetterboxState CameraLetterbox;
 	FCameraScopeLensState CameraScopeLens;
+	TArray<FCameraShockWaveState> CameraShockWaves;
 
 	// Derived helpers
 	bool IsFixedOrtho() const
@@ -176,5 +177,6 @@ struct FFrameContext
 		DoFBokehSRV             = nullptr;
 		DoFBokehWidth           = 0.0f;
 		DoFBokehHeight          = 0.0f;
+		CameraShockWaves.clear();
 	}
 };

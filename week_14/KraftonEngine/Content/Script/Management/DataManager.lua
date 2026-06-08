@@ -3,12 +3,44 @@ DataManager.__index = DataManager
 
 local SAVE_PATH = "GameData/player_profile.json"
 
+local function default_settings()
+    return {
+        bgm_volume = 1.0,
+        sfx_volume = 1.0,
+        zoom_toggle = true,
+        mouse_sensitivity = 1.0
+    }
+end
+
 local function default_data()
     return {
         nickname = "",
         score = 0,
         high_score = 0,
+        settings = default_settings(),
         runs = {}
+    }
+end
+
+local function clamp(value, min_value, max_value)
+    value = tonumber(value) or min_value
+    if value < min_value then
+        return min_value
+    end
+    if value > max_value then
+        return max_value
+    end
+    return value
+end
+
+local function normalize_settings(settings)
+    settings = type(settings) == "table" and settings or {}
+    local defaults = default_settings()
+    return {
+        bgm_volume = clamp(settings.bgm_volume or defaults.bgm_volume, 0.0, 1.0),
+        sfx_volume = clamp(settings.sfx_volume or defaults.sfx_volume, 0.0, 1.0),
+        zoom_toggle = settings.zoom_toggle ~= false,
+        mouse_sensitivity = clamp(settings.mouse_sensitivity or defaults.mouse_sensitivity, 0.1, 5.0)
     }
 end
 
@@ -35,6 +67,7 @@ function DataManager:Load()
             self.data.nickname = self.data.nickname or ""
             self.data.score = tonumber(self.data.score) or 0
             self.data.high_score = tonumber(self.data.high_score) or 0
+            self.data.settings = normalize_settings(self.data.settings)
             self.data.runs = self.data.runs or {}
             return true
         end
@@ -81,6 +114,44 @@ end
 
 function DataManager:GetHighScore()
     return self.data.high_score or 0
+end
+
+function DataManager:GetSettings()
+    self.data.settings = normalize_settings(self.data.settings)
+    return self.data.settings
+end
+
+function DataManager:SetSetting(key, value)
+    self.data.settings = normalize_settings(self.data.settings)
+    if key == "bgm_volume" or key == "sfx_volume" then
+        self.data.settings[key] = clamp(value, 0.0, 1.0)
+    elseif key == "mouse_sensitivity" then
+        self.data.settings[key] = clamp(value, 0.1, 5.0)
+    elseif key == "zoom_toggle" then
+        self.data.settings[key] = value == true
+    else
+        return false
+    end
+
+    self:Save()
+    self.general:Publish("settings.changed", { key = key, value = self.data.settings[key], settings = self.data.settings })
+    return true
+end
+
+function DataManager:GetScoreEntries()
+    local entries = {}
+    for _, run in ipairs(self.data.runs or {}) do
+        table.insert(entries, {
+            nickname = tostring(run.nickname or self.data.nickname or "Player"),
+            result = tostring(run.result or run.state or "Unknown"),
+            score = tonumber(run.score) or 0
+        })
+    end
+
+    table.sort(entries, function(a, b)
+        return (a.score or 0) > (b.score or 0)
+    end)
+    return entries
 end
 
 function DataManager:CommitRun(result)
