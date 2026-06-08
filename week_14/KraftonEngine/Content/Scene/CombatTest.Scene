@@ -1859,6 +1859,84 @@
               "bTickEnable" : true
             },
             "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "ObjectId" : 52,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.uasset",
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_534",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "bAbsoluteScale" : true,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "ObjectId" : 53,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.uasset",
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_535",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "bAbsoluteScale" : true,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
           }],
         "ClassName" : "UDirectionalLightComponent",
         "ObjectId" : 5,
@@ -1891,7 +1969,7 @@
       "Name" : "Manager",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatFlowManagerComponent",
-          "ObjectId" : 54,
+          "ObjectId" : 56,
           "Properties" : {
             "DebugDrawInterval" : 0.100000,
             "PendingTagsString" : "",
@@ -1913,7 +1991,7 @@
             "bUseNodeOccupancyLimit" : true
           }
         }],
-      "ObjectId" : 52,
+      "ObjectId" : 54,
       "Properties" : {
         "PendingActorLocation" : [0.000000, 0.000000, 1000.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1925,7 +2003,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 53,
+        "ObjectId" : 55,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1966,7 +2044,7 @@
       "Name" : "CoverNode_001",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 57,
+          "ObjectId" : 59,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2037,7 +2115,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 55,
+      "ObjectId" : 57,
       "Properties" : {
         "PendingActorLocation" : [-66.066673, -39.333336, 0.000000],
         "PendingActorRotation" : [-0.000000, 4.906805, 0.000000],
@@ -2049,7 +2127,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 56,
+        "ObjectId" : 58,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 4.906805, 0.000000],
@@ -2090,7 +2168,7 @@
       "Name" : "CoverNode_002",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 60,
+          "ObjectId" : 62,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2161,7 +2239,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 58,
+      "ObjectId" : 60,
       "Properties" : {
         "PendingActorLocation" : [-75.066673, -17.866667, 0.000000],
         "PendingActorRotation" : [0.000000, -6.599725, 0.000000],
@@ -2173,7 +2251,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 59,
+        "ObjectId" : 61,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -6.599725, 0.000000],
@@ -2214,7 +2292,7 @@
       "Name" : "CoverNode_003",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 63,
+          "ObjectId" : 65,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2285,7 +2363,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 61,
+      "ObjectId" : 63,
       "Properties" : {
         "PendingActorLocation" : [-52.266670, -2.266667, 0.000000],
         "PendingActorRotation" : [-0.000000, 5.171628, 0.000000],
@@ -2297,7 +2375,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 62,
+        "ObjectId" : 64,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 5.171628, 0.000000],
@@ -2338,7 +2416,7 @@
       "Name" : "CoverNode_004",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 66,
+          "ObjectId" : 68,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2431,7 +2509,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 64,
+      "ObjectId" : 66,
       "Properties" : {
         "PendingActorLocation" : [-48.400002, 17.733334, 0.000000],
         "PendingActorRotation" : [0.000000, -7.887218, 0.000000],
@@ -2443,7 +2521,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 65,
+        "ObjectId" : 67,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -7.887218, 0.000000],
@@ -2484,7 +2562,7 @@
       "Name" : "CoverNode_005",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 69,
+          "ObjectId" : 71,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2533,7 +2611,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 67,
+      "ObjectId" : 69,
       "Properties" : {
         "PendingActorLocation" : [-60.066669, 29.933334, 0.000000],
         "PendingActorRotation" : [-0.000000, 4.611417, 0.000000],
@@ -2545,7 +2623,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 68,
+        "ObjectId" : 70,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 4.611417, 0.000000],
@@ -2586,7 +2664,7 @@
       "Name" : "CoverNode_006",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 72,
+          "ObjectId" : 74,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2657,7 +2735,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 70,
+      "ObjectId" : 72,
       "Properties" : {
         "PendingActorLocation" : [-36.600002, -32.266670, 0.000000],
         "PendingActorRotation" : [0.000000, -4.218642, 0.000000],
@@ -2669,7 +2747,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 71,
+        "ObjectId" : 73,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -4.218642, 0.000000],
@@ -2710,7 +2788,7 @@
       "Name" : "CoverNode_007",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 75,
+          "ObjectId" : 77,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2759,7 +2837,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 73,
+      "ObjectId" : 75,
       "Properties" : {
         "PendingActorLocation" : [-52.866669, -13.800001, 0.000000],
         "PendingActorRotation" : [-0.000000, 7.009995, 0.000000],
@@ -2771,7 +2849,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 74,
+        "ObjectId" : 76,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 7.009995, 0.000000],
@@ -2812,7 +2890,7 @@
       "Name" : "CoverNode_008",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 78,
+          "ObjectId" : 80,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2883,10 +2961,10 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 76,
+      "ObjectId" : 78,
       "Properties" : {
         "PendingActorLocation" : [-24.333334, -2.733334, 0.000000],
-        "PendingActorRotation" : [0.000000, -7.239548, 0.000000],
+        "PendingActorRotation" : [0.000000, -7.239545, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "ProceduralCombatObstacle",
@@ -2895,10 +2973,10 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 77,
+        "ObjectId" : 79,
         "Properties" : {
           "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [0.000000, -7.239548, 0.000000],
+          "CachedEditRotator" : [0.000000, -7.239545, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
@@ -2936,7 +3014,7 @@
       "Name" : "CoverNode_009",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 81,
+          "ObjectId" : 83,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -2985,7 +3063,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 79,
+      "ObjectId" : 81,
       "Properties" : {
         "PendingActorLocation" : [-26.533335, 15.866668, 0.000000],
         "PendingActorRotation" : [-0.000000, 6.443818, 0.000000],
@@ -2997,7 +3075,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 80,
+        "ObjectId" : 82,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 6.443818, 0.000000],
@@ -3038,7 +3116,7 @@
       "Name" : "CoverNode_010",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 84,
+          "ObjectId" : 86,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3109,7 +3187,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 82,
+      "ObjectId" : 84,
       "Properties" : {
         "PendingActorLocation" : [-39.666668, 41.000004, 0.000000],
         "PendingActorRotation" : [-0.000000, 3.452257, 0.000000],
@@ -3121,7 +3199,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 83,
+        "ObjectId" : 85,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 3.452257, 0.000000],
@@ -3162,7 +3240,7 @@
       "Name" : "CoverNode_011",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 87,
+          "ObjectId" : 89,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3255,7 +3333,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 85,
+      "ObjectId" : 87,
       "Properties" : {
         "PendingActorLocation" : [-22.533335, -37.066669, 0.000000],
         "PendingActorRotation" : [-0.000000, 6.169164, 0.000000],
@@ -3267,7 +3345,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 86,
+        "ObjectId" : 88,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 6.169164, 0.000000],
@@ -3308,7 +3386,7 @@
       "Name" : "CoverNode_012",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 90,
+          "ObjectId" : 92,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3401,7 +3479,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 88,
+      "ObjectId" : 90,
       "Properties" : {
         "PendingActorLocation" : [-28.800001, -12.333334, 0.000000],
         "PendingActorRotation" : [0.000000, -1.279707, 0.000000],
@@ -3413,7 +3491,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 89,
+        "ObjectId" : 91,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -1.279707, 0.000000],
@@ -3454,7 +3532,7 @@
       "Name" : "CoverNode_013",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 93,
+          "ObjectId" : 95,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3525,7 +3603,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 91,
+      "ObjectId" : 93,
       "Properties" : {
         "PendingActorLocation" : [-26.133335, -4.133334, 0.000000],
         "PendingActorRotation" : [-0.000000, 7.613530, 0.000000],
@@ -3537,7 +3615,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 92,
+        "ObjectId" : 94,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 7.613530, 0.000000],
@@ -3578,7 +3656,7 @@
       "Name" : "CoverNode_014",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 96,
+          "ObjectId" : 98,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3649,10 +3727,10 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 94,
+      "ObjectId" : 96,
       "Properties" : {
         "PendingActorLocation" : [-22.666668, 16.600000, 0.000000],
-        "PendingActorRotation" : [-0.000000, 7.476464, 0.000000],
+        "PendingActorRotation" : [-0.000000, 7.476460, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "ProceduralCombatObstacle",
@@ -3661,10 +3739,10 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 95,
+        "ObjectId" : 97,
         "Properties" : {
           "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-0.000000, 7.476464, 0.000000],
+          "CachedEditRotator" : [-0.000000, 7.476460, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
@@ -3702,7 +3780,7 @@
       "Name" : "CoverNode_015",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 99,
+          "ObjectId" : 101,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3751,7 +3829,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 97,
+      "ObjectId" : 99,
       "Properties" : {
         "PendingActorLocation" : [-13.333334, 39.066669, 0.000000],
         "PendingActorRotation" : [0.000000, -1.493294, 0.000000],
@@ -3763,7 +3841,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 98,
+        "ObjectId" : 100,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -1.493294, 0.000000],
@@ -3804,7 +3882,7 @@
       "Name" : "CoverNode_016",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 102,
+          "ObjectId" : 104,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3875,7 +3953,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 100,
+      "ObjectId" : 102,
       "Properties" : {
         "PendingActorLocation" : [-2.533334, -25.333334, 0.000000],
         "PendingActorRotation" : [0.000000, -7.066823, 0.000000],
@@ -3887,7 +3965,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 101,
+        "ObjectId" : 103,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -7.066823, 0.000000],
@@ -3928,7 +4006,7 @@
       "Name" : "CoverNode_017",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 105,
+          "ObjectId" : 107,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -3999,7 +4077,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 103,
+      "ObjectId" : 105,
       "Properties" : {
         "PendingActorLocation" : [12.466667, -6.133334, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.866984, 0.000000],
@@ -4011,7 +4089,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 104,
+        "ObjectId" : 106,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.866984, 0.000000],
@@ -4052,7 +4130,7 @@
       "Name" : "CoverNode_018",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 108,
+          "ObjectId" : 110,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4101,7 +4179,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 106,
+      "ObjectId" : 108,
       "Properties" : {
         "PendingActorLocation" : [-8.733334, -2.200000, 0.000000],
         "PendingActorRotation" : [-0.000000, 1.277727, 0.000000],
@@ -4113,7 +4191,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 107,
+        "ObjectId" : 109,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 1.277727, 0.000000],
@@ -4154,7 +4232,7 @@
       "Name" : "CoverNode_019",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 111,
+          "ObjectId" : 113,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4203,7 +4281,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 109,
+      "ObjectId" : 111,
       "Properties" : {
         "PendingActorLocation" : [-20.400002, 18.000000, 0.000000],
         "PendingActorRotation" : [0.000000, -3.099988, 0.000000],
@@ -4215,7 +4293,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 110,
+        "ObjectId" : 112,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -3.099988, 0.000000],
@@ -4256,7 +4334,7 @@
       "Name" : "CoverNode_020",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 114,
+          "ObjectId" : 116,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4327,7 +4405,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 112,
+      "ObjectId" : 114,
       "Properties" : {
         "PendingActorLocation" : [2.533334, 30.333334, 0.000000],
         "PendingActorRotation" : [-0.000000, 6.543382, 0.000000],
@@ -4339,7 +4417,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 113,
+        "ObjectId" : 115,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 6.543382, 0.000000],
@@ -4380,7 +4458,7 @@
       "Name" : "CoverNode_021",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 117,
+          "ObjectId" : 119,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4473,7 +4551,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 115,
+      "ObjectId" : 117,
       "Properties" : {
         "PendingActorLocation" : [13.133334, -28.600002, 0.000000],
         "PendingActorRotation" : [0.000000, -1.342381, 0.000000],
@@ -4485,7 +4563,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 116,
+        "ObjectId" : 118,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -1.342381, 0.000000],
@@ -4526,7 +4604,7 @@
       "Name" : "CoverNode_022",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 120,
+          "ObjectId" : 122,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4575,7 +4653,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 118,
+      "ObjectId" : 120,
       "Properties" : {
         "PendingActorLocation" : [31.466669, -15.000001, 0.000000],
         "PendingActorRotation" : [-0.000000, 2.262675, 0.000000],
@@ -4587,7 +4665,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 119,
+        "ObjectId" : 121,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 2.262675, 0.000000],
@@ -4628,7 +4706,7 @@
       "Name" : "CoverNode_023",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 123,
+          "ObjectId" : 125,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4677,7 +4755,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 121,
+      "ObjectId" : 123,
       "Properties" : {
         "PendingActorLocation" : [13.400001, -7.266667, 0.000000],
         "PendingActorRotation" : [-0.000000, 1.193389, 0.000000],
@@ -4689,7 +4767,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 122,
+        "ObjectId" : 124,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 1.193389, 0.000000],
@@ -4730,7 +4808,7 @@
       "Name" : "CoverNode_024",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 126,
+          "ObjectId" : 128,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4779,7 +4857,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 124,
+      "ObjectId" : 126,
       "Properties" : {
         "PendingActorLocation" : [31.200001, 14.600000, 0.000000],
         "PendingActorRotation" : [0.000000, -2.498132, 0.000000],
@@ -4791,7 +4869,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 125,
+        "ObjectId" : 127,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -2.498132, 0.000000],
@@ -4832,7 +4910,7 @@
       "Name" : "CoverNode_025",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 129,
+          "ObjectId" : 131,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -4903,7 +4981,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 127,
+      "ObjectId" : 129,
       "Properties" : {
         "PendingActorLocation" : [39.466667, 29.666668, 0.000000],
         "PendingActorRotation" : [0.000000, -4.853855, 0.000000],
@@ -4915,7 +4993,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 128,
+        "ObjectId" : 130,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -4.853855, 0.000000],
@@ -4956,7 +5034,7 @@
       "Name" : "CoverNode_026",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 132,
+          "ObjectId" : 134,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5027,7 +5105,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 130,
+      "ObjectId" : 132,
       "Properties" : {
         "PendingActorLocation" : [56.600002, -37.066669, 0.000000],
         "PendingActorRotation" : [-0.000000, 5.319058, 0.000000],
@@ -5039,7 +5117,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 131,
+        "ObjectId" : 133,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 5.319058, 0.000000],
@@ -5080,7 +5158,7 @@
       "Name" : "CoverNode_027",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 135,
+          "ObjectId" : 137,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5151,7 +5229,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 133,
+      "ObjectId" : 135,
       "Properties" : {
         "PendingActorLocation" : [33.200001, -23.533335, 0.000000],
         "PendingActorRotation" : [-0.000000, 0.277178, 0.000000],
@@ -5163,7 +5241,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 134,
+        "ObjectId" : 136,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.277178, 0.000000],
@@ -5204,7 +5282,7 @@
       "Name" : "CoverNode_028",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 138,
+          "ObjectId" : 140,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5275,7 +5353,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 136,
+      "ObjectId" : 138,
       "Properties" : {
         "PendingActorLocation" : [55.466671, -7.533334, 0.000000],
         "PendingActorRotation" : [-0.000000, 1.489309, 0.000000],
@@ -5287,7 +5365,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 137,
+        "ObjectId" : 139,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 1.489309, 0.000000],
@@ -5328,7 +5406,7 @@
       "Name" : "CoverNode_029",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 141,
+          "ObjectId" : 143,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5421,7 +5499,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 139,
+      "ObjectId" : 141,
       "Properties" : {
         "PendingActorLocation" : [33.666668, 19.466667, 0.000000],
         "PendingActorRotation" : [-0.000000, 5.424798, 0.000000],
@@ -5433,7 +5511,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 140,
+        "ObjectId" : 142,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 5.424798, 0.000000],
@@ -5474,7 +5552,7 @@
       "Name" : "CoverNode_030",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 144,
+          "ObjectId" : 146,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5545,7 +5623,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 142,
+      "ObjectId" : 144,
       "Properties" : {
         "PendingActorLocation" : [51.800003, 32.933334, 0.000000],
         "PendingActorRotation" : [-0.000000, 4.265367, 0.000000],
@@ -5557,7 +5635,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 143,
+        "ObjectId" : 145,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 4.265367, 0.000000],
@@ -5598,7 +5676,7 @@
       "Name" : "CoverNode_031",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 147,
+          "ObjectId" : 149,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5664,7 +5742,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 145,
+      "ObjectId" : 147,
       "Properties" : {
         "PendingActorLocation" : [64.333336, -30.933334, 0.000000],
         "PendingActorRotation" : [-0.000000, 1.390035, 0.000000],
@@ -5676,7 +5754,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 146,
+        "ObjectId" : 148,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 1.390035, 0.000000],
@@ -5717,7 +5795,7 @@
       "Name" : "CoverNode_032",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 150,
+          "ObjectId" : 152,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5788,7 +5866,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 148,
+      "ObjectId" : 150,
       "Properties" : {
         "PendingActorLocation" : [57.400002, -6.933334, 0.000000],
         "PendingActorRotation" : [0.000000, -6.381701, 0.000000],
@@ -5800,7 +5878,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 149,
+        "ObjectId" : 151,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -6.381701, 0.000000],
@@ -5841,7 +5919,7 @@
       "Name" : "CoverNode_033",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 153,
+          "ObjectId" : 155,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -5912,7 +5990,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 151,
+      "ObjectId" : 153,
       "Properties" : {
         "PendingActorLocation" : [57.400002, 2.266667, 0.000000],
         "PendingActorRotation" : [0.000000, -0.432637, 0.000000],
@@ -5924,7 +6002,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 152,
+        "ObjectId" : 154,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [0.000000, -0.432637, 0.000000],
@@ -5965,7 +6043,7 @@
       "Name" : "CoverNode_034",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 156,
+          "ObjectId" : 158,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -6014,7 +6092,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 154,
+      "ObjectId" : 156,
       "Properties" : {
         "PendingActorLocation" : [57.533337, 5.266667, 0.000000],
         "PendingActorRotation" : [-0.000000, 5.550447, 0.000000],
@@ -6026,7 +6104,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 155,
+        "ObjectId" : 157,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 5.550447, 0.000000],
@@ -6067,7 +6145,7 @@
       "Name" : "CoverNode_035",
       "NonSceneComponents" : [{
           "ClassName" : "UCombatCoverNodeComponent",
-          "ObjectId" : 159,
+          "ObjectId" : 161,
           "Properties" : {
             "DebugSlotRadius" : 1.000000,
             "DisplayName" : "",
@@ -6150,7 +6228,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 157,
+      "ObjectId" : 159,
       "Properties" : {
         "PendingActorLocation" : [64.400002, 25.066668, 0.000000],
         "PendingActorRotation" : [-0.000000, 1.394092, 0.000000],
@@ -6162,7 +6240,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 158,
+        "ObjectId" : 160,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 1.394092, 0.000000],
@@ -6203,7 +6281,7 @@
       "Name" : "ScopeTest_Player",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 180,
+          "ObjectId" : 184,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -6225,10 +6303,17 @@
           }
         }, {
           "ClassName" : "USniperWeaponComponent",
-          "ObjectId" : 181,
+          "ObjectId" : 185,
           "Properties" : {
+            "AmmoInMagazine" : 5,
+            "FireSFXPath" : "SFX/Sniper/Shoot1.wav",
+            "FireSFXVolume" : 1.000000,
+            "MagazineCapacity" : 5,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_1710",
+            "ReloadDuration" : 3.528000,
+            "ReloadSFXPath" : "SFX/Sniper/rifle_reload.mp3",
+            "ReloadSFXVolume" : 1.000000,
             "ZeroRangeMeters" : 200.000000,
             "bAutoActivate" : true,
             "bEditorOnly" : false,
@@ -6239,7 +6324,7 @@
           }
         }, {
           "ClassName" : "UBallisticBulletManagerComponent",
-          "ObjectId" : 182,
+          "ObjectId" : 186,
           "Properties" : {
             "BulletHeadVisualMaterialPath" : "Content/Material/Custom/BulletTraceSprite.uasset",
             "BulletHeadVisualScaleMultiplier" : 50.000000,
@@ -6251,7 +6336,7 @@
             "ImpactVisualScale" : 0.075000,
             "MaxBallisticSubstepDeltaTime" : 0.008333,
             "MaxBallisticSubsteps" : 2,
-            "MaxKillCamBodyCenterDistance" : 0.500000,
+            "MaxKillCamBodyCenterDistance" : 0.200000,
             "MaxPreciseCharacterHitDistance" : 0.250000,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_1711",
@@ -6269,7 +6354,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 160,
+      "ObjectId" : 162,
       "Properties" : {
         "AimSwayState.BaseSwayAmount" : 0.000300,
         "AimSwayState.HoldBreathConsumeSpeed" : 1.000000,
@@ -6319,7 +6404,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 162,
+            "ObjectId" : 164,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "None"
@@ -6391,84 +6476,6 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 164,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_646",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 165,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1063",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
                 "ObjectId" : 166,
                 "Properties" : {
                   "AttachSocketName" : "Name_None",
@@ -6479,7 +6486,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1060",
+                  "PersistentGuid" : "Component_648",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6518,7 +6525,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_618",
+                  "PersistentGuid" : "Component_647",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6557,7 +6564,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_617",
+                  "PersistentGuid" : "Component_646",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6596,7 +6603,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1061",
+                  "PersistentGuid" : "Component_1063",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6635,7 +6642,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_589",
+                  "PersistentGuid" : "Component_1060",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6674,7 +6681,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_588",
+                  "PersistentGuid" : "Component_618",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6713,7 +6720,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_599",
+                  "PersistentGuid" : "Component_617",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6752,7 +6759,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_642",
+                  "PersistentGuid" : "Component_1061",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6791,7 +6798,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_641",
+                  "PersistentGuid" : "Component_589",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6830,7 +6837,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_640",
+                  "PersistentGuid" : "Component_588",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6869,7 +6876,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1878",
+                  "PersistentGuid" : "Component_599",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6908,7 +6915,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_742",
+                  "PersistentGuid" : "Component_642",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6947,7 +6954,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_447",
+                  "PersistentGuid" : "Component_641",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -6986,6 +6993,162 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_640",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 180,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_1878",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 181,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_742",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 182,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_447",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 183,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
                   "PersistentGuid" : "Component_3733",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
@@ -7014,7 +7177,7 @@
                 "bHiddenInComponentTree" : true
               }],
             "ClassName" : "UCameraComponent",
-            "ObjectId" : 163,
+            "ObjectId" : 165,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -7040,7 +7203,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 161,
+        "ObjectId" : 163,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -7083,7 +7246,7 @@
       "Name" : "AActor_3",
       "NonSceneComponents" : [{
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 185,
+          "ObjectId" : 189,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -7096,7 +7259,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 183,
+      "ObjectId" : 187,
       "Properties" : {
         "PendingActorLocation" : [-79.879242, -7.329476, -0.000004],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -7108,7 +7271,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UBillboardComponent",
-        "ObjectId" : 184,
+        "ObjectId" : 188,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -7149,7 +7312,7 @@
       "Name" : "ACombatCharacter_0",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 190,
+          "ObjectId" : 194,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -7171,7 +7334,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 191,
+          "ObjectId" : 195,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.450000,
@@ -7221,7 +7384,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 192,
+          "ObjectId" : 196,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -7234,7 +7397,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 186,
+      "ObjectId" : 190,
       "Properties" : {
         "PendingActorLocation" : [-56.817020, 72.676048, -0.000004],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -7252,7 +7415,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 189,
+                "ObjectId" : 193,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999985, -6.000000],
@@ -7289,7 +7452,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 188,
+            "ObjectId" : 192,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -7364,7 +7527,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 187,
+        "ObjectId" : 191,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -7407,7 +7570,7 @@
       "Name" : "ACombatCharacter_1",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 197,
+          "ObjectId" : 201,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -7429,7 +7592,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 198,
+          "ObjectId" : 202,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -7479,7 +7642,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 199,
+          "ObjectId" : 203,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -7492,9 +7655,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 193,
+      "ObjectId" : 197,
       "Properties" : {
-        "PendingActorLocation" : [-51.566444, 74.023590, -0.000002],
+        "PendingActorLocation" : [118.679817, 15.936193, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -7510,7 +7673,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 196,
+                "ObjectId" : 200,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999985, -6.000000],
@@ -7547,7 +7710,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 195,
+            "ObjectId" : 199,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -7622,7 +7785,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 194,
+        "ObjectId" : 198,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -7634,7 +7797,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-51.566444, 74.023590, -0.000002],
+          "RelativeTransform.Location" : [118.679817, 15.936193, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -7664,7 +7827,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_84",
       "NonSceneComponents" : [],
-      "ObjectId" : 200,
+      "ObjectId" : 204,
       "Properties" : {
         "PendingActorLocation" : [-26.849678, 63.380367, -100.863998],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -7676,7 +7839,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 201,
+        "ObjectId" : 205,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -7717,7 +7880,7 @@
       "Name" : "SniperKillCamDirector",
       "NonSceneComponents" : [{
           "ClassName" : "UKillCamRailRigComponent",
-          "ObjectId" : 210,
+          "ObjectId" : 216,
           "Properties" : {
             "BulletForwardOffset" : 0.000000,
             "BulletPitchOffset" : 0.000000,
@@ -7800,7 +7963,7 @@
           }
         }, {
           "ClassName" : "UActorSequenceComponent",
-          "ObjectId" : 211,
+          "ObjectId" : 217,
           "Properties" : {
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_1381",
@@ -7817,7 +7980,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 202,
+      "ObjectId" : 206,
       "Properties" : {
         "CameraLagSpeed" : 12.000000,
         "CinematicBulletMaterialPath" : "Content/Material/Auto/Barrett M82 Magazine and Bullet.uasset",
@@ -7852,162 +8015,6 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 204,
-            "Properties" : {
-              "AttachSocketName" : "Name_None",
-              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-              "CollisionEnabled" : 0,
-              "Mass" : 1.000000,
-              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-              "ObjectType" : 0,
-              "PendingTagsString" : "",
-              "PersistentGuid" : "Component_686",
-              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-              "ResponseContainer" : {
-                "Responses[0]" : 2,
-                "Responses[1]" : 2,
-                "Responses[2]" : 2,
-                "Responses[3]" : 2,
-                "Responses[4]" : 2
-              },
-              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-              "bAbsoluteScale" : false,
-              "bAutoActivate" : true,
-              "bCastShadow" : false,
-              "bCastShadowAsTwoSided" : false,
-              "bEditorOnly" : true,
-              "bEnableCCD" : false,
-              "bGenerateOverlapEvents" : false,
-              "bHiddenInComponentTree" : true,
-              "bIsActive" : true,
-              "bIsVisible" : true,
-              "bKinematic" : false,
-              "bSimulatePhysics" : false,
-              "bTickEnable" : true
-            },
-            "bHiddenInComponentTree" : true
-          }, {
-            "Children" : [],
-            "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 205,
-            "Properties" : {
-              "AttachSocketName" : "Name_None",
-              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-              "CollisionEnabled" : 0,
-              "Mass" : 1.000000,
-              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-              "ObjectType" : 0,
-              "PendingTagsString" : "",
-              "PersistentGuid" : "Component_1102",
-              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-              "ResponseContainer" : {
-                "Responses[0]" : 2,
-                "Responses[1]" : 2,
-                "Responses[2]" : 2,
-                "Responses[3]" : 2,
-                "Responses[4]" : 2
-              },
-              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-              "bAbsoluteScale" : false,
-              "bAutoActivate" : true,
-              "bCastShadow" : false,
-              "bCastShadowAsTwoSided" : false,
-              "bEditorOnly" : true,
-              "bEnableCCD" : false,
-              "bGenerateOverlapEvents" : false,
-              "bHiddenInComponentTree" : true,
-              "bIsActive" : true,
-              "bIsVisible" : true,
-              "bKinematic" : false,
-              "bSimulatePhysics" : false,
-              "bTickEnable" : true
-            },
-            "bHiddenInComponentTree" : true
-          }, {
-            "Children" : [],
-            "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 206,
-            "Properties" : {
-              "AttachSocketName" : "Name_None",
-              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-              "CollisionEnabled" : 0,
-              "Mass" : 1.000000,
-              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-              "ObjectType" : 0,
-              "PendingTagsString" : "",
-              "PersistentGuid" : "Component_1098",
-              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-              "ResponseContainer" : {
-                "Responses[0]" : 2,
-                "Responses[1]" : 2,
-                "Responses[2]" : 2,
-                "Responses[3]" : 2,
-                "Responses[4]" : 2
-              },
-              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-              "bAbsoluteScale" : false,
-              "bAutoActivate" : true,
-              "bCastShadow" : false,
-              "bCastShadowAsTwoSided" : false,
-              "bEditorOnly" : true,
-              "bEnableCCD" : false,
-              "bGenerateOverlapEvents" : false,
-              "bHiddenInComponentTree" : true,
-              "bIsActive" : true,
-              "bIsVisible" : true,
-              "bKinematic" : false,
-              "bSimulatePhysics" : false,
-              "bTickEnable" : true
-            },
-            "bHiddenInComponentTree" : true
-          }, {
-            "Children" : [],
-            "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 207,
-            "Properties" : {
-              "AttachSocketName" : "Name_None",
-              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-              "CollisionEnabled" : 0,
-              "Mass" : 1.000000,
-              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-              "ObjectType" : 0,
-              "PendingTagsString" : "",
-              "PersistentGuid" : "Component_655",
-              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-              "ResponseContainer" : {
-                "Responses[0]" : 2,
-                "Responses[1]" : 2,
-                "Responses[2]" : 2,
-                "Responses[3]" : 2,
-                "Responses[4]" : 2
-              },
-              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-              "bAbsoluteScale" : false,
-              "bAutoActivate" : true,
-              "bCastShadow" : false,
-              "bCastShadowAsTwoSided" : false,
-              "bEditorOnly" : true,
-              "bEnableCCD" : false,
-              "bGenerateOverlapEvents" : false,
-              "bHiddenInComponentTree" : true,
-              "bIsActive" : true,
-              "bIsVisible" : true,
-              "bKinematic" : false,
-              "bSimulatePhysics" : false,
-              "bTickEnable" : true
-            },
-            "bHiddenInComponentTree" : true
-          }, {
-            "Children" : [],
-            "ClassName" : "UStaticMeshComponent",
             "ObjectId" : 208,
             "Properties" : {
               "AttachSocketName" : "Name_None",
@@ -8018,7 +8025,7 @@
               "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
               "ObjectType" : 0,
               "PendingTagsString" : "",
-              "PersistentGuid" : "Component_653",
+              "PersistentGuid" : "Component_690",
               "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
               "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
               "ResponseContainer" : {
@@ -8057,6 +8064,240 @@
               "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
               "ObjectType" : 0,
               "PendingTagsString" : "",
+              "PersistentGuid" : "Component_688",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+              "bAbsoluteScale" : false,
+              "bAutoActivate" : true,
+              "bCastShadow" : false,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 210,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_686",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+              "bAbsoluteScale" : false,
+              "bAutoActivate" : true,
+              "bCastShadow" : false,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 211,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_1102",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+              "bAbsoluteScale" : false,
+              "bAutoActivate" : true,
+              "bCastShadow" : false,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 212,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_1098",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+              "bAbsoluteScale" : false,
+              "bAutoActivate" : true,
+              "bCastShadow" : false,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 213,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_655",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+              "bAbsoluteScale" : false,
+              "bAutoActivate" : true,
+              "bCastShadow" : false,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 214,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
+              "PersistentGuid" : "Component_653",
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+              "bAbsoluteScale" : false,
+              "bAutoActivate" : true,
+              "bCastShadow" : false,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 215,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+              "ObjectType" : 0,
+              "PendingTagsString" : "",
               "PersistentGuid" : "Component_1379",
               "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
               "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
@@ -8085,7 +8326,7 @@
             "bHiddenInComponentTree" : true
           }],
         "ClassName" : "UCameraComponent",
-        "ObjectId" : 203,
+        "ObjectId" : 207,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -8114,7 +8355,7 @@
       "ClassName" : "AActor",
       "Name" : "PauseMenu_Camera",
       "NonSceneComponents" : [],
-      "ObjectId" : 212,
+      "ObjectId" : 218,
       "Properties" : {
         "PendingActorLocation" : [10000.000000, 10000.000000, 10005.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -8128,240 +8369,6 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 215,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_697",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 216,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1112",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 217,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_509",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 218,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_497",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 219,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_495",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 220,
-                "Properties" : {
-                  "AttachSocketName" : "Name_None",
-                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
-                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-                  "CollisionEnabled" : 0,
-                  "Mass" : 1.000000,
-                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
-                  "ObjectType" : 0,
-                  "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_493",
-                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
-                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
-                  "ResponseContainer" : {
-                    "Responses[0]" : 2,
-                    "Responses[1]" : 2,
-                    "Responses[2]" : 2,
-                    "Responses[3]" : 2,
-                    "Responses[4]" : 2
-                  },
-                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
-                  "bAbsoluteScale" : false,
-                  "bAutoActivate" : true,
-                  "bCastShadow" : false,
-                  "bCastShadowAsTwoSided" : false,
-                  "bEditorOnly" : true,
-                  "bEnableCCD" : false,
-                  "bGenerateOverlapEvents" : false,
-                  "bHiddenInComponentTree" : true,
-                  "bIsActive" : true,
-                  "bIsVisible" : true,
-                  "bKinematic" : false,
-                  "bSimulatePhysics" : false,
-                  "bTickEnable" : true
-                },
-                "bHiddenInComponentTree" : true
-              }, {
-                "Children" : [],
-                "ClassName" : "UStaticMeshComponent",
                 "ObjectId" : 221,
                 "Properties" : {
                   "AttachSocketName" : "Name_None",
@@ -8372,7 +8379,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_491",
+                  "PersistentGuid" : "Component_703",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -8411,7 +8418,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_729",
+                  "PersistentGuid" : "Component_700",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -8450,7 +8457,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_487",
+                  "PersistentGuid" : "Component_697",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -8489,7 +8496,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1789",
+                  "PersistentGuid" : "Component_1112",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -8528,7 +8535,7 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
-                  "PersistentGuid" : "Component_1466",
+                  "PersistentGuid" : "Component_509",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
                   "ResponseContainer" : {
@@ -8567,6 +8574,318 @@
                   "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
                   "ObjectType" : 0,
                   "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_497",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 227,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_495",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 228,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_493",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 229,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_491",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 230,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_729",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 231,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_487",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 232,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_1789",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 233,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
+                  "PersistentGuid" : "Component_1466",
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
+                  "ResponseContainer" : {
+                    "Responses[0]" : 2,
+                    "Responses[1]" : 2,
+                    "Responses[2]" : 2,
+                    "Responses[3]" : 2,
+                    "Responses[4]" : 2
+                  },
+                  "StaticMeshPath" : "Content/Data/EditorCamera/CameraMesh_StaticMesh.uasset",
+                  "bAbsoluteScale" : false,
+                  "bAutoActivate" : true,
+                  "bCastShadow" : false,
+                  "bCastShadowAsTwoSided" : false,
+                  "bEditorOnly" : true,
+                  "bEnableCCD" : false,
+                  "bGenerateOverlapEvents" : false,
+                  "bHiddenInComponentTree" : true,
+                  "bIsActive" : true,
+                  "bIsVisible" : true,
+                  "bKinematic" : false,
+                  "bSimulatePhysics" : false,
+                  "bTickEnable" : true
+                },
+                "bHiddenInComponentTree" : true
+              }, {
+                "Children" : [],
+                "ClassName" : "UStaticMeshComponent",
+                "ObjectId" : 234,
+                "Properties" : {
+                  "AttachSocketName" : "Name_None",
+                  "CachedEditRotator" : [-0.000000, 0.000000, 89.999992],
+                  "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                  "CollisionEnabled" : 0,
+                  "Mass" : 1.000000,
+                  "MaterialSlots" : ["Content/Material/Editor/EditorCamera_Blue.uasset"],
+                  "ObjectType" : 0,
+                  "PendingTagsString" : "",
                   "PersistentGuid" : "Component_1152",
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [0.010000, 0.010000, 0.010000],
@@ -8595,7 +8914,7 @@
                 "bHiddenInComponentTree" : true
               }],
             "ClassName" : "UCameraComponent",
-            "ObjectId" : 214,
+            "ObjectId" : 220,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -8621,7 +8940,7 @@
             }
           }],
         "ClassName" : "UBillboardComponent",
-        "ObjectId" : 213,
+        "ObjectId" : 219,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -8662,12 +8981,12 @@
       "Name" : "PauseMenu_Rifle",
       "NonSceneComponents" : [{
           "ClassName" : "UActorSequenceComponent",
-          "ObjectId" : 229,
+          "ObjectId" : 237,
           "Properties" : {
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_PauseMenu_RifleSequence",
             "PlayRate" : 1.000000,
-            "SequenceDataJson" : "{\n  \"Bindings\" : [{\n      \"BindingId\" : \"Binding_2\",\n      \"TargetComponentGuid\" : \"Component_PauseMenu_RifleMesh\",\n      \"TargetObjectName\" : \"UStaticMeshComponent_97\",\n      \"TargetType\" : 1,\n      \"Tracks\" : [{\n          \"PropertyName\" : \"RelativeTransform.Location\",\n          \"Sections\" : [{\n              \"Channels\" : [{\n                  \"ChannelName\" : \"z\",\n                  \"Playback\" : {\n                    \"ApplyMode\" : 0,\n                    \"CurveAssetPath\" : \"\",\n                    \"TimeMappingMode\" : 0\n                  }\n                }],\n              \"Duration\" : 60.000000,\n              \"Loop\" : true,\n              \"PlayRate\" : 1.000000,\n              \"SectionId\" : \"Section_PauseMenu_Rifle_Bob_Z\",\n              \"StartTime\" : 0.000000\n            }],\n          \"TrackType\" : 1\n        }, {\n          \"PropertyName\" : \"CachedEditRotator\",\n          \"Sections\" : [{\n              \"Channels\" : [{\n                  \"ChannelName\" : \"roll\",\n                  \"Playback\" : {\n                    \"ApplyMode\" : 0,\n                    \"CurveAssetPath\" : \"\",\n                    \"TimeMappingMode\" : 0\n                  }\n                }],\n              \"Duration\" : 60.000000,\n              \"Loop\" : true,\n              \"PlayRate\" : 1.000000,\n              \"SectionId\" : \"Section_PauseMenu_Rifle_Rotate_Z\",\n              \"StartTime\" : 0.000000\n            }],\n          \"TrackType\" : 2\n        }]\n    }],\n  \"Duration\" : 60.000000,\n  \"StartTime\" : 0.000000\n}",
+            "SequenceDataJson" : "{\n  \"Bindings\" : [{\n      \"BindingId\" : \"Binding_2\",\n      \"TargetComponentGuid\" : \"Component_PauseMenu_RifleMesh\",\n      \"TargetObjectName\" : \"UStaticMeshComponent_103\",\n      \"TargetType\" : 1,\n      \"Tracks\" : [{\n          \"PropertyName\" : \"RelativeTransform.Location\",\n          \"Sections\" : [{\n              \"Channels\" : [{\n                  \"ChannelName\" : \"z\",\n                  \"Playback\" : {\n                    \"ApplyMode\" : 0,\n                    \"CurveAssetPath\" : \"\",\n                    \"TimeMappingMode\" : 0\n                  }\n                }],\n              \"Duration\" : 60.000000,\n              \"Loop\" : true,\n              \"PlayRate\" : 1.000000,\n              \"SectionId\" : \"Section_PauseMenu_Rifle_Bob_Z\",\n              \"StartTime\" : 0.000000\n            }],\n          \"TrackType\" : 1\n        }, {\n          \"PropertyName\" : \"CachedEditRotator\",\n          \"Sections\" : [{\n              \"Channels\" : [{\n                  \"ChannelName\" : \"roll\",\n                  \"Playback\" : {\n                    \"ApplyMode\" : 0,\n                    \"CurveAssetPath\" : \"\",\n                    \"TimeMappingMode\" : 0\n                  }\n                }],\n              \"Duration\" : 60.000000,\n              \"Loop\" : true,\n              \"PlayRate\" : 1.000000,\n              \"SectionId\" : \"Section_PauseMenu_Rifle_Rotate_Z\",\n              \"StartTime\" : 0.000000\n            }],\n          \"TrackType\" : 2\n        }]\n    }],\n  \"Duration\" : 60.000000,\n  \"StartTime\" : 0.000000\n}",
             "StartOffsetSeconds" : 0.000000,
             "bAutoActivate" : true,
             "bAutoPlay" : false,
@@ -8679,7 +8998,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 227,
+      "ObjectId" : 235,
       "Properties" : {
         "PendingActorLocation" : [10020.255859, 9994.245117, 10004.150391],
         "PendingActorRotation" : [46.063606, 96.959854, -10.020790],
@@ -8691,7 +9010,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 228,
+        "ObjectId" : 236,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [46.063606, 96.959854, -10.020790],
@@ -8732,7 +9051,7 @@
       "Name" : "ACombatCharacter_1_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 234,
+          "ObjectId" : 242,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -8754,7 +9073,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 235,
+          "ObjectId" : 243,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -8804,7 +9123,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 236,
+          "ObjectId" : 244,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -8817,9 +9136,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 230,
+      "ObjectId" : 238,
       "Properties" : {
-        "PendingActorLocation" : [-51.566444, 66.971344, -0.000002],
+        "PendingActorLocation" : [118.679817, 8.883949, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -8835,10 +9154,10 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 233,
+                "ObjectId" : 241,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
-                  "CachedEditRotator" : [13.800002, 169.999954, -6.000000],
+                  "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
                   "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
                   "CollisionEnabled" : 0,
                   "Mass" : 1.000000,
@@ -8872,7 +9191,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 232,
+            "ObjectId" : 240,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -8947,7 +9266,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 231,
+        "ObjectId" : 239,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -8959,7 +9278,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-51.566444, 66.971344, -0.000002],
+          "RelativeTransform.Location" : [118.679817, 8.883949, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -8990,7 +9309,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 241,
+          "ObjectId" : 249,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -9012,7 +9331,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 242,
+          "ObjectId" : 250,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -9062,7 +9381,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 243,
+          "ObjectId" : 251,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -9075,9 +9394,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 237,
+      "ObjectId" : 245,
       "Properties" : {
-        "PendingActorLocation" : [-51.566444, 57.437168, -0.000002],
+        "PendingActorLocation" : [118.679817, -0.650227, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -9093,7 +9412,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 240,
+                "ObjectId" : 248,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -9130,7 +9449,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 239,
+            "ObjectId" : 247,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -9205,7 +9524,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 238,
+        "ObjectId" : 246,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -9217,7 +9536,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-51.566444, 57.437168, -0.000002],
+          "RelativeTransform.Location" : [118.679817, -0.650227, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -9248,7 +9567,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 248,
+          "ObjectId" : 256,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -9270,7 +9589,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 249,
+          "ObjectId" : 257,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -9320,7 +9639,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 250,
+          "ObjectId" : 258,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -9333,9 +9652,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 244,
+      "ObjectId" : 252,
       "Properties" : {
-        "PendingActorLocation" : [-48.077415, 57.437168, -0.000002],
+        "PendingActorLocation" : [122.168846, -0.650227, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -9351,7 +9670,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 247,
+                "ObjectId" : 255,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -9388,7 +9707,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 246,
+            "ObjectId" : 254,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -9463,7 +9782,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 245,
+        "ObjectId" : 253,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -9475,7 +9794,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-48.077415, 57.437168, -0.000002],
+          "RelativeTransform.Location" : [122.168846, -0.650227, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -9506,7 +9825,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_2",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 255,
+          "ObjectId" : 263,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -9528,7 +9847,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 256,
+          "ObjectId" : 264,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -9578,7 +9897,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 257,
+          "ObjectId" : 265,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -9591,9 +9910,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 251,
+      "ObjectId" : 259,
       "Properties" : {
-        "PendingActorLocation" : [-48.077415, 66.971344, -0.000002],
+        "PendingActorLocation" : [122.168846, 8.883949, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -9609,7 +9928,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 254,
+                "ObjectId" : 262,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -9646,7 +9965,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 253,
+            "ObjectId" : 261,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -9721,7 +10040,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 252,
+        "ObjectId" : 260,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -9733,7 +10052,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-48.077415, 66.971344, -0.000002],
+          "RelativeTransform.Location" : [122.168846, 8.883949, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -9764,7 +10083,7 @@
       "Name" : "ACombatCharacter_1_Copy_2",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 262,
+          "ObjectId" : 270,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -9786,7 +10105,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 263,
+          "ObjectId" : 271,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -9836,7 +10155,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 264,
+          "ObjectId" : 272,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -9849,9 +10168,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 258,
+      "ObjectId" : 266,
       "Properties" : {
-        "PendingActorLocation" : [-48.077415, 74.023590, -0.000002],
+        "PendingActorLocation" : [122.168846, 15.936193, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -9867,10 +10186,10 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 261,
+                "ObjectId" : 269,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
-                  "CachedEditRotator" : [13.800002, 169.999954, -6.000000],
+                  "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
                   "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
                   "CollisionEnabled" : 0,
                   "Mass" : 1.000000,
@@ -9904,7 +10223,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 260,
+            "ObjectId" : 268,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -9979,7 +10298,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 259,
+        "ObjectId" : 267,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -9991,7 +10310,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-48.077415, 74.023590, -0.000002],
+          "RelativeTransform.Location" : [122.168846, 15.936193, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -10022,7 +10341,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 269,
+          "ObjectId" : 277,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -10044,7 +10363,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 270,
+          "ObjectId" : 278,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -10094,7 +10413,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 271,
+          "ObjectId" : 279,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -10107,9 +10426,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 265,
+      "ObjectId" : 273,
       "Properties" : {
-        "PendingActorLocation" : [-42.171242, 57.437168, -0.000002],
+        "PendingActorLocation" : [86.012337, -0.650227, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -10125,7 +10444,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 268,
+                "ObjectId" : 276,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -10162,7 +10481,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 267,
+            "ObjectId" : 275,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -10237,7 +10556,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 266,
+        "ObjectId" : 274,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -10249,7 +10568,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-42.171242, 57.437168, -0.000002],
+          "RelativeTransform.Location" : [86.012337, -0.650227, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -10280,7 +10599,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_2_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 276,
+          "ObjectId" : 284,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -10302,7 +10621,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 277,
+          "ObjectId" : 285,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -10352,7 +10671,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 278,
+          "ObjectId" : 286,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -10365,9 +10684,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 272,
+      "ObjectId" : 280,
       "Properties" : {
-        "PendingActorLocation" : [-42.171242, 66.971344, -0.000002],
+        "PendingActorLocation" : [86.012337, 8.883949, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -10383,7 +10702,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 275,
+                "ObjectId" : 283,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -10420,7 +10739,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 274,
+            "ObjectId" : 282,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -10495,7 +10814,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 273,
+        "ObjectId" : 281,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -10507,7 +10826,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-42.171242, 66.971344, -0.000002],
+          "RelativeTransform.Location" : [86.012337, 8.883949, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -10538,7 +10857,7 @@
       "Name" : "ACombatCharacter_1_Copy_2_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 283,
+          "ObjectId" : 291,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -10560,7 +10879,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 284,
+          "ObjectId" : 292,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -10610,7 +10929,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 285,
+          "ObjectId" : 293,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -10623,9 +10942,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 279,
+      "ObjectId" : 287,
       "Properties" : {
-        "PendingActorLocation" : [-42.171242, 74.023590, -0.000002],
+        "PendingActorLocation" : [86.012337, 15.936193, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -10641,7 +10960,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 282,
+                "ObjectId" : 290,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -10678,7 +10997,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 281,
+            "ObjectId" : 289,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -10753,7 +11072,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 280,
+        "ObjectId" : 288,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -10765,7 +11084,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-42.171242, 74.023590, -0.000002],
+          "RelativeTransform.Location" : [86.012337, 15.936193, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -10796,7 +11115,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 290,
+          "ObjectId" : 298,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -10818,7 +11137,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 291,
+          "ObjectId" : 299,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -10868,7 +11187,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 292,
+          "ObjectId" : 300,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -10881,9 +11200,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 286,
+      "ObjectId" : 294,
       "Properties" : {
-        "PendingActorLocation" : [-34.273769, 57.437168, -0.000002],
+        "PendingActorLocation" : [93.909805, -0.650227, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -10899,7 +11218,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 289,
+                "ObjectId" : 297,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800001, 169.999908, -6.000000],
@@ -10936,7 +11255,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 288,
+            "ObjectId" : 296,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -11011,7 +11330,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 287,
+        "ObjectId" : 295,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -11023,7 +11342,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-34.273769, 57.437168, -0.000002],
+          "RelativeTransform.Location" : [93.909805, -0.650227, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -11054,7 +11373,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_2_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 297,
+          "ObjectId" : 305,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -11076,7 +11395,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 298,
+          "ObjectId" : 306,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -11126,7 +11445,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 299,
+          "ObjectId" : 307,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -11139,9 +11458,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 293,
+      "ObjectId" : 301,
       "Properties" : {
-        "PendingActorLocation" : [-34.273769, 66.971344, -0.000002],
+        "PendingActorLocation" : [93.909805, 8.883949, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -11157,7 +11476,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 296,
+                "ObjectId" : 304,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -11194,7 +11513,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 295,
+            "ObjectId" : 303,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -11269,7 +11588,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 294,
+        "ObjectId" : 302,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -11281,7 +11600,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-34.273769, 66.971344, -0.000002],
+          "RelativeTransform.Location" : [93.909805, 8.883949, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -11312,7 +11631,7 @@
       "Name" : "ACombatCharacter_1_Copy_2_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 304,
+          "ObjectId" : 312,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -11334,7 +11653,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 305,
+          "ObjectId" : 313,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -11384,7 +11703,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 306,
+          "ObjectId" : 314,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -11397,9 +11716,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 300,
+      "ObjectId" : 308,
       "Properties" : {
-        "PendingActorLocation" : [-34.273769, 74.023590, -0.000002],
+        "PendingActorLocation" : [93.909805, 15.936193, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -11415,7 +11734,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 303,
+                "ObjectId" : 311,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -11452,7 +11771,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 302,
+            "ObjectId" : 310,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -11527,7 +11846,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 301,
+        "ObjectId" : 309,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -11539,7 +11858,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-34.273769, 74.023590, -0.000002],
+          "RelativeTransform.Location" : [93.909805, 15.936193, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -11570,7 +11889,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 311,
+          "ObjectId" : 319,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -11592,7 +11911,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 312,
+          "ObjectId" : 320,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -11642,7 +11961,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 313,
+          "ObjectId" : 321,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -11655,9 +11974,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 307,
+      "ObjectId" : 315,
       "Properties" : {
-        "PendingActorLocation" : [-22.304314, 32.739304, -0.000002],
+        "PendingActorLocation" : [133.223221, -61.955544, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -11673,7 +11992,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 310,
+                "ObjectId" : 318,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800001, 169.999908, -6.000000],
@@ -11710,7 +12029,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 309,
+            "ObjectId" : 317,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -11785,7 +12104,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 308,
+        "ObjectId" : 316,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -11797,7 +12116,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-22.304314, 32.739304, -0.000002],
+          "RelativeTransform.Location" : [133.223221, -61.955544, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -11828,7 +12147,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_2_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 318,
+          "ObjectId" : 326,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -11850,7 +12169,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 319,
+          "ObjectId" : 327,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -11900,7 +12219,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 320,
+          "ObjectId" : 328,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -11913,9 +12232,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 314,
+      "ObjectId" : 322,
       "Properties" : {
-        "PendingActorLocation" : [-22.304314, 42.273479, -0.000002],
+        "PendingActorLocation" : [133.223221, -52.421368, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -11931,7 +12250,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 317,
+                "ObjectId" : 325,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800001, 169.999908, -6.000000],
@@ -11968,7 +12287,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 316,
+            "ObjectId" : 324,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -12043,7 +12362,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 315,
+        "ObjectId" : 323,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -12055,7 +12374,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-22.304314, 42.273479, -0.000002],
+          "RelativeTransform.Location" : [133.223221, -52.421368, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -12086,7 +12405,7 @@
       "Name" : "ACombatCharacter_1_Copy_2_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 325,
+          "ObjectId" : 333,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -12108,7 +12427,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 326,
+          "ObjectId" : 334,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -12158,7 +12477,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 327,
+          "ObjectId" : 335,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -12171,9 +12490,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 321,
+      "ObjectId" : 329,
       "Properties" : {
-        "PendingActorLocation" : [-22.304314, 49.325726, -0.000002],
+        "PendingActorLocation" : [133.223221, -45.369118, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -12189,7 +12508,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 324,
+                "ObjectId" : 332,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800004, 169.999924, -6.000000],
@@ -12226,7 +12545,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 323,
+            "ObjectId" : 331,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -12301,7 +12620,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 322,
+        "ObjectId" : 330,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -12313,7 +12632,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [-22.304314, 49.325726, -0.000002],
+          "RelativeTransform.Location" : [133.223221, -45.369118, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -12344,7 +12663,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_Copy_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 332,
+          "ObjectId" : 340,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -12366,7 +12685,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 333,
+          "ObjectId" : 341,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -12416,7 +12735,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 334,
+          "ObjectId" : 342,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -12429,9 +12748,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 328,
+      "ObjectId" : 336,
       "Properties" : {
-        "PendingActorLocation" : [12.198082, 32.739304, -0.000002],
+        "PendingActorLocation" : [91.091866, 32.739304, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -12447,7 +12766,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 331,
+                "ObjectId" : 339,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.799987, 169.999908, -6.000000],
@@ -12484,7 +12803,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 330,
+            "ObjectId" : 338,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -12559,7 +12878,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 329,
+        "ObjectId" : 337,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -12571,7 +12890,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [12.198082, 32.739304, -0.000002],
+          "RelativeTransform.Location" : [91.091866, 32.739304, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -12602,7 +12921,7 @@
       "Name" : "ACombatCharacter_1_Copy_Copy_2_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 339,
+          "ObjectId" : 347,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -12624,7 +12943,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 340,
+          "ObjectId" : 348,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -12674,7 +12993,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 341,
+          "ObjectId" : 349,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -12687,9 +13006,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 335,
+      "ObjectId" : 343,
       "Properties" : {
-        "PendingActorLocation" : [12.198082, 42.273479, -0.000002],
+        "PendingActorLocation" : [91.091866, 42.273479, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -12705,7 +13024,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 338,
+                "ObjectId" : 346,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800001, 169.999908, -6.000000],
@@ -12742,7 +13061,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 337,
+            "ObjectId" : 345,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -12817,7 +13136,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 336,
+        "ObjectId" : 344,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -12829,7 +13148,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [12.198082, 42.273479, -0.000002],
+          "RelativeTransform.Location" : [91.091866, 42.273479, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -12860,7 +13179,7 @@
       "Name" : "ACombatCharacter_1_Copy_2_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 346,
+          "ObjectId" : 354,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -12882,7 +13201,7 @@
           }
         }, {
           "ClassName" : "UCombatCoverAgentComponent",
-          "ObjectId" : 347,
+          "ObjectId" : 355,
           "Properties" : {
             "AcceptanceRadius" : 1.000000,
             "AdvanceFullCoverChance" : 0.850000,
@@ -12932,7 +13251,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 348,
+          "ObjectId" : 356,
           "Properties" : {
             "InitialGameState" : 4,
             "PendingTagsString" : "",
@@ -12945,9 +13264,9 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 342,
+      "ObjectId" : 350,
       "Properties" : {
-        "PendingActorLocation" : [12.198082, 49.325726, -0.000002],
+        "PendingActorLocation" : [91.091866, 49.325726, -0.000002],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
         "PendingActorScale" : [1.000000, 1.000000, 1.000000],
         "PendingActorVisible" : true,
@@ -12963,7 +13282,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UStaticMeshComponent",
-                "ObjectId" : 345,
+                "ObjectId" : 353,
                 "Properties" : {
                   "AttachSocketName" : "GunSocket",
                   "CachedEditRotator" : [13.800001, 169.999908, -6.000000],
@@ -13000,7 +13319,7 @@
                 }
               }],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 344,
+            "ObjectId" : 352,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimGraphInstance",
@@ -13075,7 +13394,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 343,
+        "ObjectId" : 351,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -13087,7 +13406,7 @@
           "ObjectType" : 0,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_9042",
-          "RelativeTransform.Location" : [12.198082, 49.325726, -0.000002],
+          "RelativeTransform.Location" : [91.091866, 49.325726, -0.000002],
           "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
@@ -13122,15 +13441,22 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-84.122086, 37.680847, 15.377136],
+    "Location" : [32.747517, 25.634359, 45.180115],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 28.399656, 737.255920]
+    "Rotation" : [0.000000, 34.699833, 704.558472]
   },
   "Version" : 2,
   "WorldSettings" : {
     "BallisticWindAcceleration" : [0.000000, 3.000000, 0.000000],
+    "BallisticWindBlendSpeed" : 1.500000,
+    "BallisticWindChangeIntervalMax" : 7.000000,
+    "BallisticWindChangeIntervalMin" : 3.000000,
+    "BallisticWindDirectionOffsetDegrees" : 20.000000,
     "BallisticWindEnabled" : true,
+    "BallisticWindMagnitudeScaleMax" : 1.400000,
+    "BallisticWindMagnitudeScaleMin" : 0.600000,
     "DefaultPawnPrefabPath" : "",
+    "DynamicBallisticWindEnabled" : true,
     "GameMode" : "",
     "Gravity" : [0.000000, 0.000000, -9.810000]
   },

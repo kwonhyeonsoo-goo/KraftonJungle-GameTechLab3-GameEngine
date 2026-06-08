@@ -90,6 +90,13 @@ namespace SceneKeys
 	static constexpr const char* Gravity = "Gravity";
 	static constexpr const char* BallisticWindEnabled = "BallisticWindEnabled";
 	static constexpr const char* BallisticWindAcceleration = "BallisticWindAcceleration";
+	static constexpr const char* DynamicBallisticWindEnabled = "DynamicBallisticWindEnabled";
+	static constexpr const char* BallisticWindChangeIntervalMin = "BallisticWindChangeIntervalMin";
+	static constexpr const char* BallisticWindChangeIntervalMax = "BallisticWindChangeIntervalMax";
+	static constexpr const char* BallisticWindDirectionOffsetDegrees = "BallisticWindDirectionOffsetDegrees";
+	static constexpr const char* BallisticWindMagnitudeScaleMin = "BallisticWindMagnitudeScaleMin";
+	static constexpr const char* BallisticWindMagnitudeScaleMax = "BallisticWindMagnitudeScaleMax";
+	static constexpr const char* BallisticWindBlendSpeed = "BallisticWindBlendSpeed";
 	static constexpr const char* Actors = "Actors";
 	static constexpr const char* RootComponent = "RootComponent";
 	static constexpr const char* NonSceneComponents = "NonSceneComponents";
@@ -387,6 +394,13 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 		WriteVec3(WSObj, SceneKeys::Gravity, WS.Gravity);
 		WSObj[SceneKeys::BallisticWindEnabled] = WS.bEnableBallisticWind;
 		WriteVec3(WSObj, SceneKeys::BallisticWindAcceleration, WS.BallisticWindAcceleration);
+		WSObj[SceneKeys::DynamicBallisticWindEnabled] = WS.bEnableDynamicBallisticWind;
+		WSObj[SceneKeys::BallisticWindChangeIntervalMin] = WS.BallisticWindChangeIntervalMin;
+		WSObj[SceneKeys::BallisticWindChangeIntervalMax] = WS.BallisticWindChangeIntervalMax;
+		WSObj[SceneKeys::BallisticWindDirectionOffsetDegrees] = WS.BallisticWindDirectionOffsetDegrees;
+		WSObj[SceneKeys::BallisticWindMagnitudeScaleMin] = WS.BallisticWindMagnitudeScaleMin;
+		WSObj[SceneKeys::BallisticWindMagnitudeScaleMax] = WS.BallisticWindMagnitudeScaleMax;
+		WSObj[SceneKeys::BallisticWindBlendSpeed] = WS.BallisticWindBlendSpeed;
 		w[SceneKeys::WorldSettings] = WSObj;
 	}
 
@@ -731,6 +745,34 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 			WSObj[SceneKeys::BallisticWindAcceleration].JSONType() == JSON::Class::Array)
 		{
 			WorldSettings.BallisticWindAcceleration = ReadVec3(WSObj[SceneKeys::BallisticWindAcceleration]);
+		}
+		if (WSObj.hasKey(SceneKeys::DynamicBallisticWindEnabled))
+		{
+			WorldSettings.bEnableDynamicBallisticWind = WSObj[SceneKeys::DynamicBallisticWindEnabled].ToBool();
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindChangeIntervalMin))
+		{
+			WorldSettings.BallisticWindChangeIntervalMin = static_cast<float>(WSObj[SceneKeys::BallisticWindChangeIntervalMin].ToFloat());
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindChangeIntervalMax))
+		{
+			WorldSettings.BallisticWindChangeIntervalMax = static_cast<float>(WSObj[SceneKeys::BallisticWindChangeIntervalMax].ToFloat());
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindDirectionOffsetDegrees))
+		{
+			WorldSettings.BallisticWindDirectionOffsetDegrees = static_cast<float>(WSObj[SceneKeys::BallisticWindDirectionOffsetDegrees].ToFloat());
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindMagnitudeScaleMin))
+		{
+			WorldSettings.BallisticWindMagnitudeScaleMin = static_cast<float>(WSObj[SceneKeys::BallisticWindMagnitudeScaleMin].ToFloat());
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindMagnitudeScaleMax))
+		{
+			WorldSettings.BallisticWindMagnitudeScaleMax = static_cast<float>(WSObj[SceneKeys::BallisticWindMagnitudeScaleMax].ToFloat());
+		}
+		if (WSObj.hasKey(SceneKeys::BallisticWindBlendSpeed))
+		{
+			WorldSettings.BallisticWindBlendSpeed = static_cast<float>(WSObj[SceneKeys::BallisticWindBlendSpeed].ToFloat());
 		}
 	}
 	else if (root.hasKey(SceneKeys::GameMode))
