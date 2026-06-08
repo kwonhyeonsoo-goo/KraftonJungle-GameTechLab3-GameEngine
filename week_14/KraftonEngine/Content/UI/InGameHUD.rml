@@ -25,6 +25,10 @@
         <img id="compassImage" data-ui-type="Image" data-ui-name="Compass Image" src="Image/Hor-Compass/Window/Compass_Window_000.png" data-ui-fit="contain" />
         <img id="CompassArrow" data-ui-type="Image" data-ui-name="CompassArrow" src="Image/Hor-Compass/Arrow.png" data-ui-fit="fill" />
         <img id="crosshairImage" data-ui-type="Image" data-ui-name="Crosshair Image" src="Image/CrossHair/crosshair022.png" data-ui-fit="fill" />
+        <div id="airSupportTimerPanel" data-ui-type="Panel" data-ui-name="Air Support Timer Panel">
+            <div id="airSupportTimerLabel" data-ui-type="Text" data-ui-name="Air Support Timer Label">&#54637;&#44277; &#51648;&#50896; &#46020;&#52265; &#50696;&#51221;</div>
+            <div id="airSupportTimerValue" data-ui-type="Text" data-ui-name="Air Support Timer Value">05:00</div>
+        </div>
         <div id="breathPanel" data-ui-type="Panel" data-ui-name="Hold Breath Panel">
             <div id="breathLabel" data-ui-type="Text" data-ui-name="Hold Breath Label">&amp;#49704;&amp;#52280;&amp;#44592;</div>
             <div id="breathBarTrack" data-ui-type="Panel" data-ui-name="Hold Breath Track">

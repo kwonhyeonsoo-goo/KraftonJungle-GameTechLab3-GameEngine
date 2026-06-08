@@ -4,7 +4,9 @@
 </head>
 <body>
     <div id="mainRoot" data-ui-type="Canvas" data-ui-name="Main HUD">
-        <div id="logoSlot" data-ui-type="Panel" data-ui-name="Logo Slot"></div>
+        <div id="logoSlot" data-ui-type="Panel" data-ui-name="Logo Slot">
+            <img id="mainLogo" data-ui-type="Image" data-ui-name="Main Logo" src="Image/MainLogo.png" data-ui-fit="contain" />
+        </div>
 
         <div id="mainMenu" data-ui-type="Panel" data-ui-name="Main Menu">
             <button id="btnGameStart" class="menu-button primary" data-ui-type="Button" data-ui-name="Game Start" data-action="GameStart" data-hover-action="MainButtonHover"><span id="btnGameStartLabel" class="menu-button-label">Game Start</span></button>

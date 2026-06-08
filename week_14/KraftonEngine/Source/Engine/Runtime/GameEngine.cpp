@@ -3,6 +3,7 @@
 #include "Engine/Runtime/GameRenderPipeline.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 #include "Engine/Platform/WindowsWindow.h"
+#include "Component/Input/ActionComponent.h"
 #include "Lua/LuaScriptManager.h"
 #include "Profiling/Time/Timer.h"
 #include <windows.h>  // VK_ESCAPE
@@ -173,6 +174,7 @@ void UGameEngine::ProcessPendingTransition()
 
 	// 기존 active world 파괴 — EndPlay → 액터/컴포넌트 destruct → PhysicsScene unique_ptr 해제.
 	const FName OldHandle = GetActiveWorldHandle();
+	UActionComponent::ResetGlobalTimeDilationState();
 	DestroyWorldContext(OldHandle);
 
 	// require 캐시된 lua 모듈 (CoroutineManager / ObjRegistry) 이 보유한 죽은-월드 참조 정리.
@@ -191,6 +193,7 @@ void UGameEngine::ProcessPendingTransition()
 	{
 		if (Ctx->World && (Ctx->WorldType == EWorldType::Game || Ctx->WorldType == EWorldType::PIE))
 		{
+			Ctx->World->SetPaused(false);
 			Ctx->World->BeginPlay();
 		}
 	}

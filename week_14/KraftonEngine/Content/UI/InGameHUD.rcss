@@ -240,6 +240,68 @@ body {
     text-align: center;
 }
 
+#airSupportTimerPanel {
+    position: absolute;
+    right: 10.000000px;
+    top: 402.000000px;
+    width: 320.000000px;
+    height: 86.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+}
+
+#airSupportTimerLabel {
+    position: absolute;
+    right: 0.000000px;
+    top: 0.000000px;
+    width: 320.000000px;
+    height: 28.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 230);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 22.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+}
+
+#airSupportTimerValue {
+    position: absolute;
+    right: 0.000000px;
+    top: 27.000000px;
+    width: 320.000000px;
+    height: 58.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 48.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+}
+
 #breathPanel {
     position: absolute;
     left: 1439.000000px;

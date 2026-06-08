@@ -84,15 +84,30 @@ body {
 
 #logoSlot {
     position: absolute;
-    right: 92.000000px;
-    top: 72.000000px;
-    width: 360.000000px;
-    height: 120.000000px;
+    left: 80.000000px;
+    top: 172.000000px;
+    width: 500.000000px;
+    height: 285.000000px;
     box-sizing: border-box;
     opacity: 1;
     background-color: rgba(0, 0, 0, 0);
     border-color: rgba(255, 255, 255, 0);
     border-width: 0px;
+    overflow: hidden;
+}
+
+#mainLogo {
+    position: absolute;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 500.000000px;
+    height: 285.000000px;
+    box-sizing: border-box;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px;
+    padding: 0px;
 }
 
 #versionLabel {

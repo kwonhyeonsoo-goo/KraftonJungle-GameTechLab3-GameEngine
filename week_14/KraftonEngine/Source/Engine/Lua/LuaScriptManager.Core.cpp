@@ -53,6 +53,67 @@
 #include <sstream>
 #include <windows.h>
 
+namespace
+{
+    FString NormalizeLuaModuleName(FString ModuleName)
+    {
+        for (char& Ch : ModuleName)
+        {
+            if (Ch == '\\')
+            {
+                Ch = '/';
+            }
+        }
+        return ModuleName;
+    }
+
+    bool IsRuntimeSessionLuaModule(const FString& ModuleName)
+    {
+        if (ModuleName.empty())
+        {
+            return false;
+        }
+
+        const FString Normalized = NormalizeLuaModuleName(ModuleName);
+        if (Normalized == "CoroutineManager" || Normalized == "ObjRegistry")
+        {
+            return true;
+        }
+
+        if (Normalized.rfind("Management/", 0) == 0)
+        {
+            return true;
+        }
+
+        FString Dotted = Normalized;
+        for (char& Ch : Dotted)
+        {
+            if (Ch == '/')
+            {
+                Ch = '.';
+            }
+        }
+        return Dotted.rfind("Management.", 0) == 0;
+    }
+
+    void InvokeModuleWorldResetHook(const FString& ModuleName, const sol::table& ModuleTable)
+    {
+        sol::object HookObject = ModuleTable["OnWorldReset"];
+        if (!HookObject.valid() || HookObject.get_type() != sol::type::function)
+        {
+            return;
+        }
+
+        sol::protected_function Hook = HookObject.as<sol::protected_function>();
+        sol::protected_function_result Result = Hook();
+        if (!Result.valid())
+        {
+            sol::error Err = Result;
+            UE_LOG("[Lua] OnWorldReset failed for %s: %s", ModuleName.c_str(), Err.what());
+        }
+    }
+}
+
 FString FLuaScriptManager::ResolveScriptPath(const FString& ScriptFile)
 {
     std::wstring FullPath = FPaths::Combine(FPaths::ScriptDir(), FPaths::ToWide(ScriptFile));
@@ -183,6 +244,39 @@ void FLuaScriptManager::FireWorldReset()
         T["dirtyCar"]   = sol::nil;
         T["policeCars"] = Lua->create_table();
     }
+
+    TArray<FString> RuntimeModules;
+    for (const auto& Entry : Loaded)
+    {
+        const sol::object Key = Entry.first;
+        if (!Key.valid() || Key.get_type() != sol::type::string)
+        {
+            continue;
+        }
+
+        const FString ModuleName = Key.as<FString>();
+        if (!IsRuntimeSessionLuaModule(ModuleName))
+        {
+            continue;
+        }
+
+        const sol::object ModuleObject = Entry.second;
+        if (ModuleObject.valid() && ModuleObject.get_type() == sol::type::table)
+        {
+            InvokeModuleWorldResetHook(ModuleName, ModuleObject.as<sol::table>());
+        }
+        RuntimeModules.push_back(ModuleName);
+    }
+
+    for (const FString& ModuleName : RuntimeModules)
+    {
+        Loaded[ModuleName] = sol::nil;
+        UE_LOG("[Lua] Cleared runtime module for world reset: %s", ModuleName.c_str());
+    }
+
+    (*Lua)["GameGeneralManager"] = sol::nil;
+    OnEscapePressedCallback = sol::protected_function();
+    lua_gc(Lua->lua_state(), LUA_GCCOLLECT, 0);
 }
 
 void FLuaScriptManager::RegisterComponent(ULuaScriptComponent* Component)
