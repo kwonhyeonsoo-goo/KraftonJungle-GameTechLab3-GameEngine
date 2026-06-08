@@ -93,6 +93,7 @@ local CUTSCENE_LETTERBOX_THICKNESS = 130.0
 local CUTSCENE_LETTERBOX_SCREEN_HEIGHT = 1080.0
 local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
 local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
+local SCOPE_DISTANCE_TRACE_METERS = 2000.0
 
 local function log(message)
     if Debug and Debug.Log then
@@ -1509,6 +1510,43 @@ function UIManager:GetScopeTelemetrySnapshot()
             snapshot.zoom_multiplier = current_zoom
         else
             snapshot.zoom_multiplier = snapshot.zoom_min
+        end
+
+        if World ~= nil and pawn.GetCamera ~= nil then
+            local ok_camera, camera = pcall(function()
+                return pawn:GetCamera()
+            end)
+            if ok_camera and camera ~= nil then
+                local ok_trace, trace_result = pcall(function()
+                    local trace_start = nil
+                    if camera.GetLocation ~= nil then
+                        trace_start = camera:GetLocation()
+                    else
+                        trace_start = camera.Location
+                    end
+
+                    local trace_direction = camera.Forward
+                    if trace_start == nil or trace_direction == nil then
+                        return nil
+                    end
+
+                    local trace_end = trace_start + trace_direction * SCOPE_DISTANCE_TRACE_METERS
+                    if World.LineTraceGameplay ~= nil then
+                        return World.LineTraceGameplay(trace_start, trace_end, pawn)
+                    end
+                    if World.LineTrace ~= nil then
+                        return World.LineTrace(trace_start, trace_end, pawn)
+                    end
+                    return nil
+                end)
+
+                if ok_trace and type(trace_result) == "table" and trace_result.Hit == true then
+                    local hit_distance = tonumber(trace_result.Distance)
+                    if hit_distance ~= nil and hit_distance >= 0.0 then
+                        snapshot.distance_meters = hit_distance
+                    end
+                end
+            end
         end
     end
 

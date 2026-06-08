@@ -46,6 +46,7 @@
 #include "Component/SoundComponent.h"
 #include "Component/Vehicle/VehicleWheelPoseComponent.h"
 #include "Core/Logging/Log.h"
+#include "Core/Types/CollisionTypes.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Actor/ParticleSystemActor.h"
 #include "GameFramework/Actor/SniperKillCamDirector.h"
@@ -2765,6 +2766,51 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 Result["Normal"]    = Hit.WorldNormal;
                 Result["Distance"]  = Hit.Distance;
             }
+            return Result;
+        }
+    );
+    World.set_function(
+        "LineTraceGameplay",
+        [](const FVector& Start, const FVector& End, sol::optional<AActor*> IgnoreActor) -> sol::table
+        {
+            sol::table Result   = FLuaScriptManager::GetState().create_table();
+            Result["Hit"]       = false;
+            Result["Actor"]     = static_cast<AActor*>(nullptr);
+            Result["Component"] = static_cast<UPrimitiveComponent*>(nullptr);
+            Result["Location"]  = FVector(0, 0, 0);
+            Result["Normal"]    = FVector(0, 0, 0);
+            Result["Distance"]  = 0.0f;
+
+            UWorld* CurrentWorld = GEngine ? GEngine->GetWorld() : nullptr;
+            if (!CurrentWorld)
+            {
+                return Result;
+            }
+
+            FVector Delta = End - Start;
+            const float MaxDistance = Delta.Length();
+            if (MaxDistance <= 0.0001f)
+            {
+                return Result;
+            }
+
+            const FVector Direction = Delta / MaxDistance;
+            const uint32 ObjectMask =
+                ObjectTypeBit(ECollisionChannel::WorldStatic) |
+                ObjectTypeBit(ECollisionChannel::WorldDynamic) |
+                ObjectTypeBit(ECollisionChannel::Pawn);
+
+            FHitResult Hit;
+            if (CurrentWorld->PhysicsRaycastByObjectTypes(Start, Direction, MaxDistance, Hit, ObjectMask, IgnoreActor.value_or(nullptr)))
+            {
+                Result["Hit"]       = true;
+                Result["Actor"]     = Hit.HitActor;
+                Result["Component"] = Hit.HitComponent;
+                Result["Location"]  = Hit.WorldHitLocation;
+                Result["Normal"]    = Hit.WorldNormal;
+                Result["Distance"]  = Hit.Distance;
+            }
+
             return Result;
         }
     );
