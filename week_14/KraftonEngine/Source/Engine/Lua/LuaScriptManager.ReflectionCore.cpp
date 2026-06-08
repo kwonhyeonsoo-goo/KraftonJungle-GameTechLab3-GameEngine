@@ -5,6 +5,7 @@
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
 #include "Component/Camera/CameraComponent.h"
+#include "Component/Primitive/BillboardComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
 #include "Component/PrimitiveComponent.h"
@@ -2880,6 +2881,10 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             {
                 return SkinnedMeshComponent->GetMaterial(ElementIndex);
             }
+            if (UBillboardComponent* BillboardComponent = Cast<UBillboardComponent>(Component))
+            {
+                return BillboardComponent->GetMaterial();
+            }
             return nullptr;
         }
     );
@@ -2898,6 +2903,11 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                 SkinnedMeshComponent->SetMaterial(ElementIndex, InMaterial);
                 return true;
             }
+            if (UBillboardComponent* BillboardComponent = Cast<UBillboardComponent>(Component))
+            {
+                BillboardComponent->SetMaterial(InMaterial);
+                return true;
+            }
             return false;
         }
     );
@@ -2913,6 +2923,11 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             if (USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(Component))
             {
                 return SkinnedMeshComponent->SetMaterialByPath(ElementIndex, MaterialPath);
+            }
+            if (UBillboardComponent* BillboardComponent = Cast<UBillboardComponent>(Component))
+            {
+                BillboardComponent->SetMaterial(FMaterialManager::Get().GetOrCreateMaterial(MaterialPath));
+                return true;
             }
             return false;
         }

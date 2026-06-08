@@ -5,14 +5,19 @@
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Input/InputComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/Primitive/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
+#include "Core/Types/CollisionTypes.h"
 #include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/World.h"
 #include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
 #include "Profiling/Time/Timer.h"
 #include "Runtime/Engine.h"
+#include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cmath>
@@ -82,11 +87,17 @@ ASniperPawn::ASniperPawn()
 	bUseControllerRotationRoll = false;
 }
 
-void ASniperPawn::BeginPlay()
+void ASniperPawn::EnsureWeaponVisualComponents()
 {
 	CacheComponentReferences();
 	InitDefaultComponents();
 	CacheComponentReferences();
+	SyncWeaponVisualComponent();
+}
+
+void ASniperPawn::BeginPlay()
+{
+	EnsureWeaponVisualComponents();
 	SyncSniperRuntimeState();
 
 	APawn::BeginPlay();
@@ -109,7 +120,19 @@ void ASniperPawn::EndPlay()
 void ASniperPawn::PostDuplicate()
 {
 	APawn::PostDuplicate();
-	CacheComponentReferences();
+	EnsureWeaponVisualComponents();
+}
+
+void ASniperPawn::OnPostLoad(FArchive& Ar)
+{
+	APawn::OnPostLoad(Ar);
+	EnsureWeaponVisualComponents();
+}
+
+void ASniperPawn::PreGetEditableProperties()
+{
+	EnsureWeaponVisualComponents();
+	APawn::PreGetEditableProperties();
 }
 
 void ASniperPawn::SetupInputComponent()
@@ -277,6 +300,9 @@ void ASniperPawn::Tick(float DeltaTime)
 
 void ASniperPawn::InitDefaultComponents()
 {
+	bool bCreatedWeaponHandsMesh = false;
+	bool bCreatedWeaponVisual = false;
+
 	if (!GetRootComponent())
 	{
 		SniperRoot = AddComponent<USceneComponent>();
@@ -294,6 +320,44 @@ void ASniperPawn::InitDefaultComponents()
 		{
 			Camera->AttachToComponent(GetRootComponent());
 		}
+	}
+
+	if (!WeaponHandsMeshComponent && Camera)
+	{
+		WeaponHandsMeshComponent = AddComponent<USkeletalMeshComponent>();
+		if (WeaponHandsMeshComponent)
+		{
+			WeaponHandsMeshComponent->AttachToComponent(Camera.Get());
+			bCreatedWeaponHandsMesh = true;
+		}
+	}
+
+	if (!WeaponVisualComponent)
+	{
+		if (WeaponHandsMeshComponent)
+		{
+			WeaponVisualComponent = AddComponent<UStaticMeshComponent>();
+			if (WeaponVisualComponent)
+			{
+				WeaponVisualComponent->AttachToComponent(WeaponHandsMeshComponent.Get(), WeaponVisualSocketName);
+				bCreatedWeaponVisual = true;
+			}
+		}
+	}
+
+	if (bCreatedWeaponHandsMesh && WeaponHandsMeshComponent)
+	{
+		WeaponHandsMeshComponent->SetRelativeLocation(WeaponHandsRelativeLocation);
+		WeaponHandsMeshComponent->SetRelativeRotation(WeaponHandsRelativeRotation);
+		WeaponHandsMeshComponent->SetRelativeScale(WeaponHandsRelativeScale);
+	}
+
+	if (bCreatedWeaponVisual && WeaponVisualComponent)
+	{
+		WeaponVisualComponent->SetAbsoluteScale(true);
+		WeaponVisualComponent->SetRelativeLocation(WeaponVisualRelativeLocation);
+		WeaponVisualComponent->SetRelativeRotation(WeaponVisualRelativeRotation);
+		WeaponVisualComponent->SetRelativeScale(WeaponVisualRelativeScale);
 	}
 
 	if (!WeaponComponent)
@@ -316,6 +380,32 @@ void ASniperPawn::CacheComponentReferences()
 {
 	SniperRoot = GetRootComponent();
 	Camera = GetComponentByClass<UCameraComponent>();
+	WeaponHandsMeshComponent = nullptr;
+	WeaponVisualComponent = nullptr;
+	if (Camera)
+	{
+		for (USceneComponent* Child : Camera->GetChildren())
+		{
+			if (!WeaponHandsMeshComponent)
+			{
+				if (USkeletalMeshComponent* SkeletalMeshChild = Cast<USkeletalMeshComponent>(Child))
+				{
+					WeaponHandsMeshComponent = SkeletalMeshChild;
+				}
+			}
+		}
+	}
+	if (WeaponHandsMeshComponent)
+	{
+		for (USceneComponent* Child : WeaponHandsMeshComponent->GetChildren())
+		{
+			if (UStaticMeshComponent* StaticMeshChild = Cast<UStaticMeshComponent>(Child))
+			{
+				WeaponVisualComponent = StaticMeshChild;
+				break;
+			}
+		}
+	}
 	WeaponComponent = GetComponentByClass<USniperWeaponComponent>();
 	BulletManagerComponent = GetComponentByClass<UBallisticBulletManagerComponent>();
 	ActionComponent = GetComponentByClass<UActionComponent>();
@@ -412,6 +502,91 @@ void ASniperPawn::SyncSniperRuntimeState()
 	ApplySniperControlRotation();
 }
 
+void ASniperPawn::SyncWeaponVisualComponent()
+{
+	USkeletalMeshComponent* WeaponHandsMesh = WeaponHandsMeshComponent.Get();
+	UStaticMeshComponent* WeaponVisual = WeaponVisualComponent.Get();
+	UCameraComponent* SniperCamera = Camera.Get();
+	if (!WeaponHandsMesh || !WeaponVisual || !SniperCamera)
+	{
+		return;
+	}
+
+	const FString HandsMeshPath = WeaponHandsMeshPath.ToString();
+	const bool bHasHandsMeshPath = !HandsMeshPath.empty() && HandsMeshPath != "None";
+	if (WeaponHandsMesh->GetParent() != SniperCamera)
+	{
+		WeaponHandsMesh->AttachToComponent(SniperCamera);
+	}
+
+	WeaponHandsMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponHandsMesh->SetGenerateOverlapEvents(false);
+	WeaponHandsMesh->SetCastShadow(false);
+
+	const bool bEnableHandsAndWeapon = bEnableWeaponVisual && bEnableWeaponHandsMesh && bHasHandsMeshPath;
+	if (bEnableHandsAndWeapon)
+	{
+		WeaponHandsMesh->SetSkeletalMeshByPath(HandsMeshPath);
+		if (!WeaponHandsIdleAnimationPath.empty() && WeaponHandsIdleAnimationPath != "None")
+		{
+			WeaponHandsMesh->PlayAnimationByPath(WeaponHandsIdleAnimationPath, true);
+		}
+	}
+	else
+	{
+		WeaponHandsMesh->SetSkeletalMeshByPath("None");
+		WeaponHandsMesh->SetVisibility(false);
+		WeaponVisual->ClearStaticMesh();
+		WeaponVisual->SetVisibility(false);
+		return;
+	}
+
+	if (WeaponVisual->GetParent() != WeaponHandsMesh || WeaponVisual->GetAttachSocketName() != WeaponVisualSocketName)
+	{
+		WeaponVisual->AttachToComponent(WeaponHandsMesh, WeaponVisualSocketName);
+	}
+
+	WeaponVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponVisual->SetGenerateOverlapEvents(false);
+	WeaponVisual->SetCastShadow(false);
+	WeaponVisual->SetAbsoluteScale(true);
+
+	const FString MeshPath = WeaponVisualMeshPath.ToString();
+	const bool bHasMeshPath = !MeshPath.empty() && MeshPath != "None";
+	if (bEnableWeaponVisual && bHasMeshPath)
+	{
+		WeaponVisual->SetStaticMeshByPath(MeshPath);
+	}
+	else
+	{
+		WeaponVisual->ClearStaticMesh();
+	}
+
+	UpdateWeaponVisualScopeVisibility();
+}
+
+void ASniperPawn::UpdateWeaponVisualScopeVisibility()
+{
+	USkeletalMeshComponent* WeaponHandsMesh = WeaponHandsMeshComponent.Get();
+	UStaticMeshComponent* WeaponVisual = WeaponVisualComponent.Get();
+
+	const FString HandsMeshPath = WeaponHandsMeshPath.ToString();
+	const FString MeshPath = WeaponVisualMeshPath.ToString();
+	const bool bHasHandsMeshPath = !HandsMeshPath.empty() && HandsMeshPath != "None";
+	const bool bHasWeaponMeshPath = !MeshPath.empty() && MeshPath != "None";
+	const bool bShowWeaponHands = bEnableWeaponVisual && bEnableWeaponHandsMesh && bHasHandsMeshPath && !ScopeState.bIsScoped;
+	const bool bShowWeaponVisual = bShowWeaponHands && bHasWeaponMeshPath;
+
+	if (WeaponHandsMesh)
+	{
+		WeaponHandsMesh->SetVisibility(bShowWeaponHands);
+	}
+	if (WeaponVisual)
+	{
+		WeaponVisual->SetVisibility(bShowWeaponVisual);
+	}
+}
+
 void ASniperPawn::UpdateScopeState(float DeltaTime)
 {
 	if (!CanEnterScope())
@@ -466,6 +641,7 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 		}
 	}
 
+	UpdateWeaponVisualScopeVisibility();
 }
 
 void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
@@ -674,6 +850,20 @@ void ASniperPawn::SetGamepadLookSensitivityMultiplier(float Multiplier)
 	GamepadLookSensitivity = BaseGamepadLookSensitivity * ClampedMultiplier;
 }
 
+void ASniperPawn::SetRightClickZoomToggleMode(bool bToggleMode)
+{
+	if (bRightClickZoomToggleMode == bToggleMode)
+	{
+		return;
+	}
+
+	bRightClickZoomToggleMode = bToggleMode;
+	if (!bRightClickZoomToggleMode && bMouseScopeInputHeld)
+	{
+		ForceScopeReleased();
+	}
+}
+
 bool ASniperPawn::IsReloading() const
 {
 	const USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
@@ -721,6 +911,8 @@ void ASniperPawn::ForceScopeReleased()
 			CameraManager->ClearScopeLens();
 		}
 	}
+
+	UpdateWeaponVisualScopeVisibility();
 }
 
 bool ASniperPawn::IsHoldBreathActive() const
@@ -746,6 +938,12 @@ FRotator ASniperPawn::BuildEffectiveAimRotation() const
 
 bool ASniperPawn::CanEnterScope() const
 {
+	const UWorld* World = GetWorld();
+	if (World && World->IsPaused())
+	{
+		return false;
+	}
+
 	return !IsSniperKillCamPlaying(this) && !IsReloading();
 }
 
@@ -919,12 +1117,17 @@ void ASniperPawn::HandleScopePressed()
 		return;
 	}
 
-	bMouseScopeInputHeld = true;
+	bMouseScopeInputHeld = bRightClickZoomToggleMode ? !bMouseScopeInputHeld : true;
 	RefreshScopeHeldState();
 }
 
 void ASniperPawn::HandleScopeReleased()
 {
+	if (bRightClickZoomToggleMode)
+	{
+		return;
+	}
+
 	bMouseScopeInputHeld = false;
 	RefreshScopeHeldState();
 }

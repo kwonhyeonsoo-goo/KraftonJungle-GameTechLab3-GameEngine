@@ -1638,6 +1638,28 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             if (IsValid(Component)) Component->SetTemplate(FParticleSystemManager::Get().Load(Path));
         }
     );
+    Particle.set_function(
+        "SpawnEmitterAtLocation",
+        [](const FString& Path, const FVector& Location, sol::optional<FVector> Rotation, sol::optional<FVector> Scale, sol::optional<bool> bActivate) -> AActor*
+        {
+            if (!GEngine || !GEngine->GetWorld()) return nullptr;
+            UParticleSystemComponent* Component = FGameplayStatics::SpawnEmitterAtLocation(
+                GEngine->GetWorld(),
+                Path,
+                Location,
+                FRotator(Rotation.value_or(FVector(0.0f, 0.0f, 0.0f))),
+                bActivate.value_or(true)
+            );
+            if (!IsValid(Component)) return nullptr;
+
+            AActor* Owner = Component->GetOwner();
+            if (IsValid(Owner))
+            {
+                Owner->SetActorScale(Scale.value_or(FVector(1.0f, 1.0f, 1.0f)));
+            }
+            return Owner;
+        }
+    );
 
     Lua.new_usertype<USceneComponent>(
         "SceneComponent",

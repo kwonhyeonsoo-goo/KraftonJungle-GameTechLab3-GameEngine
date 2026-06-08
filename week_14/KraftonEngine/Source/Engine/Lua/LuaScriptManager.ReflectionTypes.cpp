@@ -7,6 +7,7 @@
 #include "Animation/ActorSequence.h"
 #include "Component/ActorComponent.h"
 #include "Component/ActorSequenceComponent.h"
+#include "Component/Primitive/BillboardComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Core/Logging/Log.h"
@@ -24,6 +25,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Camera/SequenceCameraShake.h"
 #include "GameFramework/Pawn/Pawn.h"
+#include "Materials/MaterialManager.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
 #include "Object/Object.h"
@@ -1523,6 +1525,41 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &UActorComponent::Activate,
         "Deactivate",
         &UActorComponent::Deactivate,
+        "SetVisibility",
+        [](UActorComponent& Component, bool bVisible)
+        {
+            if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(&Component))
+            {
+                Primitive->SetVisibility(bVisible);
+            }
+        },
+        "SetVisible",
+        [](UActorComponent& Component, bool bVisible)
+        {
+            if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(&Component))
+            {
+                Primitive->SetVisibility(bVisible);
+            }
+        },
+        "IsVisible",
+        [](UActorComponent& Component)
+        {
+            if (const UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(&Component))
+            {
+                return Primitive->IsVisible();
+            }
+            return false;
+        },
+        "SetMaterialPath",
+        [](UActorComponent& Component, const FString& MaterialPath)
+        {
+            if (UBillboardComponent* Billboard = Cast<UBillboardComponent>(&Component))
+            {
+                Billboard->SetMaterial(FMaterialManager::Get().GetOrCreateMaterial(MaterialPath));
+                return true;
+            }
+            return false;
+        },
         "SetTickWhenPaused",
         [](UActorComponent& Component, bool bTickWhenPaused)
         {
