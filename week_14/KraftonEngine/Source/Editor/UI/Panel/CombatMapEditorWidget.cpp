@@ -1184,8 +1184,9 @@ void FCombatMapEditorWidget::RenderRoleStatsPopup()
             };
 
             Row("Ally", "Ally", "Outgoing", "50", "30", "5", "1.0-2.0s", "20.0-30.0s");
-            Row("EnemyShortRange", "Enemy", "Incoming", "35", "25", "5", "0.8-1.4s", "4.0-6.0s");
-            Row("EnemyLongRangeSlow", "Enemy", "Incoming", "80", "30", "7", "2.4-3.6s", "6.0-8.0s");
+            Row("EnemyShortRange", "Enemy", "Incoming", "35", "25", "5", "0.8-1.4s", "8.0-12.0s");
+            Row("EnemyLongRangeSlow", "Enemy", "Incoming", "80", "30", "7", "4.5-6.5s", "12.0-16.0s");
+            Row("EnemyAssault", "Enemy", "Incoming", "18", "12", "4", "0.7-1.1s", "3.5-5.5s");
 
             ImGui::EndTable();
         }

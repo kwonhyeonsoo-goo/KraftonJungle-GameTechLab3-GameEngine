@@ -200,7 +200,7 @@ function Tick(dt)
     end
 
     local bHitActive = hitTriggered or hitBoolPulseTime > 0.0
-    local moveState = bHitActive and 0.0 or current_move_state(agent)
+    local moveState = current_move_state(agent)
 
     anim:SetGraphVariableFloat("MoveState", moveState)
     anim:SetGraphVariableBool("Death", isDead)

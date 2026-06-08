@@ -37,7 +37,8 @@ enum class ECombatAgentRole : uint8
     AutoFromTeam,
     Ally,
     EnemyShortRange,
-    EnemyLongRangeSlow
+    EnemyLongRangeSlow,
+    EnemyAssault
 };
 
 UCLASS()
@@ -143,6 +144,12 @@ public:
     float GetAttackIntervalMax() const { return AttackIntervalMax; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetSuppressedAttackSpeedMultiplier() const { return SuppressedAttackSpeedMultiplier; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetSuppressedMoveSpeedMultiplier() const { return SuppressedMoveSpeedMultiplier; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
     int32 GetIncomingFireCount() const { return IncomingFireCount; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
@@ -197,7 +204,7 @@ public:
     bool IsInCover() const { return State == ECombatCoverAgentState::InCover; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
-    bool IsSuppressed() const { return State == ECombatCoverAgentState::Suppressed; }
+    bool IsSuppressed() const { return State != ECombatCoverAgentState::Dead && SuppressionTimer > 0.0f; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetSuppressionTimeRemaining() const { return SuppressionTimer; }
@@ -222,6 +229,12 @@ public:
 
     UFUNCTION(Pure, Category="CombatAgent|Animation")
     float GetCombatAnimationMoveState() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Animation")
+    bool ShouldRunDuringCombatMovement() const;
+
+    UFUNCTION(Pure, Category="CombatAgent|Movement")
+    float GetCurrentCombatMoveSpeed() const;
 
     UFUNCTION(Pure, Category="CombatAgent|Animation")
     bool WantsHitReaction() const { return bHitReactionPending && HitReactionTimer > 0.0f; }
@@ -282,6 +295,7 @@ private:
     void TickCombatDecisionCooldown(float DeltaTime);
     void FinishSuppression();
     void QueueHitReaction();
+    bool IsHitReactionMoveLocked() const;
     void TickMoveToTarget(float DeltaTime);
     void FaceDirection2D(const FVector& Direction, float DeltaTime);
     void FaceLocation2D(const FVector& WorldLocation, float DeltaTime);
@@ -304,8 +318,14 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Use Role Combat Defaults")
     bool bUseRoleCombatDefaults = true;
 
-    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Legacy Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
     float MoveSpeed = 10.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Movement", DisplayName="Crouch Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float CrouchMoveSpeed = 4.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Movement", DisplayName="Run Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float RunMoveSpeed = 6.0f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Acceptance Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
     float AcceptanceRadius = 0.0f;
@@ -373,11 +393,17 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Can Fire While Moving")
     bool bCanFireWhileMoving = false;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Suppressed Attack Speed Multiplier", Min=0.01f, Max=1.0f, Speed=0.01f)
+    float SuppressedAttackSpeedMultiplier = 0.25f;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Suppressed Move Speed Multiplier", Min=0.01f, Max=1.0f, Speed=0.01f)
+    float SuppressedMoveSpeedMultiplier = 0.25f;
+
     UPROPERTY(Edit, Save, Category="CombatAgent|Animation", DisplayName="Hit Reaction Duration", Min=0.0f, Max=10.0f, Speed=0.01f)
     float HitReactionDuration = 0.45f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Animation", DisplayName="Trigger Hit Reaction On Suppression")
-    bool bTriggerHitReactionOnSuppression = true;
+    bool bTriggerHitReactionOnSuppression = false;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Behavior", DisplayName="Reposition Chance When In Range", Min=0.0f, Max=1.0f, Speed=0.01f)
     float RepositionChanceWhenInRange = 0.25f;
