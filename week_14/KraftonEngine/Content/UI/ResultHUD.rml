@@ -6,6 +6,9 @@
 <body>
     <div id="resultRoot" data-ui-type="Canvas" data-ui-name="Result HUD">
         <div id="resultDim" data-ui-type="Panel" data-ui-name="Result Dim"></div>
+        <div id="radioSubtitlePanel" data-ui-type="Panel" data-ui-name="Radio Subtitle Panel">
+            <div id="radioSubtitleText" data-ui-type="Text" data-ui-name="Radio Subtitle Text"></div>
+        </div>
 
         <div id="resultEntryPanel" class="result-panel" data-ui-type="Panel" data-ui-name="Result Entry Panel">
             <div id="resultEyebrow" class="eyebrow">MISSION RESULT</div>

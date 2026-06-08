@@ -4,7 +4,7 @@ local InGameManager = {}
 InGameManager.__index = InGameManager
 
 local ENEMY_KILL_SCORE = 100
-local FRIENDLY_KILL_PENALTY = 150
+local FRIENDLY_KILL_PENALTY = 500
 local HEADSHOT_BONUS = 50
 local PENETRATION_BONUS = 25
 local KILLCAM_TRIGGER_BONUS = 200
@@ -29,6 +29,8 @@ local PAUSE_CLOTH_BASE_WIND_X = 3.2
 local PAUSE_CLOTH_GUST_X = 1.15
 local PAUSE_CLOTH_SWAY_Y = 0.28
 local PAUSE_CLOTH_SWAY_Z = 0.18
+local DEBUG_TIME_TO_THREE_MIN_DIALOGUE = 181.0
+local DEBUG_TIME_TO_ONE_MIN_DIALOGUE = 61.0
 
 local function log(message)
     if Debug and Debug.Log then
@@ -232,6 +234,169 @@ local function get_hit_region_display_name(hit)
     return string.upper(get_hit_region_name(hit))
 end
 
+local function normalize_team_tag(value)
+    if value == nil then
+        return ""
+    end
+    local text = string.lower(tostring(value))
+    text = string.gsub(text, "^%s+", "")
+    text = string.gsub(text, "%s+$", "")
+    return text
+end
+
+local FRIENDLY_TEAM_TAGS = {
+    ally = true,
+    friendly = true,
+    player = true,
+    bravo = true
+}
+
+local ENEMY_TEAM_TAGS = {
+    enemy = true,
+    hostile = true,
+    opfor = true
+}
+
+local function read_object_team_tag(object)
+    if object == nil then
+        return nil
+    end
+    if object.GetTeamTag ~= nil then
+        local ok, value = pcall(function()
+            return object:GetTeamTag()
+        end)
+        if ok and value ~= nil and value ~= "" then
+            return value
+        end
+    end
+    if object.GetCombatCoverAgentComponent ~= nil then
+        local ok, agent = pcall(function()
+            return object:GetCombatCoverAgentComponent()
+        end)
+        if ok and agent ~= nil and agent.GetTeamTag ~= nil then
+            local tag_ok, value = pcall(function()
+                return agent:GetTeamTag()
+            end)
+            if tag_ok and value ~= nil and value ~= "" then
+                return value
+            end
+        end
+    end
+    return nil
+end
+
+local function object_has_team_tag(object, tag_map)
+    if object == nil then
+        return false
+    end
+
+    if object.GetTags ~= nil then
+        local ok, tags = pcall(function()
+            return object:GetTags()
+        end)
+        if ok and type(tags) == "table" then
+            for _, tag in pairs(tags) do
+                if tag_map[normalize_team_tag(tag)] == true then
+                    return true
+                end
+            end
+        end
+    end
+
+    if object.HasTag ~= nil then
+        for tag, _ in pairs(tag_map) do
+            local ok, has_tag = pcall(function()
+                return object:HasTag(tag)
+            end)
+            if ok and has_tag == true then
+                return true
+            end
+        end
+    end
+
+    local team_tag = normalize_team_tag(read_object_team_tag(object))
+    return team_tag ~= "" and tag_map[team_tag] == true
+end
+
+local function get_payload_hit(payload)
+    if payload == nil then
+        return nil
+    end
+    if payload.hit ~= nil then
+        return payload.hit
+    end
+    if type(payload.payload) == "table" then
+        return payload.payload.hit
+    end
+    return nil
+end
+
+local function get_payload_target(payload, hit)
+    if payload == nil then
+        return nil
+    end
+    if payload.target ~= nil then
+        return payload.target
+    end
+    if type(payload.payload) == "table" and payload.payload.target ~= nil then
+        return payload.payload.target
+    end
+    hit = hit or get_payload_hit(payload)
+    if hit ~= nil and hit.HitActor ~= nil then
+        return hit.HitActor
+    end
+    return nil
+end
+
+local function resolve_friendly_payload(payload)
+    if payload == nil then
+        return false
+    end
+
+    local hit = get_payload_hit(payload)
+    local target = get_payload_target(payload, hit)
+    if object_has_team_tag(target, ENEMY_TEAM_TAGS) then
+        return false
+    end
+    if object_has_team_tag(target, FRIENDLY_TEAM_TAGS) then
+        return true
+    end
+
+    if hit ~= nil and hit.HitActor ~= nil and hit.HitActor ~= target then
+        if object_has_team_tag(hit.HitActor, ENEMY_TEAM_TAGS) then
+            return false
+        end
+        if object_has_team_tag(hit.HitActor, FRIENDLY_TEAM_TAGS) then
+            return true
+        end
+    end
+
+    if type(payload.payload) == "table" and payload.payload.friendly == true then
+        return true
+    end
+    if hit ~= nil and hit.bFriendlyTarget == true then
+        return true
+    end
+    return payload.friendly == true
+end
+
+local function normalize_sniper_payload_friendly(payload)
+    local is_friendly = resolve_friendly_payload(payload)
+    if payload ~= nil then
+        payload.friendly = is_friendly
+        if type(payload.payload) == "table" then
+            payload.payload.friendly = is_friendly
+        end
+    end
+    local hit = get_payload_hit(payload)
+    if hit ~= nil then
+        pcall(function()
+            hit.bFriendlyTarget = is_friendly
+        end)
+    end
+    return is_friendly
+end
+
 local function calculate_hit_score_delta(hit, isFriendly)
     if hit == nil then
         return 0
@@ -309,8 +474,8 @@ function InGameManager:Initialize()
             return
         end
 
-        local hit = payload ~= nil and payload.hit or nil
-        local isFriendly = payload ~= nil and payload.friendly == true
+        local hit = get_payload_hit(payload)
+        local isFriendly = normalize_sniper_payload_friendly(payload)
         local scoreDelta = calculate_hit_score_delta(hit, isFriendly)
         if scoreDelta ~= 0 then
             self.general:AddScore(scoreDelta)
@@ -359,8 +524,8 @@ function InGameManager:Initialize()
             return
         end
 
-        local hit = payload ~= nil and payload.hit or nil
-        local isFriendly = payload ~= nil and payload.friendly == true
+        local hit = get_payload_hit(payload)
+        local isFriendly = normalize_sniper_payload_friendly(payload)
         local scoreDelta = 0
 
         if isFriendly then
@@ -508,6 +673,7 @@ function InGameManager:Tick(dt)
         return
     end
 
+    self:PollDebugCheatInput()
     self:PollPauseInput()
     self:TickPauseTransition(dt)
     if self.paused or self.pause_transition ~= nil then
@@ -553,6 +719,33 @@ end
 
 function InGameManager:GetRemainingTime()
     return math.max(0.0, (self.match_duration or DEFAULT_MATCH_DURATION) - (self.timer or 0.0))
+end
+
+function InGameManager:SetRemainingTime(seconds, reason)
+    if not self.running then
+        return false
+    end
+
+    seconds = tonumber(seconds)
+    if seconds == nil then
+        return false
+    end
+
+    local duration = math.max(1.0, tonumber(self.match_duration) or DEFAULT_MATCH_DURATION)
+    local remaining = math.max(0.0, seconds)
+    if remaining > duration then
+        duration = remaining
+        self.match_duration = duration
+    end
+
+    self.timer = math.max(0.0, duration - remaining)
+    self.last_timer_second = -1
+    local snapshot = self:GetSnapshot()
+    snapshot.reason = reason or "set_remaining_time"
+    self.general:Publish("ingame.timer", snapshot)
+    self.general:Publish("ingame.debug_time_warp", snapshot)
+    log("debug time warp remaining=" .. tostring(math.ceil(remaining)) .. " reason=" .. tostring(snapshot.reason))
+    return true
 end
 
 function InGameManager:RequestVictory(reason)
@@ -608,6 +801,18 @@ function InGameManager:EnsureRunningForCurrentState(reason)
 
     log("starting InGame runtime from current state reason=" .. tostring(reason))
     self:Start(self.settings)
+end
+
+function InGameManager:PollDebugCheatInput()
+    if Input == nil or Input.GetKeyDown == nil then
+        return
+    end
+
+    if Input.GetKeyDown("F1") == true then
+        self:SetRemainingTime(DEBUG_TIME_TO_THREE_MIN_DIALOGUE, "debug_f1_three_minute_dialogue")
+    elseif Input.GetKeyDown("F2") == true then
+        self:SetRemainingTime(DEBUG_TIME_TO_ONE_MIN_DIALOGUE, "debug_f2_one_minute_dialogue")
+    end
 end
 
 function InGameManager:PollPauseInput()
