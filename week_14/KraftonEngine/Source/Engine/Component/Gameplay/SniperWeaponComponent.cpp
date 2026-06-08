@@ -209,6 +209,7 @@ bool USniperWeaponComponent::RequestFire(
 
 	if (AmmoInMagazine <= 0)
 	{
+		PlayWeaponSFX(EmptyTriggerSFXPath, EmptyTriggerSFXVolume);
 		return false;
 	}
 

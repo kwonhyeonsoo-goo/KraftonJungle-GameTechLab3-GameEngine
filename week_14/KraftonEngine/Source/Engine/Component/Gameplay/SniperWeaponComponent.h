@@ -85,10 +85,14 @@ private:
 	FString FireSFXPath = "SFX/Sniper/Shoot1.wav";
 	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Reload SFX Path")
 	FString ReloadSFXPath = "SFX/Sniper/rifle_reload.mp3";
+	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Empty Trigger SFX Path")
+	FString EmptyTriggerSFXPath = "SFX/Sniper/Empty_Gun_Trigger.mp3";
 	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Fire SFX Volume", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float FireSFXVolume = 1.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Reload SFX Volume", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float ReloadSFXVolume = 1.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Empty Trigger SFX Volume", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float EmptyTriggerSFXVolume = 1.0f;
 	ESniperAmmoType CurrentAmmoType = ESniperAmmoType::Normal;
 	float FireCooldownRemaining = 0.0f;
 	float ReloadRemaining = 0.0f;

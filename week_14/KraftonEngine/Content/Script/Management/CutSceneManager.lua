@@ -8,7 +8,6 @@ local SNIPER_KILLCAM_PRE_IMPACT_FORWARD_DISTANCE = 0.18
 local SNIPER_KILLCAM_POST_IMPACT_FORWARD_DISTANCE = 4.0
 local SNIPER_KILLCAM_IMPACT_BULLET_SCALE = 0.05
 local SNIPER_KILLCAM_TRAVEL_FOV_BOOST = 0.22
-local SNIPER_KILLCAM_SHOOT_SFX = "SFX/Sniper/Shoot1.wav"
 local SNIPER_KILLCAM_SLOWDOWN_SFX = "SFX/Sniper/SlowDown.mp3"
 local SNIPER_KILLCAM_SLOWDOWN_SFX_DELAY = 0.3
 local SNIPER_KILLCAM_BULLET_CAM_SFX = "SFX/Sniper/BulletCam1.mp3"
@@ -1181,7 +1180,6 @@ function CutSceneManager:Initialize()
             force_scope_released()
             set_time_dilation(0.0)
             set_world_paused(true)
-            play_sfx(self.general, SNIPER_KILLCAM_SHOOT_SFX, 1.0)
             if SniperKillCam ~= nil and SniperKillCam.Start ~= nil then
                 if SniperKillCam.ConfigureBullet ~= nil then
                     SniperKillCam.ConfigureBullet(merge_tables(current.killcam_profile.bullet, payload.bullet))
