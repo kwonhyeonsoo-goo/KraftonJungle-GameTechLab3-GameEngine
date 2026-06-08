@@ -131,6 +131,8 @@ public:
 	}
 	UFUNCTION(Callable, Category="World|Wind")
 	void SetBallisticWindAcceleration(const FVector& InWindAcceleration);
+	UFUNCTION(Callable, Category="World|Wind")
+	void RefreshBallisticWindRuntimeState();
 
 	// Transient runtime hook for future global wind actors/fields. Scene save/load does
 	// not serialize this value; editor preview wind remains a component-level override.

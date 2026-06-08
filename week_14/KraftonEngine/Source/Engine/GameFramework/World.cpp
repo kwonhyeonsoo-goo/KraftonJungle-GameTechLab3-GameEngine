@@ -692,6 +692,11 @@ void UWorld::SetBallisticWindAcceleration(const FVector& InWindAcceleration)
 	ResetRuntimeBallisticWindState();
 }
 
+void UWorld::RefreshBallisticWindRuntimeState()
+{
+	ResetRuntimeBallisticWindState();
+}
+
 void UWorld::BeginPlay()
 {
 	bHasBegunPlay = true;

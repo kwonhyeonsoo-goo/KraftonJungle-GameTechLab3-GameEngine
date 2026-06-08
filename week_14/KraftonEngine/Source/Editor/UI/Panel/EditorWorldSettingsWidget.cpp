@@ -12,7 +12,7 @@ void EditorWorldSettingsWidget::Render()
 {
 	if (!bOpen) return;
 
-	ImGui::SetNextWindowSize(ImVec2(360, 300), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(420, 420), ImGuiCond_FirstUseEver);
 	if (!ImGui::Begin("World Settings", &bOpen))
 	{
 		ImGui::End();
@@ -85,10 +85,69 @@ void EditorWorldSettingsWidget::Render()
 
 	if (ImGui::CollapsingHeader("Ballistics", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		bool bWindSettingsChanged = false;
 		ImGui::Checkbox("Enable Ballistic Wind", &WS.bEnableBallisticWind);
 		ImGui::BeginDisabled(!WS.bEnableBallisticWind);
-		ImGui::DragFloat3("Wind Acceleration", WS.BallisticWindAcceleration.Data, 0.01f, -100.0f, 100.0f, "%.2f");
+		FVector WindAcceleration = WS.BallisticWindAcceleration;
+		if (ImGui::DragFloat3("Wind Acceleration", WindAcceleration.Data, 0.01f, -100.0f, 100.0f, "%.2f"))
+		{
+			World->SetBallisticWindAcceleration(WindAcceleration);
+			bWindSettingsChanged = true;
+		}
+		if (ImGui::Checkbox("Enable Dynamic Wind", &WS.bEnableDynamicBallisticWind))
+		{
+			bWindSettingsChanged = true;
+		}
+		if (WS.bEnableDynamicBallisticWind)
+		{
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Change Interval Min",
+				&WS.BallisticWindChangeIntervalMin,
+				0.05f,
+				0.1f,
+				60.0f,
+				"%.2f s");
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Change Interval Max",
+				&WS.BallisticWindChangeIntervalMax,
+				0.05f,
+				0.1f,
+				60.0f,
+				"%.2f s");
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Direction Offset",
+				&WS.BallisticWindDirectionOffsetDegrees,
+				0.1f,
+				0.0f,
+				180.0f,
+				"%.1f deg");
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Magnitude Scale Min",
+				&WS.BallisticWindMagnitudeScaleMin,
+				0.01f,
+				0.0f,
+				5.0f,
+				"%.2f");
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Magnitude Scale Max",
+				&WS.BallisticWindMagnitudeScaleMax,
+				0.01f,
+				0.0f,
+				5.0f,
+				"%.2f");
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Blend Speed",
+				&WS.BallisticWindBlendSpeed,
+				0.01f,
+				0.0f,
+				20.0f,
+				"%.2f");
+		}
 		ImGui::EndDisabled();
+		if (bWindSettingsChanged)
+		{
+			World->RefreshBallisticWindRuntimeState();
+		}
 		ImGui::TextDisabled("Scene-wide wind shared by all sniper bullets.");
 	}
 
