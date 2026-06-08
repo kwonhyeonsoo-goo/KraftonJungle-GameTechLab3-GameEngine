@@ -302,6 +302,157 @@ body {
     text-align: right;
 }
 
+#combatAgentPanel {
+    position: absolute;
+    right: 10.000000px;
+    top: 500.000000px;
+    width: 336.000000px;
+    height: 312.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 42);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 14.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+#combatAgentTitle {
+    position: absolute;
+    left: 14.000000px;
+    top: 10.000000px;
+    width: 308.000000px;
+    height: 24.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 230);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 17.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+.combat-agent-row {
+    position: absolute;
+    left: 14.000000px;
+    width: 308.000000px;
+    height: 48.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+#combatAgentRow1 { top: 44.000000px; }
+#combatAgentRow2 { top: 96.000000px; }
+#combatAgentRow3 { top: 148.000000px; }
+#combatAgentRow4 { top: 200.000000px; }
+#combatAgentRow5 { top: 252.000000px; }
+
+.combat-agent-name {
+    position: absolute;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 178.000000px;
+    height: 22.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 16.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+.combat-agent-hp {
+    position: absolute;
+    right: 0.000000px;
+    top: 0.000000px;
+    width: 116.000000px;
+    height: 22.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 15.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+}
+
+.combat-agent-state {
+    position: absolute;
+    left: 0.000000px;
+    top: 24.000000px;
+    width: 92.000000px;
+    height: 18.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(210, 225, 235, 230);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 12.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: left;
+}
+
+.combat-agent-bar-track {
+    position: absolute;
+    left: 98.000000px;
+    top: 29.000000px;
+    width: 210.000000px;
+    height: 8.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(20, 22, 24, 210);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 0px;
+}
+
+.combat-agent-bar-fill {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 210.000000px;
+    height: 8.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(245, 245, 245, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 0px;
+}
+
 #breathPanel {
     position: absolute;
     left: 1439.000000px;
@@ -500,6 +651,94 @@ body {
     text-align: left;
 }
 
+#hitNotifyPanel {
+    position: absolute;
+    left: 740.000000px;
+    top: 476.000000px;
+    width: 440.000000px;
+    height: 128.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: center;
+    transform: scale(1.0);
+    transform-origin: center center;
+    z-index: 18;
+}
+
+#hitNotifyTitle {
+    position: absolute;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 440.000000px;
+    height: 66.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 245, 218, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-size: 52.000000px;
+    font-weight: bold;
+    text-align: center;
+}
+
+#hitNotifyMeta {
+    position: absolute;
+    left: 30.000000px;
+    top: 72.000000px;
+    width: 380.000000px;
+    height: 50.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+}
+
+#hitNotifyDistance,
+#hitNotifyScore {
+    position: absolute;
+    left: 0.000000px;
+    width: 380.000000px;
+    height: 24.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-size: 19.000000px;
+    font-weight: bold;
+    text-align: right;
+}
+
+#hitNotifyDistance {
+    top: 0.000000px;
+    color: rgba(225, 232, 235, 230);
+}
+
+#hitNotifyScore {
+    top: 25.000000px;
+    color: rgba(255, 213, 118, 255);
+}
+
 #cutsceneLetterboxTop,
 #cutsceneLetterboxBottom {
     position: absolute;
@@ -549,6 +788,62 @@ body {
     font-weight: bold;
     text-align: right;
     z-index: 30;
+}
+
+#radioBlackout {
+    position: absolute;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 1920.000000px;
+    height: 1080.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 0px;
+    z-index: 40;
+}
+
+#radioSubtitlePanel {
+    position: absolute;
+    left: 260.000000px;
+    top: 862.000000px;
+    width: 1400.000000px;
+    height: 96.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: center;
+    z-index: 50;
+}
+
+#radioSubtitleText {
+    position: absolute;
+    left: 0.000000px;
+    top: 12.000000px;
+    width: 1400.000000px;
+    height: 76.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: block;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(245, 246, 240, 255);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 24.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: center;
 }
 
 #pauseLayer {

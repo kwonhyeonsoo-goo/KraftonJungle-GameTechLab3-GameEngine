@@ -2,11 +2,13 @@
 
 #include "Component/ActorComponent.h"
 #include "Component/Gameplay/CombatCoverNodeComponent.h"
+#include "Object/FName.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Gameplay/CombatCoverAgentComponent.generated.h"
 
 class UCombatFlowManagerComponent;
+struct FSniperHitInfo;
 
 UENUM()
 enum class ECombatCoverAgentState : uint8
@@ -65,6 +67,15 @@ public:
     UFUNCTION(Pure, Category="CombatAgent")
     const FString& GetTeamTag() const { return TeamTag; }
 
+    UFUNCTION(Callable, Category="CombatAgent")
+    void SetTeamTag(const FString& InTeamTag);
+
+    UFUNCTION(Pure, Category="CombatAgent")
+    FString GetDisplayName() const;
+
+    UFUNCTION(Callable, Category="CombatAgent")
+    void SetDisplayName(const FString& InDisplayName);
+
     UFUNCTION(Pure, Category="CombatAgent")
     const FString& GetCurrentNodeId() const { return CurrentNodeId; }
 
@@ -95,8 +106,14 @@ public:
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetMaxHealth() const { return MaxHealth; }
 
+    UFUNCTION(Callable, Category="CombatAgent|Combat")
+    void SetMaxHealth(float InMaxHealth);
+
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetHealth() const { return Health; }
+
+    UFUNCTION(Callable, Category="CombatAgent|Combat")
+    void SetHealth(float InHealth);
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     float GetHealthRatio() const;
@@ -194,6 +211,35 @@ public:
     UFUNCTION(Pure, Category="CombatAgent|Combat")
     bool IsEngaging() const { return State == ECombatCoverAgentState::Engaging || CurrentTarget.Get() != nullptr; }
 
+    void RecordSniperHit(const FSniperHitInfo& HitInfo);
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    bool HasLastSniperHit() const { return bHasLastSniperHit; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    FName GetLastHitBoneName() const { return LastHitBoneName; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    const FString& GetLastHitBodyName() const { return LastHitBodyName; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    const FString& GetLastHitRegionName() const { return LastHitRegionName; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    const FString& GetLastHitRegionDisplayName() const { return LastHitRegionDisplayName; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    float GetLastHitDamage() const { return LastHitDamage; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    float GetLastHitScoreMultiplier() const { return LastHitScoreMultiplier; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    int32 GetLastHitScoreValue() const { return LastHitScoreValue; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Sniper")
+    bool WasLastHitKilled() const { return bLastHitKilled; }
+
     const char* GetStateName() const;
     const char* GetAdvanceLinkModeName() const;
     const char* GetCombatRoleName() const;
@@ -223,6 +269,9 @@ private:
 private:
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Team Tag")
     FString TeamTag = "Enemy";
+
+    UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Agent Display Name")
+    FString AgentDisplayName;
 
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Advance Link Mode", Enum=ECombatAdvanceLinkMode)
     ECombatAdvanceLinkMode AdvanceLinkMode = ECombatAdvanceLinkMode::OutgoingLinks;
@@ -357,6 +406,15 @@ private:
     ECombatCoverAgentState StateBeforeSuppressed = ECombatCoverAgentState::Idle;
     TWeakObjectPtr<UCombatCoverAgentComponent> CurrentTarget;
     TWeakObjectPtr<UCombatFlowManagerComponent> CachedManager;
+    bool bHasLastSniperHit = false;
+    FName LastHitBoneName = FName::None;
+    FString LastHitBodyName;
+    FString LastHitRegionName = "Unknown";
+    FString LastHitRegionDisplayName = "UNKNOWN";
+    float LastHitDamage = 0.0f;
+    float LastHitScoreMultiplier = 1.0f;
+    int32 LastHitScoreValue = 0;
+    bool bLastHitKilled = false;
 
 protected:
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;

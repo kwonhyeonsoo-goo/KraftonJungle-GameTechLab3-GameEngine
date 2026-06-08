@@ -7,6 +7,7 @@ local ENEMY_KILL_SCORE = 100
 local FRIENDLY_KILL_PENALTY = 150
 local HEADSHOT_BONUS = 50
 local PENETRATION_BONUS = 25
+local DEFAULT_HIT_SCORE = 5
 
 local PAUSE_CAMERA_NAME = "PauseMenu_Camera"
 local PAUSE_RIFLE_NAME = "PauseMenu_Rifle"
@@ -21,6 +22,89 @@ local function log(message)
     else
         print("[InGameManager] " .. message)
     end
+end
+
+local function get_hit_region_score(hit)
+    if hit == nil then
+        return DEFAULT_HIT_SCORE
+    end
+
+    if SniperHitRegion ~= nil then
+        if hit.HitRegion == SniperHitRegion.Head then
+            return 50
+        end
+        if hit.HitRegion == SniperHitRegion.Torso then
+            return 20
+        end
+        if hit.HitRegion == SniperHitRegion.Arm or hit.HitRegion == SniperHitRegion.Leg then
+            return 10
+        end
+    end
+
+    local regionName = hit.HitRegionName or ""
+    if regionName == "Head" then
+        return 50
+    end
+    if regionName == "Torso" then
+        return 20
+    end
+    if regionName == "Arm" or regionName == "Leg" then
+        return 10
+    end
+    return DEFAULT_HIT_SCORE
+end
+
+local function get_hit_body_name(hit)
+    if hit == nil then
+        return ""
+    end
+    if hit.HitBodyName ~= nil and hit.HitBodyName ~= "" then
+        return hit.HitBodyName
+    end
+    if hit.HitBoneNameString ~= nil then
+        return hit.HitBoneNameString
+    end
+    return ""
+end
+
+local function get_hit_region_name(hit)
+    if hit == nil then
+        return "Unknown"
+    end
+    if hit.HitRegionName ~= nil and hit.HitRegionName ~= "" then
+        return hit.HitRegionName
+    end
+    return "Unknown"
+end
+
+local function get_hit_region_display_name(hit)
+    if hit == nil then
+        return "UNKNOWN"
+    end
+    if hit.HitRegionDisplayName ~= nil and hit.HitRegionDisplayName ~= "" then
+        return hit.HitRegionDisplayName
+    end
+    return string.upper(get_hit_region_name(hit))
+end
+
+local function calculate_hit_score_delta(hit, isFriendly)
+    if hit == nil then
+        return 0
+    end
+
+    local rawScore = tonumber(hit.HitScoreValue)
+    local score = 0
+    if rawScore ~= nil and rawScore > 0 then
+        score = math.floor(rawScore + 0.5)
+    else
+        local multiplier = tonumber(hit.HitScoreMultiplier or hit.RegionDamageMultiplier) or 1.0
+        score = math.floor(get_hit_region_score(hit) * math.max(0.0, multiplier) + 0.5)
+    end
+
+    if isFriendly then
+        return -score
+    end
+    return score
 end
 
 function InGameManager.new(general)
@@ -68,11 +152,40 @@ function InGameManager:Initialize()
             return
         end
 
+        local hit = payload ~= nil and payload.hit or nil
+        local isFriendly = payload ~= nil and payload.friendly == true
+        local scoreDelta = calculate_hit_score_delta(hit, isFriendly)
+        if scoreDelta ~= 0 then
+            self.general:AddScore(scoreDelta)
+            if hit ~= nil then
+                pcall(function()
+                    hit.HitScoreValue = math.abs(scoreDelta)
+                end)
+            end
+        end
+
         self.general:Publish("ingame.sniper_damaged", {
             timer = self.timer,
             wave = self.wave,
             phase = self.phase,
-            payload = payload
+            payload = payload,
+            score_delta = scoreDelta,
+            total_score = self.general:GetScore(),
+            hit_body_name = get_hit_body_name(hit),
+            hit_region_name = get_hit_region_name(hit),
+            hit_region_display_name = get_hit_region_display_name(hit)
+        })
+
+        self.general:Publish("ingame.sniper_hit_scored", {
+            timer = self.timer,
+            wave = self.wave,
+            phase = self.phase,
+            payload = payload,
+            score_delta = scoreDelta,
+            total_score = self.general:GetScore(),
+            hit_body_name = get_hit_body_name(hit),
+            hit_region_name = get_hit_region_name(hit),
+            hit_region_display_name = get_hit_region_display_name(hit)
         })
     end)
 
@@ -109,7 +222,10 @@ function InGameManager:Initialize()
             score_delta = scoreDelta,
             total_score = self.general:GetScore(),
             sniper_kills = self.sniper_kills,
-            friendly_fire_kills = self.friendly_fire_kills
+            friendly_fire_kills = self.friendly_fire_kills,
+            hit_body_name = get_hit_body_name(hit),
+            hit_region_name = get_hit_region_name(hit),
+            hit_region_display_name = get_hit_region_display_name(hit)
         })
     end)
 
