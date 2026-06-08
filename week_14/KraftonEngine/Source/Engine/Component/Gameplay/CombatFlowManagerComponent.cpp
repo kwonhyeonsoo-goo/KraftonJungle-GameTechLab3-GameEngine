@@ -1520,13 +1520,6 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             continue;
         }
 
-        if (Agent->IsSuppressed())
-        {
-            Agent->ClearEngagementTarget();
-            AttackStateByAgent.erase(Agent);
-            continue;
-        }
-
         if (Agent->IsHoldingCoverForCombat())
         {
             Agent->ClearEngagementTarget();
