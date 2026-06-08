@@ -14,7 +14,11 @@ local RESULT_HUD = {
     name = "ResultHUD",
     path = "Content/UI/ResultHUD.rml",
     z_order = 40,
-    mode = "Result"
+    mode = "Result",
+    payload = {
+        result = "Victory",
+        result_radio_only = true
+    }
 }
 local VICTORY_BGM_KEY = "VictoryBGM"
 local VICTORY_BGM_PATH = "BGM/Victory.mp3"
@@ -303,11 +307,13 @@ function VictoryState.new(general)
 end
 
 function VictoryState:GetHUD()
-    return nil
+    return RESULT_HUD
 end
 
 function VictoryState:Enter(payload)
     payload = payload or {}
+    payload.result = payload.result or "Victory"
+    payload.result_radio_only = true
     self:Reset()
     log("Enter reason=" .. tostring(payload.reason) .. " target_scene=" .. SCENE_PATH)
     if not is_current_scene(SCENE_PATH) then
@@ -877,7 +883,8 @@ function VictoryState:ShowResultHUD()
             state = "Victory",
             hud = RESULT_HUD,
             payload = {
-                result = "Victory"
+                result = "Victory",
+                result_radio_only = false
             },
             reason = "victory_sequence_complete"
         })

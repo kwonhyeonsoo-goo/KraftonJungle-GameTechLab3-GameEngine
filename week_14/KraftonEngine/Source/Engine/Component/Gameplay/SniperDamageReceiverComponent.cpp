@@ -5,6 +5,8 @@
 #include "Math/MathUtils.h"
 
 #include <algorithm>
+#include <cctype>
+#include <initializer_list>
 
 namespace
 {
@@ -12,6 +14,50 @@ namespace
 	constexpr float SniperArmorPenetrationSpeedScale = 350.0f;
 	constexpr float SniperBlockedDamageMultiplier = 0.15f;
 	constexpr float SniperPenetratedDamageMultiplier = 0.75f;
+
+	FString NormalizeTeamToken(FString Text)
+	{
+		std::transform(Text.begin(), Text.end(), Text.begin(), [](unsigned char Character)
+		{
+			return static_cast<char>(std::tolower(Character));
+		});
+		return Text;
+	}
+
+	bool MatchesAnyTeamToken(const FString& Text, std::initializer_list<const char*> Tokens)
+	{
+		const FString NormalizedText = NormalizeTeamToken(Text);
+		for (const char* Token : Tokens)
+		{
+			if (NormalizedText == Token)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool HasAnyTag(const TArray<FName>& Tags, std::initializer_list<const char*> Tokens)
+	{
+		for (const FName& Tag : Tags)
+		{
+			if (MatchesAnyTeamToken(Tag.ToString(), Tokens))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool HasEnemyTag(const TArray<FName>& Tags)
+	{
+		return HasAnyTag(Tags, { "enemy", "hostile", "opfor" });
+	}
+
+	bool HasFriendlyTag(const TArray<FName>& Tags)
+	{
+		return HasAnyTag(Tags, { "ally", "friendly", "player", "bravo" });
+	}
 }
 
 USniperDamageReceiverComponent::USniperDamageReceiverComponent()
@@ -182,7 +228,26 @@ UCombatCoverAgentComponent* USniperDamageReceiverComponent::ResolveCombatCoverAg
 
 bool USniperDamageReceiverComponent::IsFriendlyTarget() const
 {
-	if (bIsFriendly)
+	AActor* OwnerActor = GetOwner();
+	if (OwnerActor != nullptr)
+	{
+		const TArray<FName> OwnerTags = OwnerActor->GetTags();
+		if (HasEnemyTag(OwnerTags))
+		{
+			return false;
+		}
+		if (HasFriendlyTag(OwnerTags))
+		{
+			return true;
+		}
+	}
+
+	const TArray<FName> ComponentTags = GetTags();
+	if (HasEnemyTag(ComponentTags))
+	{
+		return false;
+	}
+	if (HasFriendlyTag(ComponentTags))
 	{
 		return true;
 	}
@@ -190,10 +255,17 @@ bool USniperDamageReceiverComponent::IsFriendlyTarget() const
 	if (UCombatCoverAgentComponent* CombatAgent = ResolveCombatCoverAgentComponent())
 	{
 		const FString& TeamTag = CombatAgent->GetTeamTag();
-		return TeamTag.find("Ally") != FString::npos || TeamTag.find("Friendly") != FString::npos;
+		if (MatchesAnyTeamToken(TeamTag, { "enemy", "hostile", "opfor" }))
+		{
+			return false;
+		}
+		if (MatchesAnyTeamToken(TeamTag, { "ally", "friendly", "player", "bravo" }))
+		{
+			return true;
+		}
 	}
 
-	return false;
+	return bIsFriendly;
 }
 
 float USniperDamageReceiverComponent::GetDamageMultiplierForHitRegion(ESniperHitRegion HitRegion) const

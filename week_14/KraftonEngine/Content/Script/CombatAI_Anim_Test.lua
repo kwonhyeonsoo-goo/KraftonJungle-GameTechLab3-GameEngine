@@ -5,9 +5,13 @@ local lastMoveState = -1.0
 local lastDeath = false
 local lastEngaging = false
 local hitBoolPulseTime = 0.0
+local healthBillboards = nil
+local lastHealthIndicatorState = ""
 
 local FIRE_TRIGGER_INTERVAL = 0.45
 local HIT_BOOL_PULSE_DURATION = 0.12
+local HEALTH_INDICATOR_GREEN_RATIO = 0.60
+local HEALTH_INDICATOR_ORANGE_RATIO = 0.30
 
 local function find_anim_instance()
     if obj == nil then
@@ -66,6 +70,81 @@ local function get_combat_agent()
         combatAgent = find_combat_agent()
     end
     return combatAgent
+end
+
+local function find_component_by_tag(tag)
+    if obj == nil then
+        return nil
+    end
+
+    if obj.GetComponentByTag ~= nil then
+        local component = obj:GetComponentByTag(tag)
+        if component ~= nil then
+            return component
+        end
+    end
+    if obj.FindComponentByTag ~= nil then
+        return obj:FindComponentByTag(tag)
+    end
+    return nil
+end
+
+local function set_component_visible(component, visible)
+    if component ~= nil and component.SetVisibility ~= nil then
+        component:SetVisibility(visible)
+    end
+end
+
+local function collect_health_billboards()
+    return {
+        green = find_component_by_tag("AllyHealthGreen"),
+        orange = find_component_by_tag("AllyHealthOrange"),
+        red = find_component_by_tag("AllyHealthRed")
+    }
+end
+
+local function get_health_billboards()
+    if healthBillboards == nil then
+        healthBillboards = collect_health_billboards()
+    end
+    return healthBillboards
+end
+
+local function update_health_indicator(agent)
+    local billboards = get_health_billboards()
+    if billboards == nil then
+        return
+    end
+
+    local state = "hidden"
+    if agent ~= nil and agent.IsAlive ~= nil and agent:IsAlive() then
+        local ratio = 1.0
+        if agent.GetHealthRatio ~= nil then
+            ratio = tonumber(agent:GetHealthRatio()) or ratio
+        elseif agent.GetHealth ~= nil and agent.GetMaxHealth ~= nil then
+            local maxHealth = tonumber(agent:GetMaxHealth()) or 0.0
+            if maxHealth > 0.0 then
+                ratio = (tonumber(agent:GetHealth()) or 0.0) / maxHealth
+            end
+        end
+
+        if ratio > HEALTH_INDICATOR_GREEN_RATIO then
+            state = "green"
+        elseif ratio > HEALTH_INDICATOR_ORANGE_RATIO then
+            state = "orange"
+        else
+            state = "red"
+        end
+    end
+
+    if state == lastHealthIndicatorState then
+        return
+    end
+
+    lastHealthIndicatorState = state
+    set_component_visible(billboards.green, state == "green")
+    set_component_visible(billboards.orange, state == "orange")
+    set_component_visible(billboards.red, state == "red")
 end
 
 local function get_hit_body_name(hitInfo)
@@ -177,6 +256,9 @@ function BeginPlay()
     lastDeath = false
     lastEngaging = false
     hitBoolPulseTime = 0.0
+    healthBillboards = collect_health_billboards()
+    lastHealthIndicatorState = ""
+    update_health_indicator(combatAgent)
     set_initial_variables()
 end
 
@@ -187,6 +269,7 @@ function Tick(dt)
     end
 
     local agent = get_combat_agent()
+    update_health_indicator(agent)
     local isDead = agent ~= nil and not agent:IsAlive()
     local isEngaging = agent ~= nil and agent:IsEngaging()
     local hitTriggered = false
