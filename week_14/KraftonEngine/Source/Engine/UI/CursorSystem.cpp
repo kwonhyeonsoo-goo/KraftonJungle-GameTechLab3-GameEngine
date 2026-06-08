@@ -172,7 +172,7 @@ bool FCursorSystem::ShouldRender(const FPassContext& Ctx) const
 	}
 
 	const UGameViewportClient* ViewportClient = GEngine ? GEngine->GetGameViewportClient() : nullptr;
-	return ViewportClient && ViewportClient->IsPossessed() && ViewportClient->IsCursorVisible();
+	return ViewportClient && ViewportClient->IsCursorVisible();
 }
 
 void FCursorSystem::Render(const FPassContext& Ctx)

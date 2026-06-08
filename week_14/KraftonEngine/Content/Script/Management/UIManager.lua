@@ -42,6 +42,11 @@ local MAIN_BUTTON_HOVER_SFX = "SFX/ButtonHovering.mp3"
 local MAIN_BUTTON_CLICK_SFX = "SFX/ButtonClickMain.mp3"
 local MAIN_GAME_START_SFX = "SFX/ButtonClickGameStart.mp3"
 local LOADING_END_SFX = "SFX/LoadingEnd.mp3"
+local DEFAULT_CURSOR_IMAGE_PATH = "Content/Texture/Pointer_Main.png"
+local DEFAULT_CURSOR_WIDTH = 64.0
+local DEFAULT_CURSOR_HEIGHT = 64.0
+local DEFAULT_CURSOR_HOTSPOT_X = 11.0
+local DEFAULT_CURSOR_HOTSPOT_Y = 7.0
 local POPUP_LAYER_ID = "popupLayer"
 local POPUP_BACKDROP_ID = "popupBackdrop"
 local POPUP_IDS = {
@@ -120,6 +125,28 @@ local function call_widget(widget, method_name, ...)
         return widget[method_name](widget, ...)
     end
     return nil
+end
+
+local function apply_default_cursor_image()
+    if Input == nil or Input.SetCursorImage == nil then
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return Input.SetCursorImage(
+            DEFAULT_CURSOR_IMAGE_PATH,
+            DEFAULT_CURSOR_WIDTH,
+            DEFAULT_CURSOR_HEIGHT,
+            DEFAULT_CURSOR_HOTSPOT_X,
+            DEFAULT_CURSOR_HOTSPOT_Y)
+    end)
+
+    if not ok then
+        log("Failed to apply default cursor image")
+        return false
+    end
+
+    return result == true
 end
 
 local function clamp01(value)
@@ -422,6 +449,8 @@ function UIManager.new(general)
 end
 
 function UIManager:Initialize()
+    apply_default_cursor_image()
+
     self.general:Subscribe("scene.hud_requested", self, function(payload)
         self:ApplySceneHUDRequest(payload)
     end)
@@ -731,6 +760,7 @@ function UIManager:ConfigureMainHUD(widget)
     self.main_start_pending = false
     self.main_start_elapsed = 0.0
     self.main_state_requested = false
+    apply_default_cursor_image()
 
     call_widget(widget, "SetWantsMouse", true)
     call_widget(widget, "SetBlocksGameMouseLook", true)
@@ -1640,6 +1670,7 @@ function UIManager:SetInGamePauseVisible(visible)
 
     self.pause_visible = visible
     if visible then
+        apply_default_cursor_image()
         if Input ~= nil and Input.SetInputModeGameAndUI ~= nil then
             Input.SetInputModeGameAndUI()
         end
