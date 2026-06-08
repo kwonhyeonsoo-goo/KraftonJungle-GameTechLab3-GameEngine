@@ -1,10 +1,11 @@
-// Generated from Content/Material/Auto/rus_build_dec_01.uasset
+// Generated from Content/Material/Auto/rus_build_11.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/Functions.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/ForwardLighting.hlsli"
 
 struct FMaterialPixelInput
 {
@@ -46,7 +47,8 @@ float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, flo
     return SpecularLight * SpecularColor;
 }
 
-Texture2D Tex_Diffuse : register(t0);
+Texture2D Tex_DiffuseTexture : register(t0);
+Texture2D Tex_NormalTexture : register(t1);
 
 cbuffer PerMaterial : register(b2)
 {
@@ -62,15 +64,18 @@ float3 GetCommonMaterialEmissive()
 
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
-    float4 n_17 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
-    float n_3 = 0.000000f;
+    float4 n_3 = Tex_DiffuseTexture.Sample(LinearWrapSampler, Input.UV0);
+    float3 n_13 = float3(1.000000f, 1.000000f, 1.000000f);
+    float3 n_15 = ((n_3).rgb * n_13);
+    float4 n_23 = Tex_NormalTexture.Sample(LinearWrapSampler, Input.UV0);
+    float n_33 = 1.000000f;
     FMaterialResult Result;
-    Result.BaseColor = (n_17).rgb;
-    Result.Normal = float3(0, 0, 1);
-    Result.Roughness = 0.5f;
+    Result.BaseColor = n_15;
+    Result.Normal = (n_23).rgb;
+    Result.Roughness = (n_23).r;
     Result.Metallic = 0.0f;
     Result.Emissive = float3(0, 0, 0);
-    Result.Opacity = n_3;
+    Result.Opacity = n_33;
     return Result;
 }
 
@@ -113,7 +118,16 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
     float3 N = normalize(input.normal);
 
-    float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
+    float3 V = normalize(CameraWorldPos - input.worldPos);
+    float roughness = saturate(Result.Roughness);
+    float metallic = saturate(Result.Metallic);
+    float shininess = MaterialRoughnessToShininess(roughness);
+    float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
+    float3 specular = ApplyMaterialMetallicSpecular(AccumulateSpecular(input.worldPos, N, V, shininess, input.position), Result.BaseColor, metallic);
 
-    return float4(finalRgb, saturate(Result.Opacity));
+    float3 diffuseBase = ApplyMaterialMetallicDiffuse(Result.BaseColor, metallic);
+    float3 finalRgb = diffuseBase * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
+    float OutOpacity = saturate(Result.Opacity);
+
+    return float4(finalRgb, OutOpacity);
 }
