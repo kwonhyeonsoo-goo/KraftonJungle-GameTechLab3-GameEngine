@@ -43,6 +43,8 @@ public:
 
     // UMaterial 생성
 	UMaterial* GetOrCreateMaterial(const FString& MatFilePath);
+	void ClearCache();
+	uint64 GetCacheGeneration() const { return CacheGeneration; }
 
 	// 임포터용 — JSON 없이 머티리얼을 직접 만들고 .uasset 으로 저장.
 	UMaterial* CreateImportedMaterialAsset(const FString& UassetPath, const FVector4& SectionColor,
@@ -87,6 +89,7 @@ public:
 private:
 	void PurgeInvalidMaterialCacheEntries();
 	bool bReleased = false;
+	uint64 CacheGeneration = 0;
 
 	// 셰이더로 Template 생성 또는 캐시에서 반환. Stable generated shader paths use SourceHash/Revision in cache keys.
 	FMaterialTemplate* GetOrCreateTemplate(const FString& ShaderPath, uint64 SourceHash = 0, uint32 CompileRevision = 0);
