@@ -93,6 +93,15 @@ local CUTSCENE_LETTERBOX_THICKNESS = 130.0
 local CUTSCENE_LETTERBOX_SCREEN_HEIGHT = 1080.0
 local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
 local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
+local SCOPE_DISTANCE_TRACE_METERS = 2000.0
+local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
+local COMBAT_AGENT_ROW_COUNT = 5
+local COMBAT_AGENT_BAR_WIDTH = 210.0
+local HIT_NOTIFY_CENTER_X = 740.0
+local HIT_NOTIFY_CENTER_Y = 476.0
+local HIT_NOTIFY_RIGHT_X = 1268.0
+local HIT_NOTIFY_RIGHT_Y = 376.0
+local HIT_NOTIFY_DURATION = 2.75
 
 local function log(message)
     if Debug and Debug.Log then
@@ -120,6 +129,30 @@ local function clamp01(value)
         return 1.0
     end
     return value
+end
+
+local function utf8_text(...)
+    return string.char(...)
+end
+
+local function lerp(a, b, t)
+    t = clamp01(t)
+    return (a or 0.0) + ((b or 0.0) - (a or 0.0)) * t
+end
+
+local function ease_out_cubic(t)
+    t = clamp01(t)
+    local inv = 1.0 - t
+    return 1.0 - inv * inv * inv
+end
+
+local function ease_in_out_cubic(t)
+    t = clamp01(t)
+    if t < 0.5 then
+        return 4.0 * t * t * t
+    end
+    local f = -2.0 * t + 2.0
+    return 1.0 - (f * f * f) * 0.5
 end
 
 local function approach01(current, target, dt, speed)
@@ -311,6 +344,17 @@ local function read_string_method(target, method_names)
     return nil
 end
 
+local function is_friendly_combat_team(team_tag)
+    if team_tag == nil or team_tag == "" then
+        return false
+    end
+
+    local team = string.lower(tostring(team_tag))
+    return string.find(team, "ally", 1, true) ~= nil
+        or string.find(team, "friendly", 1, true) ~= nil
+        or string.find(team, "player", 1, true) ~= nil
+end
+
 function UIManager.new(general)
     return setmetatable({
         general = general,
@@ -322,6 +366,8 @@ function UIManager.new(general)
         main_start_duration = 2.0,
         main_state_requested = false,
         scope_visible = false,
+        scope_distance_last_valid_meters = nil,
+        scope_distance_last_valid_time = -1000.0,
         compass_frame_count = 360,
         compass_last_frame = -1,
         compass_smooth_speed = 18.0,
@@ -341,6 +387,11 @@ function UIManager.new(general)
         weapon_last_name = nil,
         weapon_last_ammo_text = nil,
         weapon_last_ammo_type = nil,
+        combat_agent_last_key = "",
+        hit_notify = nil,
+        radio_hud_suppressed = false,
+        radio_blackout_alpha = 0.0,
+        radio_subtitle_visible = false,
         cutscene_active = false,
         cutscene_letterbox_alpha = 0.0,
         cutscene_letterbox_target = 0.0,
@@ -406,12 +457,24 @@ function UIManager:Initialize()
         self:SetScopeTelemetry(payload)
     end)
 
+    self.general:Subscribe("ingame.sniper_hit_scored", self, function(payload)
+        self:ShowHitNotification(payload)
+    end)
+
     self.general:Subscribe("cutscene.skip_prompt", self, function(payload)
         self:SetCutSceneSkipPrompt(payload)
     end)
 
     self.general:Subscribe("cutscene.presentation", self, function(payload)
         self:SetCutScenePresentation(payload)
+    end)
+
+    self.general:Subscribe("radio.subtitle", self, function(payload)
+        self:SetRadioSubtitle(payload)
+    end)
+
+    self.general:Subscribe("radio.opening_presentation", self, function(payload)
+        self:SetRadioOpeningPresentation(payload)
     end)
 end
 
@@ -921,6 +984,46 @@ function UIManager:SetCutScenePresentation(payload)
     end
 end
 
+function UIManager:SetRadioSubtitle(payload)
+    local visible = payload ~= nil and payload.visible == true
+    local text = payload ~= nil and payload.text ~= nil and tostring(payload.text) or ""
+    self.radio_subtitle_visible = visible
+
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        return
+    end
+
+    call_widget(widget, "SetText", "radioSubtitleText", visible and text or "")
+    self:SetElementVisible(widget, "radioSubtitlePanel", visible)
+    self:SetElementStyle(widget, "radioSubtitlePanel", "display", visible and "block" or "none")
+    self:SetElementAlpha(widget, "radioSubtitlePanel", visible and 1.0 or 0.0)
+end
+
+function UIManager:SetRadioOpeningPresentation(payload)
+    local alpha = payload ~= nil and tonumber(payload.blackout_alpha) or 0.0
+    local active = payload ~= nil and payload.active == true
+    local suppress = payload ~= nil and payload.hud_suppressed == true
+    self.radio_blackout_alpha = clamp01(alpha)
+    self.radio_hud_suppressed = suppress
+
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        return
+    end
+
+    local blackout_visible = active and self.radio_blackout_alpha > 0.001
+    self:SetElementVisible(widget, "radioBlackout", blackout_visible)
+    self:SetElementStyle(widget, "radioBlackout", "display", blackout_visible and "block" or "none")
+    self:SetElementAlpha(widget, "radioBlackout", blackout_visible and self.radio_blackout_alpha or 0.0)
+
+    if suppress then
+        self:SetInGameHUDSuppressed(widget, true)
+    elseif not self.cutscene_active and not self.pause_visible then
+        self:SetInGameHUDSuppressed(widget, false)
+    end
+end
+
 function UIManager:HideAllPopups(widget)
     widget = widget or self:GetActiveHUDWidget()
     if widget == nil then
@@ -1345,8 +1448,36 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementStyle(widget, "weaponNameLabel", "color", "rgba(255, 255, 255, 255)")
     self:SetElementStyle(widget, "ammoTypeLabel", "color", "rgba(255, 255, 255, 255)")
     self:UpdateWeaponHUD(true)
+
+    self:SetElementVisible(widget, "hitNotifyPanel", false)
+    self:SetElementAlpha(widget, "hitNotifyPanel", 0.0)
+    self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
+    self:SetElementStyle(widget, "hitNotifyTitle", "font-family", "\"Nexon\"")
+    self:SetElementStyle(widget, "hitNotifyTitle", "font-weight", "bold")
+    self:SetElementStyle(widget, "hitNotifyDistance", "font-family", "\"Nexon\"")
+    self:SetElementStyle(widget, "hitNotifyDistance", "font-weight", "bold")
+    self:SetElementStyle(widget, "hitNotifyScore", "font-family", "\"Nexon\"")
+    self:SetElementStyle(widget, "hitNotifyScore", "font-weight", "bold")
+
+    self:SetElementVisible(widget, "combatAgentPanel", false)
+    self:SetElementAlpha(widget, "combatAgentPanel", 0.0)
+    self:SetElementStyle(widget, "combatAgentTitle", "font-family", "\"Nexon\"")
+    self:SetElementStyle(widget, "combatAgentTitle", "font-weight", "bold")
+    for index = 1, COMBAT_AGENT_ROW_COUNT do
+        self:SetElementVisible(widget, "combatAgentRow" .. tostring(index), false)
+        self:SetElementAlpha(widget, "combatAgentRow" .. tostring(index), 0.0)
+        self:SetElementStyle(widget, "combatAgentName" .. tostring(index), "font-family", "\"Nexon\"")
+        self:SetElementStyle(widget, "combatAgentName" .. tostring(index), "font-weight", "bold")
+        self:SetElementStyle(widget, "combatAgentHp" .. tostring(index), "font-family", "\"Nexon\"")
+        self:SetElementStyle(widget, "combatAgentHp" .. tostring(index), "font-weight", "bold")
+        self:SetElementStyle(widget, "combatAgentState" .. tostring(index), "font-family", "\"Nexon\"")
+        self:SetElementStyle(widget, "combatAgentState" .. tostring(index), "font-weight", "bold")
+    end
+
     self:SetCutSceneSkipPrompt({ visible = false })
     self:ApplyCutSceneLetterbox(widget, self.cutscene_letterbox_alpha)
+    self:SetRadioSubtitle({ visible = false, text = "" })
+    self:SetRadioOpeningPresentation({ active = false, blackout_alpha = 0.0, hud_suppressed = false })
 
     self:SetElementImage(widget, "compassImage", "Image/Hor-Compass/Window/Compass_Window_000.png")
     self:ConfigurePauseMenuActions(widget)
@@ -1392,6 +1523,8 @@ function UIManager:SetInGameHUDSuppressed(widget, suppressed)
     self:SetElementVisible(widget, "airSupportTimerPanel", visible)
     self:SetElementVisible(widget, "breathPanel", visible and self.breath_visible)
     self:SetElementVisible(widget, "weaponInfoPanel", visible)
+    self:SetElementVisible(widget, "hitNotifyPanel", visible and self.hit_notify ~= nil)
+    self:SetElementVisible(widget, "combatAgentPanel", visible and self.combat_agent_last_key ~= "")
 end
 
 function UIManager:SetPausePanel(panel_name)
@@ -1475,6 +1608,167 @@ function UIManager:ConfigureScopeTelemetry(widget)
     })
 end
 
+function UIManager:GetWorldTimeSeconds()
+    if World ~= nil and World.GetTimeSeconds ~= nil then
+        local ok, value = pcall(function()
+            return World.GetTimeSeconds()
+        end)
+        if ok then
+            local seconds = tonumber(value)
+            if seconds ~= nil then
+                return seconds
+            end
+        end
+    end
+
+    return 0.0
+end
+
+function UIManager:RememberScopeDistance(distance_meters)
+    if type(distance_meters) ~= "number" or distance_meters < 0.0 then
+        return
+    end
+
+    self.scope_distance_last_valid_meters = distance_meters
+    self.scope_distance_last_valid_time = self:GetWorldTimeSeconds()
+end
+
+function UIManager:GetHeldScopeDistance()
+    local last_distance = self.scope_distance_last_valid_meters
+    if type(last_distance) ~= "number" then
+        return nil
+    end
+
+    local elapsed = self:GetWorldTimeSeconds() - (self.scope_distance_last_valid_time or -1000.0)
+    if elapsed <= SCOPE_DISTANCE_HOLD_SECONDS then
+        return last_distance
+    end
+
+    return nil
+end
+
+function UIManager:GetScopeTelemetrySnapshot()
+    local snapshot = {
+        distance_text = "-- m",
+        wind_text = "000 deg  0.0 m/s",
+        wind_degrees = 0.0,
+        wind_mps = 0.0,
+        zoom_text = "4x",
+        zoom_multiplier = 4.0,
+        zoom_min = 4.0,
+        zoom_max = 16.0
+    }
+
+    local pawn = self:GetSniperPawn()
+    if pawn ~= nil then
+        local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
+        local min_zoom = read_float_method(pawn, { "GetMinScopeZoomMagnification" })
+        local max_zoom = read_float_method(pawn, { "GetMaxScopeZoomMagnification" })
+
+        if type(min_zoom) == "number" and min_zoom > 0.0 then
+            snapshot.zoom_min = min_zoom
+        end
+        if type(max_zoom) == "number" and max_zoom > 0.0 then
+            snapshot.zoom_max = max_zoom
+        end
+        if snapshot.zoom_max < snapshot.zoom_min then
+            local temp = snapshot.zoom_min
+            snapshot.zoom_min = snapshot.zoom_max
+            snapshot.zoom_max = temp
+        end
+
+        if type(current_zoom) == "number" then
+            snapshot.zoom_multiplier = current_zoom
+        else
+            snapshot.zoom_multiplier = snapshot.zoom_min
+        end
+
+        if World ~= nil and pawn.GetCamera ~= nil then
+            local ok_camera, camera = pcall(function()
+                return pawn:GetCamera()
+            end)
+            if ok_camera and camera ~= nil then
+                local ok_trace, trace_result = pcall(function()
+                    local trace_start = nil
+                    if camera.GetLocation ~= nil then
+                        trace_start = camera:GetLocation()
+                    else
+                        trace_start = camera.Location
+                    end
+
+                    local trace_direction = camera.Forward
+                    if trace_start == nil or trace_direction == nil then
+                        return nil
+                    end
+
+                    local trace_end = trace_start + trace_direction * SCOPE_DISTANCE_TRACE_METERS
+                    if World.LineTraceGameplay ~= nil then
+                        return World.LineTraceGameplay(trace_start, trace_end, pawn)
+                    end
+                    if World.LineTrace ~= nil then
+                        return World.LineTrace(trace_start, trace_end, pawn)
+                    end
+                    return nil
+                end)
+
+                if ok_trace and type(trace_result) == "table" and trace_result.Hit == true then
+                    local hit_distance = tonumber(trace_result.Distance)
+                    if hit_distance ~= nil and hit_distance >= 0.0 then
+                        snapshot.distance_meters = hit_distance
+                        self:RememberScopeDistance(hit_distance)
+                    end
+                end
+            end
+        end
+    end
+
+    if type(snapshot.distance_meters) ~= "number" then
+        local held_distance = self:GetHeldScopeDistance()
+        if type(held_distance) == "number" then
+            snapshot.distance_meters = held_distance
+        end
+    end
+
+    local wind_enabled = true
+    if Engine ~= nil and Engine.GetBallisticWindEnabled ~= nil then
+        local ok, value = pcall(function()
+            return Engine.GetBallisticWindEnabled()
+        end)
+        if ok then
+            wind_enabled = value == true
+        end
+    end
+
+    local current_wind = nil
+    if Engine ~= nil and Engine.GetCurrentBallisticWindAcceleration ~= nil then
+        local ok, value = pcall(function()
+            return Engine.GetCurrentBallisticWindAcceleration()
+        end)
+        if ok then
+            current_wind = value
+        end
+    elseif Engine ~= nil and Engine.GetBallisticWindAcceleration ~= nil then
+        local ok, value = pcall(function()
+            return Engine.GetBallisticWindAcceleration()
+        end)
+        if ok then
+            current_wind = value
+        end
+    end
+
+    if wind_enabled and current_wind ~= nil then
+        local wind_x = tonumber(current_wind.X or current_wind.x or 0.0) or 0.0
+        local wind_y = tonumber(current_wind.Y or current_wind.y or 0.0) or 0.0
+        local planar_wind_speed = math.sqrt(wind_x * wind_x + wind_y * wind_y)
+        if planar_wind_speed > 0.0001 then
+            snapshot.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
+            snapshot.wind_mps = planar_wind_speed
+        end
+    end
+
+    return snapshot
+end
+
 function UIManager:SetScopeTelemetry(payload)
     payload = payload or {}
     local widget = payload.widget or self:GetActiveHUDWidget()
@@ -1506,10 +1800,17 @@ function UIManager:SetScopeTelemetry(payload)
     end
     if type(payload.zoom_multiplier) == "number" then
         local clamped_zoom = payload.zoom_multiplier
-        if clamped_zoom < 4 then
-            clamped_zoom = 4
-        elseif clamped_zoom > 32 then
-            clamped_zoom = 32
+        local min_zoom = type(payload.zoom_min) == "number" and payload.zoom_min or 4
+        local max_zoom = type(payload.zoom_max) == "number" and payload.zoom_max or 16
+        if max_zoom < min_zoom then
+            local temp = min_zoom
+            min_zoom = max_zoom
+            max_zoom = temp
+        end
+        if clamped_zoom < min_zoom then
+            clamped_zoom = min_zoom
+        elseif clamped_zoom > max_zoom then
+            clamped_zoom = max_zoom
         end
         zoom_text = string.format("%dx", math.floor(clamped_zoom + 0.5))
     end
@@ -1529,8 +1830,221 @@ function UIManager:SetScopeTelemetry(payload)
     end
 end
 
+function UIManager:UpdateScopeTelemetryHUD(force)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    if not force and not self.scope_visible then
+        return
+    end
+
+    self:SetScopeTelemetry(self:GetScopeTelemetrySnapshot())
+end
+
+function UIManager:GetHitNotifyHitInfo(payload)
+    if payload == nil then
+        return nil
+    end
+    if payload.hit ~= nil then
+        return payload.hit
+    end
+    if type(payload.payload) == "table" then
+        return payload.payload.hit
+    end
+    return nil
+end
+
+function UIManager:GetHitNotifyRegionAlias(hit, payload)
+    local region_name = payload ~= nil and payload.hit_region_name or nil
+    if (region_name == nil or region_name == "") and hit ~= nil then
+        region_name = hit.HitRegionName
+    end
+
+    if hit ~= nil and SniperHitRegion ~= nil then
+        if enum_equals(hit.HitRegion, SniperHitRegion.Head) then
+            return utf8_text(235, 168, 184, 235, 166, 172)
+        end
+        if enum_equals(hit.HitRegion, SniperHitRegion.Torso) then
+            return utf8_text(235, 170, 184, 237, 134, 181)
+        end
+        if enum_equals(hit.HitRegion, SniperHitRegion.Arm) then
+            return utf8_text(237, 140, 148)
+        end
+        if enum_equals(hit.HitRegion, SniperHitRegion.Leg) then
+            return utf8_text(235, 139, 164, 235, 166, 172)
+        end
+    end
+
+    region_name = string.upper(tostring(region_name or ""))
+    if region_name == "HEAD" then
+        return utf8_text(235, 168, 184, 235, 166, 172)
+    end
+    if region_name == "TORSO" or region_name == "BODY" then
+        return utf8_text(235, 170, 184, 237, 134, 181)
+    end
+    if region_name == "ARM" then
+        return utf8_text(237, 140, 148)
+    end
+    if region_name == "LEG" then
+        return utf8_text(235, 139, 164, 235, 166, 172)
+    end
+    return utf8_text(235, 182, 128, 236, 156, 132)
+end
+
+function UIManager:GetHitNotifyOutcomeAlias(hit)
+    if hit ~= nil and SniperHitOutcome ~= nil then
+        if enum_equals(hit.HitOutcome, SniperHitOutcome.Penetrated) then
+            return utf8_text(234, 180, 128, 237, 134, 181)
+        end
+        if enum_equals(hit.HitOutcome, SniperHitOutcome.Blocked) then
+            return utf8_text(235, 176, 169, 237, 131, 132)
+        end
+        if enum_equals(hit.HitOutcome, SniperHitOutcome.Ricochet) then
+            return utf8_text(235, 143, 132, 237, 131, 132)
+        end
+    end
+    return utf8_text(235, 170, 133, 236, 164, 145)
+end
+
+function UIManager:FormatHitNotifyDistance(hit)
+    if hit == nil then
+        return utf8_text(234, 177, 176, 235, 166, 172) .. " --m"
+    end
+
+    local distance = tonumber(hit.TravelDistance)
+    if distance == nil then
+        return utf8_text(234, 177, 176, 235, 166, 172) .. " --m"
+    end
+
+    if distance >= 10000.0 then
+        distance = distance / 100.0
+    end
+    return string.format("%s %dm", utf8_text(234, 177, 176, 235, 166, 172), math.floor(distance + 0.5))
+end
+
+function UIManager:FormatHitNotifyScore(payload)
+    local score = payload ~= nil and tonumber(payload.score_delta) or nil
+    if score == nil and payload ~= nil then
+        score = tonumber(payload.hit_score_value)
+    end
+    if score == nil then
+        local hit = self:GetHitNotifyHitInfo(payload)
+        score = hit ~= nil and tonumber(hit.HitScoreValue) or 0
+    end
+
+    score = tonumber(score) or 0
+    if score >= 0 then
+        score = math.floor(score + 0.5)
+    else
+        score = -math.floor(math.abs(score) + 0.5)
+    end
+    if score >= 0 then
+        return string.format("+%d%s", score, utf8_text(236, 160, 144))
+    end
+    return string.format("%d%s", score, utf8_text(236, 160, 144))
+end
+
+function UIManager:ShowHitNotification(payload)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        return
+    end
+
+    local hit = self:GetHitNotifyHitInfo(payload)
+    local title = self:GetHitNotifyRegionAlias(hit, payload) .. " " .. self:GetHitNotifyOutcomeAlias(hit)
+    local distance_text = self:FormatHitNotifyDistance(hit)
+    local score_text = self:FormatHitNotifyScore(payload)
+
+    call_widget(widget, "SetText", "hitNotifyTitle", title)
+    call_widget(widget, "SetText", "hitNotifyDistance", distance_text)
+    call_widget(widget, "SetText", "hitNotifyScore", score_text)
+
+    self.hit_notify = {
+        time = 0.0,
+        duration = HIT_NOTIFY_DURATION
+    }
+
+    self:SetElementVisible(widget, "hitNotifyPanel", true)
+    self:SetElementVisible(widget, "hitNotifyMeta", true)
+    self:ApplyHitNotificationState(widget, 0.0)
+end
+
+function UIManager:ApplyHitNotificationState(widget, time)
+    if widget == nil then
+        return
+    end
+
+    local alpha = 1.0
+    local x = HIT_NOTIFY_CENTER_X
+    local y = HIT_NOTIFY_CENTER_Y
+    local scale = 1.0
+    local title_alpha = 1.0
+    local meta_alpha = 0.0
+
+    if time < 0.22 then
+        local t = ease_out_cubic(time / 0.22)
+        scale = lerp(1.34, 0.92, t)
+    elseif time < 0.50 then
+        local t = ease_out_cubic((time - 0.22) / 0.28)
+        scale = lerp(0.92, 1.0, t)
+    elseif time < 1.00 then
+        local t = ease_in_out_cubic((time - 0.50) / 0.50)
+        x = lerp(HIT_NOTIFY_CENTER_X, HIT_NOTIFY_RIGHT_X, t)
+        y = lerp(HIT_NOTIFY_CENTER_Y, HIT_NOTIFY_RIGHT_Y, t)
+        scale = lerp(1.0, 0.74, t)
+        meta_alpha = clamp01((time - 0.66) / 0.28)
+    elseif time < 2.30 then
+        x = HIT_NOTIFY_RIGHT_X
+        y = HIT_NOTIFY_RIGHT_Y
+        scale = 0.74
+        meta_alpha = 1.0
+    else
+        local t = clamp01((time - 2.30) / 0.45)
+        x = HIT_NOTIFY_RIGHT_X
+        y = HIT_NOTIFY_RIGHT_Y
+        scale = 0.74
+        alpha = 1.0 - t
+        title_alpha = alpha
+        meta_alpha = alpha
+    end
+
+    self:SetElementStyle(widget, "hitNotifyPanel", "left", string.format("%.3fpx", x))
+    self:SetElementStyle(widget, "hitNotifyPanel", "top", string.format("%.3fpx", y))
+    self:SetElementStyle(widget, "hitNotifyPanel", "transform", string.format("scale(%.3f)", scale))
+    self:SetElementAlpha(widget, "hitNotifyPanel", alpha)
+    self:SetElementAlpha(widget, "hitNotifyTitle", title_alpha)
+    self:SetElementAlpha(widget, "hitNotifyMeta", meta_alpha)
+end
+
+function UIManager:TickHitNotification(dt)
+    if self.hit_notify == nil then
+        return
+    end
+
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        self.hit_notify = nil
+        return
+    end
+
+    self.hit_notify.time = (self.hit_notify.time or 0.0) + (dt or 0.0)
+    if self.hit_notify.time >= (self.hit_notify.duration or HIT_NOTIFY_DURATION) then
+        self.hit_notify = nil
+        self:SetElementAlpha(widget, "hitNotifyPanel", 0.0)
+        self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
+        self:SetElementVisible(widget, "hitNotifyPanel", false)
+        return
+    end
+
+    self:ApplyHitNotificationState(widget, self.hit_notify.time)
+end
+
 function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.scope_visible = false
+    self.scope_distance_last_valid_meters = nil
+    self.scope_distance_last_valid_time = -1000.0
     self.compass_last_frame = -1
     self.smoothed_heading_degrees = nil
     self.breath_visible = false
@@ -1543,6 +2057,11 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.weapon_last_name = nil
     self.weapon_last_ammo_text = nil
     self.weapon_last_ammo_type = nil
+    self.combat_agent_last_key = ""
+    self.hit_notify = nil
+    self.radio_hud_suppressed = false
+    self.radio_blackout_alpha = 0.0
+    self.radio_subtitle_visible = false
     self.cutscene_active = false
     self.cutscene_letterbox_alpha = 0.0
     self.cutscene_letterbox_target = 0.0
@@ -1657,7 +2176,6 @@ function UIManager:GetWeaponHUDSnapshot()
     local weapon_name = "SNIPER RIFLE"
     local ammo_type_name = "NORMAL"
     local current_ammo = nil
-    local total_ammo = nil
 
     if weapon ~= nil then
         weapon_name = read_string_method(weapon, {
@@ -1683,18 +2201,11 @@ function UIManager:GetWeaponHUDSnapshot()
             "GetCurrentAmmo",
             "GetClipAmmo"
         })
-        total_ammo = read_number_method(weapon, {
-            "GetTotalAmmoCount",
-            "GetTotalAmmo",
-            "GetReserveAmmo",
-            "GetMaxAmmoCount",
-            "GetMaxAmmo"
-        })
     end
 
-    local ammo_text = "00 / 00"
-    if current_ammo ~= nil or total_ammo ~= nil then
-        ammo_text = string.format("%02d / %02d", current_ammo or 0, total_ammo or 0)
+    local ammo_text = "00"
+    if current_ammo ~= nil then
+        ammo_text = string.format("%02d", current_ammo)
     end
 
     return {
@@ -1724,6 +2235,107 @@ function UIManager:UpdateWeaponHUD(force)
     if force or snapshot.ammo_type_name ~= self.weapon_last_ammo_type then
         self.weapon_last_ammo_type = snapshot.ammo_type_name
         call_widget(widget, "SetText", "ammoTypeLabel", snapshot.ammo_type_name)
+    end
+end
+
+function UIManager:GetCombatAgentHUDSnapshot()
+    if Combat == nil or Combat.GetAgents == nil then
+        return {}
+    end
+
+    local ok, agents = pcall(function()
+        return Combat.GetAgents()
+    end)
+    if not ok or agents == nil then
+        return {}
+    end
+
+    local result = {}
+    for _, agent in ipairs(agents) do
+        local alive = true
+        if agent.IsAlive ~= nil then
+            local alive_ok, alive_value = pcall(function()
+                return agent:IsAlive()
+            end)
+            alive = alive_ok and alive_value == true
+        end
+
+        if alive then
+            local team = read_string_method(agent, { "GetTeamTag" }) or ""
+            if is_friendly_combat_team(team) then
+                local health = read_float_method(agent, { "GetHealth" }) or 0.0
+                local max_health = read_float_method(agent, { "GetMaxHealth" }) or 0.0
+                local ratio = read_float_method(agent, { "GetHealthRatio" })
+                if ratio == nil then
+                    ratio = max_health > 0.0 and health / max_health or 0.0
+                end
+
+                result[#result + 1] = {
+                    name = read_string_method(agent, { "GetDisplayName", "GetName" }) or "Ally",
+                    state = read_string_method(agent, { "GetStateName" }) or "-",
+                    health = math.max(0.0, health),
+                    max_health = math.max(0.0, max_health),
+                    ratio = clamp01(ratio)
+                }
+            end
+        end
+
+        if #result >= COMBAT_AGENT_ROW_COUNT then
+            break
+        end
+    end
+
+    return result
+end
+
+function UIManager:UpdateCombatAgentHUD(force)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local snapshot = self:GetCombatAgentHUDSnapshot()
+    local key_parts = {}
+    for index, entry in ipairs(snapshot) do
+        key_parts[index] = string.format(
+            "%s|%s|%d|%d",
+            entry.name,
+            entry.state,
+            math.floor(entry.health + 0.5),
+            math.floor(entry.max_health + 0.5))
+    end
+    local snapshot_key = table.concat(key_parts, ";")
+
+    if not force and snapshot_key == self.combat_agent_last_key then
+        return
+    end
+    self.combat_agent_last_key = snapshot_key
+
+    local has_agents = #snapshot > 0
+    self:SetElementVisible(widget, "combatAgentPanel", has_agents)
+    self:SetElementAlpha(widget, "combatAgentPanel", has_agents and 1.0 or 0.0)
+
+    for index = 1, COMBAT_AGENT_ROW_COUNT do
+        local entry = snapshot[index]
+        local row_id = "combatAgentRow" .. tostring(index)
+        local row_visible = entry ~= nil
+        self:SetElementVisible(widget, row_id, row_visible)
+        self:SetElementAlpha(widget, row_id, row_visible and 1.0 or 0.0)
+
+        if entry ~= nil then
+            call_widget(widget, "SetText", "combatAgentName" .. tostring(index), entry.name)
+            call_widget(
+                widget,
+                "SetText",
+                "combatAgentHp" .. tostring(index),
+                string.format("%03d / %03d", math.floor(entry.health + 0.5), math.floor(entry.max_health + 0.5)))
+            call_widget(widget, "SetText", "combatAgentState" .. tostring(index), string.upper(entry.state))
+            self:SetElementStyle(
+                widget,
+                "combatAgentBarFill" .. tostring(index),
+                "width",
+                string.format("%.3fpx", COMBAT_AGENT_BAR_WIDTH * entry.ratio))
+        end
     end
 end
 
@@ -1781,6 +2393,8 @@ function UIManager:SetScopeHUDVisible(visible)
         self:SetElementAlpha(widget, "crosshairImage", 0.0)
         self:SetElementVisible(widget, "crosshairImage", false)
     else
+        self.scope_distance_last_valid_meters = nil
+        self.scope_distance_last_valid_time = -1000.0
         self:SetElementAlpha(widget, "scopeOverlay", 0.0)
         self:SetElementVisible(widget, "scopeOverlay", false)
         self:SetElementVisible(widget, "crosshairImage", true)
@@ -2067,14 +2681,24 @@ function UIManager:TickInGameHUD(dt)
         return
     end
 
+    if self.radio_hud_suppressed then
+        if widget ~= nil then
+            self:SetInGameHUDSuppressed(widget, true)
+        end
+        return
+    end
+
     if self.pause_visible then
         return
     end
 
     self:UpdateCompass(dt)
     self:SetScopeHUDVisible(self:GetScopeVisibleFromInputOrPawn())
+    self:UpdateScopeTelemetryHUD(false)
     self:UpdateBreathHUD(dt)
     self:UpdateWeaponHUD(false)
+    self:UpdateCombatAgentHUD(false)
+    self:TickHitNotification(dt)
 end
 
 return UIManager

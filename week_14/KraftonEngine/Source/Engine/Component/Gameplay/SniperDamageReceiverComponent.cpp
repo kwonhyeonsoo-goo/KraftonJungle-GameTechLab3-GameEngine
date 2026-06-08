@@ -136,6 +136,7 @@ bool USniperDamageReceiverComponent::ApplyResolvedSniperHit(const FSniperHitInfo
 		ResolvedHitInfo.TargetMaxHP = SafeMaxHealth;
 		ResolvedHitInfo.TargetCurrentHP = CurrentHealth;
 		ResolvedHitInfo.bKilled = PreviousHealth > 0.0f && CurrentHealth <= 0.0f;
+		CombatAgent->RecordSniperHit(ResolvedHitInfo);
 
 		OnSniperDamaged.Broadcast(ResolvedHitInfo);
 
@@ -229,6 +230,24 @@ FSniperHitInfo USniperDamageReceiverComponent::BuildResolvedHitInfo(const FSnipe
 
 	ResolvedHitInfo.HitOutcome = ESniperHitOutcome::Normal;
 	ResolvedHitInfo.RegionDamageMultiplier = RegionDamageMultiplier;
+	ResolvedHitInfo.HitScoreMultiplier = RegionDamageMultiplier;
+	if (ResolvedHitInfo.HitScoreValue <= 0)
+	{
+		ResolvedHitInfo.HitScoreValue = GetDefaultSniperHitScoreValue(ResolvedHitInfo.HitRegion);
+	}
+	ResolvedHitInfo.HitScoreValue = static_cast<int32>((std::max)(0.0f, ResolvedHitInfo.HitScoreValue * RegionDamageMultiplier) + 0.5f);
+	if (ResolvedHitInfo.HitBodyName.empty() && ResolvedHitInfo.HitBoneName.IsValid() && ResolvedHitInfo.HitBoneName != FName::None)
+	{
+		ResolvedHitInfo.HitBodyName = ResolvedHitInfo.HitBoneName.ToString();
+	}
+	if (ResolvedHitInfo.HitRegionName.empty())
+	{
+		ResolvedHitInfo.HitRegionName = GetSniperHitRegionName(ResolvedHitInfo.HitRegion);
+	}
+	if (ResolvedHitInfo.HitRegionDisplayName.empty())
+	{
+		ResolvedHitInfo.HitRegionDisplayName = GetSniperHitRegionDisplayName(ResolvedHitInfo.HitRegion);
+	}
 	ResolvedHitInfo.bShouldRagdoll = HitInfo.bShouldRagdoll && bCanRagdoll;
 
 	if (bHasArmor)

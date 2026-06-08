@@ -41,6 +41,7 @@
 #include "Particle/Distributions/DistributionVectorUniform.h"
 #include "Particle/Distributions/DistributionVectorUniformCurve.h"
 #include "Particle/Modules/ParticleModuleAcceleration.h"
+#include "Particle/Modules/ParticleModuleBloodSpray.h"
 #include "Particle/Modules/ParticleModuleBeamSource.h"
 #include "Particle/Modules/ParticleModuleBeamTarget.h"
 #include "Particle/Modules/ParticleModuleBeamNoise.h"
@@ -363,6 +364,8 @@ namespace
 	// (콤보가 열렸을 때만 머티리얼을 load → 캐시됨. 불일치 머티리얼은 셰이더 레이아웃이 안 맞아 사용 불가.)
 	bool MaterialComboFieldFiltered(const char* Label, FSoftObjectPtr& Value, const FString& RequiredShaderPath)
 	{
+		FMaterialManager::Get().ScanMaterialAssets();
+
 		FString CurrentPath = Value.ToString();
 		if (CurrentPath.empty()) CurrentPath = "None";
 
@@ -2483,6 +2486,12 @@ void FParticleEditorWidget::RenderEmitterColumn(UParticleEmitter* Emitter, int32
 						if (Module && ContextLOD->AddModule(Module)) { SelectedModuleIndex = static_cast<int32>(ContextLOD->Modules.size()) - 1; NotifyParticleAssetChanged(true); }
 						else if (Module) { UObjectManager::Get().DestroyObject(Module); }
 					}
+					if (ImGui::MenuItem("Blood Spray"))
+					{
+						UParticleModule* Module = CreateParticleModule<UParticleModuleBloodSpray>(ContextLOD, Emitter);
+						if (Module && ContextLOD->AddModule(Module)) { SelectedModuleIndex = static_cast<int32>(ContextLOD->Modules.size()) - 1; NotifyParticleAssetChanged(true); }
+						else if (Module) { UObjectManager::Get().DestroyObject(Module); }
+					}
 					ImGui::EndMenu();
 				}
 				if (ImGui::BeginMenu("Acceleration"))
@@ -3193,6 +3202,26 @@ void FParticleEditorWidget::RenderPropertyPanel(ImVec2 Size)
 				{
 					bChanged |= DragRotatorField("Rotation", VectorFieldRotation->Rotation, 0.1f);
 					bChanged |= DragRotatorField("Rotation Rate", VectorFieldRotation->RotationRate, 0.1f);
+				}
+			}
+			else if (UParticleModuleBloodSpray* BloodSpray = Cast<UParticleModuleBloodSpray>(Module))
+			{
+				if (ImGui::CollapsingHeader("Blood Spray", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::TextDisabled("Use this instead of Initial Velocity for one-shot blood hit effects.");
+					bChanged |= DragFloat3Field("Cone Axis Local", BloodSpray->ConeAxisLocal, 0.01f, -1.0f, 1.0f);
+					bChanged |= ImGui::DragFloat("Cone Half Angle Degrees", &BloodSpray->ConeHalfAngleDegrees, 0.5f, 0.0f, 180.0f, "%.1f");
+					bChanged |= ImGui::DragFloat("Min Speed", &BloodSpray->MinSpeed, 1.0f, 0.0f, 100000.0f, "%.1f");
+					bChanged |= ImGui::DragFloat("Max Speed", &BloodSpray->MaxSpeed, 1.0f, 0.0f, 100000.0f, "%.1f");
+					bChanged |= ImGui::Checkbox("In World Space", &BloodSpray->bInWorldSpace);
+					bChanged |= ImGui::Checkbox("Add To Existing Velocity", &BloodSpray->bAddToExistingVelocity);
+					ImGui::Separator();
+					bChanged |= ImGui::DragFloat("Drag Coefficient", &BloodSpray->DragCoefficient, 0.1f, 0.0f, 1000.0f, "%.3f");
+					ImGui::Separator();
+					bChanged |= ImGui::DragFloat("Initial Rotation Min Degrees", &BloodSpray->InitialRotationMinDegrees, 1.0f, -3600.0f, 3600.0f, "%.1f");
+					bChanged |= ImGui::DragFloat("Initial Rotation Max Degrees", &BloodSpray->InitialRotationMaxDegrees, 1.0f, -3600.0f, 3600.0f, "%.1f");
+					bChanged |= ImGui::DragFloat("Rotation Rate Min Degrees", &BloodSpray->RotationRateMinDegrees, 1.0f, -10000.0f, 10000.0f, "%.1f");
+					bChanged |= ImGui::DragFloat("Rotation Rate Max Degrees", &BloodSpray->RotationRateMaxDegrees, 1.0f, -10000.0f, 10000.0f, "%.1f");
 				}
 			}
 			else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
@@ -3930,6 +3959,7 @@ void FParticleEditorWidget::RenderAddModulePopup()
 		AddRegular("Lifetime", UParticleModule::EModuleCategory::Lifetime, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleLifetime>(LOD, Emitter); });
 		AddRegular("Initial Location", UParticleModule::EModuleCategory::Location, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleLocation>(LOD, Emitter); });
 		AddRegular("Initial Velocity", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVelocity>(LOD, Emitter); });
+		AddRegular("Blood Spray", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleBloodSpray>(LOD, Emitter); });
 		AddRegular("Local Vector Field", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVectorFieldLocal>(LOD, Emitter); });
 		AddRegular("Vector Field Rotation", UParticleModule::EModuleCategory::Rotation, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVectorFieldRotation>(LOD, Emitter); });
 		AddRegular("Const Acceleration", UParticleModule::EModuleCategory::Acceleration, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleAcceleration>(LOD, Emitter); });

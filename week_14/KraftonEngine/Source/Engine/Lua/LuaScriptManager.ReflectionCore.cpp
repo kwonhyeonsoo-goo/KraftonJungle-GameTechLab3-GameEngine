@@ -1457,6 +1457,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             if (GEngine && GEngine->GetWorld())
             {
                 GEngine->GetWorld()->GetWorldSettings().bEnableBallisticWind = bEnabled;
+                GEngine->GetWorld()->RefreshBallisticWindRuntimeState();
             }
         }
     );
@@ -1470,12 +1471,21 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     Engine.set_function(
+        "GetCurrentBallisticWindAcceleration",
+        []()
+        {
+            return GEngine && GEngine->GetWorld()
+                ? GEngine->GetWorld()->GetCurrentBallisticWindAcceleration()
+                : FVector(0.0f, 1.5f, 0.0f);
+        }
+    );
+    Engine.set_function(
         "SetBallisticWindAcceleration",
         [](const FVector& WindAcceleration)
         {
             if (GEngine && GEngine->GetWorld())
             {
-                GEngine->GetWorld()->GetWorldSettings().BallisticWindAcceleration = WindAcceleration;
+                GEngine->GetWorld()->SetBallisticWindAcceleration(WindAcceleration);
             }
         }
     );

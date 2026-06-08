@@ -96,6 +96,10 @@ private:
 	// PlayerCameraManager 갱신 — Slomo / HitStop 등 TimeDilation 의 영향을 받지 않도록
 	// FTimer 의 raw delta 를 직접 사용한다. Tick 의 paused / 정상 흐름 양쪽에서 호출.
 	void TickPlayerCamera() const;
+	void ResetRuntimeBallisticWindState();
+	void TickRuntimeBallisticWind(float DeltaTime);
+	void PickNextRuntimeBallisticWindTarget();
+	float ComputeRuntimeBallisticWindChangeInterval() const;
 	void ApplyPhysicsSnapshot_GameThread();
 	void ShutdownPhysicsScene();
     void RouteLuaBlueprintPostBeginPlayForActor(AActor* Actor) const;
@@ -120,6 +124,15 @@ public:
 	// 씬 단위 게임 설정 (GameMode 등). 에디터 UI 와 SceneSaveManager 가 사용.
 	FWorldSettings& GetWorldSettings() { return WorldSettings; }
 	const FWorldSettings& GetWorldSettings() const { return WorldSettings; }
+	UFUNCTION(Pure, Category="World|Wind")
+	FVector GetCurrentBallisticWindAcceleration() const
+	{
+		return bRuntimeBallisticWindInitialized ? RuntimeBallisticWindAcceleration : WorldSettings.BallisticWindAcceleration;
+	}
+	UFUNCTION(Callable, Category="World|Wind")
+	void SetBallisticWindAcceleration(const FVector& InWindAcceleration);
+	UFUNCTION(Callable, Category="World|Wind")
+	void RefreshBallisticWindRuntimeState();
 
 	// Transient runtime hook for future global wind actors/fields. Scene save/load does
 	// not serialize this value; editor preview wind remains a component-level override.
@@ -175,6 +188,10 @@ private:
     float                             GameTimeSeconds     = 0.0f;
     bool                              bWorldDestroyRouted = false;
     FWorldSettings                    WorldSettings;
+    FVector                           RuntimeBallisticWindAcceleration = FVector::ZeroVector;
+    FVector                           RuntimeBallisticWindTargetAcceleration = FVector::ZeroVector;
+    float                             RuntimeBallisticWindChangeRemaining = 0.0f;
+    bool                              bRuntimeBallisticWindInitialized = false;
     FVector                           ClothWorldWindVelocity = FVector::ZeroVector;
     bool                              bHasLastFullLODUpdateCameraPos = false;
 	mutable FWorldPrimitivePickingBVH WorldPrimitivePickingBVH;

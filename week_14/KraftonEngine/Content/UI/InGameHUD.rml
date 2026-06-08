@@ -29,6 +29,14 @@
             <div id="airSupportTimerLabel" data-ui-type="Text" data-ui-name="Air Support Timer Label">&#54637;&#44277; &#51648;&#50896; &#46020;&#52265; &#50696;&#51221;</div>
             <div id="airSupportTimerValue" data-ui-type="Text" data-ui-name="Air Support Timer Value">05:00</div>
         </div>
+        <div id="combatAgentPanel" data-ui-type="Panel" data-ui-name="Combat Agent Panel">
+            <div id="combatAgentTitle" data-ui-type="Text" data-ui-name="Combat Agent Title">ALLY STATUS</div>
+            <div id="combatAgentRow1" class="combat-agent-row" data-ui-type="Panel"><div id="combatAgentName1" class="combat-agent-name" data-ui-type="Text">-</div><div id="combatAgentHp1" class="combat-agent-hp" data-ui-type="Text">000 / 000</div><div id="combatAgentState1" class="combat-agent-state" data-ui-type="Text">-</div><div id="combatAgentBarTrack1" class="combat-agent-bar-track" data-ui-type="Panel"><div id="combatAgentBarFill1" class="combat-agent-bar-fill" data-ui-type="Panel"></div></div></div>
+            <div id="combatAgentRow2" class="combat-agent-row" data-ui-type="Panel"><div id="combatAgentName2" class="combat-agent-name" data-ui-type="Text">-</div><div id="combatAgentHp2" class="combat-agent-hp" data-ui-type="Text">000 / 000</div><div id="combatAgentState2" class="combat-agent-state" data-ui-type="Text">-</div><div id="combatAgentBarTrack2" class="combat-agent-bar-track" data-ui-type="Panel"><div id="combatAgentBarFill2" class="combat-agent-bar-fill" data-ui-type="Panel"></div></div></div>
+            <div id="combatAgentRow3" class="combat-agent-row" data-ui-type="Panel"><div id="combatAgentName3" class="combat-agent-name" data-ui-type="Text">-</div><div id="combatAgentHp3" class="combat-agent-hp" data-ui-type="Text">000 / 000</div><div id="combatAgentState3" class="combat-agent-state" data-ui-type="Text">-</div><div id="combatAgentBarTrack3" class="combat-agent-bar-track" data-ui-type="Panel"><div id="combatAgentBarFill3" class="combat-agent-bar-fill" data-ui-type="Panel"></div></div></div>
+            <div id="combatAgentRow4" class="combat-agent-row" data-ui-type="Panel"><div id="combatAgentName4" class="combat-agent-name" data-ui-type="Text">-</div><div id="combatAgentHp4" class="combat-agent-hp" data-ui-type="Text">000 / 000</div><div id="combatAgentState4" class="combat-agent-state" data-ui-type="Text">-</div><div id="combatAgentBarTrack4" class="combat-agent-bar-track" data-ui-type="Panel"><div id="combatAgentBarFill4" class="combat-agent-bar-fill" data-ui-type="Panel"></div></div></div>
+            <div id="combatAgentRow5" class="combat-agent-row" data-ui-type="Panel"><div id="combatAgentName5" class="combat-agent-name" data-ui-type="Text">-</div><div id="combatAgentHp5" class="combat-agent-hp" data-ui-type="Text">000 / 000</div><div id="combatAgentState5" class="combat-agent-state" data-ui-type="Text">-</div><div id="combatAgentBarTrack5" class="combat-agent-bar-track" data-ui-type="Panel"><div id="combatAgentBarFill5" class="combat-agent-bar-fill" data-ui-type="Panel"></div></div></div>
+        </div>
         <div id="breathPanel" data-ui-type="Panel" data-ui-name="Hold Breath Panel">
             <div id="breathLabel" data-ui-type="Text" data-ui-name="Hold Breath Label">&amp;#49704;&amp;#52280;&amp;#44592;</div>
             <div id="breathBarTrack" data-ui-type="Panel" data-ui-name="Hold Breath Track">
@@ -39,12 +47,23 @@
         <div id="weaponInfoPanel" data-ui-type="Panel" data-ui-name="Weapon Info Panel">
             <img id="weaponPanelBg" data-ui-type="Image" data-ui-name="Weapon Panel Background" src="Image/HUD/WeaponPanelFade.png" data-ui-fit="fill" />
             <div id="weaponNameLabel" data-ui-type="Text" data-ui-name="Weapon Name">SNIPER RIFLE</div>
-            <div id="ammoCountLabel" data-ui-type="Text" data-ui-name="Ammo Count">00 / 00</div>
+            <div id="ammoCountLabel" data-ui-type="Text" data-ui-name="Ammo Count">05</div>
             <div id="ammoTypeLabel" data-ui-type="Text" data-ui-name="Ammo Type">AMMO TYPE  NORMAL</div>
+        </div>
+        <div id="hitNotifyPanel" data-ui-type="Panel" data-ui-name="Hit Notify Panel">
+            <div id="hitNotifyTitle" data-ui-type="Text" data-ui-name="Hit Notify Title">HIT</div>
+            <div id="hitNotifyMeta" data-ui-type="Panel" data-ui-name="Hit Notify Meta">
+                <div id="hitNotifyDistance" data-ui-type="Text" data-ui-name="Hit Notify Distance">DISTANCE --m</div>
+                <div id="hitNotifyScore" data-ui-type="Text" data-ui-name="Hit Notify Score">+0 POINTS</div>
+            </div>
         </div>
         <div id="cutsceneLetterboxTop" data-ui-type="Panel" data-ui-name="Cutscene Letterbox Top"></div>
         <div id="cutsceneLetterboxBottom" data-ui-type="Panel" data-ui-name="Cutscene Letterbox Bottom"></div>
         <div id="cutsceneSkipPrompt" data-ui-type="Text" data-ui-name="Cutscene Skip Prompt">Press Space to Skip</div>
+        <div id="radioBlackout" data-ui-type="Panel" data-ui-name="Radio Blackout"></div>
+        <div id="radioSubtitlePanel" data-ui-type="Panel" data-ui-name="Radio Subtitle Panel">
+            <div id="radioSubtitleText" data-ui-type="Text" data-ui-name="Radio Subtitle Text"></div>
+        </div>
         <div id="pauseLayer" data-ui-type="Panel" data-ui-name="Pause Layer">
             <div id="pauseMenuPanel" data-ui-type="Panel" data-ui-name="Pause Menu Panel">
                 <div id="pauseTitle" data-ui-type="Text" data-ui-name="Pause Title">Paused</div>
