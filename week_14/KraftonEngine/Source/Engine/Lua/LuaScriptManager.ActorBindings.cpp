@@ -81,6 +81,7 @@
 #include "Texture/Texture2D.h"
 
 #include <algorithm>
+#include <cctype>
 
 namespace
 {
@@ -212,6 +213,88 @@ namespace
             }
         }
         return Result;
+    }
+    bool EndsWithPrefabExtension(const FString& Value)
+    {
+        constexpr const char* Extension = ".prefab";
+        constexpr size_t ExtensionLength = 7;
+        if (Value.size() < ExtensionLength)
+        {
+            return false;
+        }
+
+        const size_t Offset = Value.size() - ExtensionLength;
+        for (size_t Index = 0; Index < ExtensionLength; ++Index)
+        {
+            const char A = static_cast<char>(std::tolower(static_cast<unsigned char>(Value[Offset + Index])));
+            if (A != Extension[Index])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    FString NormalizePrefabSlash(FString Value)
+    {
+        for (char& Ch : Value)
+        {
+            if (Ch == '\\')
+            {
+                Ch = '/';
+            }
+        }
+        return Value;
+    }
+
+    FString BuildPrefabPathFromDirectoryAndName(FString Directory, FString PrefabName)
+    {
+        Directory = NormalizePrefabSlash(Directory);
+        PrefabName = NormalizePrefabSlash(PrefabName);
+
+        if (PrefabName.empty())
+        {
+            return FString();
+        }
+        if (!EndsWithPrefabExtension(PrefabName))
+        {
+            PrefabName += ".prefab";
+        }
+
+        while (!Directory.empty() && Directory.back() == '/')
+        {
+            Directory.pop_back();
+        }
+
+        if (Directory.empty())
+        {
+            return PrefabName;
+        }
+        return Directory + "/" + PrefabName;
+    }
+
+    void ApplyOptionalActorTransform(
+        AActor* Actor,
+        const sol::optional<FVector>& Location,
+        const sol::optional<FVector>& Rotation,
+        const sol::optional<FVector>& Scale)
+    {
+        if (!IsValid(Actor))
+        {
+            return;
+        }
+        if (Location)
+        {
+            Actor->SetActorLocation(Location.value());
+        }
+        if (Rotation)
+        {
+            Actor->SetActorRotation(Rotation.value());
+        }
+        if (Scale)
+        {
+            Actor->SetActorScale(Scale.value());
+        }
     }
 }
 void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
@@ -2731,6 +2814,32 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             UWorld* W = GEngine->GetWorld();
             if (!W) return nullptr;
             return FPrefabManager::SpawnActorFromPrefab(W, Path);
+        }
+    );
+    World.set_function(
+        "SpawnActorFromPrefabAt",
+        [](const FString& Path, sol::optional<FVector> Location, sol::optional<FVector> Rotation, sol::optional<FVector> Scale) -> AActor*
+        {
+            if (!GEngine) return nullptr;
+            UWorld* W = GEngine->GetWorld();
+            if (!W) return nullptr;
+            AActor* Actor = FPrefabManager::SpawnActorFromPrefab(W, Path);
+            ApplyOptionalActorTransform(Actor, Location, Rotation, Scale);
+            return Actor;
+        }
+    );
+    World.set_function(
+        "SpawnActorFromPrefabByName",
+        [](const FString& Directory, const FString& PrefabName, sol::optional<FVector> Location, sol::optional<FVector> Rotation, sol::optional<FVector> Scale) -> AActor*
+        {
+            if (!GEngine) return nullptr;
+            UWorld* W = GEngine->GetWorld();
+            if (!W) return nullptr;
+            const FString Path = BuildPrefabPathFromDirectoryAndName(Directory, PrefabName);
+            if (Path.empty()) return nullptr;
+            AActor* Actor = FPrefabManager::SpawnActorFromPrefab(W, Path);
+            ApplyOptionalActorTransform(Actor, Location, Rotation, Scale);
+            return Actor;
         }
     );
     World.set_function(

@@ -1,10 +1,10 @@
 {
   "Actor" : {
     "ClassName" : "ACombatCharacter",
-    "Name" : "solider_Ally",
+    "Name" : "ACombatCharacter_55",
     "NonSceneComponents" : [{
         "ClassName" : "UCharacterMovementComponent",
-        "ObjectId" : 4,
+        "ObjectId" : 5,
         "Properties" : {
           "BrakingFriction" : 8.000000,
           "FloorProbeDistance" : 0.100000,
@@ -26,19 +26,19 @@
         }
       }, {
         "ClassName" : "UCombatCoverAgentComponent",
-        "ObjectId" : 5,
+        "ObjectId" : 6,
         "Properties" : {
           "AcceptanceRadius" : 1.000000,
           "AdvanceFullCoverChance" : 0.450000,
-          "AdvanceInterval" : 12.000000,
-          "AdvanceIntervalMax" : 120.000000,
-          "AdvanceIntervalMin" : 80.000000,
+          "AdvanceInterval" : 3.000000,
+          "AdvanceIntervalMax" : 30.000000,
+          "AdvanceIntervalMin" : 20.000000,
           "AdvanceLinkMode" : 0,
           "AttackDamage" : 5.000000,
           "AttackIntervalMax" : 2.000000,
           "AttackIntervalMin" : 1.000000,
           "CombatDecisionCooldown" : 3.000000,
-          "CombatRole" : 0,
+          "CombatRole" : 2,
           "DeathDebugScaleMultiplier" : 0.100000,
           "FacingYawOffset" : 0.000000,
           "FacingYawRate" : 720.000000,
@@ -60,7 +60,7 @@
           "TakeCoverDurationMax" : 2.000000,
           "TakeCoverDurationMin" : 1.000000,
           "TargetScanInterval" : 0.200000,
-          "TeamTag" : "Ally",
+          "TeamTag" : "Enemy",
           "bAutoActivate" : true,
           "bAutoStart" : true,
           "bCanFireWhileMoving" : false,
@@ -76,7 +76,7 @@
         }
       }, {
         "ClassName" : "ULuaScriptComponent",
-        "ObjectId" : 6,
+        "ObjectId" : 7,
         "Properties" : {
           "InitialGameState" : 4,
           "PendingTagsString" : "",
@@ -91,7 +91,7 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [-83.887215, -17.872810, 0.865510],
+      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
@@ -104,7 +104,45 @@
     },
     "RootComponent" : {
       "Children" : [{
-          "Children" : [],
+          "Children" : [{
+              "Children" : [],
+              "ClassName" : "UStaticMeshComponent",
+              "ObjectId" : 4,
+              "Properties" : {
+                "AttachSocketName" : "GunSocket",
+                "CachedEditRotator" : [13.800004, 169.999985, -6.000000],
+                "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+                "CollisionEnabled" : 0,
+                "Mass" : 1.000000,
+                "MaterialSlots" : ["Content/Material/Auto/1b.uasset", "Content/Material/Auto/2b.uasset", "Content/Material/Auto/1w.uasset"],
+                "ObjectType" : 0,
+                "PendingTagsString" : "",
+                "PersistentGuid" : "Component_458",
+                "RelativeTransform.Location" : [0.030000, 0.125000, 0.070000],
+                "RelativeTransform.Scale" : [1.100000, 1.100000, 1.100000],
+                "ResponseContainer" : {
+                  "Responses[0]" : 2,
+                  "Responses[1]" : 2,
+                  "Responses[2]" : 2,
+                  "Responses[3]" : 2,
+                  "Responses[4]" : 2
+                },
+                "StaticMeshPath" : "Content/Data/Gun/M05_StaticMesh.uasset",
+                "bAbsoluteScale" : true,
+                "bAutoActivate" : true,
+                "bCastShadow" : true,
+                "bCastShadowAsTwoSided" : false,
+                "bEditorOnly" : false,
+                "bEnableCCD" : false,
+                "bGenerateOverlapEvents" : false,
+                "bHiddenInComponentTree" : false,
+                "bIsActive" : true,
+                "bIsVisible" : true,
+                "bKinematic" : false,
+                "bSimulatePhysics" : false,
+                "bTickEnable" : true
+              }
+            }],
           "ClassName" : "USkeletalMeshComponent",
           "ObjectId" : 3,
           "Properties" : {
@@ -133,7 +171,7 @@
             "FrontStandUpAnimationPath" : "None",
             "FullBodyLaunchImpulseMagnitude" : 900.000000,
             "Mass" : 1.000000,
-            "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_Ally.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
+            "MaterialSlots" : ["Content/Material/Auto/MI_Bandit_1.uasset", "Content/Material/Auto/M_Bandit_Hair.uasset", "Content/Material/Auto/MI_Bandit_Eyelashes.uasset"],
             "ObjectType" : 0,
             "PartialEscalationThreshold" : 0.800000,
             "PartialFirstValidPoseBlendInTime" : 0.040000,
@@ -165,6 +203,7 @@
             "ShockwaveFullBodyThreshold" : 0.900000,
             "ShockwaveImpulseThreshold" : 0.450000,
             "SkeletalMeshPath" : "Content/Data/CombatAI/SK_Bandit_SkeletalMesh.uasset",
+            "bAbsoluteScale" : false,
             "bAutoActivate" : true,
             "bCastShadow" : true,
             "bCastShadowAsTwoSided" : false,
@@ -173,44 +212,6 @@
             "bGenerateOverlapEvents" : false,
             "bHiddenInComponentTree" : false,
             "bIsActive" : true,
-            "bIsVisible" : true,
-            "bKinematic" : false,
-            "bSimulatePhysics" : false,
-            "bTickEnable" : true
-          }
-        }, {
-          "Children" : [],
-          "ClassName" : "UBillboardComponent",
-          "ObjectId" : 7,
-          "Properties" : {
-            "AttachSocketName" : "Name_None",
-            "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
-            "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-            "CollisionEnabled" : 0,
-            "Mass" : 1.000000,
-            "MaterialSlot" : "Content/Material/UI/AllyStatus/AllyHealth_Green.uasset",
-            "ObjectType" : 0,
-            "PendingTagsString" : "AllyHealthIndicator,AllyHealthGreen",
-            "PersistentGuid" : "Component_AllyHealth_Green",
-            "RelativeTransform.Location" : [0.000000, 0.000000, 2.150000],
-            "RelativeTransform.Scale" : [0.760000, 0.760000, 0.760000],
-            "ResponseContainer" : {
-              "Responses[0]" : 2,
-              "Responses[1]" : 2,
-              "Responses[2]" : 2,
-              "Responses[3]" : 2,
-              "Responses[4]" : 2
-            },
-            "bAbsoluteScale" : false,
-            "bAutoActivate" : true,
-            "bCastShadow" : false,
-            "bCastShadowAsTwoSided" : false,
-            "bEditorOnly" : false,
-            "bEnableCCD" : false,
-            "bGenerateOverlapEvents" : false,
-            "bHiddenInComponentTree" : false,
-            "bIsActive" : true,
-            "bIsBillboard" : true,
             "bIsVisible" : true,
             "bKinematic" : false,
             "bSimulatePhysics" : false,
@@ -230,7 +231,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_9042",
-        "RelativeTransform.Location" : [-83.887215, -17.872810, 0.865510],
+        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -240,6 +241,7 @@
           "Responses[4]" : 2
         },
         "ShapeColor" : [0.000000, 1.000000, 0.000000, 1.000000],
+        "bAbsoluteScale" : false,
         "bAutoActivate" : true,
         "bCastShadow" : false,
         "bCastShadowAsTwoSided" : false,
@@ -256,7 +258,7 @@
       }
     }
   },
-  "SourceActorName" : "solider_Ally",
+  "SourceActorName" : "ACombatCharacter_55",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

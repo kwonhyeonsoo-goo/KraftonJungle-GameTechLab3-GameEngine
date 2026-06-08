@@ -46,6 +46,8 @@ public:
 	UFUNCTION(Pure, Category="Sniper|Weapon")
 	float GetReloadRemaining() const { return ReloadRemaining; }
 	UFUNCTION(Pure, Category="Sniper|Weapon")
+	float GetReloadDuration() const { return ReloadDuration; }
+	UFUNCTION(Pure, Category="Sniper|Weapon")
 	float GetReloadProgress() const;
 	UFUNCTION(Pure, Category="Sniper|Weapon")
 	int32 GetAmmoInMagazine() const { return AmmoInMagazine; }
