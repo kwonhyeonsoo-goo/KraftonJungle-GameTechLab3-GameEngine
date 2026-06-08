@@ -5666,7 +5666,7 @@
       "Properties" : {
         "PendingActorLocation" : [10027.289062, 10000.000000, 10005.000000],
         "PendingActorRotation" : [-89.980209, 0.000000, 0.000000],
-        "PendingActorScale" : [3.000000, 4.000000, 3.000000],
+        "PendingActorScale" : [3.000000, 3.000000, 3.000000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "PauseMenu,PauseCloth",
         "bNeedsTick" : true
@@ -5717,7 +5717,7 @@
           "RecoveryFullBodyThreshold" : 0.900000,
           "RecoveryImpulseThreshold" : 0.550000,
           "RelativeTransform.Location" : [10027.289062, 10000.000000, 10005.000000],
-          "RelativeTransform.Scale" : [3.000000, 4.000000, 3.000000],
+          "RelativeTransform.Scale" : [3.000000, 3.000000, 3.000000],
           "ResponseContainer" : {
             "Responses[0]" : 2,
             "Responses[1]" : 2,
