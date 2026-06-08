@@ -162,6 +162,7 @@ private:
 	void HandleHoldBreathReleased();
 	void HandleSwitchAmmoNormalPressed();
 	void HandleSwitchAmmoAntiMaterialPressed();
+	void HandleReloadPressed();
 	void ApplyFireRecoil();
 	bool FireCurrentRound();
 

@@ -208,10 +208,6 @@ bool USniperWeaponComponent::RequestFire(
 
 	if (AmmoInMagazine <= 0)
 	{
-		if (bAutoReloadWhenEmpty)
-		{
-			RequestReload();
-		}
 		return false;
 	}
 
@@ -254,17 +250,13 @@ bool USniperWeaponComponent::RequestFire(
 
 	FireCooldownRemaining = AmmoData->FireInterval;
 	AmmoInMagazine = (std::max)(0, AmmoInMagazine - 1);
-	if (AmmoInMagazine <= 0 && bAutoReloadWhenEmpty)
-	{
-		RequestReload();
-	}
 	return true;
 }
 
 bool USniperWeaponComponent::RequestReload()
 {
 	NormalizeMagazineState();
-	if (bIsReloading || MagazineCapacity <= 0 || AmmoInMagazine >= MagazineCapacity || ReserveAmmo <= 0)
+	if (bIsReloading || MagazineCapacity <= 0 || AmmoInMagazine >= MagazineCapacity)
 	{
 		return false;
 	}
@@ -422,7 +414,6 @@ void USniperWeaponComponent::NormalizeMagazineState()
 {
 	MagazineCapacity = (std::max)(MagazineCapacity, 1);
 	AmmoInMagazine = (std::max)(0, (std::min)(AmmoInMagazine, MagazineCapacity));
-	ReserveAmmo = (std::max)(ReserveAmmo, 0);
 	ReloadDuration = (std::max)(ReloadDuration, 0.0f);
 	if (!bIsReloading)
 	{
@@ -437,10 +428,7 @@ void USniperWeaponComponent::NormalizeMagazineState()
 void USniperWeaponComponent::CompleteReload()
 {
 	NormalizeMagazineState();
-	const int32 NeededAmmo = (std::max)(MagazineCapacity - AmmoInMagazine, 0);
-	const int32 LoadedAmmo = (std::min)(NeededAmmo, ReserveAmmo);
-	AmmoInMagazine += LoadedAmmo;
-	ReserveAmmo -= LoadedAmmo;
+	AmmoInMagazine = MagazineCapacity;
 	ReloadRemaining = 0.0f;
 	bIsReloading = false;
 	NormalizeMagazineState();

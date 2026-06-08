@@ -1657,7 +1657,6 @@ function UIManager:GetWeaponHUDSnapshot()
     local weapon_name = "SNIPER RIFLE"
     local ammo_type_name = "NORMAL"
     local current_ammo = nil
-    local total_ammo = nil
 
     if weapon ~= nil then
         weapon_name = read_string_method(weapon, {
@@ -1683,18 +1682,11 @@ function UIManager:GetWeaponHUDSnapshot()
             "GetCurrentAmmo",
             "GetClipAmmo"
         })
-        total_ammo = read_number_method(weapon, {
-            "GetTotalAmmoCount",
-            "GetTotalAmmo",
-            "GetReserveAmmo",
-            "GetMaxAmmoCount",
-            "GetMaxAmmo"
-        })
     end
 
-    local ammo_text = "00 / 00"
-    if current_ammo ~= nil or total_ammo ~= nil then
-        ammo_text = string.format("%02d / %02d", current_ammo or 0, total_ammo or 0)
+    local ammo_text = "00"
+    if current_ammo ~= nil then
+        ammo_text = string.format("%02d", current_ammo)
     end
 
     return {

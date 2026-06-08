@@ -51,8 +51,6 @@ public:
 	int32 GetAmmoInMagazine() const { return AmmoInMagazine; }
 	UFUNCTION(Pure, Category="Sniper|Weapon")
 	int32 GetMagazineCapacity() const { return MagazineCapacity; }
-	UFUNCTION(Pure, Category="Sniper|Weapon")
-	int32 GetReserveAmmo() const { return ReserveAmmo; }
 	UFUNCTION(Callable, Category="Sniper|Weapon")
 	void NotifySniperHit(const FSniperHitInfo& HitInfo);
 	UFUNCTION(Pure, Category="Sniper|Weapon")
@@ -80,12 +78,8 @@ private:
 	int32 MagazineCapacity = 5;
 	UPROPERTY(Edit, Save, Category="Sniper|Reload", Min=0, Max=100, Speed=1)
 	int32 AmmoInMagazine = 5;
-	UPROPERTY(Edit, Save, Category="Sniper|Reload", Min=0, Max=999, Speed=1)
-	int32 ReserveAmmo = 20;
 	UPROPERTY(Edit, Save, Category="Sniper|Reload", Min=0.0f, Max=10.0f, Speed=0.1f)
 	float ReloadDuration = 2.0f;
-	UPROPERTY(Edit, Save, Category="Sniper|Reload")
-	bool bAutoReloadWhenEmpty = true;
 	ESniperAmmoType CurrentAmmoType = ESniperAmmoType::Normal;
 	float FireCooldownRemaining = 0.0f;
 	float ReloadRemaining = 0.0f;

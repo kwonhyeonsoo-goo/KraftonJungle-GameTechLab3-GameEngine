@@ -117,6 +117,7 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->AddActionMapping("SniperHoldBreath", "RightShift");
 	InputComponent->AddActionMapping("SniperSwitchAmmoNormal", "1");
 	InputComponent->AddActionMapping("SniperSwitchAmmoAntiMaterial", "2");
+	InputComponent->AddActionMapping("SniperReload", "R");
 
 	InputComponent->BindAxis("SniperTurn", [this](float Value)
 	{
@@ -161,6 +162,11 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->BindAction("SniperSwitchAmmoAntiMaterial", EInputEvent::Pressed, [this]()
 	{
 		HandleSwitchAmmoAntiMaterialPressed();
+	});
+
+	InputComponent->BindAction("SniperReload", EInputEvent::Pressed, [this]()
+	{
+		HandleReloadPressed();
 	});
 
 	InputComponent->BindAction("SniperScope", EInputEvent::Released, [this]()
@@ -676,6 +682,22 @@ void ASniperPawn::HandleFirePressed()
 {
 	InputState.bFirePressed = true;
 	FireCurrentRound();
+}
+
+void ASniperPawn::HandleReloadPressed()
+{
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bReloadPressed = false;
+		return;
+	}
+
+	InputState.bReloadPressed = true;
+	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
+	{
+		SniperWeapon->RequestReload();
+	}
+	InputState.bReloadPressed = false;
 }
 
 void ASniperPawn::ApplyFireRecoil()
