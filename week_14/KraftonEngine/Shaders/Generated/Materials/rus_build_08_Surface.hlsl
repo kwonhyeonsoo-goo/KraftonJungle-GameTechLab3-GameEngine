@@ -1,4 +1,4 @@
-// Generated from Content/Material/Auto/rus_build_11.uasset
+// Generated from Content/Material/Auto/rus_build_08.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"

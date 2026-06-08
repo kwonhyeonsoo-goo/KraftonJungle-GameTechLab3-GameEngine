@@ -1,4 +1,4 @@
-// Generated from Content/Material/Auto/rus_build_11.uasset
+// Generated from Content/Material/Auto/BLD_BrickHouse1.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
@@ -66,13 +66,14 @@ FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
     float4 n_3 = Tex_DiffuseTexture.Sample(LinearWrapSampler, Input.UV0);
     float3 n_13 = float3(2.200000f, 2.200000f, 2.200000f);
-    float3 n_46 = pow((n_3).rgb, n_13);
+    float3 n_56 = pow((n_3).rgb, n_13);
     float4 n_23 = Tex_NormalTexture.Sample(LinearWrapSampler, Input.UV0);
+    float n_52 = 0.500000f;
     float n_33 = 1.000000f;
     FMaterialResult Result;
-    Result.BaseColor = n_46;
+    Result.BaseColor = n_56;
     Result.Normal = (n_23).rgb;
-    Result.Roughness = 0.5f;
+    Result.Roughness = n_52;
     Result.Metallic = 0.0f;
     Result.Emissive = float3(0, 0, 0);
     Result.Opacity = n_33;

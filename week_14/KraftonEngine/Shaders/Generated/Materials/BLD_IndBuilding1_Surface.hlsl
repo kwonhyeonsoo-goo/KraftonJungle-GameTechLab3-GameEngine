@@ -1,11 +1,10 @@
-// Generated from Content/Material/Auto/rus_build_11.uasset
+// Generated from Content/Material/Auto/BLD_IndBuilding1.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/Functions.hlsli"
 #include "Common/SystemSamplers.hlsli"
-#include "Common/ForwardLighting.hlsli"
 
 struct FMaterialPixelInput
 {
@@ -65,7 +64,7 @@ float3 GetCommonMaterialEmissive()
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
     float4 n_3 = Tex_DiffuseTexture.Sample(LinearWrapSampler, Input.UV0);
-    float3 n_13 = float3(2.200000f, 2.200000f, 2.200000f);
+    float3 n_13 = float3(2.200000f, 2.000000f, 2.200000f);
     float3 n_46 = pow((n_3).rgb, n_13);
     float4 n_23 = Tex_NormalTexture.Sample(LinearWrapSampler, Input.UV0);
     float n_33 = 1.000000f;
@@ -118,15 +117,7 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
     float3 N = normalize(input.normal);
 
-    float3 V = normalize(CameraWorldPos - input.worldPos);
-    float roughness = saturate(Result.Roughness);
-    float metallic = saturate(Result.Metallic);
-    float shininess = MaterialRoughnessToShininess(roughness);
-    float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
-    float3 specular = ApplyMaterialMetallicSpecular(AccumulateSpecular(input.worldPos, N, V, shininess, input.position), Result.BaseColor, metallic);
-
-    float3 diffuseBase = ApplyMaterialMetallicDiffuse(Result.BaseColor, metallic);
-    float3 finalRgb = diffuseBase * diffuse + specular + Result.Emissive + GetCommonMaterialEmissive();
+    float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
     float OutOpacity = saturate(Result.Opacity);
 
     return float4(finalRgb, OutOpacity);

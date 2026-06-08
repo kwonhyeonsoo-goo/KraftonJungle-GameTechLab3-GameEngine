@@ -6,7 +6,7 @@ local BLOOD_HIT_POOL_SIZE = 3
 local BLOOD_HIT_BURST_DELAYS = { 0.0, 0.08, 0.16 }
 local BLOOD_HIT_ROTATION_MODES = { "normal", "inverse_normal", "default" }
 local BLOOD_HIT_SCALE = Vec3(3.0, 3.0, 3.0)
-local BLOOD_HIT_LIFETIME = 5.0
+local BLOOD_HIT_LIFETIME = 8.0
 local HIDDEN_LOCATION = Vec3(0.0, 0.0, -100000.0)
 
 local function log(message)
