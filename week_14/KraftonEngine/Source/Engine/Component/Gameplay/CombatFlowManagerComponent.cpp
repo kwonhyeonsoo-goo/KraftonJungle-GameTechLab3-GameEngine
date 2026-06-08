@@ -106,6 +106,72 @@ namespace
         Chance = (std::min)((std::max)(0.0f, Chance), 1.0f);
         return Chance > 0.0f && std::uniform_real_distribution<float>(0.0f, 1.0f)(GetCombatRandomGenerator()) < Chance;
     }
+
+    bool IsAttackSlot(const FCombatCoverSlot& Slot)
+    {
+        return Slot.ProvidesCover() && Slot.CanAttackFrom();
+    }
+
+    float ScoreCombatSlotForAgent(const FCombatCoverSlot& Slot, const UCombatCoverAgentComponent* Agent, ECombatSlotQueryPurpose Purpose)
+    {
+        float Score = Slot.GetSlotSelectionScore();
+
+        if (Purpose == ECombatSlotQueryPurpose::PreferFullCover)
+        {
+            switch (Slot.SlotType)
+            {
+            case ECombatCoverSlotType::FullCover:
+                Score += 300.0f;
+                break;
+            case ECombatCoverSlotType::CombatCover:
+                Score += 40.0f;
+                break;
+            case ECombatCoverSlotType::StandingCombatCover:
+                Score += 25.0f;
+                break;
+            case ECombatCoverSlotType::ExposedDummy:
+            default:
+                Score -= 100.0f;
+                break;
+            }
+        }
+
+        if (Agent)
+        {
+            const float HealthRatio = Agent->GetHealthRatio();
+            const bool bUnderPressure = Agent->IsSuppressed() || Agent->GetIncomingFireCount() > 0 || HealthRatio <= Agent->GetLowHealthFullCoverRatio();
+            const bool bHasTarget = Agent->GetCurrentTarget() != nullptr || Agent->IsEngaging();
+
+            if (bUnderPressure)
+            {
+                if (Slot.SlotType == ECombatCoverSlotType::FullCover)
+                {
+                    Score += 120.0f;
+                }
+                else if (Slot.SlotType == ECombatCoverSlotType::CombatCover)
+                {
+                    Score += 30.0f;
+                }
+                else if (Slot.SlotType == ECombatCoverSlotType::StandingCombatCover)
+                {
+                    Score -= 25.0f;
+                }
+            }
+            else if (bHasTarget)
+            {
+                if (Slot.SlotType == ECombatCoverSlotType::StandingCombatCover)
+                {
+                    Score += 70.0f;
+                }
+                else if (Slot.SlotType == ECombatCoverSlotType::CombatCover)
+                {
+                    Score += 35.0f;
+                }
+            }
+        }
+
+        return Score;
+    }
 }
 
 UCombatFlowManagerComponent::UCombatFlowManagerComponent()
@@ -301,6 +367,11 @@ bool UCombatFlowManagerComponent::TryMoveToFullCoverInCurrentNode(UCombatCoverAg
 bool UCombatFlowManagerComponent::TryMoveToCombatSlotInCurrentNode(UCombatCoverAgentComponent* Agent)
 {
     return TryMoveToSlotTypeInCurrentNode(Agent, ECombatCoverSlotType::CombatCover);
+}
+
+bool UCombatFlowManagerComponent::TryMoveToStandingCombatSlotInCurrentNode(UCombatCoverAgentComponent* Agent)
+{
+    return TryMoveToSlotTypeInCurrentNode(Agent, ECombatCoverSlotType::StandingCombatCover);
 }
 
 void UCombatFlowManagerComponent::ConfirmArrived(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle)
@@ -499,6 +570,7 @@ FCombatCoverGraphValidationResult UCombatFlowManagerComponent::ValidateGraph(boo
             switch (Slot.SlotType)
             {
             case ECombatCoverSlotType::CombatCover:
+            case ECombatCoverSlotType::StandingCombatCover:
                 ++CombatCoverSlotCount;
                 break;
             case ECombatCoverSlotType::FullCover:
@@ -666,7 +738,7 @@ bool UCombatFlowManagerComponent::CanAgentAttackFromCurrentSlot(const UCombatCov
 
 bool UCombatFlowManagerComponent::CanAgentBeTargetedInCurrentSlot(const UCombatCoverAgentComponent* Agent) const
 {
-    if (!Agent || !Agent->IsInCover())
+    if (!Agent)
     {
         return true;
     }
@@ -677,7 +749,7 @@ bool UCombatFlowManagerComponent::CanAgentBeTargetedInCurrentSlot(const UCombatC
 
 float UCombatFlowManagerComponent::GetTargetPriorityMultiplierForAgent(const UCombatCoverAgentComponent* Agent) const
 {
-    if (!Agent || !Agent->IsInCover())
+    if (!Agent)
     {
         return 1.0f;
     }
@@ -685,7 +757,7 @@ float UCombatFlowManagerComponent::GetTargetPriorityMultiplierForAgent(const UCo
     const FCombatCoverSlot* Slot = FindCurrentSlot(Agent);
     if (!Slot)
     {
-        return Agent ? Agent->GetInCoverTargetPriorityMultiplier() : 1.0f;
+        return Agent->IsInCover() ? Agent->GetInCoverTargetPriorityMultiplier() : 1.0f;
     }
 
     if (Slot->SlotType == ECombatCoverSlotType::CombatCover)
@@ -718,7 +790,7 @@ bool UCombatFlowManagerComponent::HasFreeCombatSlotInCurrentNode(const UCombatCo
     FCombatCoverSlotHandle CurrentSlot;
     CurrentSlot.NodeId = Agent->GetCurrentNodeId();
     CurrentSlot.SlotId = Agent->GetCurrentSlotId();
-    return FindFreeSlotInNode(Node, Agent->GetTeamTag(), Agent, ECombatSlotQueryPurpose::CombatCoverOnly, &CurrentSlot).IsValid();
+    return FindFreeSlotInNode(Node, Agent->GetTeamTag(), Agent, ECombatSlotQueryPurpose::AttackSlotOnly, &CurrentSlot).IsValid();
 }
 
 void UCombatFlowManagerComponent::DrawAllDebugVisuals(bool bIncludeUnselected) const
@@ -801,7 +873,7 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindNearestFreeSlot(
             }
 
             const float Distance = Dist2D(WorldLocation, Node->GetSlotWorldPosition(SlotIndex));
-            const float SlotScore = (std::max)(1.0f, Slot.GetSlotSelectionScore());
+            const float SlotScore = (std::max)(1.0f, ScoreCombatSlotForAgent(Slot, RequestingAgent, ECombatSlotQueryPurpose::Advance));
             const float WeightedDistance = Distance / SlotScore;
             if (!bHasBest || WeightedDistance < BestDistance)
             {
@@ -856,6 +928,18 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
                 continue;
             }
             break;
+        case ECombatSlotQueryPurpose::StandingCombatCoverOnly:
+            if (Slot.SlotType != ECombatCoverSlotType::StandingCombatCover)
+            {
+                continue;
+            }
+            break;
+        case ECombatSlotQueryPurpose::AttackSlotOnly:
+            if (!IsAttackSlot(Slot))
+            {
+                continue;
+            }
+            break;
         case ECombatSlotQueryPurpose::Advance:
         case ECombatSlotQueryPurpose::PreferFullCover:
         default:
@@ -870,23 +954,7 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindFreeSlotInNode(
             continue;
         }
 
-        float SlotScore = Slot.GetSlotSelectionScore();
-        if (Purpose == ECombatSlotQueryPurpose::PreferFullCover)
-        {
-            switch (Slot.SlotType)
-            {
-            case ECombatCoverSlotType::FullCover:
-                SlotScore += 300.0f;
-                break;
-            case ECombatCoverSlotType::CombatCover:
-                SlotScore += 40.0f;
-                break;
-            case ECombatCoverSlotType::ExposedDummy:
-            default:
-                SlotScore -= 100.0f;
-                break;
-            }
-        }
+        const float SlotScore = ScoreCombatSlotForAgent(Slot, RequestingAgent, Purpose);
 
         if (SlotScore > BestWeight)
         {
@@ -917,9 +985,19 @@ bool UCombatFlowManagerComponent::TryMoveToSlotTypeInCurrentNode(UCombatCoverAge
     StartSlot.NodeId = Agent->GetCurrentNodeId();
     StartSlot.SlotId = Agent->GetCurrentSlotId();
 
-    const ECombatSlotQueryPurpose Purpose = DesiredSlotType == ECombatCoverSlotType::FullCover
-        ? ECombatSlotQueryPurpose::FullCoverOnly
-        : ECombatSlotQueryPurpose::CombatCoverOnly;
+    ECombatSlotQueryPurpose Purpose = ECombatSlotQueryPurpose::AttackSlotOnly;
+    if (DesiredSlotType == ECombatCoverSlotType::FullCover)
+    {
+        Purpose = ECombatSlotQueryPurpose::FullCoverOnly;
+    }
+    else if (DesiredSlotType == ECombatCoverSlotType::CombatCover)
+    {
+        Purpose = ECombatSlotQueryPurpose::AttackSlotOnly;
+    }
+    else if (DesiredSlotType == ECombatCoverSlotType::StandingCombatCover)
+    {
+        Purpose = ECombatSlotQueryPurpose::StandingCombatCoverOnly;
+    }
     const FCombatCoverSlotHandle Candidate = FindFreeSlotInNode(CurrentNode, Agent->GetTeamTag(), Agent, Purpose, &StartSlot);
     if (!Candidate.IsValid())
     {
@@ -1369,13 +1447,11 @@ UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UComb
         }
 
         const float Distance = Dist2D(AgentLocation, Candidate->GetOwner()->GetActorLocation());
-        float TargetPriorityMultiplier = 1.0f;
-        if (Candidate->IsInCover())
-        {
-            TargetPriorityMultiplier = (std::min)((std::max)(0.05f, GetTargetPriorityMultiplierForAgent(Candidate)), 1.0f);
-        }
-
-        const float Score = Distance / TargetPriorityMultiplier;
+        const float TargetPriorityMultiplier = (std::min)((std::max)(0.05f, GetTargetPriorityMultiplierForAgent(Candidate)), 1.0f);
+        const float HealthPressure = 0.75f + (std::min)((std::max)(0.0f, Candidate->GetHealthRatio()), 1.0f) * 0.25f;
+        const float ThreatPressure = Candidate->IsEngaging() ? 0.85f : 1.0f;
+        const float IncomingFirePressure = Candidate->GetIncomingFireCount() > 0 ? 0.9f : 1.0f;
+        const float Score = (Distance * HealthPressure * ThreatPressure * IncomingFirePressure) / TargetPriorityMultiplier;
         if (!bHasBest || Score < BestScore)
         {
             BestScore = Score;

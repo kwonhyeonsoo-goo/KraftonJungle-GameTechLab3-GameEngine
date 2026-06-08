@@ -14,7 +14,8 @@ enum class ECombatCoverSlotType : uint8
 {
     CombatCover,
     FullCover,
-    ExposedDummy
+    ExposedDummy,
+    StandingCombatCover
 };
 
 USTRUCT()
@@ -55,6 +56,7 @@ struct FCombatCoverSlot
     bool ProvidesCover() const;
     bool CanAttackFrom() const;
     bool CanBeTargetedWhileInCover() const;
+    bool RequiresStandingFire() const;
     float GetTargetPriorityMultiplierWhileInCover() const;
     float GetSlotSelectionScore() const;
 };

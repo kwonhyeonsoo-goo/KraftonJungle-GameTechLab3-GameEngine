@@ -202,6 +202,8 @@ namespace
             return "Full Cover";
         case ECombatCoverSlotType::ExposedDummy:
             return "Exposed Dummy";
+        case ECombatCoverSlotType::StandingCombatCover:
+            return "Standing Fire Cover";
         case ECombatCoverSlotType::CombatCover:
         default:
             return "Combat Cover";
@@ -215,6 +217,7 @@ namespace
             const ECombatCoverSlotType Values[] =
             {
                 ECombatCoverSlotType::CombatCover,
+                ECombatCoverSlotType::StandingCombatCover,
                 ECombatCoverSlotType::FullCover,
                 ECombatCoverSlotType::ExposedDummy
             };
