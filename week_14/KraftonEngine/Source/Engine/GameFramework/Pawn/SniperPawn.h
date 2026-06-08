@@ -9,12 +9,16 @@
 
 class UBallisticBulletManagerComponent;
 class UCameraComponent;
+class UBoxComponent;
+class UCapsuleComponent;
 class USceneComponent;
 class USniperWeaponComponent;
 class UActionComponent;
 class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class FArchive;
+struct FBoundingBox;
+struct FHitResult;
 
 UCLASS()
 class ASniperPawn : public APawn
@@ -133,6 +137,24 @@ public:
 	bool bInvertMouseY = false;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Right Click Zoom Toggle Mode")
 	bool bRightClickZoomToggleMode = false;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Enable WASD Movement")
+	bool bEnableWASDMovement = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Move Speed", Min=0.0f, Max=1000.0f, Speed=1.0f)
+	float SniperMoveSpeed = 4.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Footstep SFX Path")
+	FString FootstepSFXPath = "Foot1.mp3";
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Footstep Interval", Min=0.05f, Max=2.0f, Speed=0.01f)
+	float FootstepInterval = 0.45f;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Footstep Volume", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float FootstepVolume = 0.65f;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Movement Sweep Pullback Distance", Min=0.0f, Max=1.0f, Speed=0.001f)
+	float SniperMovementSweepPullbackDistance = 0.01f;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Use Explicit Movement Bounds")
+	bool bUseExplicitSniperMovementBounds = false;
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Movement Min Location", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.1f)
+	FVector SniperMovementMinLocation = FVector(-130.0f, 129.0f, 0.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Movement", DisplayName="Movement Max Location", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.1f)
+	FVector SniperMovementMaxLocation = FVector(-88.0f, 138.0f, 0.0f);
 
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped FOV", Member=ScopeState.ScopedFOV, Type=Float, Min=0.05f, Max=3.14f, Speed=0.01f);
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Min Zoom Magnification", Member=ScopeState.MinZoomMagnification, Type=Float, Min=1.0f, Max=64.0f, Speed=0.1f);
@@ -232,7 +254,18 @@ private:
 	void UpdateHoldBreathState(float DeltaTime);
 	void UpdateAimSwayState(float DeltaTime);
 	void UpdateRecoilState(float DeltaTime);
+	void ApplySniperMovement(float DeltaTime);
 	void ApplySniperControlRotation();
+	void ConfigureSniperMovementCapsule();
+	void ConfigureSniperMovementWalls();
+	bool TryMoveSniperWithCollision(const FVector& MoveDelta);
+	bool TryApplySniperMovementDelta(const FVector& MoveDelta);
+	bool TrySweepSniperMovement(const FVector& MoveDelta, FHitResult& OutHit) const;
+	bool TryGetSniperMovementBounds(FVector& OutMinLocation, FVector& OutMaxLocation) const;
+	bool IsSniperMovementWallActor(const AActor* Actor) const;
+	UBoxComponent* FindSniperMovementWallBox(const FString& ActorName) const;
+	UCapsuleComponent* GetSniperMovementCapsule() const;
+	void PlaySniperFootstep();
 	FRotator BuildEffectiveAimRotation() const;
 	bool CanEnterScope() const;
 	float ClampScopeZoomMagnification(float Magnification) const;
@@ -243,6 +276,8 @@ private:
 	void HandleLookUpInput(float Value);
 	void HandleGamepadTurnInput(float Value);
 	void HandleGamepadLookUpInput(float Value);
+	void HandleMoveForwardInput(float Value);
+	void HandleMoveRightInput(float Value);
 	void HandleScopeZoomAxis(float Value);
 	void HandleGamepadScopeAxis(float Value);
 	void HandleGamepadFireAxis(float Value);
@@ -285,6 +320,9 @@ private:
 	bool bWasWeaponReloading = false;
 	bool bWeaponHandsReloadAnimationActive = false;
 	bool bInputSensitivityBaseInitialized = false;
+	float SniperMoveForwardInput = 0.0f;
+	float SniperMoveRightInput = 0.0f;
+	float FootstepCooldownRemaining = 0.0f;
 	float BaseMouseSensitivity = 0.2f;
 	float BaseGamepadLookSensitivity = 90.0f;
 };
