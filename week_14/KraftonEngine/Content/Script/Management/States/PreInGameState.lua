@@ -98,6 +98,19 @@ local function lerp(a, b, alpha)
     return a + (b - a) * alpha
 end
 
+local function was_confirm_pressed()
+    if Input ~= nil and Input.WasConfirmPressed ~= nil then
+        local ok, value = pcall(function()
+            return Input.WasConfirmPressed()
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
+    return Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space")
+end
+
 function PreInGameState.new(general)
     return setmetatable({
         general = general,
@@ -205,8 +218,8 @@ function PreInGameState:Tick(dt)
         return
     end
 
-    if Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space") then
-        log("Space accepted after sheet sequence; fading news audio before Approved")
+    if was_confirm_pressed() then
+        log("Confirm accepted after sheet sequence; fading news audio before Approved")
         self.approval_pending = true
         self.approval_fade_elapsed = 0.0
         self.approved_elapsed = 0.0
@@ -302,7 +315,7 @@ function PreInGameState:TickSheets(dt)
     self:PublishSheet(self.current_sheet, 1.0)
     if self.current_sheet >= SHEET_COUNT then
         self.sequence_complete = true
-        log("Sheet sequence complete; Space skip enabled")
+        log("Sheet sequence complete; confirm skip enabled")
         self:PublishReady()
         return
     end

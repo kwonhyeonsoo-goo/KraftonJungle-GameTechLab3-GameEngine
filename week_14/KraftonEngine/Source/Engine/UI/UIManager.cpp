@@ -10,7 +10,9 @@
 #include "Render/Resource/RenderResources.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Render/Types/FrameContext.h"
+#include "Runtime/Engine.h"
 #include "UI/UserWidget.h"
+#include "Viewport/GameViewportClient.h"
 #include "WICTextureLoader.h"
 
 #ifdef GetNextSibling
@@ -1193,7 +1195,10 @@ bool UUIManager::PumpViewportInput(uint32 ViewportWidth, uint32 ViewportHeight,
 	});
 
 	InputSystem& Input = InputSystem::Get();
-	const POINT ClientMousePos = Input.GetMouseClientPos();
+	const UGameViewportClient* ViewportClient = GEngine ? GEngine->GetGameViewportClient() : nullptr;
+	const POINT ClientMousePos = (ViewportClient && ViewportClient->HasVirtualCursorPosition())
+		? ViewportClient->GetVirtualCursorClientPos()
+		: Input.GetMouseClientPos();
 	const bool bInsideViewport =
 		ClientMousePos.x >= ViewportClientX &&
 		ClientMousePos.y >= ViewportClientY &&
@@ -1763,7 +1768,10 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	}
 	else
 	{
-		const POINT MousePos = Input.GetMouseClientPos();
+		const UGameViewportClient* ViewportClient = GEngine ? GEngine->GetGameViewportClient() : nullptr;
+		const POINT MousePos = (ViewportClient && ViewportClient->HasVirtualCursorPosition())
+			? ViewportClient->GetVirtualCursorClientPos()
+			: Input.GetMouseClientPos();
 		const FUIVirtualViewportLayout Layout = MakeUIVirtualViewportLayout(Frame.ViewportWidth, Frame.ViewportHeight);
 		bMouseInsideViewport = PhysicalToVirtualUIPosition(
 			Layout,
@@ -1810,6 +1818,10 @@ void UUIManager::ProcessInputAtPosition(int32 MouseX, int32 MouseY, bool bMouseI
 	bDispatchingRmlEvents = true;
 	if (bShouldForwardMouse)
 	{
+		const UGameViewportClient* ViewportClient = GEngine ? GEngine->GetGameViewportClient() : nullptr;
+		const bool bVirtualCursorLeftPressed = ViewportClient && ViewportClient->WasVirtualCursorConfirmPressedThisFrame();
+		const bool bVirtualCursorLeftReleased = ViewportClient && ViewportClient->WasVirtualCursorConfirmReleasedThisFrame();
+
 		if (bMouseInsideViewport)
 		{
 			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseMove(MouseX, MouseY, KeyModifierState);
@@ -1824,13 +1836,13 @@ void UUIManager::ProcessInputAtPosition(int32 MouseX, int32 MouseY, bool bMouseI
 				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 		}
 
-		if (Input.GetKeyDown(VK_LBUTTON))
+		if (Input.GetKeyDown(VK_LBUTTON) || bVirtualCursorLeftPressed)
 		{
 			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonDown(0, KeyModifierState);
 			LastFrameInputCaptureState.bConsumedMouseThisFrame =
 				LastFrameInputCaptureState.bConsumedMouseThisFrame || !bMouseEventNotConsumed;
 		}
-		if (Input.GetKeyUp(VK_LBUTTON))
+		if (Input.GetKeyUp(VK_LBUTTON) || bVirtualCursorLeftReleased)
 		{
 			const bool bMouseEventNotConsumed = RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
 			LastFrameInputCaptureState.bConsumedMouseThisFrame =

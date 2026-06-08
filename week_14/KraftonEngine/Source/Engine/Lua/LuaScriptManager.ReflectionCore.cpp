@@ -747,6 +747,74 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     Input.set_function(
+        "IsGamepadConnected",
+        []()
+        {
+            return GetLuaInputSnapshot().bGamepadConnected;
+        }
+    );
+    Input.set_function(
+        "GetLastInputDevice",
+        []()
+        {
+            return InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("Gamepad")
+                : FString("KeyboardMouse");
+        }
+    );
+    Input.set_function(
+        "WasConfirmPressed",
+        []()
+        {
+            const FInputSystemSnapshot& Snapshot = GetLuaInputSnapshot();
+            return Snapshot.WasPressed(VK_SPACE) ||
+                Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
+        }
+    );
+    Input.set_function(
+        "WasPausePressed",
+        []()
+        {
+            const FInputSystemSnapshot& Snapshot = GetLuaInputSnapshot();
+            return Snapshot.WasPressed('Q') ||
+                Snapshot.WasPressed(81) ||
+                Snapshot.WasGamepadButtonPressed(EGamepadButton::Start);
+        }
+    );
+    Input.set_function(
+        "GetConfirmPromptLabel",
+        []()
+        {
+            return InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("A")
+                : FString("Space");
+        }
+    );
+    Input.set_function(
+        "GetPausePromptLabel",
+        []()
+        {
+            return InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("Menu")
+                : FString("Q");
+        }
+    );
+    Input.set_function(
+        "GetConfirmPromptText",
+        [](const FString& ActionText)
+        {
+            const FString Label = InputSystem::Get().IsLastInputDeviceGamepad()
+                ? FString("A")
+                : FString("Space");
+            if (ActionText.empty())
+            {
+                return Label;
+            }
+
+            return FString("Press ") + Label + " to " + ActionText;
+        }
+    );
+    Input.set_function(
         "ConsumeTextInput",
         []()
         {

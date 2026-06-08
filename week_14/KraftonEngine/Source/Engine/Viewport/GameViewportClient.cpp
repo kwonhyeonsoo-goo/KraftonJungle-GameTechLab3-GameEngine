@@ -9,18 +9,22 @@
 #include "Viewport/Viewport.h"
 
 #include <windows.h>
+#include <algorithm>
+#include <cmath>
 
 void UGameViewportClient::BeginGameSession(FViewport* InViewport)
 {
 	Viewport = InViewport;
 	ClearGameInputSnapshot();
 	ResetInputState();
+	ResetVirtualCursorState();
 }
 
 void UGameViewportClient::EndGameSession()
 {
 	SetInputPossessed(false);
 	ResetInputState();
+	ResetVirtualCursorState();
 	bHasCursorClipRect = false;
 	// Shutdown 경로에서는 ProcessInput 이 더 이상 안 돌아 — 커서 캡처/clip 을 명시적으로 해제.
 	// 이걸 안 풀면 ::ShowCursor 카운터 음수 + ::ClipCursor 클립이 종료 후에도 남아 다른 앱
@@ -33,6 +37,22 @@ void UGameViewportClient::EndGameSession()
 
 namespace
 {
+	constexpr float GamepadVirtualCursorDeadZone = 0.20f;
+	constexpr float GamepadVirtualCursorSpeed = 900.0f;
+
+	float ApplyGamepadCursorDeadZone(float Value)
+	{
+		const float AbsValue = std::abs(Value);
+		if (AbsValue <= GamepadVirtualCursorDeadZone)
+		{
+			return 0.0f;
+		}
+
+		const float Normalized = (AbsValue - GamepadVirtualCursorDeadZone) / (1.0f - GamepadVirtualCursorDeadZone);
+		const float Clamped = (std::max)(0.0f, (std::min)(Normalized, 1.0f));
+		return Value < 0.0f ? -Clamped : Clamped;
+	}
+
 	bool IsMouseVirtualKey(int VK)
 	{
 		return VK == VK_LBUTTON || VK == VK_RBUTTON || VK == VK_MBUTTON ||
@@ -92,22 +112,29 @@ namespace
 	}
 }
 
-void UGameViewportClient::ProcessInput(const FInputSystemSnapshot& Snapshot, float /*DeltaTime*/)
+void UGameViewportClient::ProcessInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
 {
 	ClearGameInputSnapshot();
+	bVirtualCursorConfirmPressedThisFrame = false;
+	bVirtualCursorConfirmReleasedThisFrame = false;
 
 	if (!Snapshot.bWindowFocused)
 	{
 		ReleaseGameCapture();
 		ResetInputState();
+		ResetVirtualCursorState();
 		return;
 	}
 
 	if (!bInputPossessed)
 	{
 		ReleaseGameCapture();
+		ResetVirtualCursorState();
 		return;
 	}
+
+	const FUIInputCaptureState InitialUIState = UUIManager::Get().GetViewportInputCaptureState();
+	UpdateVirtualCursorFromGamepad(Snapshot, DeltaTime, InitialUIState);
 
 	if (Viewport)
 	{
@@ -161,6 +188,15 @@ void UGameViewportClient::ProcessInput(const FInputSystemSnapshot& Snapshot, flo
 	SetGameInputSnapshot(GameSnapshot);
 }
 
+POINT UGameViewportClient::GetVirtualCursorClientPos() const
+{
+	POINT Result = {
+		static_cast<LONG>(std::lround(VirtualCursorClientX)),
+		static_cast<LONG>(std::lround(VirtualCursorClientY))
+	};
+	return Result;
+}
+
 void UGameViewportClient::SetInputPossessed(bool bPossessed)
 {
 	if (bInputPossessed == bPossessed)
@@ -179,6 +215,7 @@ void UGameViewportClient::SetInputPossessed(bool bPossessed)
 	if (!bPossessed)
 	{
 		ClearGameInputSnapshot();
+		ResetVirtualCursorState();
 		FCursorSystem::Get().SetSoftwareCursorVisible(false);
 		ReleaseGameCapture();
 	}
@@ -289,6 +326,8 @@ void UGameViewportClient::ResetInputState()
 {
 	InputSystem::Get().ResetMouseDelta();
 	InputSystem::Get().ResetWheelDelta();
+	bVirtualCursorConfirmPressedThisFrame = false;
+	bVirtualCursorConfirmReleasedThisFrame = false;
 }
 
 void UGameViewportClient::ReleaseGameCapture()
@@ -308,6 +347,126 @@ void UGameViewportClient::ApplyGameCapturePolicy(const FUIInputCaptureState& UIS
 
 	InputSystem::Get().SetUseRawMouse(bShouldCaptureMouse);
 	SetCursorCaptured(bShouldCaptureMouse);
+}
+
+void UGameViewportClient::UpdateVirtualCursorFromGamepad(const FInputSystemSnapshot& Snapshot, float DeltaTime, const FUIInputCaptureState& UIState)
+{
+	const bool bShouldUseVirtualCursor = Snapshot.bGamepadConnected &&
+		(InputMode != EGameInputMode::GameOnly ||
+		 UIState.bWantsMouse ||
+		 UIState.bBlocksGameInput ||
+		 UIState.bBlocksGameMouseLook);
+
+	const bool bMouseMotionIntent =
+		((Snapshot.MouseDeltaX != 0 || Snapshot.MouseDeltaY != 0) && !bIgnoreNextProgrammaticMouseMove);
+	bIgnoreNextProgrammaticMouseMove = false;
+
+	const bool bMouseIntent =
+		bMouseMotionIntent ||
+		Snapshot.ScrollDelta != 0 ||
+		Snapshot.WasPressed(VK_LBUTTON) ||
+		Snapshot.WasReleased(VK_LBUTTON) ||
+		Snapshot.WasPressed(VK_RBUTTON) ||
+		Snapshot.WasReleased(VK_RBUTTON) ||
+		Snapshot.WasPressed(VK_MBUTTON) ||
+		Snapshot.WasReleased(VK_MBUTTON);
+
+	const float StickX = ApplyGamepadCursorDeadZone(Snapshot.GamepadLeftStickX);
+	const float StickY = ApplyGamepadCursorDeadZone(Snapshot.GamepadLeftStickY);
+	const bool bGamepadCursorIntent =
+		StickX != 0.0f ||
+		StickY != 0.0f ||
+		Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom) ||
+		Snapshot.WasGamepadButtonReleased(EGamepadButton::FaceBottom);
+
+	if (!bShouldUseVirtualCursor)
+	{
+		ResetVirtualCursorState();
+		return;
+	}
+
+	if (bMouseIntent)
+	{
+		ResetVirtualCursorState();
+		return;
+	}
+
+	if (!Viewport)
+	{
+		ResetVirtualCursorState();
+		return;
+	}
+
+	if (!bVirtualCursorActive && !bGamepadCursorIntent)
+	{
+		return;
+	}
+
+	if (!bVirtualCursorInitialized)
+	{
+		const POINT MousePos = InputSystem::Get().GetMouseClientPos();
+		VirtualCursorClientX = static_cast<float>(MousePos.x);
+		VirtualCursorClientY = static_cast<float>(MousePos.y);
+		bVirtualCursorInitialized = true;
+	}
+
+	bVirtualCursorActive = true;
+	if (bVirtualCursorOwnsSoftwareCursor)
+	{
+		FCursorSystem::Get().SetSoftwareCursorVisible(false);
+		bVirtualCursorOwnsSoftwareCursor = false;
+	}
+	bVirtualCursorConfirmPressedThisFrame = Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
+	bVirtualCursorConfirmReleasedThisFrame = Snapshot.WasGamepadButtonReleased(EGamepadButton::FaceBottom);
+
+	const float SafeDeltaTime = DeltaTime > 0.0f ? DeltaTime : (1.0f / 60.0f);
+
+	VirtualCursorClientX += StickX * GamepadVirtualCursorSpeed * SafeDeltaTime;
+	VirtualCursorClientY -= StickY * GamepadVirtualCursorSpeed * SafeDeltaTime;
+
+	float MinX = 0.0f;
+	float MinY = 0.0f;
+	float MaxX = static_cast<float>((std::max)(1u, Viewport->GetWidth()) - 1u);
+	float MaxY = static_cast<float>((std::max)(1u, Viewport->GetHeight()) - 1u);
+	if (bHasCursorClipRect)
+	{
+		MinX = static_cast<float>(CursorClipClientRect.left);
+		MinY = static_cast<float>(CursorClipClientRect.top);
+		MaxX = static_cast<float>((std::max)(CursorClipClientRect.left, CursorClipClientRect.right - 1));
+		MaxY = static_cast<float>((std::max)(CursorClipClientRect.top, CursorClipClientRect.bottom - 1));
+	}
+
+	VirtualCursorClientX = FMath::Clamp(VirtualCursorClientX, MinX, MaxX);
+	VirtualCursorClientY = FMath::Clamp(VirtualCursorClientY, MinY, MaxY);
+
+	if (OwnerHWnd)
+	{
+		POINT ScreenPos = {
+			static_cast<LONG>(std::lround(VirtualCursorClientX)),
+			static_cast<LONG>(std::lround(VirtualCursorClientY))
+		};
+		if (::ClientToScreen(OwnerHWnd, &ScreenPos))
+		{
+			::SetCursorPos(ScreenPos.x, ScreenPos.y);
+			InputSystem::Get().IgnoreNextMouseMoveForDeviceHeuristics();
+			bIgnoreNextProgrammaticMouseMove = true;
+		}
+	}
+}
+
+void UGameViewportClient::ResetVirtualCursorState()
+{
+	if (bVirtualCursorOwnsSoftwareCursor)
+	{
+		FCursorSystem::Get().SetSoftwareCursorVisible(false);
+		bVirtualCursorOwnsSoftwareCursor = false;
+	}
+
+	bVirtualCursorActive = false;
+	bVirtualCursorInitialized = false;
+	bIgnoreNextProgrammaticMouseMove = false;
+	bVirtualCursorConfirmPressedThisFrame = false;
+	bVirtualCursorConfirmReleasedThisFrame = false;
 }
 
 void UGameViewportClient::SetCursorCaptured(bool bCaptured)

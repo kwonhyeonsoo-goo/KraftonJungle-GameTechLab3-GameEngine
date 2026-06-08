@@ -47,6 +47,12 @@
                         <span id="mouseValue" class="setting-value">1.00x</span>
                         <button id="btnMouseUp" class="step-button" data-ui-type="Button" data-ui-name="Mouse Up" data-action="MouseUp"><span class="step-button-label">+</span></button>
                     </div>
+                    <div id="settingsGamepadRow" class="setting-row" data-ui-type="Panel" data-ui-name="Gamepad Sensitivity Row">
+                        <span class="setting-label">Gamepad Sensitivity</span>
+                        <button id="btnGamepadDown" class="step-button" data-ui-type="Button" data-ui-name="Gamepad Down" data-action="GamepadDown"><span class="step-button-label">-</span></button>
+                        <span id="gamepadValue" class="setting-value">1.00x</span>
+                        <button id="btnGamepadUp" class="step-button" data-ui-type="Button" data-ui-name="Gamepad Up" data-action="GamepadUp"><span class="step-button-label">+</span></button>
+                    </div>
                 </div>
             </div>
 

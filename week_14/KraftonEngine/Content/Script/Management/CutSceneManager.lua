@@ -8,7 +8,6 @@ local SNIPER_KILLCAM_PRE_IMPACT_FORWARD_DISTANCE = 0.18
 local SNIPER_KILLCAM_POST_IMPACT_FORWARD_DISTANCE = 4.0
 local SNIPER_KILLCAM_IMPACT_BULLET_SCALE = 0.05
 local SNIPER_KILLCAM_TRAVEL_FOV_BOOST = 0.22
-local SNIPER_KILLCAM_SHOOT_SFX = "SFX/Sniper/Shoot1.wav"
 local SNIPER_KILLCAM_SLOWDOWN_SFX = "SFX/Sniper/SlowDown.mp3"
 local SNIPER_KILLCAM_SLOWDOWN_SFX_DELAY = 0.3
 local SNIPER_KILLCAM_BULLET_CAM_SFX = "SFX/Sniper/BulletCam1.mp3"
@@ -75,6 +74,19 @@ local function camera_fade_in(duration)
     if CameraManager ~= nil and CameraManager.FadeIn ~= nil then
         CameraManager.FadeIn(duration)
     end
+end
+
+local function was_confirm_pressed()
+    if Input ~= nil and Input.WasConfirmPressed ~= nil then
+        local ok, value = pcall(function()
+            return Input.WasConfirmPressed()
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
+    return Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space")
 end
 
 local function get_time_dilation()
@@ -1168,7 +1180,6 @@ function CutSceneManager:Initialize()
             force_scope_released()
             set_time_dilation(0.0)
             set_world_paused(true)
-            play_sfx(self.general, SNIPER_KILLCAM_SHOOT_SFX, 1.0)
             if SniperKillCam ~= nil and SniperKillCam.Start ~= nil then
                 if SniperKillCam.ConfigureBullet ~= nil then
                     SniperKillCam.ConfigureBullet(merge_tables(current.killcam_profile.bullet, payload.bullet))
@@ -1225,7 +1236,7 @@ function CutSceneManager:Initialize()
                 current.damaged_sfx_played = true
                 play_sfx(self.general, SNIPER_KILLCAM_DAMAGED_SFX, 1.0)
             end
-            if Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space") then
+            if was_confirm_pressed() then
                 current.skipped = true
                 self:Stop("skipped")
             end
