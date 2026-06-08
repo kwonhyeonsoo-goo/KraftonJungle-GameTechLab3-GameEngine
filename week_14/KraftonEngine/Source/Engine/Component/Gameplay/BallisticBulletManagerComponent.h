@@ -56,7 +56,6 @@ private:
 	void UpdateBullets(float DeltaTime);
 	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, const FVector& AppliedWindAcceleration, float DeltaTime, class UWorld* World);
 	void UpdateImpactVisuals(float DeltaTime);
-	void DrawWindDebug(class UWorld* World) const;
 	void SyncBulletVisuals();
 	void HideAllBulletVisuals();
 	UBillboardComponent* GetOrCreateBulletHeadVisual(int32 VisualIndex);

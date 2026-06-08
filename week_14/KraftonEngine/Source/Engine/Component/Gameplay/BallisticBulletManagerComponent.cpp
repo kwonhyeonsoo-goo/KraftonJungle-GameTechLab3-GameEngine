@@ -44,10 +44,6 @@ namespace
 	constexpr float SniperDebugGravityMultiplier = 1.0f;
 	constexpr float SniperBulletMinSweepRadius = 0.01f;
 	constexpr float SniperDebugHitMarkerRadius = 0.2f;
-	constexpr float SniperWindDebugArrowScale = 3.0f;
-	constexpr float SniperWindDebugArrowHeadSize = 0.35f;
-	constexpr float SniperWindDebugArrowDuration = 0.0f;
-	constexpr float SniperWindDebugMinMagnitude = 0.01f;
 	constexpr float SniperRagdollImpactSpeedThreshold = 300.0f;
 	constexpr const char* SniperDefaultBulletVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
 	constexpr float SniperBulletVisualMinScale = 0.04f;
@@ -526,11 +522,6 @@ void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
 	const FVector WorldWindAcceleration = World ? World->GetWorldSettings().BallisticWindAcceleration : SniperDefaultWindAcceleration;
 	const FVector AppliedWindAcceleration = bWindEnabled ? WorldWindAcceleration : FVector::ZeroVector;
 
-	if (World)
-	{
-		DrawWindDebug(World);
-	}
-
 	int32 SubstepCount = 1;
 	if (bEnableBallisticSubsteps && MaxBallisticSubsteps > 1 && MaxBallisticSubstepDeltaTime > 0.0f)
 	{
@@ -608,43 +599,6 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	{
 		Bullet.bIsAlive = false;
 	}
-}
-
-void UBallisticBulletManagerComponent::DrawWindDebug(UWorld* World) const
-{
-	if (!World || !World->GetWorldSettings().bEnableBallisticWind)
-	{
-		return;
-	}
-
-	const FVector WindAcceleration = World->GetWorldSettings().BallisticWindAcceleration;
-	if (WindAcceleration.Length() <= SniperWindDebugMinMagnitude)
-	{
-		return;
-	}
-
-	const AActor* OwnerActor = GetOwner();
-	const FVector ArrowStart = OwnerActor ? OwnerActor->GetActorLocation() + FVector(0.0f, 0.0f, 1.5f) : FVector::ZeroVector;
-	const FVector ArrowEnd = ArrowStart + (WindAcceleration * SniperWindDebugArrowScale);
-	const FVector Direction = (ArrowEnd - ArrowStart).Normalized();
-	const FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
-	FVector ArrowSide = FVector::Cross(Direction, UpVector);
-	if (ArrowSide.IsNearlyZero())
-	{
-		ArrowSide = FVector(0.0f, 1.0f, 0.0f);
-	}
-	else
-	{
-		ArrowSide = ArrowSide.Normalized();
-	}
-
-	const FVector ArrowHeadBase = ArrowEnd - Direction * SniperWindDebugArrowHeadSize;
-	const FVector ArrowHeadLeft = ArrowHeadBase + ArrowSide * (SniperWindDebugArrowHeadSize * 0.5f);
-	const FVector ArrowHeadRight = ArrowHeadBase - ArrowSide * (SniperWindDebugArrowHeadSize * 0.5f);
-
-	DrawDebugLine(World, ArrowStart, ArrowEnd, FColor(80, 255, 120), SniperWindDebugArrowDuration);
-	DrawDebugLine(World, ArrowEnd, ArrowHeadLeft, FColor(80, 255, 120), SniperWindDebugArrowDuration);
-	DrawDebugLine(World, ArrowEnd, ArrowHeadRight, FColor(80, 255, 120), SniperWindDebugArrowDuration);
 }
 
 void UBallisticBulletManagerComponent::UpdateImpactVisuals(float DeltaTime)
