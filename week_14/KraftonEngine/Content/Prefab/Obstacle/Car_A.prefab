@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_46",
+    "Name" : "AStaticMeshActor_29",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -67,9 +67,9 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [-34.361923, 146.971619, 0.000000],
+      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
       "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
-      "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+      "PendingActorScale" : [1.200000, 1.200000, 1.200000],
       "PendingActorVisible" : true,
       "PendingTagsString" : "",
       "bNeedsTick" : true
@@ -88,8 +88,8 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [-34.361923, 146.971619, 0.000000],
-        "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+        "RelativeTransform.Scale" : [1.200000, 1.200000, 1.200000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
           "Responses[1]" : 2,
@@ -98,6 +98,7 @@
           "Responses[4]" : 2
         },
         "StaticMeshPath" : "Content/Data/Obstacle/Car/Car_A_StaticMesh.uasset",
+        "bAbsoluteScale" : false,
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -113,7 +114,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_46",
+  "SourceActorName" : "AStaticMeshActor_29",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }

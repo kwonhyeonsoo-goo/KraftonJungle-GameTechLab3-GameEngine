@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_60",
+    "Name" : "AStaticMeshActor_28",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -14,68 +14,68 @@
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
           "Slots" : [{
-              "LocalApproachOffset" : [-2.000000, -2.000000, 0.000000],
+              "LocalApproachOffset" : [-2.000000, -3.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [2.000000, -2.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 0,
               "SlotType" : 0,
-              "Tags" : "Enemy,Cover",
+              "Tags" : "Ally,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
-              "LocalApproachOffset" : [-2.000000, 2.000000, 0.000000],
+              "LocalApproachOffset" : [-2.000000, 3.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [2.000000, 2.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 1,
-              "SlotType" : 0,
-              "Tags" : "Enemy,Cover",
+              "SlotType" : 3,
+              "Tags" : "Ally,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
-              "LocalApproachOffset" : [2.000000, -2.000000, 0.000000],
+              "LocalApproachOffset" : [2.000000, -3.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [-2.000000, -2.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 2,
               "SlotType" : 0,
-              "Tags" : "Ally,Cover",
+              "Tags" : "Enemy,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
-              "LocalApproachOffset" : [2.000000, 2.000000, 0.000000],
+              "LocalApproachOffset" : [2.000000, 3.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [-2.000000, 2.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 3,
-              "SlotType" : 0,
-              "Tags" : "Ally,Cover",
+              "SlotType" : 3,
+              "Tags" : "Enemy,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : true
             }, {
               "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [2.000000, 0.000000, 0.000000],
+              "LocalPosition" : [2.000000, 1.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 4,
               "SlotType" : 1,
-              "Tags" : "Enemy,Cover",
+              "Tags" : "Ally,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : false
             }, {
               "LocalApproachOffset" : [0.000000, 0.000000, 0.000000],
               "LocalForward" : [1.000000, 0.000000, 0.000000],
-              "LocalPosition" : [-2.000000, 0.000000, 0.000000],
+              "LocalPosition" : [-2.000000, 1.000000, 0.000000],
               "Radius" : 1.000000,
               "SlotId" : 5,
               "SlotType" : 1,
-              "Tags" : "Ally,Cover",
+              "Tags" : "Enemy,Cover",
               "Weight" : 1.000000,
               "bUseApproachOnEntry" : false,
               "bUseApproachOnExit" : false
@@ -89,8 +89,8 @@
       }],
     "ObjectId" : 1,
     "Properties" : {
-      "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
-      "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+      "PendingActorLocation" : [-3.317832, -8.965345, 21.848644],
+      "PendingActorRotation" : [-0.000000, -179.999985, 0.000000],
       "PendingActorScale" : [1.000000, 1.000000, 1.000000],
       "PendingActorVisible" : true,
       "PendingTagsString" : "",
@@ -102,7 +102,7 @@
       "ObjectId" : 2,
       "Properties" : {
         "AttachSocketName" : "Name_None",
-        "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+        "CachedEditRotator" : [-0.000000, -179.999985, 0.000000],
         "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
         "CollisionEnabled" : 0,
         "Mass" : 1.000000,
@@ -110,7 +110,7 @@
         "ObjectType" : 0,
         "PendingTagsString" : "",
         "PersistentGuid" : "Component_333",
-        "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+        "RelativeTransform.Location" : [-3.317832, -8.965345, 21.848644],
         "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
         "ResponseContainer" : {
           "Responses[0]" : 2,
@@ -136,7 +136,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_60",
+  "SourceActorName" : "AStaticMeshActor_28",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }
