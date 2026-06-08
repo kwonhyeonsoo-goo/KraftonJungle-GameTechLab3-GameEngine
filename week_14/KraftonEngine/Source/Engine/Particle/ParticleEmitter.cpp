@@ -10,6 +10,7 @@
 #include "Modules/ParticleModuleLifetime.h"
 #include "Modules/ParticleModuleLocation.h"
 #include "Modules/ParticleModuleVelocity.h"
+#include "Modules/ParticleModuleRotation.h"
 #include "Modules/ParticleModuleColor.h"
 #include "Modules/ParticleModuleColorOverLife.h"
 #include "Modules/ParticleModuleSize.h"
@@ -133,6 +134,16 @@ void UParticleEmitter::InitializeDefaultLODLevel()
 			SetVectorUniform(Velocity->StartVelocityDistribution, Velocity, { -3.0f, -3.0f, 1.0f }, { 3.0f, 3.0f, 3.0f });
 
 			LOD0->AddModule(Velocity);
+		}
+	}
+
+	if (!HasModuleClass(static_cast<UParticleModuleRotation*>(nullptr)))
+	{
+		auto* Rotation = UObjectManager::Get().CreateObject<UParticleModuleRotation>(LOD0);
+		if (Rotation)
+		{
+			Rotation->SetToSensibleDefaults(this);
+			LOD0->AddModule(Rotation);
 		}
 	}
 

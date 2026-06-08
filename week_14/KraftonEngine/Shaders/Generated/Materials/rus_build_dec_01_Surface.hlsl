@@ -46,6 +46,8 @@ float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, flo
     return SpecularLight * SpecularColor;
 }
 
+Texture2D Tex_Diffuse : register(t0);
+
 cbuffer PerMaterial : register(b2)
 {
     float4 Param_EmissiveColor;
@@ -60,9 +62,10 @@ float3 GetCommonMaterialEmissive()
 
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
+    float4 n_17 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
     float n_3 = 0.000000f;
     FMaterialResult Result;
-    Result.BaseColor = float3(1, 1, 1);
+    Result.BaseColor = (n_17).rgb;
     Result.Normal = float3(0, 0, 1);
     Result.Roughness = 0.5f;
     Result.Metallic = 0.0f;

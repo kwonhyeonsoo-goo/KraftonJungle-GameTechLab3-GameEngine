@@ -1569,6 +1569,29 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         }
     );
     Particle.set_function(
+        "SpawnEmitterAtLocation",
+        [](const FString& Path, const FVector& Location, sol::optional<FVector> Rotation, sol::optional<bool> bActivate) -> UParticleSystemComponent*
+        {
+            if (!GEngine || Path.empty() || Path == "None")
+            {
+                return nullptr;
+            }
+
+            UWorld* World = GEngine->GetWorld();
+            if (!World)
+            {
+                return nullptr;
+            }
+
+            return FGameplayStatics::SpawnEmitterAtLocation(
+                World,
+                Path,
+                Location,
+                FRotator(Rotation.value_or(FVector(0.0f, 0.0f, 0.0f))),
+                bActivate.value_or(true));
+        }
+    );
+    Particle.set_function(
         "SaveSystem",
         [](UParticleSystem* System)
         {

@@ -7,6 +7,8 @@ void UParticleModuleRequired::SetToSensibleDefaults(UParticleEmitter* Owner)
 {
 	MaterialSlot = "None";
 	CachedMaterial = nullptr;
+	CachedMaterialPath.clear();
+	CachedMaterialGeneration = FMaterialManager::Get().GetCacheGeneration();
 
 	bUseLocalSpace = false;
 
@@ -22,11 +24,24 @@ void UParticleModuleRequired::SetToSensibleDefaults(UParticleEmitter* Owner)
 
 UMaterial* UParticleModuleRequired::ResolveMaterial()
 {
-	if (CachedMaterial) return CachedMaterial;
-
 	const FString& Path = MaterialSlot.ToString();
-	if (Path.empty() || Path == "None") return nullptr;
+	FMaterialManager& MaterialManager = FMaterialManager::Get();
+	const uint64 CurrentGeneration = MaterialManager.GetCacheGeneration();
+	if (Path.empty() || Path == "None")
+	{
+		CachedMaterial = nullptr;
+		CachedMaterialPath.clear();
+		CachedMaterialGeneration = CurrentGeneration;
+		return nullptr;
+	}
 
-	CachedMaterial = FMaterialManager::Get().GetOrCreateMaterial(Path);
+	if (CachedMaterial && CachedMaterialPath == Path && CachedMaterialGeneration == CurrentGeneration)
+	{
+		return CachedMaterial;
+	}
+
+	CachedMaterial = MaterialManager.GetOrCreateMaterial(Path);
+	CachedMaterialPath = Path;
+	CachedMaterialGeneration = CurrentGeneration;
 	return CachedMaterial;
 }
