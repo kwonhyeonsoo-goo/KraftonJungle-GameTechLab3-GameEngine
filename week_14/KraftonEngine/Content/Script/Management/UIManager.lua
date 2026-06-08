@@ -1309,7 +1309,7 @@ function UIManager:GetSettings()
     return {
         bgm_volume = 1.0,
         sfx_volume = 1.0,
-        zoom_toggle = true,
+        zoom_toggle = false,
         mouse_sensitivity = 1.0,
         gamepad_sensitivity = 1.0
     }
@@ -1324,6 +1324,7 @@ function UIManager:ApplySniperInputSettings(force)
     local settings = self:GetSettings()
     local mouse_sensitivity = tonumber(settings.mouse_sensitivity) or 1.0
     local gamepad_sensitivity = tonumber(settings.gamepad_sensitivity) or 1.0
+    local zoom_toggle = settings.zoom_toggle == true
 
     if force or self.applied_mouse_sensitivity ~= mouse_sensitivity then
         if pawn.SetMouseSensitivityMultiplier ~= nil then
@@ -1337,6 +1338,13 @@ function UIManager:ApplySniperInputSettings(force)
             pawn:SetGamepadLookSensitivityMultiplier(gamepad_sensitivity)
         end
         self.applied_gamepad_sensitivity = gamepad_sensitivity
+    end
+
+    if force or self.applied_zoom_toggle ~= zoom_toggle then
+        if pawn.SetRightClickZoomToggleMode ~= nil then
+            pawn:SetRightClickZoomToggleMode(zoom_toggle)
+        end
+        self.applied_zoom_toggle = zoom_toggle
     end
 end
 
@@ -1355,7 +1363,7 @@ function UIManager:SetSetting(key, value)
         end
     end
 
-    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" then
+    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" or key == "zoom_toggle" then
         self:ApplySniperInputSettings(true)
     end
 
@@ -2067,6 +2075,12 @@ function UIManager:SetInGamePauseVisible(visible)
 
     self.pause_visible = visible
     if visible then
+        local pawn = self:GetSniperPawn()
+        if pawn ~= nil and pawn.ForceScopeReleased ~= nil then
+            pawn:ForceScopeReleased()
+        end
+        self:SetScopeHUDVisible(false)
+
         if Input ~= nil and Input.SetInputModeGameAndUI ~= nil then
             Input.SetInputModeGameAndUI()
         end
@@ -2728,7 +2742,7 @@ function UIManager:RenderHitNotification(payload)
 
     self:SetElementVisible(widget, "hitNotifyPanel", true)
     self:SetElementStyle(widget, "hitNotifyPanel", "display", "block")
-    if friendly_kill then
+    if friendly then
         self:SetElementStyle(widget, "hitNotifyTitle", "background-color", HIT_NOTIFY_FRIENDLY_TITLE_BG)
         self:SetElementStyle(widget, "hitNotifyTitle", "color", HIT_NOTIFY_FRIENDLY_TITLE_COLOR)
         self:SetElementStyle(widget, "hitNotifyScore", "color", HIT_NOTIFY_FRIENDLY_SCORE_COLOR)

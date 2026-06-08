@@ -12,6 +12,7 @@
 #include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/World.h"
 #include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
 #include "Profiling/Time/Timer.h"
@@ -849,6 +850,20 @@ void ASniperPawn::SetGamepadLookSensitivityMultiplier(float Multiplier)
 	GamepadLookSensitivity = BaseGamepadLookSensitivity * ClampedMultiplier;
 }
 
+void ASniperPawn::SetRightClickZoomToggleMode(bool bToggleMode)
+{
+	if (bRightClickZoomToggleMode == bToggleMode)
+	{
+		return;
+	}
+
+	bRightClickZoomToggleMode = bToggleMode;
+	if (!bRightClickZoomToggleMode && bMouseScopeInputHeld)
+	{
+		ForceScopeReleased();
+	}
+}
+
 bool ASniperPawn::IsReloading() const
 {
 	const USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
@@ -923,6 +938,12 @@ FRotator ASniperPawn::BuildEffectiveAimRotation() const
 
 bool ASniperPawn::CanEnterScope() const
 {
+	const UWorld* World = GetWorld();
+	if (World && World->IsPaused())
+	{
+		return false;
+	}
+
 	return !IsSniperKillCamPlaying(this) && !IsReloading();
 }
 
@@ -1096,12 +1117,17 @@ void ASniperPawn::HandleScopePressed()
 		return;
 	}
 
-	bMouseScopeInputHeld = true;
+	bMouseScopeInputHeld = bRightClickZoomToggleMode ? !bMouseScopeInputHeld : true;
 	RefreshScopeHeldState();
 }
 
 void ASniperPawn::HandleScopeReleased()
 {
+	if (bRightClickZoomToggleMode)
+	{
+		return;
+	}
+
 	bMouseScopeInputHeld = false;
 	RefreshScopeHeldState();
 }

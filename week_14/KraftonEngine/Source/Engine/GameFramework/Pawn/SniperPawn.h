@@ -79,6 +79,10 @@ public:
 	float GetGamepadLookSensitivityMultiplier() const;
 	UFUNCTION(Callable, Category="Sniper|Input")
 	void SetGamepadLookSensitivityMultiplier(float Multiplier);
+	UFUNCTION(Pure, Category="Sniper|Input")
+	bool IsRightClickZoomToggleMode() const { return bRightClickZoomToggleMode; }
+	UFUNCTION(Callable, Category="Sniper|Input")
+	void SetRightClickZoomToggleMode(bool bToggleMode);
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathActive() const;
 	UFUNCTION(Pure, Category="Sniper|State")
@@ -127,6 +131,8 @@ public:
 	float MaxCameraPitch = 60.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Invert Mouse Y")
 	bool bInvertMouseY = false;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Right Click Zoom Toggle Mode")
+	bool bRightClickZoomToggleMode = false;
 
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Scoped FOV", Member=ScopeState.ScopedFOV, Type=Float, Min=0.05f, Max=3.14f, Speed=0.01f);
 	UPROPERTY(Edit, Save, Category="Sniper|Scope", DisplayName="Min Zoom Magnification", Member=ScopeState.MinZoomMagnification, Type=Float, Min=1.0f, Max=64.0f, Speed=0.1f);

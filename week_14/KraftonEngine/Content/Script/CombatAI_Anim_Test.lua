@@ -12,6 +12,11 @@ local FIRE_TRIGGER_INTERVAL = 0.45
 local HIT_BOOL_PULSE_DURATION = 0.12
 local HEALTH_INDICATOR_GREEN_RATIO = 0.60
 local HEALTH_INDICATOR_ORANGE_RATIO = 0.30
+local HEALTH_INDICATOR_MATERIALS = {
+    green = "Content/Material/UI/AllyStatus/AllyHealth_Green.uasset",
+    orange = "Content/Material/UI/AllyStatus/AllyHealth_Orange.uasset",
+    red = "Content/Material/UI/AllyStatus/AllyHealth_Red.uasset"
+}
 
 local function find_anim_instance()
     if obj == nil then
@@ -90,7 +95,12 @@ local function find_component_by_tag(tag)
 end
 
 local function set_component_visible(component, visible)
-    if component ~= nil and component.SetVisibility ~= nil then
+    if component == nil then
+        return
+    end
+    if component.SetVisible ~= nil then
+        component:SetVisible(visible)
+    elseif component.SetVisibility ~= nil then
         component:SetVisibility(visible)
     end
 end
@@ -104,7 +114,10 @@ local function collect_health_billboards()
 end
 
 local function get_health_billboards()
-    if healthBillboards == nil then
+    if healthBillboards == nil
+        or (healthBillboards.green == nil
+            and healthBillboards.orange == nil
+            and healthBillboards.red == nil) then
         healthBillboards = collect_health_billboards()
     end
     return healthBillboards
@@ -142,9 +155,23 @@ local function update_health_indicator(agent)
     end
 
     lastHealthIndicatorState = state
-    set_component_visible(billboards.green, state == "green")
-    set_component_visible(billboards.orange, state == "orange")
-    set_component_visible(billboards.red, state == "red")
+    local indicator = billboards.green or billboards.orange or billboards.red
+    if state == "hidden" then
+        set_component_visible(indicator, false)
+        set_component_visible(billboards.orange, false)
+        set_component_visible(billboards.red, false)
+        return
+    end
+
+    set_component_visible(indicator, true)
+    set_component_visible(billboards.orange, false)
+    set_component_visible(billboards.red, false)
+
+    if indicator ~= nil and indicator.SetMaterialPath ~= nil then
+        indicator:SetMaterialPath(HEALTH_INDICATOR_MATERIALS[state])
+    elseif indicator ~= nil and MaterialLibrary ~= nil and MaterialLibrary.SetComponentMaterialByPath ~= nil then
+        MaterialLibrary.SetComponentMaterialByPath(indicator, 0, HEALTH_INDICATOR_MATERIALS[state])
+    end
 end
 
 local function get_hit_body_name(hitInfo)

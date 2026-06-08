@@ -10,6 +10,7 @@ local BOMB_SFX = {
     "SFX/Bomber/Bomb2.mp3",
     "SFX/Bomber/Bomb3.mp3"
 }
+local BOMB_EXPLOSION_PARTICLE = "Content/Particle System/Explosion.uasset"
 local RESULT_HUD = {
     name = "ResultHUD",
     path = "Content/UI/ResultHUD.rml",
@@ -43,6 +44,9 @@ local BOMB_COUNT = 30
 local BOMB_DROP_DURATION = 2.0
 local BOMB_SCALE = 1.0
 local BOMB_GROUND_HOLD_SECONDS = 5.0
+local BOMB_EXPLOSION_SCALE = 20.0
+local BOMB_EXPLOSION_Z_OFFSET = 0.8
+local BOMB_EXPLOSION_LIFETIME = 4.0
 local GRAVITY = -15.0
 local VICTORY_AUDIO_START_DELAY = 3.0
 local PLANE_AUDIO_FADE_SECONDS = 3.0
@@ -297,6 +301,7 @@ function VictoryState.new(general)
         bomb_drop_elapsed = 0.0,
         bombs = {},
         pending_bombs = {},
+        explosion_particles = {},
         bombs_spawned = false,
         result_hold_elapsed = 0.0,
         result_hud_requested = false,
@@ -359,6 +364,7 @@ function VictoryState:Reset()
     self.bomb_drop_elapsed = 0.0
     self.bombs = {}
     self.pending_bombs = {}
+    self.explosion_particles = {}
     self.bombs_spawned = false
     self.result_hold_elapsed = 0.0
     self.result_hud_requested = false
@@ -827,6 +833,7 @@ function VictoryState:TickBombs(dt)
                     if AudioManager ~= nil and AudioManager.PlaySFX3D ~= nil and bomb.sfx ~= nil then
                         AudioManager.PlaySFX3D(bomb.sfx, impact_location, 1.0, 80.0, 3000.0)
                     end
+                    self:SpawnBombExplosion(impact_location)
                     log("bomb impact index=" .. tostring(bomb.index) ..
                         " destroy_delay=" .. tostring(BOMB_GROUND_HOLD_SECONDS))
                 else
@@ -835,6 +842,8 @@ function VictoryState:TickBombs(dt)
             end
         end
     end
+
+    self:TickExplosionParticles(dt)
 end
 
 function VictoryState:GetBombFocus()
@@ -905,6 +914,80 @@ function VictoryState:HideBombActor(actor)
     end
 end
 
+function VictoryState:SpawnBombExplosion(location)
+    if location == nil then
+        return
+    end
+    if (Particle == nil or Particle.SpawnEmitterAtLocation == nil) and
+        (World == nil or World.SpawnActor == nil) then
+        return
+    end
+
+    local spawn_location = vec3(
+        vector_value(location, "X", "x"),
+        vector_value(location, "Y", "y"),
+        vector_value(location, "Z", "z") + BOMB_EXPLOSION_Z_OFFSET)
+    local scale = vec3(BOMB_EXPLOSION_SCALE, BOMB_EXPLOSION_SCALE, BOMB_EXPLOSION_SCALE)
+    local actor = nil
+    if Particle ~= nil and Particle.SpawnEmitterAtLocation ~= nil then
+        actor = Particle.SpawnEmitterAtLocation(BOMB_EXPLOSION_PARTICLE, spawn_location, vec3(0.0, 0.0, 0.0), scale, true)
+    elseif World.SpawnActor ~= nil then
+        actor = World.SpawnActor("AParticleSystemActor", spawn_location, vec3(0.0, 0.0, 0.0), scale)
+    end
+    if actor == nil then
+        log("explosion particle spawn failed: " .. BOMB_EXPLOSION_PARTICLE)
+        return
+    end
+
+    actor.Location = spawn_location
+    actor.Scale = scale
+
+    local component = nil
+    if actor.GetParticleSystemComponent ~= nil then
+        component = actor:GetParticleSystemComponent()
+    end
+    if component == nil then
+        log("explosion particle component missing: " .. BOMB_EXPLOSION_PARTICLE)
+        if actor.Destroy ~= nil then
+            actor:Destroy()
+        end
+        return
+    end
+
+    if component.SetTemplateByPath ~= nil then
+        component:SetTemplateByPath(BOMB_EXPLOSION_PARTICLE)
+    end
+    if component.ResetParticles ~= nil then
+        component:ResetParticles()
+    end
+    if component.Activate ~= nil then
+        component:Activate()
+    end
+
+    table.insert(self.explosion_particles, {
+        actor = actor,
+        age = 0.0,
+        lifetime = BOMB_EXPLOSION_LIFETIME
+    })
+end
+
+function VictoryState:TickExplosionParticles(dt)
+    for index = #(self.explosion_particles or {}), 1, -1 do
+        local particle = self.explosion_particles[index]
+        if not actor_is_valid(particle.actor) then
+            table.remove(self.explosion_particles, index)
+        else
+            particle.age = (particle.age or 0.0) + dt
+            if particle.age >= (particle.lifetime or BOMB_EXPLOSION_LIFETIME) then
+                if particle.actor.Destroy ~= nil then
+                    particle.actor:Destroy()
+                end
+                table.remove(self.explosion_particles, index)
+            end
+        end
+    end
+end
+
 function VictoryState:SpawnBomb(pending)
     if World == nil or World.SpawnActor == nil then
         return
@@ -970,8 +1053,14 @@ function VictoryState:CleanupBombs()
             bomb.actor:Destroy()
         end
     end
+    for _, particle in ipairs(self.explosion_particles or {}) do
+        if actor_is_valid(particle.actor) and particle.actor.Destroy ~= nil then
+            particle.actor:Destroy()
+        end
+    end
     self.bombs = {}
     self.pending_bombs = {}
+    self.explosion_particles = {}
 end
 
 return VictoryState
