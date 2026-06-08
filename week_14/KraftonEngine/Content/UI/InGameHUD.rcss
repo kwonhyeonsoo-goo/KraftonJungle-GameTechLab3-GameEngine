@@ -85,10 +85,10 @@ body {
 
 #scopeTelemetryPanel {
     position: absolute;
-    left: 650.000000px;
-    top: 122.000000px;
-    width: 620.000000px;
-    height: 96.000000px;
+    left: 0.000000px;
+    top: 0.000000px;
+    width: 1920.000000px;
+    height: 1080.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -106,7 +106,7 @@ body {
 
 .scope-info-row {
     position: absolute;
-    height: 36.000000px;
+    height: 42.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -117,168 +117,34 @@ body {
     border-radius: 0px;
     padding: 0px 0px 0px 0px;
     font-family: "Nexon";
-    font-size: 24.000000px;
+    font-size: 22.000000px;
     font-weight: bold;
     text-align: left;
 }
 
 #scopeDistanceRow {
-    left: 0.000000px;
-    top: 0.000000px;
-    width: 184.000000px;
+    left: 598.000000px;
+    top: 300.000000px;
+    width: 142.000000px;
 }
 
 #scopeWindRow {
-    left: 220.000000px;
-    top: 0.000000px;
-    width: 180.000000px;
-    height: 36.000000px;
-}
-
-#scopeWindBarRow {
-    position: absolute;
-    left: 150.000000px;
-    top: 44.000000px;
-    width: 320.000000px;
-    height: 24.000000px;
-    box-sizing: border-box;
-    overflow: visible;
-    opacity: 1;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0px;
-    padding: 0px;
-}
-
-#scopeWindGauge {
-    position: absolute;
-    left: 0.000000px;
-    top: 0.000000px;
-    width: 320.000000px;
-    height: 24.000000px;
-    box-sizing: border-box;
-    overflow: visible;
-    opacity: 1;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0px;
-    padding: 0px;
-}
-
-#scopeWindPulseGlow {
-    position: absolute;
-    left: -2.000000px;
-    top: 4.000000px;
-    width: 324.000000px;
-    height: 16.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 0;
-    background-color: rgba(80, 210, 220, 220);
-    border-width: 0px;
-    border-radius: 9px;
-    padding: 0px;
-}
-
-#scopeWindBarTrack {
-    position: absolute;
-    left: 0.000000px;
-    top: 8.000000px;
-    width: 320.000000px;
-    height: 8.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 1;
-    background-color: rgba(90, 112, 122, 72);
-    border-color: rgba(210, 232, 238, 96);
-    border-width: 1px 1px 1px 1px;
-    border-radius: 6px;
-    padding: 0px;
-}
-
-#scopeWindBarLeft {
-    position: absolute;
-    left: 160.000000px;
-    top: 9.000000px;
-    width: 0.000000px;
-    height: 6.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 1;
-    background-color: rgba(80, 210, 220, 220);
-    border-width: 0px;
-    border-radius: 4px;
-    padding: 0px;
-}
-
-#scopeWindBarRight {
-    position: absolute;
-    left: 160.000000px;
-    top: 9.000000px;
-    width: 0.000000px;
-    height: 6.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 1;
-    background-color: rgba(80, 210, 220, 220);
-    border-width: 0px;
-    border-radius: 4px;
-    padding: 0px;
-}
-
-#scopeWindBarLeftTip {
-    position: absolute;
-    left: 160.000000px;
-    top: 7.000000px;
-    width: 0.000000px;
-    height: 10.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 0;
-    background-color: rgba(80, 210, 220, 220);
-    border-width: 0px;
-    border-radius: 5px;
-    padding: 0px;
-}
-
-#scopeWindBarRightTip {
-    position: absolute;
-    left: 160.000000px;
-    top: 7.000000px;
-    width: 0.000000px;
-    height: 10.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 0;
-    background-color: rgba(80, 210, 220, 220);
-    border-width: 0px;
-    border-radius: 5px;
-    padding: 0px;
-}
-
-#scopeWindCenterLine {
-    position: absolute;
-    left: 159.000000px;
-    top: 3.000000px;
-    width: 2.000000px;
-    height: 18.000000px;
-    box-sizing: border-box;
-    overflow: hidden;
-    opacity: 1;
-    background-color: rgba(240, 248, 252, 220);
-    border-width: 0px;
-    border-radius: 1px;
-    padding: 0px;
+    left: 1232.000000px;
+    top: 308.000000px;
+    width: 174.000000px;
+    height: 60.000000px;
 }
 
 #scopeZoomRow {
-    left: 458.000000px;
-    top: 0.000000px;
-    width: 140.000000px;
+    left: 598.000000px;
+    top: 350.000000px;
+    width: 116.000000px;
 }
 
 .scope-info-icon {
     position: absolute;
     left: 0.000000px;
-    top: 4.000000px;
+    top: 7.000000px;
     width: 24.000000px;
     height: 24.000000px;
     box-sizing: border-box;
@@ -296,8 +162,8 @@ body {
 
 .scope-info-value {
     position: absolute;
-    left: 32.000000px;
-    top: 1.000000px;
+    left: 34.000000px;
+    top: 5.000000px;
     width: 222.000000px;
     height: 34.000000px;
     box-sizing: border-box;
@@ -316,28 +182,24 @@ body {
 }
 
 #scopeDistanceValue {
-    width: 132.000000px;
+    width: 98.000000px;
 }
 
 #scopeWindValue {
     top: 1.000000px;
-    width: 130.000000px;
-    height: 30.000000px;
-    display: none;
-    opacity: 0;
+    width: 132.000000px;
+    height: 28.000000px;
 }
 
 #scopeWindSpeedValue {
-    top: 1.000000px;
-    width: 136.000000px;
-    height: 30.000000px;
-    font-size: 22.000000px;
-    display: block;
-    opacity: 1;
+    top: 27.000000px;
+    width: 132.000000px;
+    height: 28.000000px;
+    font-size: 18.000000px;
 }
 
 #scopeZoomValue {
-    width: 86.000000px;
+    width: 64.000000px;
 }
 
 #CompassArrow {
@@ -791,10 +653,10 @@ body {
 
 #hitNotifyPanel {
     position: absolute;
-    left: 740.000000px;
-    top: 476.000000px;
-    width: 440.000000px;
-    height: 128.000000px;
+    left: 820.000000px;
+    top: 700.000000px;
+    width: 620.000000px;
+    height: 82.000000px;
     box-sizing: border-box;
     overflow: hidden;
     display: none;
@@ -810,34 +672,36 @@ body {
     text-align: center;
     transform: scale(1.0);
     transform-origin: center center;
-    z-index: 18;
+    z-index: 80;
 }
 
 #hitNotifyTitle {
     position: absolute;
     left: 0.000000px;
-    top: 0.000000px;
-    width: 440.000000px;
-    height: 66.000000px;
+    top: 8.000000px;
+    width: 286.000000px;
+    height: 58.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
-    background-color: rgba(0, 0, 0, 0);
-    color: rgba(255, 245, 218, 255);
+    background-color: rgba(255, 209, 70, 245);
+    color: rgba(32, 27, 15, 255);
+    border-color: rgba(255, 255, 255, 0);
     border-width: 0px;
-    padding: 0px;
+    border-radius: 8px;
+    padding: 10px 18px 8px 18px;
     font-family: "Nexon";
-    font-size: 52.000000px;
+    font-size: 28.000000px;
     font-weight: bold;
     text-align: center;
 }
 
 #hitNotifyMeta {
     position: absolute;
-    left: 30.000000px;
-    top: 72.000000px;
-    width: 380.000000px;
-    height: 50.000000px;
+    left: 314.000000px;
+    top: 7.000000px;
+    width: 268.000000px;
+    height: 66.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 0;
@@ -846,15 +710,15 @@ body {
     padding: 0px;
     font-family: "Nexon";
     font-weight: bold;
-    text-align: right;
+    text-align: left;
 }
 
 #hitNotifyDistance,
 #hitNotifyScore {
     position: absolute;
     left: 0.000000px;
-    width: 380.000000px;
-    height: 24.000000px;
+    width: 268.000000px;
+    height: 30.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -862,19 +726,21 @@ body {
     border-width: 0px;
     padding: 0px;
     font-family: "Nexon";
-    font-size: 19.000000px;
+    font-size: 22.000000px;
     font-weight: bold;
-    text-align: right;
+    text-align: left;
 }
 
 #hitNotifyDistance {
-    top: 0.000000px;
-    color: rgba(225, 232, 235, 230);
+    top: 34.000000px;
+    color: rgba(245, 246, 240, 230);
+    font-size: 18.000000px;
 }
 
 #hitNotifyScore {
-    top: 25.000000px;
-    color: rgba(255, 213, 118, 255);
+    top: 2.000000px;
+    color: rgba(255, 220, 88, 255);
+    font-size: 27.000000px;
 }
 
 #cutsceneLetterboxTop,
@@ -982,6 +848,27 @@ body {
     font-family: "Nexon";
     font-weight: bold;
     text-align: center;
+}
+
+#radioOpeningSkipPrompt {
+    position: absolute;
+    right: 42.000000px;
+    bottom: 36.000000px;
+    width: 320.000000px;
+    height: 32.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(245, 246, 240, 230);
+    border-width: 0px;
+    padding: 0px;
+    font-size: 19.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+    z-index: 51;
 }
 
 #pauseLayer {

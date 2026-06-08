@@ -203,7 +203,7 @@ function PreInGameState:Tick(dt)
             self.general:RequestState(GameState.Loading, {
                 reason = "pre_ingame_skip",
                 target_state = GameState.InGame,
-                target_scene = "Content/Scene/ScopeTest.Scene"
+                target_scene = "Content/Scene/InGame.Scene"
             })
         end
         return

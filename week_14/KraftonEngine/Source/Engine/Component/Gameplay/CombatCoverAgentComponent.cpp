@@ -152,7 +152,7 @@ void UCombatCoverAgentComponent::RecordSniperHit(const FSniperHitInfo& HitInfo)
     LastHitScoreValue = HitInfo.HitScoreValue;
     bLastHitKilled = HitInfo.bKilled;
 
-    if (!HitInfo.bKilled)
+    if (!HitInfo.bKilled && IsAlive())
     {
         QueueHitReaction();
     }
@@ -315,12 +315,12 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         FireRange = 80.0f;
         MovingFireRange = 30.0f;
         AttackDamage = 7.0f;
-        AttackIntervalMin = 2.4f;
-        AttackIntervalMax = 3.6f;
-        AdvanceIntervalMin = 6.0f;
-        AdvanceIntervalMax = 8.0f;
-        RepositionChanceWhenInRange = 0.05f;
-        CombatDecisionCooldown = 5.0f;
+        AttackIntervalMin = 4.5f;
+        AttackIntervalMax = 6.5f;
+        AdvanceIntervalMin = 12.0f;
+        AdvanceIntervalMax = 16.0f;
+        RepositionChanceWhenInRange = 0.01f;
+        CombatDecisionCooldown = 6.0f;
         TakeCoverChanceWhenInRange = 0.50f;
         TakeCoverDurationMin = 2.0f;
         TakeCoverDurationMax = 4.0f;
@@ -342,10 +342,10 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 0.8f;
         AttackIntervalMax = 1.4f;
-        AdvanceIntervalMin = 4.0f;
-        AdvanceIntervalMax = 6.0f;
-        RepositionChanceWhenInRange = 0.08f;
-        CombatDecisionCooldown = 4.0f;
+        AdvanceIntervalMin = 8.0f;
+        AdvanceIntervalMax = 12.0f;
+        RepositionChanceWhenInRange = 0.02f;
+        CombatDecisionCooldown = 5.0f;
         TakeCoverChanceWhenInRange = 0.35f;
         TakeCoverDurationMin = 1.5f;
         TakeCoverDurationMax = 3.0f;
@@ -355,6 +355,29 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         FullCoverToCombatDelayMax = 1.6f;
         LowHealthFullCoverRatio = 0.35f;
         LowHealthFullCoverChance = 0.75f;
+        break;
+
+    case ECombatAgentRole::EnemyAssault:
+        TeamTag = "Enemy";
+        AdvanceLinkMode = ECombatAdvanceLinkMode::IncomingLinks;
+        FireRange = 18.0f;
+        MovingFireRange = 12.0f;
+        AttackDamage = 4.0f;
+        AttackIntervalMin = 0.7f;
+        AttackIntervalMax = 1.1f;
+        AdvanceIntervalMin = 3.5f;
+        AdvanceIntervalMax = 5.5f;
+        RepositionChanceWhenInRange = 0.08f;
+        CombatDecisionCooldown = 2.5f;
+        TakeCoverChanceWhenInRange = 0.10f;
+        TakeCoverDurationMin = 0.5f;
+        TakeCoverDurationMax = 1.0f;
+        InCoverTargetPriorityMultiplier = 0.55f;
+        AdvanceFullCoverChance = 0.20f;
+        FullCoverToCombatDelayMin = 0.2f;
+        FullCoverToCombatDelayMax = 0.5f;
+        LowHealthFullCoverRatio = 0.25f;
+        LowHealthFullCoverChance = 0.35f;
         break;
     }
 
@@ -466,6 +489,8 @@ void UCombatCoverAgentComponent::TickCombatDecisionCooldown(float DeltaTime)
 void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
 {
     MoveSpeed = (std::max)(0.0f, MoveSpeed);
+    CrouchMoveSpeed = (std::max)(0.0f, CrouchMoveSpeed);
+    RunMoveSpeed = (std::max)(0.0f, RunMoveSpeed);
     AcceptanceRadius = (std::max)(1.0f, AcceptanceRadius);
     AdvanceIntervalMin = (std::max)(0.0f, AdvanceIntervalMin);
     AdvanceIntervalMax = (std::max)(AdvanceIntervalMin, AdvanceIntervalMax);
@@ -481,6 +506,8 @@ void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
     AttackIntervalMin = (std::max)(0.0f, AttackIntervalMin);
     AttackIntervalMax = (std::max)(AttackIntervalMin, AttackIntervalMax);
     TargetScanInterval = (std::max)(0.01f, TargetScanInterval);
+    SuppressedAttackSpeedMultiplier = (std::min)((std::max)(0.01f, SuppressedAttackSpeedMultiplier), 1.0f);
+    SuppressedMoveSpeedMultiplier = (std::min)((std::max)(0.01f, SuppressedMoveSpeedMultiplier), 1.0f);
     HitReactionDuration = (std::min)((std::max)(0.0f, HitReactionDuration), 10.0f);
     RepositionChanceWhenInRange = (std::min)((std::max)(0.0f, RepositionChanceWhenInRange), 1.0f);
     CombatDecisionCooldown = (std::max)(0.0f, CombatDecisionCooldown);
@@ -533,7 +560,7 @@ float UCombatCoverAgentComponent::GetCombatAnimationMoveState() const
 {
     if (IsMovingForCombatRange())
     {
-        return 2.0f;
+        return ShouldRunDuringCombatMovement() ? 2.0f : 1.0f;
     }
 
     if (ShouldUseStandingFire())
@@ -547,6 +574,26 @@ float UCombatCoverAgentComponent::GetCombatAnimationMoveState() const
     }
 
     return 0.0f;
+}
+
+bool UCombatCoverAgentComponent::ShouldRunDuringCombatMovement() const
+{
+    return GetResolvedCombatRole() == ECombatAgentRole::EnemyAssault;
+}
+
+float UCombatCoverAgentComponent::GetCurrentCombatMoveSpeed() const
+{
+    const float MoveState = GetCombatAnimationMoveState();
+    const float BaseSpeed = MoveState >= 1.5f
+        ? (std::max)(0.0f, RunMoveSpeed)
+        : (std::max)(0.0f, CrouchMoveSpeed);
+
+    if (IsSuppressed())
+    {
+        return BaseSpeed * (std::min)((std::max)(0.01f, SuppressedMoveSpeedMultiplier), 1.0f);
+    }
+
+    return BaseSpeed;
 }
 
 bool UCombatCoverAgentComponent::ConsumeHitReaction()
@@ -596,6 +643,7 @@ const char* UCombatCoverAgentComponent::GetCombatRoleName() const
     case ECombatAgentRole::Ally: return "Ally";
     case ECombatAgentRole::EnemyShortRange: return "EnemyShortRange";
     case ECombatAgentRole::EnemyLongRangeSlow: return "EnemyLongRangeSlow";
+    case ECombatAgentRole::EnemyAssault: return "EnemyAssault";
     default: return "Unknown";
     }
 }
@@ -607,6 +655,7 @@ const char* UCombatCoverAgentComponent::GetResolvedCombatRoleName() const
     case ECombatAgentRole::Ally: return "Ally";
     case ECombatAgentRole::EnemyShortRange: return "EnemyShortRange";
     case ECombatAgentRole::EnemyLongRangeSlow: return "EnemyLongRangeSlow";
+    case ECombatAgentRole::EnemyAssault: return "EnemyAssault";
     case ECombatAgentRole::AutoFromTeam: return "AutoFromTeam";
     default: return "Unknown";
     }
@@ -614,7 +663,7 @@ const char* UCombatCoverAgentComponent::GetResolvedCombatRoleName() const
 
 void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent* Target)
 {
-    if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed)
+    if (State == ECombatCoverAgentState::Dead)
     {
         return;
     }
@@ -626,9 +675,13 @@ void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent*
     }
 
     CurrentTarget.Reset(Target);
-    CoverHoldTimer = 0.0f;
 
-    if (!bCanFireWhileMoving && State != ECombatCoverAgentState::Engaging)
+    if (State != ECombatCoverAgentState::Suppressed)
+    {
+        CoverHoldTimer = 0.0f;
+    }
+
+    if (State != ECombatCoverAgentState::Suppressed && !bCanFireWhileMoving && State != ECombatCoverAgentState::Engaging)
     {
         StateBeforeEngage = State;
         State = ECombatCoverAgentState::Engaging;
@@ -713,28 +766,19 @@ void UCombatCoverAgentComponent::ApplySuppression(float Duration)
         return;
     }
 
-    CurrentTarget.Reset();
-    CoverHoldTimer = 0.0f;
-    bMoveToCombatSlotAfterCoverHold = false;
-    AdvanceTimer = 0.0f;
-    RetryTimer = 0.0f;
-
-    if (State != ECombatCoverAgentState::Suppressed)
-    {
-        StateBeforeSuppressed = State;
-        State = ECombatCoverAgentState::Suppressed;
-    }
-
     SuppressionTimer = (std::max)(SuppressionTimer, Duration);
-    if (bTriggerHitReactionOnSuppression)
-    {
-        QueueHitReaction();
-    }
 }
 
 void UCombatCoverAgentComponent::FinishSuppression()
 {
+    const bool bWasSuppressedState = State == ECombatCoverAgentState::Suppressed;
     SuppressionTimer = 0.0f;
+
+    if (!bWasSuppressedState)
+    {
+        StateBeforeSuppressed = ECombatCoverAgentState::Idle;
+        return;
+    }
 
     switch (StateBeforeSuppressed)
     {
@@ -763,6 +807,11 @@ void UCombatCoverAgentComponent::FinishSuppression()
         break;
 
     case ECombatCoverAgentState::Engaging:
+        State = CurrentTarget.Get() && CurrentTarget.Get()->IsAlive()
+            ? ECombatCoverAgentState::Engaging
+            : (CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover);
+        break;
+
     case ECombatCoverAgentState::Suppressed:
     case ECombatCoverAgentState::InCover:
     default:
@@ -806,8 +855,18 @@ void UCombatCoverAgentComponent::QueueHitReaction()
     bHitReactionPending = true;
 }
 
+bool UCombatCoverAgentComponent::IsHitReactionMoveLocked() const
+{
+    return State != ECombatCoverAgentState::Dead && HitReactionTimer > 0.0f;
+}
+
 void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
 {
+    if (IsHitReactionMoveLocked())
+    {
+        return;
+    }
+
     AActor* Owner = GetOwner();
     UCombatFlowManagerComponent* Manager = ResolveManager();
     if (!Owner || !Manager)
@@ -913,7 +972,7 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
             {
                 if (CharacterMovement->HasValidUpdatedComponent())
                 {
-                    CharacterMovement->MaxWalkSpeed = (std::max)(0.0f, MoveSpeed);
+                    CharacterMovement->MaxWalkSpeed = GetCurrentCombatMoveSpeed();
                     Character->AddMovementInput(Direction, 1.0f);
                     return;
                 }
@@ -921,7 +980,7 @@ void UCombatCoverAgentComponent::TickMoveToTarget(float DeltaTime)
         }
     }
 
-    const float Step = (std::max)(0.0f, MoveSpeed) * DeltaTime;
+    const float Step = GetCurrentCombatMoveSpeed() * DeltaTime;
     if (Step <= 0.0f)
     {
         return;
@@ -1027,6 +1086,15 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
     TickCombatDecisionCooldown(DeltaTime);
 
+    if (SuppressionTimer > 0.0f)
+    {
+        SuppressionTimer = (std::max)(0.0f, SuppressionTimer - DeltaTime);
+        if (SuppressionTimer <= 0.0f)
+        {
+            FinishSuppression();
+        }
+    }
+
     if (HitReactionTimer > 0.0f)
     {
         HitReactionTimer = (std::max)(0.0f, HitReactionTimer - DeltaTime);
@@ -1108,7 +1176,6 @@ void UCombatCoverAgentComponent::TickComponent(float DeltaTime, ELevelTick TickT
         break;
 
     case ECombatCoverAgentState::Suppressed:
-        SuppressionTimer -= DeltaTime;
         if (SuppressionTimer <= 0.0f)
         {
             FinishSuppression();

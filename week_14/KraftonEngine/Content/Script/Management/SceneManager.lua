@@ -3,6 +3,7 @@ local MainState = require("Management/States/MainState")
 local PreInGameState = require("Management/States/PreInGameState")
 local LoadingState = require("Management/States/LoadingState")
 local InGameState = require("Management/States/InGameState")
+local VictoryState = require("Management/States/VictoryState")
 
 local SceneManager = {}
 SceneManager.__index = SceneManager
@@ -36,6 +37,7 @@ function SceneManager.new(general)
     self:RegisterState(GameState.PreInGame, PreInGameState.new(general))
     self:RegisterState(GameState.Loading, LoadingState.new(general))
     self:RegisterState(GameState.InGame, InGameState.new(general))
+    self:RegisterState(GameState.Victory, VictoryState.new(general))
     return self
 end
 

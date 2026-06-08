@@ -50,6 +50,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Actor/ParticleSystemActor.h"
 #include "GameFramework/Actor/SniperKillCamDirector.h"
+#include "GameFramework/Actor/StaticMeshActor.h"
 #include "GameFramework/Camera/CameraModifier.h"
 #include "GameFramework/Camera/CameraShakeBase.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
@@ -1657,6 +1658,16 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         {
             return IsValid(Component) ? Component->GetSimulatePhysics() : false;
         },
+        "SetVisibility",
+        [](UPrimitiveComponent* Component, bool bVisible)
+        {
+            if (IsValid(Component)) Component->SetVisibility(bVisible);
+        },
+        "IsVisible",
+        [](UPrimitiveComponent* Component) -> bool
+        {
+            return IsValid(Component) ? Component->IsVisible() : false;
+        },
         "AddForce",
         [](UPrimitiveComponent* Component, const FVector& Force)
         {
@@ -1816,7 +1827,36 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetAnimationMode",
         &USkeletalMeshComponent::GetAnimationMode,
         "GetAnimation",
-        &USkeletalMeshComponent::GetAnimation
+        &USkeletalMeshComponent::GetAnimation,
+        "ResetClothSimulation",
+        &USkeletalMeshComponent::ResetClothSimulation,
+        "SetClothPreviewWindOverride",
+        sol::overload(
+            [](USkeletalMeshComponent& Component, bool bEnable, const FVector& WindVelocity)
+            {
+                Component.SetClothPreviewWindOverride(bEnable, WindVelocity);
+            },
+            [](USkeletalMeshComponent& Component, bool bEnable, float X, float Y, float Z)
+            {
+                Component.SetClothPreviewWindOverride(bEnable, FVector(X, Y, Z));
+            }
+        ),
+        "SetClothWindOverride",
+        sol::overload(
+            [](USkeletalMeshComponent& Component, const FVector& WindVelocity)
+            {
+                Component.SetClothPreviewWindOverride(true, WindVelocity);
+            },
+            [](USkeletalMeshComponent& Component, float X, float Y, float Z)
+            {
+                Component.SetClothPreviewWindOverride(true, FVector(X, Y, Z));
+            }
+        ),
+        "ClearClothWindOverride",
+        [](USkeletalMeshComponent& Component)
+        {
+            Component.SetClothPreviewWindOverride(false, FVector::ZeroVector);
+        }
     );
 
     Lua.new_usertype<FHitResult>(
@@ -2151,6 +2191,26 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             return Actor.GetComponentByClass<UStaticMeshComponent>();
         },
 
+        "InitStaticMeshActor",
+        [](AActor& Actor, const FString& MeshPath) -> bool
+        {
+            AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(&Actor);
+            if (!IsValid(StaticMeshActor))
+            {
+                return false;
+            }
+
+            if (!IsValid(StaticMeshActor->GetStaticMeshComponent()))
+            {
+                StaticMeshActor->InitDefaultComponents(MeshPath);
+            }
+            else if (UStaticMeshComponent* StaticMeshComponent = StaticMeshActor->GetStaticMeshComponent())
+            {
+                StaticMeshComponent->SetStaticMeshByPath(MeshPath);
+            }
+            return IsValid(StaticMeshActor->GetStaticMeshComponent());
+        },
+
         "GetCamera",
         [](AActor& Actor)
         {
@@ -2402,6 +2462,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &ASniperPawn::GetBallisticBulletManagerComponent,
         "IsScoped",
         &ASniperPawn::IsScoped,
+        "IsReloading",
+        &ASniperPawn::IsReloading,
+        "GetReloadRemaining",
+        &ASniperPawn::GetReloadRemaining,
+        "GetReloadProgress",
+        &ASniperPawn::GetReloadProgress,
         "ForceScopeReleased",
         &ASniperPawn::ForceScopeReleased,
         "GetScopeBlendAlpha",
@@ -2436,6 +2502,10 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &ASniperPawn::IsHoldBreathRecovering,
         "IsHoldBreathReleaseRequired",
         &ASniperPawn::IsHoldBreathReleaseRequired,
+        "IsHoldBreathOnCooldown",
+        &ASniperPawn::IsHoldBreathOnCooldown,
+        "GetHoldBreathCooldownRemaining",
+        &ASniperPawn::GetHoldBreathCooldownRemaining,
         "GetHoldBreathDuration",
         &ASniperPawn::GetHoldBreathDuration,
         "GetHoldBreathGaugeRatio",

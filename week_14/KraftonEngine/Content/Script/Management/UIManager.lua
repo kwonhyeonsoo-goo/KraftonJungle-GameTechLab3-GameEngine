@@ -8,6 +8,7 @@ local MAIN_HUD_MODE = "Main"
 local PRE_INGAME_HUD_MODE = "PreInGame"
 local LOADING_HUD_MODE = "Loading"
 local IN_GAME_HUD_MODE = "InGame"
+local RESULT_HUD_MODE = "Result"
 local DEFAULT_LOADING_TIP = LoadingTips[1] or "Tip: Hold your breath only when the shot really matters."
 local MAIN_MENU_BUTTON_IDS = { "btnGameStart", "btnScoreBoard", "btnSettings", "btnCredits", "btnExit" }
 local MAIN_MENU_BUTTON_TEXTS = {
@@ -42,11 +43,15 @@ local MAIN_BUTTON_HOVER_SFX = "SFX/ButtonHovering.mp3"
 local MAIN_BUTTON_CLICK_SFX = "SFX/ButtonClickMain.mp3"
 local MAIN_GAME_START_SFX = "SFX/ButtonClickGameStart.mp3"
 local LOADING_END_SFX = "SFX/LoadingEnd.mp3"
-local DEFAULT_CURSOR_IMAGE_PATH = "Content/Texture/Pointer_Main.png"
-local DEFAULT_CURSOR_WIDTH = 64.0
-local DEFAULT_CURSOR_HEIGHT = 64.0
-local DEFAULT_CURSOR_HOTSPOT_X = 11.0
-local DEFAULT_CURSOR_HOTSPOT_Y = 7.0
+local BREATH_IN_SFX = "SFX/Breath/Breath-in.mp3"
+local BREATH_OUT_SFX = "SFX/Breath/Breath-out.mp3"
+local BREATH_RECOVER_SFX = "SFX/Breath/Breath-recover.mp3"
+local BREATH_HEARTBEAT_KEY = "Breath_HeartBeat_Loop"
+local BREATH_HEARTBEAT_SFX = "SFX/Breath/HeartBeat.mp3"
+local BREATH_HEARTBEAT_LOOP = "breath_heartbeat_loop"
+local BREATH_HEARTBEAT_DELAY = 2.0
+local BREATH_SFX_VOLUME = 1.0
+local BREATH_HEARTBEAT_VOLUME = 0.88
 local POPUP_LAYER_ID = "popupLayer"
 local POPUP_BACKDROP_ID = "popupBackdrop"
 local POPUP_IDS = {
@@ -104,24 +109,16 @@ local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
 local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
 local SCOPE_DISTANCE_TRACE_METERS = 2000.0
 local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
-local WIND_UI_MAX_CROSS_DISPLAY = 4.0
-local WIND_UI_MAX_HEAD_DISPLAY = 4.0
-local WIND_UI_SMOOTH_SPEED = 6.0
-local WIND_UI_CALM_CROSS_THRESHOLD = 0.18
-local WIND_UI_PULSE_DECAY_SPEED = 4.5
-local WIND_UI_PULSE_DELTA_SCALE = 1.25
-local WIND_UI_SIDE_SWITCH_PULSE = 0.92
-local WIND_UI_STRENGTH_SWITCH_PULSE = 0.58
-local SCOPE_WIND_BAR_MAX_WIDTH = 158.0
-local SCOPE_WIND_BAR_CENTER_X = 160.0
-local SCOPE_WIND_BAR_TIP_WIDTH = 8.0
 local COMBAT_AGENT_ROW_COUNT = 5
 local COMBAT_AGENT_BAR_WIDTH = 210.0
-local HIT_NOTIFY_CENTER_X = 740.0
-local HIT_NOTIFY_CENTER_Y = 476.0
-local HIT_NOTIFY_RIGHT_X = 1268.0
-local HIT_NOTIFY_RIGHT_Y = 376.0
-local HIT_NOTIFY_DURATION = 2.75
+local HIT_NOTIFY_CENTER_X = 820.0
+local HIT_NOTIFY_CENTER_Y = 700.0
+local HIT_NOTIFY_RIGHT_X = 1328.0
+local HIT_NOTIFY_RIGHT_Y = 700.0
+local HIT_NOTIFY_DURATION = 4.55
+local HIT_NOTIFY_PENDING_LIMIT = 4
+local HIT_NOTIFY_IMPACT_TIME = 1.08
+local HIT_NOTIFY_IMPACT_SFX = "SFX/Alert.mp3"
 
 local function log(message)
     if Debug and Debug.Log then
@@ -136,28 +133,6 @@ local function call_widget(widget, method_name, ...)
         return widget[method_name](widget, ...)
     end
     return nil
-end
-
-local function apply_default_cursor_image()
-    if Input == nil or Input.SetCursorImage == nil then
-        return false
-    end
-
-    local ok, result = pcall(function()
-        return Input.SetCursorImage(
-            DEFAULT_CURSOR_IMAGE_PATH,
-            DEFAULT_CURSOR_WIDTH,
-            DEFAULT_CURSOR_HEIGHT,
-            DEFAULT_CURSOR_HOTSPOT_X,
-            DEFAULT_CURSOR_HOTSPOT_Y)
-    end)
-
-    if not ok then
-        log("Failed to apply default cursor image")
-        return false
-    end
-
-    return result == true
 end
 
 local function clamp01(value)
@@ -226,24 +201,6 @@ local function approach01(current, target, dt, speed)
         return target
     end
     return clamp01(result)
-end
-
-local function exp_approach(current, target, dt, speed)
-    current = tonumber(current) or 0.0
-    target = tonumber(target) or 0.0
-    if math.abs(target - current) <= 0.001 then
-        return target
-    end
-    if dt == nil or dt <= 0.0 then
-        return current
-    end
-
-    local alpha = clamp01(1.0 - math.exp(-(speed or 1.0) * dt))
-    local result = current + (target - current) * alpha
-    if math.abs(target - result) <= 0.001 then
-        return target
-    end
-    return result
 end
 
 local function rgba255(color, alpha_scale)
@@ -319,156 +276,6 @@ local function smooth_heading(current_degrees, target_degrees, dt, speed)
         alpha = 1.0 - math.exp(-speed * dt)
     end
     return normalize_degrees(current_degrees + shortest_angle_delta(current_degrees, target_degrees) * clamp01(alpha))
-end
-
-local function read_vector_xy(vector)
-    if vector == nil then
-        return 0.0, 0.0
-    end
-
-    local x = tonumber(vector.X or vector.x or 0.0) or 0.0
-    local y = tonumber(vector.Y or vector.y or 0.0) or 0.0
-    return x, y
-end
-
-local function planar_length(x, y)
-    return math.sqrt(x * x + y * y)
-end
-
-local function normalize_planar_xy(x, y)
-    local length = planar_length(x, y)
-    if length <= 0.0001 then
-        return 0.0, 0.0, 0.0
-    end
-
-    return x / length, y / length, length
-end
-
-local function get_camera_planar_forward(camera)
-    if camera == nil or camera.Forward == nil then
-        return nil
-    end
-
-    local x, y = read_vector_xy(camera.Forward)
-    local normalized_x, normalized_y, length = normalize_planar_xy(x, y)
-    if length <= 0.0001 then
-        return nil
-    end
-
-    return normalized_x, normalized_y
-end
-
-local function get_camera_planar_right(camera)
-    if camera ~= nil and camera.Right ~= nil then
-        local x, y = read_vector_xy(camera.Right)
-        local normalized_x, normalized_y, length = normalize_planar_xy(x, y)
-        if length > 0.0001 then
-            return normalized_x, normalized_y
-        end
-    end
-
-    local forward_x, forward_y = get_camera_planar_forward(camera)
-    if forward_x == nil or forward_y == nil then
-        return nil
-    end
-
-    return -forward_y, forward_x
-end
-
-local function classify_crosswind_side(value)
-    local magnitude = math.abs(tonumber(value) or 0.0)
-    if magnitude <= WIND_UI_CALM_CROSS_THRESHOLD then
-        return "Center"
-    end
-
-    if value > 0.0 then
-        return "Right"
-    end
-    return "Left"
-end
-
-local function classify_headwind_state(value)
-    local magnitude = math.abs(tonumber(value) or 0.0)
-    if magnitude <= 0.05 then
-        return "Neutral"
-    end
-
-    if value > 0.0 then
-        return "Head"
-    end
-    return "Tail"
-end
-
-local function classify_wind_strength(normalized_strength)
-    local normalized = clamp01(normalized_strength or 0.0)
-    if normalized < 0.10 then
-        return "Calm"
-    end
-    if normalized < 0.35 then
-        return "Light"
-    end
-    if normalized < 0.70 then
-        return "Medium"
-    end
-    return "Strong"
-end
-
-local function get_wind_strength_color(strength_level)
-    local strength = tostring(strength_level or "Calm")
-    if strength == "Strong" then
-        return "rgba(255, 120, 70, 240)"
-    end
-    if strength == "Medium" then
-        return "rgba(255, 210, 90, 230)"
-    end
-    if strength == "Light" then
-        return "rgba(80, 210, 220, 220)"
-    end
-    return "rgba(120, 145, 150, 140)"
-end
-
-local function compute_relative_wind_snapshot(wind_vector, camera)
-    local result = {
-        wind_degrees = 0.0,
-        wind_mps = 0.0,
-        wind_cross = 0.0,
-        wind_head = 0.0,
-        wind_cross_abs = 0.0,
-        wind_head_abs = 0.0,
-        wind_cross_normalized = 0.0,
-        wind_head_normalized = 0.0,
-        wind_side = "Center",
-        wind_head_state = "Neutral",
-        wind_strength_level = "Calm"
-    }
-
-    if wind_vector == nil then
-        return result
-    end
-
-    local wind_x, wind_y = read_vector_xy(wind_vector)
-    local planar_speed = planar_length(wind_x, wind_y)
-    result.wind_mps = planar_speed
-    if planar_speed > 0.0001 then
-        result.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
-    end
-
-    local forward_x, forward_y = get_camera_planar_forward(camera)
-    local right_x, right_y = get_camera_planar_right(camera)
-    if forward_x == nil or forward_y == nil or right_x == nil or right_y == nil then
-        return result
-    end
-
-    result.wind_cross = wind_x * right_x + wind_y * right_y
-    result.wind_head = wind_x * forward_x + wind_y * forward_y
-    result.wind_cross_abs = math.abs(result.wind_cross)
-    result.wind_head_abs = math.abs(result.wind_head)
-    result.wind_cross_normalized = clamp01(result.wind_cross_abs / WIND_UI_MAX_CROSS_DISPLAY)
-    result.wind_head_normalized = clamp01(result.wind_head_abs / WIND_UI_MAX_HEAD_DISPLAY)
-    result.wind_side = classify_crosswind_side(result.wind_cross)
-    result.wind_head_state = classify_headwind_state(result.wind_head)
-    result.wind_strength_level = classify_wind_strength(result.wind_cross_normalized)
-    return result
 end
 
 local function enum_equals(value, expected)
@@ -595,13 +402,6 @@ function UIManager.new(general)
         compass_last_frame = -1,
         compass_smooth_speed = 18.0,
         smoothed_heading_degrees = nil,
-        scope_telemetry_last_update_time = nil,
-        smoothed_scope_wind_cross = 0.0,
-        smoothed_scope_wind_head = 0.0,
-        scope_wind_pulse_alpha = 0.0,
-        scope_wind_last_raw_cross = nil,
-        scope_wind_last_side = nil,
-        scope_wind_last_strength_level = nil,
         sniper_pawn = nil,
         breath_visible = false,
         breath_bar_width = 288.0,
@@ -614,11 +414,17 @@ function UIManager.new(general)
         breath_warning_time = 0.0,
         breath_warning_style_key = "",
         breath_missing_pawn_warned = false,
+        breath_sfx_active_prev = false,
+        breath_sfx_recovering_prev = false,
+        breath_sfx_active_time = 0.0,
+        breath_heartbeat_loaded = false,
+        breath_heartbeat_looping = false,
         weapon_last_name = nil,
         weapon_last_ammo_text = nil,
         weapon_last_ammo_type = nil,
         combat_agent_last_key = "",
         hit_notify = nil,
+        pending_hit_notifications = {},
         radio_hud_suppressed = false,
         radio_blackout_alpha = 0.0,
         radio_subtitle_visible = false,
@@ -630,13 +436,13 @@ function UIManager.new(general)
         pause_visible = false,
         pause_panel = "Menu",
         applied_mouse_sensitivity = nil,
-        applied_gamepad_sensitivity = nil
+        applied_gamepad_sensitivity = nil,
+        result_submitted = false,
+        result_last_input = ""
     }, UIManager)
 end
 
 function UIManager:Initialize()
-    apply_default_cursor_image()
-
     self.general:Subscribe("scene.hud_requested", self, function(payload)
         self:ApplySceneHUDRequest(payload)
     end)
@@ -695,6 +501,22 @@ function UIManager:Initialize()
         self:ShowHitNotification(payload)
     end)
 
+    self.general:Subscribe("ingame.sniper_killed", self, function(payload)
+        self:ShowHitNotification(payload)
+    end)
+
+    self.general:Subscribe("sniper.target_damaged", self, function(payload)
+        if self:ShouldUseRawSniperHitFallback() then
+            self:ShowHitNotification(payload)
+        end
+    end)
+
+    self.general:Subscribe("sniper.target_killed", self, function(payload)
+        if self:ShouldUseRawSniperHitFallback() then
+            self:ShowHitNotification(payload)
+        end
+    end)
+
     self.general:Subscribe("cutscene.skip_prompt", self, function(payload)
         self:SetCutSceneSkipPrompt(payload)
     end)
@@ -730,6 +552,8 @@ function UIManager:Tick(dt)
         self:TickLoadingHUD(dt or 0.0)
     elseif self.active_hud_mode == IN_GAME_HUD_MODE then
         self:TickInGameHUD(dt or 0.0)
+    elseif self.active_hud_mode == RESULT_HUD_MODE then
+        self:TickResultHUD(dt or 0.0)
     end
 end
 
@@ -861,6 +685,11 @@ function UIManager:ApplySceneHUDRequest(payload)
 
     if self.active_hud_mode == IN_GAME_HUD_MODE then
         self:ConfigureInGameHUD(widget)
+        self:FlushPendingHitNotification()
+    end
+
+    if self.active_hud_mode == RESULT_HUD_MODE then
+        self:ConfigureResultHUD(widget, payload and payload.payload)
     end
 end
 
@@ -946,7 +775,6 @@ function UIManager:ConfigureMainHUD(widget)
     self.main_start_pending = false
     self.main_start_elapsed = 0.0
     self.main_state_requested = false
-    apply_default_cursor_image()
 
     call_widget(widget, "SetWantsMouse", true)
     call_widget(widget, "SetBlocksGameMouseLook", true)
@@ -1012,6 +840,90 @@ function UIManager:PlayUISFX(path, volume)
     if AudioManager ~= nil and AudioManager.PlaySFX ~= nil then
         AudioManager.PlaySFX(path, volume or 1.0)
     end
+end
+
+function UIManager:PlayBreathSFX(path, volume)
+    if self.cutscene_active == true then
+        return
+    end
+
+    local audio = self:GetAudioManager()
+    if audio ~= nil and audio.PlaySFX ~= nil then
+        audio:PlaySFX(path, volume or BREATH_SFX_VOLUME)
+        return
+    end
+
+    if self.general ~= nil and self.general.PlaySFX ~= nil then
+        self.general:PlaySFX(path, volume or BREATH_SFX_VOLUME)
+        return
+    end
+
+    if AudioManager ~= nil and AudioManager.PlaySFX ~= nil then
+        AudioManager.PlaySFX(path, volume or BREATH_SFX_VOLUME)
+    end
+end
+
+function UIManager:EnsureBreathHeartbeatLoaded()
+    if self.breath_heartbeat_loaded == true then
+        return true
+    end
+
+    local loaded = nil
+    local audio = self:GetAudioManager()
+    if audio ~= nil and audio.Load ~= nil then
+        loaded = audio:Load(BREATH_HEARTBEAT_KEY, BREATH_HEARTBEAT_SFX, true)
+    elseif AudioManager ~= nil and AudioManager.Load ~= nil then
+        loaded = AudioManager.Load(BREATH_HEARTBEAT_KEY, BREATH_HEARTBEAT_SFX, true)
+    end
+
+    self.breath_heartbeat_loaded = loaded ~= false
+    return self.breath_heartbeat_loaded
+end
+
+function UIManager:StartBreathHeartbeat()
+    if self.cutscene_active == true then
+        self:StopBreathHeartbeat()
+        return
+    end
+    if self.breath_heartbeat_looping == true then
+        return
+    end
+    if not self:EnsureBreathHeartbeatLoaded() then
+        return
+    end
+
+    local audio = self:GetAudioManager()
+    if audio ~= nil and audio.PlayLoop ~= nil then
+        audio:PlayLoop(BREATH_HEARTBEAT_KEY, BREATH_HEARTBEAT_LOOP, BREATH_HEARTBEAT_VOLUME, 1.0)
+        self.breath_heartbeat_looping = true
+        return
+    end
+
+    if AudioManager ~= nil and AudioManager.PlayLoop ~= nil then
+        AudioManager.PlayLoop(BREATH_HEARTBEAT_KEY, BREATH_HEARTBEAT_LOOP, BREATH_HEARTBEAT_VOLUME, 1.0)
+        self.breath_heartbeat_looping = true
+    end
+end
+
+function UIManager:StopBreathHeartbeat()
+    if self.breath_heartbeat_looping ~= true then
+        return
+    end
+
+    local audio = self:GetAudioManager()
+    if audio ~= nil and audio.StopLoop ~= nil then
+        audio:StopLoop(BREATH_HEARTBEAT_LOOP)
+    elseif AudioManager ~= nil and AudioManager.StopLoop ~= nil then
+        AudioManager.StopLoop(BREATH_HEARTBEAT_LOOP)
+    end
+    self.breath_heartbeat_looping = false
+end
+
+function UIManager:ResetBreathSFXState()
+    self:StopBreathHeartbeat()
+    self.breath_sfx_active_prev = false
+    self.breath_sfx_recovering_prev = false
+    self.breath_sfx_active_time = 0.0
 end
 
 function UIManager:PollMainActions(widget)
@@ -1214,6 +1126,9 @@ end
 function UIManager:SetCutScenePresentation(payload)
     local active = payload ~= nil and payload.active == true
     self.cutscene_active = active
+    if active then
+        self:ResetBreathSFXState()
+    end
 
     local widget = self:GetActiveHUDWidget()
     if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
@@ -1222,10 +1137,12 @@ function UIManager:SetCutScenePresentation(payload)
 
     self:SetCutSceneLetterboxTarget(widget, active)
     if active then
+        self:DeferActiveHitNotificationForCutScene(widget)
         self:SetInGameHUDSuppressed(widget, true)
         self:SetElementDisplay(widget, PAUSE_LAYER_ID, false)
     elseif not self.pause_visible then
         self:SetInGameHUDSuppressed(widget, false)
+        self:FlushPendingHitNotification()
     end
 end
 
@@ -1247,11 +1164,12 @@ end
 
 function UIManager:SetRadioOpeningPresentation(payload)
     local alpha = payload ~= nil and tonumber(payload.blackout_alpha) or 0.0
+    local skip_alpha = payload ~= nil and tonumber(payload.skip_prompt_alpha) or 0.0
     local active = payload ~= nil and payload.active == true
     local suppress = payload ~= nil and payload.hud_suppressed == true
-    local block_game_input = active or suppress
     self.radio_blackout_alpha = clamp01(alpha)
     self.radio_hud_suppressed = suppress
+    skip_alpha = clamp01(skip_alpha)
 
     local widget = self:GetActiveHUDWidget()
     if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
@@ -1259,17 +1177,19 @@ function UIManager:SetRadioOpeningPresentation(payload)
     end
 
     local blackout_visible = active and self.radio_blackout_alpha > 0.001
+    local skip_visible = active and skip_alpha > 0.001
     self:SetElementVisible(widget, "radioBlackout", blackout_visible)
     self:SetElementStyle(widget, "radioBlackout", "display", blackout_visible and "block" or "none")
     self:SetElementAlpha(widget, "radioBlackout", blackout_visible and self.radio_blackout_alpha or 0.0)
-    call_widget(widget, "SetBlocksGameInput", block_game_input)
-    call_widget(widget, "SetBlocksGameKeyboard", block_game_input)
-    call_widget(widget, "SetBlocksGameMouseLook", block_game_input)
+    self:SetElementVisible(widget, "radioOpeningSkipPrompt", skip_visible)
+    self:SetElementStyle(widget, "radioOpeningSkipPrompt", "display", skip_visible and "block" or "none")
+    self:SetElementAlpha(widget, "radioOpeningSkipPrompt", skip_visible and skip_alpha or 0.0)
 
     if suppress then
         self:SetInGameHUDSuppressed(widget, true)
     elseif not self.cutscene_active and not self.pause_visible then
         self:SetInGameHUDSuppressed(widget, false)
+        self:FlushPendingHitNotification()
     end
 end
 
@@ -1482,6 +1402,217 @@ function UIManager:RefreshScoreBoardPopup(widget)
 
     local thumb_height = #entries > SCORE_ROW_COUNT and 96 or 406
     self:SetElementStyle(widget, "scoreScrollThumb", "height", tostring(thumb_height) .. "px")
+end
+
+function UIManager:ConfigureResultHUD(widget, payload)
+    self.result_submitted = false
+    self.result_last_input = ""
+
+    call_widget(widget, "SetWantsMouse", true)
+    call_widget(widget, "SetWantsKeyboard", true)
+    call_widget(widget, "SetWantsTextInput", true)
+    call_widget(widget, "SetBlocksGameInput", true)
+    call_widget(widget, "SetBlocksGameKeyboard", true)
+    call_widget(widget, "SetBlocksGameMouseLook", true)
+    call_widget(widget, "SetActionEvent", "btnSubmitScore", "SubmitScore")
+    call_widget(widget, "SetElementAttribute", "btnSubmitScore", "data-hover-action", "MainButtonHover")
+    call_widget(widget, "SetActionEvent", "btnResultGoMain", "GoToMain")
+    call_widget(widget, "SetElementAttribute", "btnResultGoMain", "data-hover-action", "MainButtonHover")
+
+    if Input ~= nil then
+        if Input.SetInputModeUIOnly ~= nil then
+            Input.SetInputModeUIOnly()
+        elseif Input.SetInputModeGameAndUI ~= nil then
+            Input.SetInputModeGameAndUI()
+        end
+        if Input.SetCursorVisible ~= nil then
+            Input.SetCursorVisible(true)
+        end
+        if Input.ReleaseMouseCapture ~= nil then
+            Input.ReleaseMouseCapture()
+        end
+    end
+
+    local data = self:GetDataManager()
+    local default_result = payload and payload.result or "Victory"
+    local temp = { result = default_result, score = 0 }
+    if data ~= nil and data.GetTempRun ~= nil then
+        temp = data:GetTempRun(default_result)
+    end
+    self.result_current = temp
+
+    call_widget(widget, "SetText", "resultTitle", self:NormalizeRunResult(temp.result))
+    call_widget(widget, "SetText", "resultScoreValue", tostring(math.floor(tonumber(temp.score) or 0)))
+
+    local nickname = ""
+    if data ~= nil and data.GetNickname ~= nil then
+        nickname = tostring(data:GetNickname() or "")
+    end
+    if nickname == "" then
+        nickname = "Player1"
+    end
+    nickname = self:SanitizeResultNickname(nickname)
+    call_widget(widget, "SetValue", "nicknameInput", nickname)
+    self:RefreshResultScoreBoard(widget)
+    self:UpdateResultSubmitState(widget, nickname)
+
+    self:SetElementAlpha(widget, "resultRoot", 0.0)
+    call_widget(widget, "SetTransition", "resultRoot", "opacity", 0.6, "ease-out", 0.0)
+    self:SetElementAlpha(widget, "resultRoot", 1.0)
+    call_widget(widget, "FocusElement", "nicknameInput", true)
+end
+
+function UIManager:SanitizeResultNickname(value)
+    local source = tostring(value or "")
+    local result = ""
+    for index = 1, string.len(source) do
+        local char = string.sub(source, index, index)
+        if string.match(char, "[A-Za-z0-9]") ~= nil then
+            result = result .. char
+            if string.len(result) >= 12 then
+                break
+            end
+        end
+    end
+    return result
+end
+
+function UIManager:IsResultNicknameValid(value)
+    local text = tostring(value or "")
+    return string.len(text) >= 6 and string.len(text) <= 12 and string.match(text, "^[A-Za-z0-9]+$") ~= nil
+end
+
+function UIManager:UpdateResultSubmitState(widget, nickname)
+    widget = widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        return false
+    end
+
+    local valid = self:IsResultNicknameValid(nickname)
+    call_widget(widget, "SetElementEnabled", "btnSubmitScore", valid and not self.result_submitted)
+    call_widget(widget, "SetClass", "btnSubmitScore", "disabled", (not valid) or self.result_submitted)
+    if self.result_submitted then
+        call_widget(widget, "SetText", "nicknameError", "Saved to local scoreboard.")
+        call_widget(widget, "SetText", "btnSubmitScoreLabel", "Submitted")
+    elseif valid then
+        call_widget(widget, "SetText", "nicknameError", "")
+        call_widget(widget, "SetText", "btnSubmitScoreLabel", "Submit")
+    else
+        call_widget(widget, "SetText", "nicknameError", "Nickname must be 6-12 letters or numbers.")
+        call_widget(widget, "SetText", "btnSubmitScoreLabel", "Submit")
+    end
+    return valid
+end
+
+function UIManager:RefreshResultScoreBoard(widget)
+    widget = widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local entries = {}
+    local data = self:GetDataManager()
+    if data ~= nil and data.GetScoreEntries ~= nil then
+        entries = data:GetScoreEntries()
+    end
+    if #entries <= 0 then
+        entries = {
+            { nickname = "Player", result = "Defeat", score = 0 }
+        }
+    end
+
+    for index = 1, SCORE_ROW_COUNT do
+        local entry = entries[index]
+        local visible = entry ~= nil
+        self:SetElementVisible(widget, "resultScoreRow" .. tostring(index), visible)
+        if visible then
+            call_widget(widget, "SetText", "resultScoreRank" .. tostring(index), tostring(index))
+            call_widget(widget, "SetText", "resultScoreName" .. tostring(index), tostring(entry.nickname or "Player"))
+            call_widget(widget, "SetText", "resultScoreResult" .. tostring(index), self:NormalizeRunResult(entry.result))
+            call_widget(widget, "SetText", "resultScoreValue" .. tostring(index), tostring(math.floor(tonumber(entry.score) or 0)))
+        end
+    end
+
+    local thumb_height = #entries > SCORE_ROW_COUNT and 96 or 386
+    self:SetElementStyle(widget, "resultScoreScrollThumb", "height", tostring(thumb_height) .. "px")
+end
+
+function UIManager:SubmitResultScore(widget)
+    widget = widget or self:GetActiveHUDWidget()
+    if widget == nil or self.result_submitted then
+        return
+    end
+
+    local nickname = self:SanitizeResultNickname(call_widget(widget, "GetValue", "nicknameInput") or "")
+    call_widget(widget, "SetValue", "nicknameInput", nickname)
+    if not self:UpdateResultSubmitState(widget, nickname) then
+        return
+    end
+
+    local result = self.result_current or { result = "Victory", score = 0 }
+    local data = self:GetDataManager()
+    if data ~= nil and data.CommitRun ~= nil then
+        data:CommitRun({
+            nickname = nickname,
+            result = self:NormalizeRunResult(result.result),
+            state = self:NormalizeRunResult(result.result),
+            score = tonumber(result.score) or 0
+        })
+    end
+
+    self.result_submitted = true
+    self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.9)
+    self:RefreshResultScoreBoard(widget)
+    self:UpdateResultSubmitState(widget, nickname)
+end
+
+function UIManager:PollResultActions(widget)
+    if widget == nil or widget.PollActionEvents == nil then
+        return
+    end
+
+    local ok, events = pcall(function()
+        return widget:PollActionEvents()
+    end)
+    if not ok or events == nil then
+        log("Result HUD action polling failed")
+        return
+    end
+
+    local hover_played = false
+    for _, action in ipairs(events) do
+        if action == "SubmitScore" then
+            self:SubmitResultScore(widget)
+        elseif action == "GoToMain" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+            if self.general ~= nil and self.general.RequestState ~= nil then
+                self.general:RequestState(GameState.Main, { reason = "result_go_main" })
+            end
+        elseif action == "MainButtonHover" and not hover_played then
+            hover_played = true
+            self:PlayUISFX(MAIN_BUTTON_HOVER_SFX, 0.75)
+        end
+    end
+end
+
+function UIManager:TickResultHUD(dt)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    self:PollResultActions(widget)
+
+    local nickname = self:SanitizeResultNickname(call_widget(widget, "GetValue", "nicknameInput") or "")
+    if nickname ~= self.result_last_input then
+        self.result_last_input = nickname
+        call_widget(widget, "SetValue", "nicknameInput", nickname)
+        self:UpdateResultSubmitState(widget, nickname)
+    end
+
+    if not self.result_submitted and Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Enter") then
+        self:SubmitResultScore(widget)
+    end
 end
 
 function UIManager:ConfigurePreInGameHUD(widget)
@@ -1748,7 +1879,9 @@ function UIManager:ConfigureInGameHUD(widget)
     self:UpdateWeaponHUD(true)
 
     self:SetElementVisible(widget, "hitNotifyPanel", false)
+    self:SetElementStyle(widget, "hitNotifyPanel", "display", "none")
     self:SetElementAlpha(widget, "hitNotifyPanel", 0.0)
+    self:SetElementAlpha(widget, "hitNotifyTitle", 0.0)
     self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
     self:SetElementStyle(widget, "hitNotifyTitle", "font-family", "\"Nexon\"")
     self:SetElementStyle(widget, "hitNotifyTitle", "font-weight", "bold")
@@ -1776,6 +1909,9 @@ function UIManager:ConfigureInGameHUD(widget)
     self:ApplyCutSceneLetterbox(widget, self.cutscene_letterbox_alpha)
     self:SetRadioSubtitle({ visible = false, text = "" })
     self:SetRadioOpeningPresentation({ active = false, blackout_alpha = 0.0, hud_suppressed = false })
+    self:SetElementVisible(widget, "radioOpeningSkipPrompt", false)
+    self:SetElementStyle(widget, "radioOpeningSkipPrompt", "display", "none")
+    self:SetElementAlpha(widget, "radioOpeningSkipPrompt", 0.0)
 
     self:SetElementImage(widget, "compassImage", "Image/Hor-Compass/Window/Compass_Window_000.png")
     self:ConfigurePauseMenuActions(widget)
@@ -1856,7 +1992,6 @@ function UIManager:SetInGamePauseVisible(visible)
 
     self.pause_visible = visible
     if visible then
-        apply_default_cursor_image()
         if Input ~= nil and Input.SetInputModeGameAndUI ~= nil then
             Input.SetInputModeGameAndUI()
         end
@@ -1894,6 +2029,7 @@ function UIManager:SetInGamePauseVisible(visible)
             self:SetElementDisplay(widget, element_id, false)
         end
         self:SetInGameHUDSuppressed(widget, false)
+        self:FlushPendingHitNotification()
     end
 end
 
@@ -1911,18 +2047,6 @@ function UIManager:ConfigureScopeTelemetry(widget)
 end
 
 function UIManager:GetWorldTimeSeconds()
-    if World ~= nil and World.GetGameTime ~= nil then
-        local ok, value = pcall(function()
-            return World.GetGameTime()
-        end)
-        if ok then
-            local seconds = tonumber(value)
-            if seconds ~= nil then
-                return seconds
-            end
-        end
-    end
-
     if World ~= nil and World.GetTimeSeconds ~= nil then
         local ok, value = pcall(function()
             return World.GetTimeSeconds()
@@ -1967,16 +2091,6 @@ function UIManager:GetScopeTelemetrySnapshot()
         wind_text = "000 deg  0.0 m/s",
         wind_degrees = 0.0,
         wind_mps = 0.0,
-        wind_cross = 0.0,
-        wind_head = 0.0,
-        wind_cross_abs = 0.0,
-        wind_head_abs = 0.0,
-        wind_cross_normalized = 0.0,
-        wind_head_normalized = 0.0,
-        wind_side = "Center",
-        wind_head_state = "Neutral",
-        wind_strength_level = "Calm",
-        wind_pulse_alpha = 0.0,
         zoom_text = "4x",
         zoom_multiplier = 4.0,
         zoom_min = 4.0,
@@ -1984,7 +2098,6 @@ function UIManager:GetScopeTelemetrySnapshot()
     }
 
     local pawn = self:GetSniperPawn()
-    local scope_camera = nil
     if pawn ~= nil then
         local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
         local min_zoom = read_float_method(pawn, { "GetMinScopeZoomMagnification" })
@@ -2013,7 +2126,6 @@ function UIManager:GetScopeTelemetrySnapshot()
                 return pawn:GetCamera()
             end)
             if ok_camera and camera ~= nil then
-                scope_camera = camera
                 local ok_trace, trace_result = pcall(function()
                     local trace_start = nil
                     if camera.GetLocation ~= nil then
@@ -2082,82 +2194,15 @@ function UIManager:GetScopeTelemetrySnapshot()
         end
     end
 
-    local relative_wind = nil
-    if wind_enabled then
-        relative_wind = compute_relative_wind_snapshot(current_wind, scope_camera)
-    else
-        relative_wind = compute_relative_wind_snapshot(nil, scope_camera)
+    if wind_enabled and current_wind ~= nil then
+        local wind_x = tonumber(current_wind.X or current_wind.x or 0.0) or 0.0
+        local wind_y = tonumber(current_wind.Y or current_wind.y or 0.0) or 0.0
+        local planar_wind_speed = math.sqrt(wind_x * wind_x + wind_y * wind_y)
+        if planar_wind_speed > 0.0001 then
+            snapshot.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
+            snapshot.wind_mps = planar_wind_speed
+        end
     end
-
-    local raw_wind_side = classify_crosswind_side(relative_wind.wind_cross)
-    local raw_wind_strength_level = classify_wind_strength(relative_wind.wind_cross_normalized)
-
-    local current_time = self:GetWorldTimeSeconds()
-    local telemetry_dt = 0.0
-    if type(self.scope_telemetry_last_update_time) == "number" then
-        telemetry_dt = math.max(0.0, current_time - self.scope_telemetry_last_update_time)
-    end
-    self.scope_telemetry_last_update_time = current_time
-
-    if telemetry_dt > 0.0 then
-        self.scope_wind_pulse_alpha = exp_approach(
-            self.scope_wind_pulse_alpha or 0.0,
-            0.0,
-            telemetry_dt,
-            WIND_UI_PULSE_DECAY_SPEED)
-    end
-
-    local pulse_trigger = 0.0
-    if type(self.scope_wind_last_raw_cross) == "number" then
-        pulse_trigger = clamp01(
-            math.abs(relative_wind.wind_cross - self.scope_wind_last_raw_cross) / WIND_UI_PULSE_DELTA_SCALE)
-    end
-    if self.scope_wind_last_side ~= nil and self.scope_wind_last_side ~= raw_wind_side then
-        pulse_trigger = math.max(pulse_trigger, WIND_UI_SIDE_SWITCH_PULSE)
-    end
-    if self.scope_wind_last_strength_level ~= nil and self.scope_wind_last_strength_level ~= raw_wind_strength_level then
-        pulse_trigger = math.max(pulse_trigger, WIND_UI_STRENGTH_SWITCH_PULSE)
-    end
-    if pulse_trigger > (self.scope_wind_pulse_alpha or 0.0) then
-        self.scope_wind_pulse_alpha = pulse_trigger
-    end
-
-    self.scope_wind_last_raw_cross = relative_wind.wind_cross
-    self.scope_wind_last_side = raw_wind_side
-    self.scope_wind_last_strength_level = raw_wind_strength_level
-
-    if telemetry_dt <= 0.0 then
-        self.smoothed_scope_wind_cross = relative_wind.wind_cross
-        self.smoothed_scope_wind_head = relative_wind.wind_head
-    else
-        self.smoothed_scope_wind_cross = exp_approach(
-            self.smoothed_scope_wind_cross,
-            relative_wind.wind_cross,
-            telemetry_dt,
-            WIND_UI_SMOOTH_SPEED)
-        self.smoothed_scope_wind_head = exp_approach(
-            self.smoothed_scope_wind_head,
-            relative_wind.wind_head,
-            telemetry_dt,
-            WIND_UI_SMOOTH_SPEED)
-    end
-
-    snapshot.wind_degrees = relative_wind.wind_degrees
-    snapshot.wind_mps = relative_wind.wind_mps
-    snapshot.wind_cross = self.smoothed_scope_wind_cross
-    snapshot.wind_head = self.smoothed_scope_wind_head
-    snapshot.wind_cross_abs = math.abs(snapshot.wind_cross)
-    snapshot.wind_head_abs = math.abs(snapshot.wind_head)
-    snapshot.wind_cross_normalized = clamp01(snapshot.wind_cross_abs / WIND_UI_MAX_CROSS_DISPLAY)
-    snapshot.wind_head_normalized = clamp01(snapshot.wind_head_abs / WIND_UI_MAX_HEAD_DISPLAY)
-    snapshot.wind_side = classify_crosswind_side(snapshot.wind_cross)
-    snapshot.wind_head_state = classify_headwind_state(snapshot.wind_head)
-    snapshot.wind_strength_level = classify_wind_strength(snapshot.wind_cross_normalized)
-    snapshot.wind_pulse_alpha = clamp01(self.scope_wind_pulse_alpha or 0.0)
-    snapshot.wind_text = string.format(
-        "%s %.2f",
-        snapshot.wind_side,
-        snapshot.wind_cross_abs)
 
     return snapshot
 end
@@ -2177,22 +2222,7 @@ function UIManager:SetScopeTelemetry(payload)
     if type(payload.distance_meters) == "number" then
         distance_text = string.format("%dm", math.floor(payload.distance_meters + 0.5))
     end
-    if payload.wind_side ~= nil or payload.wind_strength_level ~= nil then
-        local side = tostring(payload.wind_side or "Center")
-        if side == "Left" then
-            wind_direction_text = "LEFT"
-        elseif side == "Right" then
-            wind_direction_text = "RIGHT"
-        else
-            wind_direction_text = "CALM"
-        end
-        if type(payload.wind_mps) == "number" then
-            wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
-        else
-            wind_speed_text = tostring(payload.wind_strength_level or "Calm")
-        end
-        wind_text = wind_direction_text .. "  " .. wind_speed_text
-    elseif type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
+    if type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
         wind_direction_text = string.format("%03d deg", math.floor(payload.wind_degrees + 0.5) % 360)
         wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
         wind_text = wind_direction_text .. "  " .. wind_speed_text
@@ -2236,81 +2266,6 @@ function UIManager:SetScopeTelemetry(payload)
         self:SetElementStyle(widget, element_id, "color", "rgba(255, 255, 255, 255)")
         call_widget(widget, "SetText", element_id, text)
     end
-
-    local wind_side = tostring(payload.wind_side or "Center")
-    local wind_strength_level = tostring(payload.wind_strength_level or "Calm")
-    local wind_normalized = clamp01(payload.wind_cross_normalized or 0.0)
-    local wind_pulse_alpha = clamp01(payload.wind_pulse_alpha or 0.0)
-    local active_width = math.floor(SCOPE_WIND_BAR_MAX_WIDTH * wind_normalized + 0.5)
-    local left_width = 0
-    local right_width = 0
-    local left_left = SCOPE_WIND_BAR_CENTER_X
-    local right_left = SCOPE_WIND_BAR_CENTER_X
-    local left_tip_width = 0
-    local right_tip_width = 0
-    local left_tip_left = SCOPE_WIND_BAR_CENTER_X
-    local right_tip_left = SCOPE_WIND_BAR_CENTER_X
-
-    if wind_side == "Left" then
-        left_width = active_width
-        left_left = SCOPE_WIND_BAR_CENTER_X - left_width
-        if left_width > 0 then
-            left_tip_width = math.min(SCOPE_WIND_BAR_TIP_WIDTH, left_width)
-            left_tip_left = left_left
-        end
-    elseif wind_side == "Right" then
-        right_width = active_width
-        if right_width > 0 then
-            right_tip_width = math.min(SCOPE_WIND_BAR_TIP_WIDTH, right_width)
-            right_tip_left = right_left + right_width - right_tip_width
-        end
-    end
-
-    local bar_color = get_wind_strength_color(wind_strength_level)
-    self:SetElementStyle(widget, "scopeWindBarLeft", "left", string.format("%.3fpx", left_left))
-    self:SetElementStyle(widget, "scopeWindBarLeft", "width", string.format("%dpx", left_width))
-    self:SetElementStyle(widget, "scopeWindBarLeft", "background-color", bar_color)
-    self:SetElementStyle(widget, "scopeWindBarRight", "left", string.format("%.3fpx", right_left))
-    self:SetElementStyle(widget, "scopeWindBarRight", "width", string.format("%dpx", right_width))
-    self:SetElementStyle(widget, "scopeWindBarRight", "background-color", bar_color)
-    self:SetElementStyle(widget, "scopeWindBarLeftTip", "left", string.format("%.3fpx", left_tip_left))
-    self:SetElementStyle(widget, "scopeWindBarLeftTip", "width", string.format("%dpx", left_tip_width))
-    self:SetElementStyle(widget, "scopeWindBarLeftTip", "background-color", bar_color)
-    self:SetElementStyle(widget, "scopeWindBarRightTip", "left", string.format("%.3fpx", right_tip_left))
-    self:SetElementStyle(widget, "scopeWindBarRightTip", "width", string.format("%dpx", right_tip_width))
-    self:SetElementStyle(widget, "scopeWindBarRightTip", "background-color", bar_color)
-    self:SetElementStyle(widget, "scopeWindPulseGlow", "background-color", bar_color)
-    self:SetElementStyle(
-        widget,
-        "scopeWindBarTrack",
-        "border-color",
-        wind_strength_level == "Calm" and "rgba(210, 232, 238, 72)" or "rgba(210, 232, 238, 120)")
-    self:SetElementStyle(
-        widget,
-        "scopeWindBarTrack",
-        "background-color",
-        wind_strength_level == "Calm" and "rgba(90, 112, 122, 52)" or "rgba(90, 112, 122, 80)")
-    self:SetElementStyle(
-        widget,
-        "scopeWindCenterLine",
-        "background-color",
-        wind_strength_level == "Calm" and "rgba(240, 248, 252, 150)" or "rgba(240, 248, 252, 220)")
-    self:SetElementAlpha(widget, "scopeWindBarLeft", left_width > 0 and (0.76 + 0.24 * wind_pulse_alpha) or 0.0)
-    self:SetElementAlpha(widget, "scopeWindBarRight", right_width > 0 and (0.76 + 0.24 * wind_pulse_alpha) or 0.0)
-    self:SetElementAlpha(widget, "scopeWindBarLeftTip", left_tip_width > 0 and (0.88 + 0.12 * wind_pulse_alpha) or 0.0)
-    self:SetElementAlpha(widget, "scopeWindBarRightTip", right_tip_width > 0 and (0.88 + 0.12 * wind_pulse_alpha) or 0.0)
-    self:SetElementAlpha(
-        widget,
-        "scopeWindCenterLine",
-        math.min(1.0, wind_strength_level == "Calm" and 0.58 or (0.72 + 0.22 * wind_pulse_alpha)))
-    self:SetElementAlpha(
-        widget,
-        "scopeWindPulseGlow",
-        wind_strength_level == "Calm" and 0.0 or math.min(0.72, 0.16 + 0.42 * wind_pulse_alpha))
-    self:SetElementStyle(widget, "scopeWindValue", "display", "none")
-    self:SetElementStyle(widget, "scopeWindSpeedValue", "display", "block")
-    self:SetElementAlpha(widget, "scopeWindValue", 0.0)
-    self:SetElementAlpha(widget, "scopeWindSpeedValue", 1.0)
 end
 
 function UIManager:UpdateScopeTelemetryHUD(force)
@@ -2429,16 +2384,136 @@ function UIManager:FormatHitNotifyScore(payload)
     return string.format("%d%s", score, utf8_text(236, 160, 144))
 end
 
+function UIManager:IsHitNotificationBlocked()
+    return self.active_hud_mode ~= IN_GAME_HUD_MODE or
+        self.cutscene_active == true or
+        self.radio_hud_suppressed == true or
+        self.pause_visible == true
+end
+
+function UIManager:ShouldUseRawSniperHitFallback()
+    local ingame = self.general ~= nil and self.general.managers ~= nil and self.general.managers.InGame or nil
+    if ingame ~= nil and ingame.running == true then
+        return false
+    end
+    return self.active_hud_mode == IN_GAME_HUD_MODE
+end
+
+function UIManager:IsKillHitNotification(payload)
+    if payload == nil then
+        return false
+    end
+    if payload.killed == true then
+        return true
+    end
+    if type(payload.payload) == "table" and payload.payload.killed == true then
+        return true
+    end
+
+    local hit = self:GetHitNotifyHitInfo(payload)
+    return hit ~= nil and hit.bKilled == true
+end
+
+function UIManager:QueueHitNotification(payload)
+    if payload == nil then
+        return
+    end
+
+    if self.pending_hit_notifications == nil then
+        self.pending_hit_notifications = {}
+    end
+
+    if self:IsKillHitNotification(payload) then
+        self.hit_notify = nil
+        local widget = self:GetActiveHUDWidget()
+        if widget ~= nil then
+            self:SetElementAlpha(widget, "hitNotifyPanel", 0.0)
+            self:SetElementAlpha(widget, "hitNotifyTitle", 0.0)
+            self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
+            self:SetElementVisible(widget, "hitNotifyPanel", false)
+            self:SetElementStyle(widget, "hitNotifyPanel", "display", "none")
+        end
+
+        for i = #self.pending_hit_notifications, 1, -1 do
+            local existing = self.pending_hit_notifications[i]
+            if not self:IsKillHitNotification(existing) then
+                table.remove(self.pending_hit_notifications, i)
+            end
+        end
+    end
+
+    table.insert(self.pending_hit_notifications, payload)
+    while #self.pending_hit_notifications > HIT_NOTIFY_PENDING_LIMIT do
+        table.remove(self.pending_hit_notifications, 1)
+    end
+end
+
+function UIManager:DeferActiveHitNotificationForCutScene(widget)
+    if self.hit_notify == nil or self.hit_notify.payload == nil then
+        return
+    end
+
+    local payload = self.hit_notify.payload
+    self.hit_notify = nil
+    self:QueueHitNotification(payload)
+
+    widget = widget or self:GetActiveHUDWidget()
+    if widget ~= nil then
+        self:SetElementAlpha(widget, "hitNotifyPanel", 0.0)
+        self:SetElementAlpha(widget, "hitNotifyTitle", 0.0)
+        self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
+        self:SetElementVisible(widget, "hitNotifyPanel", false)
+        self:SetElementStyle(widget, "hitNotifyPanel", "display", "none")
+    end
+end
+
+function UIManager:FlushPendingHitNotification()
+    if self:IsHitNotificationBlocked() then
+        return
+    end
+    if self.hit_notify ~= nil then
+        return
+    end
+    if self.pending_hit_notifications == nil or #self.pending_hit_notifications == 0 then
+        return
+    end
+
+    local payload = table.remove(self.pending_hit_notifications, 1)
+    self:RenderHitNotification(payload)
+end
+
 function UIManager:ShowHitNotification(payload)
     local widget = self:GetActiveHUDWidget()
     if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        self:QueueHitNotification(payload)
+        return
+    end
+
+    if self:IsHitNotificationBlocked() then
+        self:QueueHitNotification(payload)
+        return
+    end
+
+    self:RenderHitNotification(payload)
+end
+
+function UIManager:RenderHitNotification(payload)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        self:QueueHitNotification(payload)
         return
     end
 
     local hit = self:GetHitNotifyHitInfo(payload)
     local title = self:GetHitNotifyRegionAlias(hit, payload) .. " " .. self:GetHitNotifyOutcomeAlias(hit)
+    if self:IsKillHitNotification(payload) then
+        title = title .. " " .. utf8_text(236, 178, 152, 236, 185, 152)
+    end
     local distance_text = self:FormatHitNotifyDistance(hit)
     local score_text = self:FormatHitNotifyScore(payload)
+    log("render hit notification title=" .. tostring(title) ..
+        " distance=" .. tostring(distance_text) ..
+        " score=" .. tostring(score_text))
 
     call_widget(widget, "SetText", "hitNotifyTitle", title)
     call_widget(widget, "SetText", "hitNotifyDistance", distance_text)
@@ -2446,10 +2521,15 @@ function UIManager:ShowHitNotification(payload)
 
     self.hit_notify = {
         time = 0.0,
-        duration = HIT_NOTIFY_DURATION
+        duration = HIT_NOTIFY_DURATION,
+        payload = payload,
+        impact_sfx_played = false
     }
 
     self:SetElementVisible(widget, "hitNotifyPanel", true)
+    self:SetElementStyle(widget, "hitNotifyPanel", "display", "block")
+    self:SetElementAlpha(widget, "hitNotifyPanel", 1.0)
+    self:SetElementAlpha(widget, "hitNotifyTitle", 1.0)
     self:SetElementVisible(widget, "hitNotifyMeta", true)
     self:ApplyHitNotificationState(widget, 0.0)
 end
@@ -2466,28 +2546,31 @@ function UIManager:ApplyHitNotificationState(widget, time)
     local title_alpha = 1.0
     local meta_alpha = 0.0
 
-    if time < 0.22 then
-        local t = ease_out_cubic(time / 0.22)
-        scale = lerp(1.34, 0.92, t)
-    elseif time < 0.50 then
-        local t = ease_out_cubic((time - 0.22) / 0.28)
-        scale = lerp(0.92, 1.0, t)
-    elseif time < 1.00 then
-        local t = ease_in_out_cubic((time - 0.50) / 0.50)
+    if time < 0.18 then
+        local t = ease_out_cubic(time / 0.18)
+        scale = lerp(0.84, 1.16, t)
+    elseif time < 0.36 then
+        local t = ease_out_cubic((time - 0.18) / 0.18)
+        scale = lerp(1.16, 0.96, t)
+    elseif time < 0.54 then
+        local t = ease_out_cubic((time - 0.36) / 0.18)
+        scale = lerp(0.96, 1.0, t)
+    elseif time < 1.08 then
+        local t = ease_in_out_cubic((time - 0.54) / 0.54)
         x = lerp(HIT_NOTIFY_CENTER_X, HIT_NOTIFY_RIGHT_X, t)
         y = lerp(HIT_NOTIFY_CENTER_Y, HIT_NOTIFY_RIGHT_Y, t)
-        scale = lerp(1.0, 0.74, t)
-        meta_alpha = clamp01((time - 0.66) / 0.28)
-    elseif time < 2.30 then
+        scale = 1.0
+        meta_alpha = clamp01((time - 0.86) / 0.22)
+    elseif time < 4.08 then
         x = HIT_NOTIFY_RIGHT_X
         y = HIT_NOTIFY_RIGHT_Y
-        scale = 0.74
+        scale = 1.0
         meta_alpha = 1.0
     else
-        local t = clamp01((time - 2.30) / 0.45)
+        local t = clamp01((time - 4.08) / 0.45)
         x = HIT_NOTIFY_RIGHT_X
         y = HIT_NOTIFY_RIGHT_Y
-        scale = 0.74
+        scale = 1.0
         alpha = 1.0 - t
         title_alpha = alpha
         meta_alpha = alpha
@@ -2513,11 +2596,19 @@ function UIManager:TickHitNotification(dt)
     end
 
     self.hit_notify.time = (self.hit_notify.time or 0.0) + (dt or 0.0)
+    if self.hit_notify.impact_sfx_played ~= true and
+        self.hit_notify.time >= HIT_NOTIFY_IMPACT_TIME then
+        self.hit_notify.impact_sfx_played = true
+        self:PlayUISFX(HIT_NOTIFY_IMPACT_SFX, 1.0)
+    end
+
     if self.hit_notify.time >= (self.hit_notify.duration or HIT_NOTIFY_DURATION) then
         self.hit_notify = nil
         self:SetElementAlpha(widget, "hitNotifyPanel", 0.0)
+        self:SetElementAlpha(widget, "hitNotifyTitle", 0.0)
         self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
         self:SetElementVisible(widget, "hitNotifyPanel", false)
+        self:SetElementStyle(widget, "hitNotifyPanel", "display", "none")
         return
     end
 
@@ -2530,13 +2621,6 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.scope_distance_last_valid_time = -1000.0
     self.compass_last_frame = -1
     self.smoothed_heading_degrees = nil
-    self.scope_telemetry_last_update_time = nil
-    self.smoothed_scope_wind_cross = 0.0
-    self.smoothed_scope_wind_head = 0.0
-    self.scope_wind_pulse_alpha = 0.0
-    self.scope_wind_last_raw_cross = nil
-    self.scope_wind_last_side = nil
-    self.scope_wind_last_strength_level = nil
     self.breath_visible = false
     self.breath_last_width = -1.0
     self.breath_hide_time_remaining = 0.0
@@ -2544,11 +2628,13 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.breath_warning_time = 0.0
     self.breath_warning_style_key = ""
     self.breath_missing_pawn_warned = false
+    self:ResetBreathSFXState()
     self.weapon_last_name = nil
     self.weapon_last_ammo_text = nil
     self.weapon_last_ammo_type = nil
     self.combat_agent_last_key = ""
     self.hit_notify = nil
+    self.pending_hit_notifications = {}
     self.radio_hud_suppressed = false
     self.radio_blackout_alpha = 0.0
     self.radio_subtitle_visible = false
@@ -2846,6 +2932,9 @@ end
 
 function UIManager:GetScopeVisibleFromInputOrPawn()
     local pawn = self:GetSniperPawn()
+    if pawn ~= nil and pawn.IsReloading ~= nil and pawn:IsReloading() then
+        return false
+    end
     if pawn ~= nil and pawn.IsScoped ~= nil then
         return pawn:IsScoped()
     end
@@ -2990,6 +3079,49 @@ function UIManager:UpdateBreathFade(dt)
     end
 end
 
+function UIManager:UpdateBreathSFX(active, recovering, ratio, dt)
+    if self.cutscene_active == true then
+        self:ResetBreathSFXState()
+        return
+    end
+
+    active = active == true
+    recovering = recovering == true
+    ratio = clamp01(ratio or 0.0)
+    dt = math.max(0.0, tonumber(dt) or 0.0)
+
+    if active then
+        if self.breath_sfx_active_prev ~= true then
+            self.breath_sfx_active_time = 0.0
+            self:PlayBreathSFX(BREATH_IN_SFX, BREATH_SFX_VOLUME)
+        else
+            self.breath_sfx_active_time = (self.breath_sfx_active_time or 0.0) + dt
+        end
+
+        if self.breath_sfx_active_time >= BREATH_HEARTBEAT_DELAY then
+            self:StartBreathHeartbeat()
+        end
+    elseif self.breath_sfx_active_prev == true then
+        self:StopBreathHeartbeat()
+        self.breath_sfx_active_time = 0.0
+        if recovering or ratio <= 0.001 then
+            self:PlayBreathSFX(BREATH_RECOVER_SFX, BREATH_SFX_VOLUME)
+        else
+            self:PlayBreathSFX(BREATH_OUT_SFX, BREATH_SFX_VOLUME)
+        end
+    else
+        self.breath_sfx_active_time = 0.0
+        self:StopBreathHeartbeat()
+    end
+
+    if recovering and self.breath_sfx_recovering_prev ~= true and self.breath_sfx_active_prev ~= true then
+        self:PlayBreathSFX(BREATH_RECOVER_SFX, BREATH_SFX_VOLUME)
+    end
+
+    self.breath_sfx_active_prev = active
+    self.breath_sfx_recovering_prev = recovering
+end
+
 function UIManager:UpdateBreathHUD(dt)
     local widget = self:GetActiveHUDWidget()
     if widget == nil then
@@ -3018,13 +3150,17 @@ function UIManager:UpdateBreathHUD(dt)
         if scoped and held and not active and ratio < 0.999 then
             warning = true
         end
+        self:UpdateBreathSFX(active, recovering or (exhausted and not active and release_required), ratio, dt)
     elseif self:IsRawHoldBreathRequested() then
         requested = true
         ratio = 1.0
+        self:UpdateBreathSFX(false, false, ratio, dt)
         if not self.breath_missing_pawn_warned then
             self.breath_missing_pawn_warned = true
             log("SniperPawn binding unavailable; showing fallback hold-breath HUD")
         end
+    else
+        self:UpdateBreathSFX(false, false, 0.0, dt)
     end
 
     if not requested then
@@ -3196,6 +3332,7 @@ function UIManager:TickInGameHUD(dt)
     self:UpdateBreathHUD(dt)
     self:UpdateWeaponHUD(false)
     self:UpdateCombatAgentHUD(false)
+    self:FlushPendingHitNotification()
     self:TickHitNotification(dt)
 end
 

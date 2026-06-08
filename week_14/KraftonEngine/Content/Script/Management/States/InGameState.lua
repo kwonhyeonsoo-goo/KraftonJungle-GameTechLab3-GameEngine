@@ -1,7 +1,7 @@
 local InGameState = {}
 InGameState.__index = InGameState
 
-local DEFAULT_SCENE_PATH = "Content/Scene/CombatTest.Scene"
+local DEFAULT_SCENE_PATH = "Content/Scene/InGame.Scene"
 local HUD = {
     name = "InGameHUD",
     path = "Content/UI/InGameHUD.rml",

@@ -27,6 +27,10 @@ public:
 	void Pause();
 	UFUNCTION(Callable, Category="Actor Sequence")
 	void Stop();
+	UFUNCTION(Callable, Category="Actor Sequence")
+	void SetTickWhenPaused(bool bInTickWhenPaused);
+	UFUNCTION(Pure, Category="Actor Sequence")
+	bool IsTickWhenPaused() const { return bTickWhenPaused; }
 
 	UFUNCTION(Pure, Category="Actor Sequence")
 	UActorSequence* GetSequence();
@@ -82,6 +86,8 @@ private:
 	float PlayRate = 1.0f;
 	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Start Offset Seconds", Min=0.0f, Max=60.0f, Speed=0.05f)
 	float StartOffsetSeconds = 0.0f;
+	UPROPERTY(Edit, Save, Category="Actor Sequence", DisplayName="Tick When Paused")
+	bool bTickWhenPaused = false;
 	UPROPERTY(Save, Category="Actor Sequence", DisplayName="Sequence Data")
 	FString SequenceDataJson;
 

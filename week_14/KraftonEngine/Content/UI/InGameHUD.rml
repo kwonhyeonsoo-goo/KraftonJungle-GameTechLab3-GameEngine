@@ -75,6 +75,7 @@
         <div id="radioSubtitlePanel" data-ui-type="Panel" data-ui-name="Radio Subtitle Panel">
             <div id="radioSubtitleText" data-ui-type="Text" data-ui-name="Radio Subtitle Text"></div>
         </div>
+        <div id="radioOpeningSkipPrompt" data-ui-type="Text" data-ui-name="Radio Opening Skip Prompt">Press Space to Skip</div>
         <div id="pauseLayer" data-ui-type="Panel" data-ui-name="Pause Layer">
             <div id="pauseMenuPanel" data-ui-type="Panel" data-ui-name="Pause Menu Panel">
                 <div id="pauseTitle" data-ui-type="Text" data-ui-name="Pause Title">Paused</div>
