@@ -59,7 +59,9 @@ local POPUP_BUTTON_IDS = {
     "btnSfxUp",
     "btnZoomMode",
     "btnMouseDown",
-    "btnMouseUp"
+    "btnMouseUp",
+    "btnGamepadDown",
+    "btnGamepadUp"
 }
 local SCORE_ROW_COUNT = 8
 local PAUSE_LAYER_ID = "pauseLayer"
@@ -82,7 +84,9 @@ local PAUSE_SETTING_BUTTON_IDS = {
     "btnPauseSfxUp",
     "btnPauseZoomMode",
     "btnPauseMouseDown",
-    "btnPauseMouseUp"
+    "btnPauseMouseUp",
+    "btnPauseGamepadDown",
+    "btnPauseGamepadUp"
 }
 local PAUSE_CONTROL_BUTTON_IDS = {
     "btnPauseControlsBack"
@@ -122,6 +126,19 @@ local function clamp01(value)
         return 1.0
     end
     return value
+end
+
+local function get_confirm_prompt_text(action_text, fallback_text)
+    if Input ~= nil and Input.GetConfirmPromptText ~= nil then
+        local ok, value = pcall(function()
+            return Input.GetConfirmPromptText(action_text or "")
+        end)
+        if ok and value ~= nil and value ~= "" then
+            return tostring(value)
+        end
+    end
+
+    return fallback_text or "Press Space"
 end
 
 local function approach01(current, target, dt, speed)
@@ -351,7 +368,9 @@ function UIManager.new(general)
         cutscene_letterbox_last_alpha = -1.0,
         active_popup = nil,
         pause_visible = false,
-        pause_panel = "Menu"
+        pause_panel = "Menu",
+        applied_mouse_sensitivity = nil,
+        applied_gamepad_sensitivity = nil
     }, UIManager)
 end
 
@@ -431,6 +450,10 @@ end
 function UIManager:Tick(dt)
     if self.active_hud_mode == MAIN_HUD_MODE then
         self:TickMainHUD(dt or 0.0)
+    elseif self.active_hud_mode == PRE_INGAME_HUD_MODE then
+        self:TickPreInGameHUD(dt or 0.0)
+    elseif self.active_hud_mode == LOADING_HUD_MODE then
+        self:TickLoadingHUD(dt or 0.0)
     elseif self.active_hud_mode == IN_GAME_HUD_MODE then
         self:TickInGameHUD(dt or 0.0)
     end
@@ -701,6 +724,8 @@ function UIManager:ConfigureMainButtonActions(widget)
     call_widget(widget, "SetActionEvent", "btnZoomMode", "ToggleZoomMode")
     call_widget(widget, "SetActionEvent", "btnMouseDown", "MouseDown")
     call_widget(widget, "SetActionEvent", "btnMouseUp", "MouseUp")
+    call_widget(widget, "SetActionEvent", "btnGamepadDown", "GamepadDown")
+    call_widget(widget, "SetActionEvent", "btnGamepadUp", "GamepadUp")
 end
 
 function UIManager:PlayUISFX(path, volume)
@@ -757,6 +782,10 @@ function UIManager:PollMainActions(widget)
             self:AdjustSetting("mouse_sensitivity", -0.1)
         elseif action == "MouseUp" then
             self:AdjustSetting("mouse_sensitivity", 0.1)
+        elseif action == "GamepadDown" then
+            self:AdjustSetting("gamepad_sensitivity", -0.1)
+        elseif action == "GamepadUp" then
+            self:AdjustSetting("gamepad_sensitivity", 0.1)
         elseif action == "MainButtonHover" and not hover_played then
             hover_played = true
             self:PlayUISFX(MAIN_BUTTON_HOVER_SFX, 0.8)
@@ -848,9 +877,9 @@ function UIManager:SetCutSceneSkipPrompt(payload)
     end
 
     local visible = payload ~= nil and payload.visible == true
-    local text = "Press Space to Skip"
+    local text = get_confirm_prompt_text("Skip", "Press Space to Skip")
     if payload ~= nil and payload.text ~= nil and payload.text ~= "" then
-        text = tostring(payload.text)
+        text = get_confirm_prompt_text(payload.action or "Skip", tostring(payload.text))
     end
 
     call_widget(widget, "SetText", "cutsceneSkipPrompt", visible and text or "")
@@ -997,8 +1026,34 @@ function UIManager:GetSettings()
         bgm_volume = 1.0,
         sfx_volume = 1.0,
         zoom_toggle = true,
-        mouse_sensitivity = 1.0
+        mouse_sensitivity = 1.0,
+        gamepad_sensitivity = 1.0
     }
+end
+
+function UIManager:ApplySniperInputSettings(force)
+    local pawn = self:GetSniperPawn()
+    if pawn == nil then
+        return
+    end
+
+    local settings = self:GetSettings()
+    local mouse_sensitivity = tonumber(settings.mouse_sensitivity) or 1.0
+    local gamepad_sensitivity = tonumber(settings.gamepad_sensitivity) or 1.0
+
+    if force or self.applied_mouse_sensitivity ~= mouse_sensitivity then
+        if pawn.SetMouseSensitivityMultiplier ~= nil then
+            pawn:SetMouseSensitivityMultiplier(mouse_sensitivity)
+        end
+        self.applied_mouse_sensitivity = mouse_sensitivity
+    end
+
+    if force or self.applied_gamepad_sensitivity ~= gamepad_sensitivity then
+        if pawn.SetGamepadLookSensitivityMultiplier ~= nil then
+            pawn:SetGamepadLookSensitivityMultiplier(gamepad_sensitivity)
+        end
+        self.applied_gamepad_sensitivity = gamepad_sensitivity
+    end
 end
 
 function UIManager:SetSetting(key, value)
@@ -1016,14 +1071,19 @@ function UIManager:SetSetting(key, value)
         end
     end
 
+    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" then
+        self:ApplySniperInputSettings(true)
+    end
+
     self:RefreshSettingsPopup()
 end
 
 function UIManager:AdjustSetting(key, delta)
     local settings = self:GetSettings()
     local current = tonumber(settings[key]) or 0.0
-    local min_value = key == "mouse_sensitivity" and 0.1 or 0.0
-    local max_value = key == "mouse_sensitivity" and 5.0 or 1.0
+    local is_sensitivity = key == "mouse_sensitivity" or key == "gamepad_sensitivity"
+    local min_value = is_sensitivity and 0.1 or 0.0
+    local max_value = is_sensitivity and 5.0 or 1.0
     local next_value = current + delta
     if next_value < min_value then
         next_value = min_value
@@ -1050,11 +1110,13 @@ function UIManager:RefreshSettingsPopup(widget)
     call_widget(widget, "SetText", "bgmValue", string.format("%d%%", math.floor((settings.bgm_volume or 1.0) * 100.0 + 0.5)))
     call_widget(widget, "SetText", "sfxValue", string.format("%d%%", math.floor((settings.sfx_volume or 1.0) * 100.0 + 0.5)))
     call_widget(widget, "SetText", "mouseValue", string.format("%.2fx", settings.mouse_sensitivity or 1.0))
+    call_widget(widget, "SetText", "gamepadValue", string.format("%.2fx", settings.gamepad_sensitivity or 1.0))
     call_widget(widget, "SetText", "zoomModeValue", settings.zoom_toggle and "Toggle" or "Hold")
 
     call_widget(widget, "SetText", "pauseBgmValue", string.format("%d%%", math.floor((settings.bgm_volume or 1.0) * 100.0 + 0.5)))
     call_widget(widget, "SetText", "pauseSfxValue", string.format("%d%%", math.floor((settings.sfx_volume or 1.0) * 100.0 + 0.5)))
     call_widget(widget, "SetText", "pauseMouseValue", string.format("%.2fx", settings.mouse_sensitivity or 1.0))
+    call_widget(widget, "SetText", "pauseGamepadValue", string.format("%.2fx", settings.gamepad_sensitivity or 1.0))
     call_widget(widget, "SetText", "pauseZoomModeValue", settings.zoom_toggle and "Toggle" or "Hold")
 end
 
@@ -1175,6 +1237,7 @@ function UIManager:SetPreInGameReady(payload)
         return
     end
 
+    call_widget(widget, "SetText", "skipPrompt", get_confirm_prompt_text("Skip", "Press Space to Skip"))
     self:SetElementVisible(widget, "skipPrompt", true)
     self:SetElementAlpha(widget, "skipPrompt", 1.0)
 end
@@ -1246,7 +1309,7 @@ function UIManager:ConfigureLoadingHUD(widget, payload)
 
     call_widget(widget, "SetText", "loadingTitle", "Loading")
     call_widget(widget, "SetText", "loadingTip", select_loading_tip(payload))
-    call_widget(widget, "SetText", "pressPrompt", "Press Space to Play")
+    call_widget(widget, "SetText", "pressPrompt", get_confirm_prompt_text("Play", "Press Space to Play"))
     self:SetElementAlpha(widget, "pressPrompt", 0.0)
     self:SetElementVisible(widget, "pressPrompt", false)
 end
@@ -1264,9 +1327,24 @@ function UIManager:SetLoadingReady(payload)
     if payload ~= nil and payload.tip ~= nil then
         call_widget(widget, "SetText", "loadingTip", payload.tip)
     end
+    call_widget(widget, "SetText", "pressPrompt", get_confirm_prompt_text("Play", "Press Space to Play"))
     self:SetElementVisible(widget, "pressPrompt", true)
     self:SetElementAlpha(widget, "pressPrompt", 1.0)
     self:PlayUISFX(LOADING_END_SFX, 1.0)
+end
+
+function UIManager:TickPreInGameHUD(dt)
+    local widget = self:GetActiveHUDWidget()
+    if widget ~= nil then
+        call_widget(widget, "SetText", "skipPrompt", get_confirm_prompt_text("Skip", "Press Space to Skip"))
+    end
+end
+
+function UIManager:TickLoadingHUD(dt)
+    local widget = self:GetActiveHUDWidget()
+    if widget ~= nil then
+        call_widget(widget, "SetText", "pressPrompt", get_confirm_prompt_text("Play", "Press Space to Play"))
+    end
 end
 
 function UIManager:SetBreathGroupAlpha(widget, alpha)
@@ -1354,6 +1432,7 @@ function UIManager:ConfigureInGameHUD(widget)
 
     self:SetElementImage(widget, "compassImage", "Image/Hor-Compass/Window/Compass_Window_000.png")
     self:ConfigurePauseMenuActions(widget)
+    self:ApplySniperInputSettings(true)
     self:SetInGamePauseVisible(false)
 end
 
@@ -1375,6 +1454,8 @@ function UIManager:ConfigurePauseMenuActions(widget)
     call_widget(widget, "SetActionEvent", "btnPauseZoomMode", "ToggleZoomMode")
     call_widget(widget, "SetActionEvent", "btnPauseMouseDown", "MouseDown")
     call_widget(widget, "SetActionEvent", "btnPauseMouseUp", "MouseUp")
+    call_widget(widget, "SetActionEvent", "btnPauseGamepadDown", "GamepadDown")
+    call_widget(widget, "SetActionEvent", "btnPauseGamepadUp", "GamepadUp")
 
     for _, element_id in ipairs(PAUSE_MENU_BUTTON_IDS) do
         call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
@@ -1734,6 +1815,8 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.cutscene_letterbox_alpha = 0.0
     self.cutscene_letterbox_target = 0.0
     self.cutscene_letterbox_last_alpha = -1.0
+    self.applied_mouse_sensitivity = nil
+    self.applied_gamepad_sensitivity = nil
     if clear_pawn then
         self.sniper_pawn = nil
     end
@@ -2230,6 +2313,10 @@ function UIManager:PollInGameActions(widget)
             self:AdjustSetting("mouse_sensitivity", -0.1)
         elseif action == "MouseUp" then
             self:AdjustSetting("mouse_sensitivity", 0.1)
+        elseif action == "GamepadDown" then
+            self:AdjustSetting("gamepad_sensitivity", -0.1)
+        elseif action == "GamepadUp" then
+            self:AdjustSetting("gamepad_sensitivity", 0.1)
         elseif action == "MainButtonHover" and not hover_played then
             hover_played = true
             self:PlayUISFX(MAIN_BUTTON_HOVER_SFX, 0.8)
@@ -2240,9 +2327,11 @@ end
 function UIManager:TickInGameHUD(dt)
     local widget = self:GetActiveHUDWidget()
     self:PollInGameActions(widget)
+    self:ApplySniperInputSettings(false)
     self:TickCutSceneLetterbox(widget, dt)
     if self.cutscene_active then
         if widget ~= nil then
+            call_widget(widget, "SetText", "cutsceneSkipPrompt", get_confirm_prompt_text("Skip", "Press Space to Skip"))
             self:SetInGameHUDSuppressed(widget, true)
         end
         return

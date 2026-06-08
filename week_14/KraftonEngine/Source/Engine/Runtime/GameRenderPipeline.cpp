@@ -8,6 +8,7 @@
 #include "Component/Camera/CineCameraComponent.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Input/InputSystem.h"
+#include "Viewport/GameViewportClient.h"
 #include "Viewport/Viewport.h"
 #include "Math/MathUtils.h"
 
@@ -171,7 +172,10 @@ void FGameRenderPipeline::BuildFrame(FViewport* VP, const FMinimalViewInfo& POV,
 	ApplyLetterboxAspect(RenderPOV, Frame.CameraLetterbox, Frame.ViewportWidth, Frame.ViewportHeight);
 	Frame.SetCameraInfo(RenderPOV);
 
-	const POINT MousePos = InputSystem::Get().GetMouseClientPos();
+	const UGameViewportClient* ViewportClient = GEngine ? GEngine->GetGameViewportClient() : nullptr;
+	const POINT MousePos = (ViewportClient && ViewportClient->HasVirtualCursorPosition())
+		? ViewportClient->GetVirtualCursorClientPos()
+		: InputSystem::Get().GetMouseClientPos();
 	if (MousePos.x >= 0 && MousePos.y >= 0
 		&& MousePos.x < static_cast<LONG>(Frame.ViewportWidth)
 		&& MousePos.y < static_cast<LONG>(Frame.ViewportHeight))

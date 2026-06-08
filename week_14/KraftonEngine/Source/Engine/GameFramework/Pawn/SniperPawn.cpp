@@ -301,6 +301,18 @@ void ASniperPawn::CacheComponentReferences()
 	BulletManagerComponent = GetComponentByClass<UBallisticBulletManagerComponent>();
 }
 
+void ASniperPawn::CacheInputSensitivityBases()
+{
+	if (bInputSensitivityBaseInitialized)
+	{
+		return;
+	}
+
+	BaseMouseSensitivity = (std::max)(MouseSensitivity, 0.0001f);
+	BaseGamepadLookSensitivity = (std::max)(GamepadLookSensitivity, 0.0001f);
+	bInputSensitivityBaseInitialized = true;
+}
+
 void ASniperPawn::SyncSniperRuntimeState()
 {
 	InputState = FSniperInputState{};
@@ -312,6 +324,7 @@ void ASniperPawn::SyncSniperRuntimeState()
 	bGamepadFireTriggerHeld = false;
 	bUseControllerRotationPitch = true;
 	bUseControllerRotationYaw = true;
+	CacheInputSensitivityBases();
 
 	if (Camera)
 	{
@@ -554,6 +567,32 @@ void ASniperPawn::ApplySniperControlRotation()
 float ASniperPawn::GetScopeBlendAlpha() const
 {
 	return ComputeScopeAlpha(ScopeState);
+}
+
+float ASniperPawn::GetMouseSensitivityMultiplier() const
+{
+	const float SafeBaseSensitivity = BaseMouseSensitivity > 0.0001f ? BaseMouseSensitivity : 0.0001f;
+	return MouseSensitivity / SafeBaseSensitivity;
+}
+
+void ASniperPawn::SetMouseSensitivityMultiplier(float Multiplier)
+{
+	CacheInputSensitivityBases();
+	const float ClampedMultiplier = FMath::Clamp(Multiplier, 0.1f, 5.0f);
+	MouseSensitivity = BaseMouseSensitivity * ClampedMultiplier;
+}
+
+float ASniperPawn::GetGamepadLookSensitivityMultiplier() const
+{
+	const float SafeBaseSensitivity = BaseGamepadLookSensitivity > 0.0001f ? BaseGamepadLookSensitivity : 0.0001f;
+	return GamepadLookSensitivity / SafeBaseSensitivity;
+}
+
+void ASniperPawn::SetGamepadLookSensitivityMultiplier(float Multiplier)
+{
+	CacheInputSensitivityBases();
+	const float ClampedMultiplier = FMath::Clamp(Multiplier, 0.1f, 5.0f);
+	GamepadLookSensitivity = BaseGamepadLookSensitivity * ClampedMultiplier;
 }
 
 void ASniperPawn::ForceScopeReleased()

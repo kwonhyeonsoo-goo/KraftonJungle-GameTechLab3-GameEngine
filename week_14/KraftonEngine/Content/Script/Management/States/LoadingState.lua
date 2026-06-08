@@ -51,6 +51,19 @@ local function transition_to_scene(path)
     return false
 end
 
+local function was_confirm_pressed()
+    if Input ~= nil and Input.WasConfirmPressed ~= nil then
+        local ok, value = pcall(function()
+            return Input.WasConfirmPressed()
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
+    return Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space")
+end
+
 function LoadingState.new(general)
     return setmetatable({
         general = general,
@@ -108,7 +121,7 @@ function LoadingState:Tick(dt)
     self.elapsed = self.elapsed + (dt or 0.0)
     if not self.ready and self.elapsed >= self.loading_duration then
         self.ready = true
-        log("Loading duration complete; Space enabled")
+        log("Loading duration complete; confirm enabled")
         self.general:Publish("loading.ready", {
             target_state = self.target_state,
             target_scene = self.target_scene,
@@ -116,9 +129,9 @@ function LoadingState:Tick(dt)
         })
     end
 
-    if self.ready and Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space") then
+    if self.ready and was_confirm_pressed() then
         self.transition_requested = true
-        log("Space accepted; requesting target_state=" .. tostring(self.target_state))
+        log("Confirm accepted; requesting target_state=" .. tostring(self.target_state))
         if self.target_state ~= nil and self.general ~= nil and self.general.RequestState ~= nil then
             self.general:RequestState(self.target_state, {
                 reason = "loading_completed",

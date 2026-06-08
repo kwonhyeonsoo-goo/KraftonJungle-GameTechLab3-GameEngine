@@ -78,14 +78,24 @@
                     <div id="pauseMouseValue" data-ui-type="Text" data-ui-name="Mouse Value">1.00x</div>
                     <button id="btnPauseMouseUp" data-ui-type="Button" data-ui-name="Mouse Up"><span>+</span></button>
                 </div>
+                <div id="pauseSettingGamepadRow" data-ui-type="Panel" data-ui-name="Gamepad Row">
+                    <div id="pauseGamepadLabel" data-ui-type="Text" data-ui-name="Gamepad Label">Gamepad Sensitivity</div>
+                    <button id="btnPauseGamepadDown" data-ui-type="Button" data-ui-name="Gamepad Down"><span>-</span></button>
+                    <div id="pauseGamepadValue" data-ui-type="Text" data-ui-name="Gamepad Value">1.00x</div>
+                    <button id="btnPauseGamepadUp" data-ui-type="Button" data-ui-name="Gamepad Up"><span>+</span></button>
+                </div>
             </div>
             <div id="pauseControlsPanel" data-ui-type="Panel" data-ui-name="Pause Controls Panel">
                 <div id="pauseControlsTitle" data-ui-type="Text" data-ui-name="Pause Controls Title">Controls</div>
                 <button id="btnPauseControlsBack" data-ui-type="Button" data-ui-name="Pause Controls Back"><span>Back</span></button>
-                <div id="pauseControlMove" data-ui-type="Text" data-ui-name="Move Control">WASD / Move</div>
-                <div id="pauseControlAim" data-ui-type="Text" data-ui-name="Aim Control">Right Mouse / Scope</div>
-                <div id="pauseControlBreath" data-ui-type="Text" data-ui-name="Breath Control">Shift while scoped / Hold Breath</div>
-                <div id="pauseControlPause" data-ui-type="Text" data-ui-name="Pause Control">Q / Pause Toggle</div>
+                <div id="pauseControlAim" data-ui-type="Text" data-ui-name="Aim Control">Aim : Mouse Move / Left Stick</div>
+                <div id="pauseControlScope" data-ui-type="Text" data-ui-name="Scope Control">Scope : Right Mouse / Left Trigger</div>
+                <div id="pauseControlFire" data-ui-type="Text" data-ui-name="Fire Control">Fire : Left Mouse / Right Trigger</div>
+                <div id="pauseControlBreath" data-ui-type="Text" data-ui-name="Breath Control">Hold Breath : Shift / LB</div>
+                <div id="pauseControlZoom" data-ui-type="Text" data-ui-name="Zoom Control">Zoom : Mouse Wheel / D-Pad Up, Down</div>
+                <div id="pauseControlAmmo" data-ui-type="Text" data-ui-name="Ammo Control">Ammo : 1, 2 / D-Pad Left, Right</div>
+                <div id="pauseControlReload" data-ui-type="Text" data-ui-name="Reload Control">Reload : R / X</div>
+                <div id="pauseControlPause" data-ui-type="Text" data-ui-name="Pause Control">Pause : Q / Menu</div>
             </div>
         </div>
     </div>

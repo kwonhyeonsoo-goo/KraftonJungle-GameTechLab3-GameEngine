@@ -29,6 +29,12 @@ enum class EGamepadButton : uint8
     Count
 };
 
+enum class ELastInputDevice : uint8
+{
+    KeyboardMouse = 0,
+    Gamepad
+};
+
 struct FInputSystemSnapshot
 {
     static constexpr int KeyCount = 256;
@@ -130,6 +136,10 @@ public:
     void ResetWheelDelta();
     void ResetCaptureStateForPIEEnd();
     bool IsWindowFocused() const { return bWindowFocused; }
+    bool IsGamepadConnected() const { return bGamepadConnected; }
+    ELastInputDevice GetLastInputDevice() const { return LastInputDevice; }
+    bool IsLastInputDeviceGamepad() const { return LastInputDevice == ELastInputDevice::Gamepad; }
+    void IgnoreNextMouseMoveForDeviceHeuristics() { bIgnoreNextMouseMoveForDeviceHeuristics = true; }
 
     // Keyboard
     bool GetKeyDown(int VK) const { return FInputSystemSnapshot::IsValidKeyCode(VK) && CurrentStates[VK] && !PrevStates[VK]; }
@@ -239,6 +249,8 @@ private:
     FGuiInputState GuiState{};
     FInputSystemSnapshot CurrentSnapshot{};
     bool bWindowFocused = true;
+    bool bIgnoreNextMouseMoveForDeviceHeuristics = false;
+    ELastInputDevice LastInputDevice = ELastInputDevice::KeyboardMouse;
 
     static constexpr int DRAG_THRESHOLD = 5;
 

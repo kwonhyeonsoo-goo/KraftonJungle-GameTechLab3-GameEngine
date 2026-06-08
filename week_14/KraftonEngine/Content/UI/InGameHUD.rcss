@@ -708,7 +708,8 @@ body {
 #pauseSettingBgmRow,
 #pauseSettingSfxRow,
 #pauseSettingZoomRow,
-#pauseSettingMouseRow {
+#pauseSettingMouseRow,
+#pauseSettingGamepadRow {
     position: absolute;
     left: 44.000000px;
     width: 382.000000px;
@@ -726,11 +727,13 @@ body {
 #pauseSettingSfxRow { top: 232.000000px; }
 #pauseSettingZoomRow { top: 328.000000px; }
 #pauseSettingMouseRow { top: 424.000000px; }
+#pauseSettingGamepadRow { top: 520.000000px; }
 
 #pauseBgmLabel,
 #pauseSfxLabel,
 #pauseZoomLabel,
-#pauseMouseLabel {
+#pauseMouseLabel,
+#pauseGamepadLabel {
     position: absolute;
     left: 22.000000px;
     top: 23.000000px;
@@ -745,7 +748,8 @@ body {
 
 #pauseBgmValue,
 #pauseSfxValue,
-#pauseMouseValue {
+#pauseMouseValue,
+#pauseGamepadValue {
     position: absolute;
     left: 274.000000px;
     top: 22.000000px;
@@ -761,9 +765,11 @@ body {
 #btnPauseBgmDown,
 #btnPauseSfxDown,
 #btnPauseMouseDown,
+#btnPauseGamepadDown,
 #btnPauseBgmUp,
 #btnPauseSfxUp,
-#btnPauseMouseUp {
+#btnPauseMouseUp,
+#btnPauseGamepadUp {
     position: absolute;
     top: 17.000000px;
     width: 42.000000px;
@@ -784,18 +790,22 @@ body {
 
 #btnPauseBgmDown,
 #btnPauseSfxDown,
-#btnPauseMouseDown { left: 226.000000px; }
+#btnPauseMouseDown,
+#btnPauseGamepadDown { left: 226.000000px; }
 
 #btnPauseBgmUp,
 #btnPauseSfxUp,
-#btnPauseMouseUp { left: 338.000000px; }
+#btnPauseMouseUp,
+#btnPauseGamepadUp { left: 338.000000px; }
 
 #btnPauseBgmDown span,
 #btnPauseSfxDown span,
 #btnPauseMouseDown span,
+#btnPauseGamepadDown span,
 #btnPauseBgmUp span,
 #btnPauseSfxUp span,
-#btnPauseMouseUp span {
+#btnPauseMouseUp span,
+#btnPauseGamepadUp span {
     position: absolute;
     left: 0px;
     top: 8.000000px;
@@ -838,33 +848,43 @@ body {
 #btnPauseBgmDown:hover,
 #btnPauseSfxDown:hover,
 #btnPauseMouseDown:hover,
+#btnPauseGamepadDown:hover,
 #btnPauseBgmUp:hover,
 #btnPauseSfxUp:hover,
 #btnPauseMouseUp:hover,
+#btnPauseGamepadUp:hover,
 #btnPauseZoomMode:hover {
     background-color: rgba(94, 78, 44, 240);
     color: rgba(255, 223, 134, 255);
 }
 
-#pauseControlMove,
 #pauseControlAim,
+#pauseControlScope,
+#pauseControlFire,
 #pauseControlBreath,
+#pauseControlZoom,
+#pauseControlAmmo,
+#pauseControlReload,
 #pauseControlPause {
     position: absolute;
     left: 44.000000px;
     width: 382.000000px;
-    height: 42.000000px;
+    height: 36.000000px;
     color: rgba(226, 232, 235, 255);
     background-color: rgba(0, 0, 0, 0);
     border-width: 0px;
-    padding: 9.000000px 18.000000px 0px 18.000000px;
+    padding: 6.000000px 18.000000px 0px 18.000000px;
     font-family: "Nexon";
-    font-size: 21.000000px;
+    font-size: 19.000000px;
     font-weight: 700;
     text-align: left;
 }
 
-#pauseControlMove { top: 146.000000px; }
-#pauseControlAim { top: 216.000000px; }
-#pauseControlBreath { top: 286.000000px; }
-#pauseControlPause { top: 356.000000px; }
+#pauseControlAim { top: 132.000000px; }
+#pauseControlScope { top: 184.000000px; }
+#pauseControlFire { top: 236.000000px; }
+#pauseControlBreath { top: 288.000000px; }
+#pauseControlZoom { top: 340.000000px; }
+#pauseControlAmmo { top: 392.000000px; }
+#pauseControlReload { top: 444.000000px; }
+#pauseControlPause { top: 496.000000px; }

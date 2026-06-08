@@ -259,15 +259,19 @@ body {
 }
 
 #settingsSfxRow {
-    top: 100.000000px;
+    top: 86.000000px;
 }
 
 #settingsZoomRow {
-    top: 200.000000px;
+    top: 172.000000px;
 }
 
 #settingsMouseRow {
-    top: 300.000000px;
+    top: 258.000000px;
+}
+
+#settingsGamepadRow {
+    top: 344.000000px;
 }
 
 .setting-label {
@@ -334,13 +338,15 @@ body {
 
 #btnBgmDown,
 #btnSfxDown,
-#btnMouseDown {
+#btnMouseDown,
+#btnGamepadDown {
     left: 556.000000px;
 }
 
 #btnBgmUp,
 #btnSfxUp,
-#btnMouseUp {
+#btnMouseUp,
+#btnGamepadUp {
     left: 744.000000px;
 }
 

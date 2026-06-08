@@ -291,7 +291,15 @@ function InGameManager:PollPauseInput()
 end
 
 function InGameManager:IsPauseKeyPressed()
-    if Input == nil or Input.GetKeyDown == nil then
+    if Input == nil then
+        return false
+    end
+
+    if Input.WasPausePressed ~= nil then
+        return Input.WasPausePressed() == true
+    end
+
+    if Input.GetKeyDown == nil then
         return false
     end
 

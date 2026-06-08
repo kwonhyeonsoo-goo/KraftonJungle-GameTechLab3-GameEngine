@@ -85,6 +85,8 @@ namespace
     {
         return static_cast<int32>(Button);
     }
+
+    constexpr float GamepadActivityEpsilon = 0.20f;
 }
 
 void InputSystem::Tick()
@@ -165,6 +167,50 @@ void InputSystem::Tick()
         bRightDragCandidate = false;
     }
 
+    bool bKeyboardMouseActivity = false;
+    for (int VK = 0; VK < 256; ++VK)
+    {
+        if (CurrentStates[VK] != PrevStates[VK])
+        {
+            bKeyboardMouseActivity = true;
+            break;
+        }
+    }
+
+    bool bMouseMoveActivity = FrameMouseDeltaX != 0 || FrameMouseDeltaY != 0;
+    if (bIgnoreNextMouseMoveForDeviceHeuristics && bMouseMoveActivity)
+    {
+        bMouseMoveActivity = false;
+    }
+    bIgnoreNextMouseMoveForDeviceHeuristics = false;
+    bKeyboardMouseActivity = bKeyboardMouseActivity || bMouseMoveActivity || PrevScrollDelta != 0;
+
+    bool bGamepadActivity = false;
+    for (int32 ButtonIndex = 0; ButtonIndex < FInputSystemSnapshot::GamepadButtonCount; ++ButtonIndex)
+    {
+        if (CurrentGamepadButtons[ButtonIndex] != PrevGamepadButtons[ButtonIndex])
+        {
+            bGamepadActivity = true;
+            break;
+        }
+    }
+    bGamepadActivity = bGamepadActivity ||
+        std::abs(GamepadLeftStickX) >= GamepadActivityEpsilon ||
+        std::abs(GamepadLeftStickY) >= GamepadActivityEpsilon ||
+        std::abs(GamepadRightStickX) >= GamepadActivityEpsilon ||
+        std::abs(GamepadRightStickY) >= GamepadActivityEpsilon ||
+        GamepadLeftTrigger >= GamepadActivityEpsilon ||
+        GamepadRightTrigger >= GamepadActivityEpsilon;
+
+    if (bKeyboardMouseActivity)
+    {
+        LastInputDevice = ELastInputDevice::KeyboardMouse;
+    }
+    else if (bGamepadActivity)
+    {
+        LastInputDevice = ELastInputDevice::Gamepad;
+    }
+
     UpdateCurrentSnapshot();
 }
 
@@ -239,6 +285,7 @@ void InputSystem::ResetTransientState()
     ResetWheelDelta();
     TextInputQueue.clear();
     ScriptTextInputQueue.clear();
+    bIgnoreNextMouseMoveForDeviceHeuristics = false;
     UpdateCurrentSnapshot();
 }
 
@@ -251,6 +298,7 @@ void InputSystem::ResetAllKeyStates()
     }
     ResetGamepadState();
     std::memset(PrevGamepadButtons, 0, sizeof(PrevGamepadButtons));
+    bIgnoreNextMouseMoveForDeviceHeuristics = false;
     UpdateCurrentSnapshot();
 }
 
@@ -262,6 +310,7 @@ void InputSystem::ResetMouseDelta()
     FrameMouseDeltaY = 0;
     RawMouseDeltaAccumX = 0;
     RawMouseDeltaAccumY = 0;
+    bIgnoreNextMouseMoveForDeviceHeuristics = false;
     UpdateCurrentSnapshot();
 }
 
@@ -280,6 +329,7 @@ void InputSystem::ResetCaptureStateForPIEEnd()
     GuiState.bUsingMouse = false;
     GuiState.bUsingKeyboard = false;
     GuiState.bUsingTextInput = false;
+    bIgnoreNextMouseMoveForDeviceHeuristics = false;
     UpdateCurrentSnapshot();
 }
 

@@ -8,7 +8,8 @@ local function default_settings()
         bgm_volume = 1.0,
         sfx_volume = 1.0,
         zoom_toggle = true,
-        mouse_sensitivity = 1.0
+        mouse_sensitivity = 1.0,
+        gamepad_sensitivity = 1.0
     }
 end
 
@@ -40,7 +41,8 @@ local function normalize_settings(settings)
         bgm_volume = clamp(settings.bgm_volume or defaults.bgm_volume, 0.0, 1.0),
         sfx_volume = clamp(settings.sfx_volume or defaults.sfx_volume, 0.0, 1.0),
         zoom_toggle = settings.zoom_toggle ~= false,
-        mouse_sensitivity = clamp(settings.mouse_sensitivity or defaults.mouse_sensitivity, 0.1, 5.0)
+        mouse_sensitivity = clamp(settings.mouse_sensitivity or defaults.mouse_sensitivity, 0.1, 5.0),
+        gamepad_sensitivity = clamp(settings.gamepad_sensitivity or defaults.gamepad_sensitivity, 0.1, 5.0)
     }
 end
 
@@ -125,7 +127,7 @@ function DataManager:SetSetting(key, value)
     self.data.settings = normalize_settings(self.data.settings)
     if key == "bgm_volume" or key == "sfx_volume" then
         self.data.settings[key] = clamp(value, 0.0, 1.0)
-    elseif key == "mouse_sensitivity" then
+    elseif key == "mouse_sensitivity" or key == "gamepad_sensitivity" then
         self.data.settings[key] = clamp(value, 0.1, 5.0)
     elseif key == "zoom_toggle" then
         self.data.settings[key] = value == true

@@ -77,6 +77,19 @@ local function camera_fade_in(duration)
     end
 end
 
+local function was_confirm_pressed()
+    if Input ~= nil and Input.WasConfirmPressed ~= nil then
+        local ok, value = pcall(function()
+            return Input.WasConfirmPressed()
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
+    return Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space")
+end
+
 local function get_time_dilation()
     if Time ~= nil and Time.GetTimeDilation ~= nil then
         return Time.GetTimeDilation()
@@ -1225,7 +1238,7 @@ function CutSceneManager:Initialize()
                 current.damaged_sfx_played = true
                 play_sfx(self.general, SNIPER_KILLCAM_DAMAGED_SFX, 1.0)
             end
-            if Input ~= nil and Input.GetKeyDown ~= nil and Input.GetKeyDown("Space") then
+            if was_confirm_pressed() then
                 current.skipped = true
                 self:Stop("skipped")
             end

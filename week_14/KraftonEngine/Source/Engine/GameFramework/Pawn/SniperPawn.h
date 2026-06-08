@@ -52,6 +52,14 @@ public:
 	float GetMaxScopeZoomMagnification() const { return ScopeState.MaxZoomMagnification; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetCurrentScopeSensitivity() const { return ScopeState.CurrentSensitivity; }
+	UFUNCTION(Pure, Category="Sniper|Input")
+	float GetMouseSensitivityMultiplier() const;
+	UFUNCTION(Callable, Category="Sniper|Input")
+	void SetMouseSensitivityMultiplier(float Multiplier);
+	UFUNCTION(Pure, Category="Sniper|Input")
+	float GetGamepadLookSensitivityMultiplier() const;
+	UFUNCTION(Callable, Category="Sniper|Input")
+	void SetGamepadLookSensitivityMultiplier(float Multiplier);
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathActive() const;
 	UFUNCTION(Pure, Category="Sniper|State")
@@ -146,6 +154,7 @@ public:
 
 private:
 	void CacheComponentReferences();
+	void CacheInputSensitivityBases();
 	void SyncSniperRuntimeState();
 	void UpdateScopeState(float DeltaTime);
 	void UpdateHoldBreathState(float DeltaTime);
@@ -196,4 +205,7 @@ private:
 	bool bKeyboardHoldBreathInputHeld = false;
 	bool bGamepadHoldBreathInputHeld = false;
 	bool bGamepadFireTriggerHeld = false;
+	bool bInputSensitivityBaseInitialized = false;
+	float BaseMouseSensitivity = 0.2f;
+	float BaseGamepadLookSensitivity = 90.0f;
 };
