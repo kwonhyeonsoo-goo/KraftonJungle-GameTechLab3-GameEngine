@@ -135,6 +135,12 @@ local HIT_NOTIFY_DURATION = 4.55
 local HIT_NOTIFY_PENDING_LIMIT = 4
 local HIT_NOTIFY_IMPACT_TIME = 1.08
 local HIT_NOTIFY_IMPACT_SFX = "SFX/Alert.mp3"
+local HIT_NOTIFY_ENEMY_TITLE_BG = "rgba(255, 209, 70, 245)"
+local HIT_NOTIFY_ENEMY_TITLE_COLOR = "rgba(32, 27, 15, 255)"
+local HIT_NOTIFY_ENEMY_SCORE_COLOR = "rgba(255, 220, 88, 255)"
+local HIT_NOTIFY_FRIENDLY_TITLE_BG = "rgba(196, 38, 38, 245)"
+local HIT_NOTIFY_FRIENDLY_TITLE_COLOR = "rgba(255, 255, 255, 255)"
+local HIT_NOTIFY_FRIENDLY_SCORE_COLOR = "rgba(255, 92, 92, 255)"
 
 local function log(message)
     if Debug and Debug.Log then
@@ -619,6 +625,7 @@ function UIManager.new(general)
         radio_hud_suppressed = false,
         radio_blackout_alpha = 0.0,
         radio_subtitle_visible = false,
+        radio_subtitle_text = "",
         cutscene_active = false,
         cutscene_letterbox_alpha = 0.0,
         cutscene_letterbox_target = 0.0,
@@ -629,7 +636,8 @@ function UIManager.new(general)
         applied_mouse_sensitivity = nil,
         applied_gamepad_sensitivity = nil,
         result_submitted = false,
-        result_last_input = ""
+        result_last_input = "",
+        result_radio_only = false
     }, UIManager)
 end
 
@@ -823,6 +831,7 @@ function UIManager:Clear()
     self.active_popup = nil
     self.pause_visible = false
     self.pause_panel = "Menu"
+    self.result_radio_only = false
 end
 
 function UIManager:ApplySceneHUDRequest(payload)
@@ -871,8 +880,29 @@ function UIManager:ApplySceneHUDRequest(payload)
         self:ConfigurePreInGameHUD(widget)
     end
 
+    local hud_payload = nil
+    if hud ~= nil and type(hud.payload) == "table" then
+        hud_payload = {}
+        for key, value in pairs(hud.payload) do
+            hud_payload[key] = value
+        end
+    end
+    if payload ~= nil and type(payload.payload) == "table" then
+        hud_payload = hud_payload or {}
+        for key, value in pairs(payload.payload) do
+            hud_payload[key] = value
+        end
+    elseif payload ~= nil and payload.payload ~= nil then
+        hud_payload = payload.payload
+    end
+
+    if hud ~= nil and hud.mode == RESULT_HUD_MODE and type(hud_payload) == "table" and hud_payload.result_radio_only == nil then
+        local reason = payload and payload.reason or nil
+        hud_payload.result_radio_only = reason ~= "victory_sequence_complete" and reason ~= "defeat_sequence_complete"
+    end
+
     if self.active_hud_mode == LOADING_HUD_MODE then
-        self:ConfigureLoadingHUD(widget, payload and payload.payload)
+        self:ConfigureLoadingHUD(widget, hud_payload)
     end
 
     if self.active_hud_mode == IN_GAME_HUD_MODE then
@@ -881,7 +911,7 @@ function UIManager:ApplySceneHUDRequest(payload)
     end
 
     if self.active_hud_mode == RESULT_HUD_MODE then
-        self:ConfigureResultHUD(widget, payload and payload.payload)
+        self:ConfigureResultHUD(widget, hud_payload)
     end
 end
 
@@ -1359,13 +1389,28 @@ function UIManager:SetRadioSubtitle(payload)
     local visible = payload ~= nil and payload.visible == true
     local text = payload ~= nil and payload.text ~= nil and tostring(payload.text) or ""
     self.radio_subtitle_visible = visible
+    self.radio_subtitle_text = visible and text or ""
 
     local widget = self:GetActiveHUDWidget()
-    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+    if widget == nil then
         return
     end
 
-    call_widget(widget, "SetText", "radioSubtitleText", visible and text or "")
+    if self.active_hud_mode ~= IN_GAME_HUD_MODE and self.active_hud_mode ~= RESULT_HUD_MODE then
+        return
+    end
+
+    self:ApplyRadioSubtitle(widget)
+end
+
+function UIManager:ApplyRadioSubtitle(widget)
+    if widget == nil or not self:HasElement(widget, "radioSubtitlePanel") then
+        return
+    end
+
+    local visible = self.radio_subtitle_visible == true
+    local text = visible and (self.radio_subtitle_text or "") or ""
+    call_widget(widget, "SetText", "radioSubtitleText", text)
     self:SetElementVisible(widget, "radioSubtitlePanel", visible)
     self:SetElementStyle(widget, "radioSubtitlePanel", "display", visible and "block" or "none")
     self:SetElementAlpha(widget, "radioSubtitlePanel", visible and 1.0 or 0.0)
@@ -1473,7 +1518,7 @@ function UIManager:GetSettings()
     return {
         bgm_volume = 1.0,
         sfx_volume = 1.0,
-        zoom_toggle = true,
+        zoom_toggle = false,
         mouse_sensitivity = 1.0,
         gamepad_sensitivity = 1.0
     }
@@ -1488,6 +1533,7 @@ function UIManager:ApplySniperInputSettings(force)
     local settings = self:GetSettings()
     local mouse_sensitivity = tonumber(settings.mouse_sensitivity) or 1.0
     local gamepad_sensitivity = tonumber(settings.gamepad_sensitivity) or 1.0
+    local zoom_toggle = settings.zoom_toggle == true
 
     if force or self.applied_mouse_sensitivity ~= mouse_sensitivity then
         if pawn.SetMouseSensitivityMultiplier ~= nil then
@@ -1501,6 +1547,13 @@ function UIManager:ApplySniperInputSettings(force)
             pawn:SetGamepadLookSensitivityMultiplier(gamepad_sensitivity)
         end
         self.applied_gamepad_sensitivity = gamepad_sensitivity
+    end
+
+    if force or self.applied_zoom_toggle ~= zoom_toggle then
+        if pawn.SetRightClickZoomToggleMode ~= nil then
+            pawn:SetRightClickZoomToggleMode(zoom_toggle)
+        end
+        self.applied_zoom_toggle = zoom_toggle
     end
 end
 
@@ -1519,7 +1572,7 @@ function UIManager:SetSetting(key, value)
         end
     end
 
-    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" then
+    if key == "mouse_sensitivity" or key == "gamepad_sensitivity" or key == "zoom_toggle" then
         self:ApplySniperInputSettings(true)
     end
 
@@ -1617,6 +1670,25 @@ function UIManager:ConfigureResultHUD(widget, payload)
     self.result_submitted = false
     self.result_last_input = ""
 
+    local radio_only = payload ~= nil and payload.result_radio_only == true
+    self.result_radio_only = radio_only
+    if radio_only then
+        call_widget(widget, "SetWantsMouse", false)
+        call_widget(widget, "SetWantsKeyboard", false)
+        call_widget(widget, "SetWantsTextInput", false)
+        call_widget(widget, "SetBlocksGameInput", false)
+        call_widget(widget, "SetBlocksGameKeyboard", false)
+        call_widget(widget, "SetBlocksGameMouseLook", false)
+        self:SetElementAlpha(widget, "resultRoot", 1.0)
+        self:SetElementStyle(widget, "resultRoot", "background-color", "rgba(0, 0, 0, 0)")
+        self:SetElementStyle(widget, "resultDim", "background-color", "rgba(0, 0, 0, 0)")
+        self:SetElementDisplay(widget, "resultDim", false)
+        self:SetElementDisplay(widget, "resultEntryPanel", false)
+        self:SetElementDisplay(widget, "resultScorePanel", false)
+        self:ApplyRadioSubtitle(widget)
+        return
+    end
+
     call_widget(widget, "SetWantsMouse", true)
     call_widget(widget, "SetWantsKeyboard", true)
     call_widget(widget, "SetWantsTextInput", true)
@@ -1627,6 +1699,12 @@ function UIManager:ConfigureResultHUD(widget, payload)
     call_widget(widget, "SetElementAttribute", "btnSubmitScore", "data-hover-action", "MainButtonHover")
     call_widget(widget, "SetActionEvent", "btnResultGoMain", "GoToMain")
     call_widget(widget, "SetElementAttribute", "btnResultGoMain", "data-hover-action", "MainButtonHover")
+    self:SetElementStyle(widget, "resultRoot", "background-color", "rgba(0, 0, 0, 0)")
+    self:SetElementStyle(widget, "resultDim", "background-color", "rgba(0, 0, 0, 76)")
+    self:SetElementDisplay(widget, "resultDim", true)
+    self:SetElementDisplay(widget, "resultEntryPanel", true)
+    self:SetElementDisplay(widget, "resultScorePanel", true)
+    self:ApplyRadioSubtitle(widget)
 
     if Input ~= nil then
         if Input.SetInputModeUIOnly ~= nil then
@@ -1807,6 +1885,10 @@ end
 function UIManager:TickResultHUD(dt)
     local widget = self:GetActiveHUDWidget()
     if widget == nil then
+        return
+    end
+
+    if self.result_radio_only then
         return
     end
 
@@ -2094,6 +2176,7 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementAlpha(widget, "hitNotifyMeta", 0.0)
     self:SetElementStyle(widget, "hitNotifyTitle", "font-family", "\"Nexon\"")
     self:SetElementStyle(widget, "hitNotifyTitle", "font-weight", "bold")
+    self:SetElementStyle(widget, "hitNotifyTitle", "border-radius", "0px")
     self:SetElementStyle(widget, "hitNotifyDistance", "font-family", "\"Nexon\"")
     self:SetElementStyle(widget, "hitNotifyDistance", "font-weight", "bold")
     self:SetElementStyle(widget, "hitNotifyScore", "font-family", "\"Nexon\"")
@@ -2201,6 +2284,12 @@ function UIManager:SetInGamePauseVisible(visible)
 
     self.pause_visible = visible
     if visible then
+        local pawn = self:GetSniperPawn()
+        if pawn ~= nil and pawn.ForceScopeReleased ~= nil then
+            pawn:ForceScopeReleased()
+        end
+        self:SetScopeHUDVisible(false)
+
         if Input ~= nil and Input.SetInputModeGameAndUI ~= nil then
             Input.SetInputModeGameAndUI()
         end
@@ -2805,6 +2894,126 @@ function UIManager:IsKillHitNotification(payload)
     return hit ~= nil and hit.bKilled == true
 end
 
+local function normalize_hit_notify_team_tag(value)
+    if value == nil then
+        return ""
+    end
+    local text = string.lower(tostring(value))
+    text = string.gsub(text, "^%s+", "")
+    text = string.gsub(text, "%s+$", "")
+    return text
+end
+
+local HIT_NOTIFY_FRIENDLY_TAGS = {
+    ally = true,
+    friendly = true,
+    player = true,
+    bravo = true
+}
+
+local HIT_NOTIFY_ENEMY_TAGS = {
+    enemy = true,
+    hostile = true,
+    opfor = true
+}
+
+local function hit_notify_read_team_tag(object)
+    if object == nil then
+        return nil
+    end
+    if object.GetTeamTag ~= nil then
+        local ok, value = pcall(function()
+            return object:GetTeamTag()
+        end)
+        if ok and value ~= nil and value ~= "" then
+            return value
+        end
+    end
+    if object.GetCombatCoverAgentComponent ~= nil then
+        local ok, agent = pcall(function()
+            return object:GetCombatCoverAgentComponent()
+        end)
+        if ok and agent ~= nil and agent.GetTeamTag ~= nil then
+            local tag_ok, value = pcall(function()
+                return agent:GetTeamTag()
+            end)
+            if tag_ok and value ~= nil and value ~= "" then
+                return value
+            end
+        end
+    end
+    return nil
+end
+
+local function hit_notify_object_has_team_tag(object, tag_map)
+    if object == nil then
+        return false
+    end
+    if object.GetTags ~= nil then
+        local ok, tags = pcall(function()
+            return object:GetTags()
+        end)
+        if ok and type(tags) == "table" then
+            for _, tag in pairs(tags) do
+                if tag_map[normalize_hit_notify_team_tag(tag)] == true then
+                    return true
+                end
+            end
+        end
+    end
+    if object.HasTag ~= nil then
+        for tag, _ in pairs(tag_map) do
+            local ok, has_tag = pcall(function()
+                return object:HasTag(tag)
+            end)
+            if ok and has_tag == true then
+                return true
+            end
+        end
+    end
+    local team_tag = normalize_hit_notify_team_tag(hit_notify_read_team_tag(object))
+    return team_tag ~= "" and tag_map[team_tag] == true
+end
+
+local function hit_notify_get_target(payload, hit)
+    if payload == nil then
+        return nil
+    end
+    if payload.target ~= nil then
+        return payload.target
+    end
+    if type(payload.payload) == "table" and payload.payload.target ~= nil then
+        return payload.payload.target
+    end
+    if hit ~= nil and hit.HitActor ~= nil then
+        return hit.HitActor
+    end
+    return nil
+end
+
+function UIManager:IsFriendlyHitNotification(payload)
+    if payload == nil then
+        return false
+    end
+    local hit = self:GetHitNotifyHitInfo(payload)
+    local target = hit_notify_get_target(payload, hit)
+    if hit_notify_object_has_team_tag(target, HIT_NOTIFY_ENEMY_TAGS) then
+        return false
+    end
+    if hit_notify_object_has_team_tag(target, HIT_NOTIFY_FRIENDLY_TAGS) then
+        return true
+    end
+
+    if payload.friendly == true then
+        return true
+    end
+    if type(payload.payload) == "table" and payload.payload.friendly == true then
+        return true
+    end
+
+    return hit ~= nil and hit.bFriendlyTarget == true
+end
+
 function UIManager:QueueHitNotification(payload)
     if payload == nil then
         return
@@ -2897,7 +3106,12 @@ function UIManager:RenderHitNotification(payload)
 
     local hit = self:GetHitNotifyHitInfo(payload)
     local title = self:GetHitNotifyRegionAlias(hit, payload) .. " " .. self:GetHitNotifyOutcomeAlias(hit)
-    if self:IsKillHitNotification(payload) then
+    local friendly = self:IsFriendlyHitNotification(payload)
+    local killed = self:IsKillHitNotification(payload)
+    local friendly_kill = friendly and killed
+    if friendly_kill then
+        title = utf8_text(236, 149, 132, 234, 181, 176, 32, 236, 130, 172, 236, 130, 180)
+    elseif killed then
         title = title .. " " .. utf8_text(236, 178, 152, 236, 185, 152)
     end
     local distance_text = self:FormatHitNotifyDistance(hit)
@@ -2919,6 +3133,15 @@ function UIManager:RenderHitNotification(payload)
 
     self:SetElementVisible(widget, "hitNotifyPanel", true)
     self:SetElementStyle(widget, "hitNotifyPanel", "display", "block")
+    if friendly then
+        self:SetElementStyle(widget, "hitNotifyTitle", "background-color", HIT_NOTIFY_FRIENDLY_TITLE_BG)
+        self:SetElementStyle(widget, "hitNotifyTitle", "color", HIT_NOTIFY_FRIENDLY_TITLE_COLOR)
+        self:SetElementStyle(widget, "hitNotifyScore", "color", HIT_NOTIFY_FRIENDLY_SCORE_COLOR)
+    else
+        self:SetElementStyle(widget, "hitNotifyTitle", "background-color", HIT_NOTIFY_ENEMY_TITLE_BG)
+        self:SetElementStyle(widget, "hitNotifyTitle", "color", HIT_NOTIFY_ENEMY_TITLE_COLOR)
+        self:SetElementStyle(widget, "hitNotifyScore", "color", HIT_NOTIFY_ENEMY_SCORE_COLOR)
+    end
     self:SetElementAlpha(widget, "hitNotifyPanel", 1.0)
     self:SetElementAlpha(widget, "hitNotifyTitle", 1.0)
     self:SetElementVisible(widget, "hitNotifyMeta", true)
@@ -3036,6 +3259,7 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.radio_hud_suppressed = false
     self.radio_blackout_alpha = 0.0
     self.radio_subtitle_visible = false
+    self.radio_subtitle_text = ""
     self.cutscene_active = false
     self.cutscene_letterbox_alpha = 0.0
     self.cutscene_letterbox_target = 0.0

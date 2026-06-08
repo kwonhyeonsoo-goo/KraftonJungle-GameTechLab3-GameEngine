@@ -4,17 +4,33 @@ local PreInGameState = require("Management/States/PreInGameState")
 local LoadingState = require("Management/States/LoadingState")
 local InGameState = require("Management/States/InGameState")
 local VictoryState = require("Management/States/VictoryState")
+local DefeatState = require("Management/States/DefeatState")
 
 local SceneManager = {}
 SceneManager.__index = SceneManager
 
 local DEFAULT_START_STATE = GameState.Main
+local SCENE_TRANSITION_FADE_OUT_SECONDS = 0.18
+local SCENE_TRANSITION_HOLD_SECONDS = 0.04
+local SCENE_TRANSITION_FADE_IN_SECONDS = 0.22
 
 local function log(message)
     if Debug and Debug.Log then
         Debug.Log("[SceneManager] " .. message)
     else
         print("[SceneManager] " .. message)
+    end
+end
+
+local function camera_fade_out(duration)
+    if CameraManager ~= nil and CameraManager.FadeOut ~= nil then
+        CameraManager.FadeOut(duration or SCENE_TRANSITION_FADE_OUT_SECONDS)
+    end
+end
+
+local function camera_fade_in(duration)
+    if CameraManager ~= nil and CameraManager.FadeIn ~= nil then
+        CameraManager.FadeIn(duration or SCENE_TRANSITION_FADE_IN_SECONDS)
     end
 end
 
@@ -27,6 +43,7 @@ function SceneManager.new(general)
         general = general,
         current = nil,
         pending = nil,
+        transition = nil,
         guard = nil,
         start_state = DEFAULT_START_STATE,
         hud_by_state = default_huds(),
@@ -38,6 +55,8 @@ function SceneManager.new(general)
     self:RegisterState(GameState.Loading, LoadingState.new(general))
     self:RegisterState(GameState.InGame, InGameState.new(general))
     self:RegisterState(GameState.Victory, VictoryState.new(general))
+    self:RegisterState(GameState.Defeat1, DefeatState.new(general, GameState.Defeat1))
+    self:RegisterState(GameState.Defeat2, DefeatState.new(general, GameState.Defeat2))
     return self
 end
 
@@ -164,6 +183,15 @@ function SceneManager:RequestState(next_state, payload)
         return false
     end
 
+    if self.transition ~= nil then
+        self.pending = {
+            to = next_state,
+            payload = payload or {}
+        }
+        log("queued transition after active fade " .. tostring(self.current) .. " -> " .. tostring(next_state))
+        return true
+    end
+
     self.pending = {
         to = next_state,
         payload = payload or {}
@@ -173,15 +201,86 @@ function SceneManager:RequestState(next_state, payload)
 end
 
 function SceneManager:Tick(dt)
-    if self.pending ~= nil then
+    dt = dt or 0.0
+
+    if self.transition ~= nil then
+        self:TickTransition(dt)
+    end
+
+    if self.transition == nil and self.pending ~= nil then
         local request = self.pending
         self.pending = nil
-        self:ApplyState(request.to, request.payload)
+        self:BeginStateTransition(request.to, request.payload)
     end
 
     local state_object = self:GetStateObject(self.current)
     if state_object ~= nil and state_object.Tick ~= nil then
-        state_object:Tick(dt or 0.0)
+        state_object:Tick(dt)
+    end
+end
+
+function SceneManager:BeginStateTransition(next_state, payload)
+    if self.current == next_state then
+        self:PublishHUDForState(next_state, payload)
+        return true
+    end
+
+    if self.guard ~= nil then
+        local ok, allowed = pcall(self.guard, self.current, next_state, payload)
+        if not ok or allowed == false then
+            self.general:Publish("scene.rejected", { from = self.current, to = next_state, payload = payload })
+            return false
+        end
+    end
+
+    self.transition = {
+        to = next_state,
+        payload = payload or {},
+        phase = "fade_out",
+        time = 0.0
+    }
+    self.general:Publish("scene.transition_started", {
+        from = self.current,
+        to = next_state,
+        payload = payload,
+        fade_out = SCENE_TRANSITION_FADE_OUT_SECONDS,
+        fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
+    })
+    camera_fade_out(SCENE_TRANSITION_FADE_OUT_SECONDS)
+    log("begin fade transition " .. tostring(self.current) .. " -> " .. tostring(next_state))
+    return true
+end
+
+function SceneManager:TickTransition(dt)
+    local transition = self.transition
+    if transition == nil then
+        return
+    end
+
+    transition.time = (transition.time or 0.0) + math.max(0.0, dt or 0.0)
+    if transition.phase == "fade_out" then
+        if transition.time < SCENE_TRANSITION_FADE_OUT_SECONDS + SCENE_TRANSITION_HOLD_SECONDS then
+            return
+        end
+
+        self:ApplyStateImmediate(transition.to, transition.payload)
+        transition.phase = "fade_in"
+        transition.time = 0.0
+        camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+        self.general:Publish("scene.transition_revealing", {
+            to = transition.to,
+            payload = transition.payload,
+            fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
+        })
+        return
+    end
+
+    if transition.phase == "fade_in" and transition.time >= SCENE_TRANSITION_FADE_IN_SECONDS then
+        self.general:Publish("scene.transition_finished", {
+            to = transition.to,
+            payload = transition.payload
+        })
+        self.transition = nil
     end
 end
 
@@ -203,19 +302,11 @@ function SceneManager:EmitEntered(from, next_state, payload)
     self:PublishHUDForState(next_state, payload)
 end
 
-function SceneManager:ApplyState(next_state, payload)
+function SceneManager:ApplyStateImmediate(next_state, payload)
     local from = self.current
     if from == next_state then
         self:PublishHUDForState(next_state, payload)
         return true
-    end
-
-    if self.guard ~= nil then
-        local ok, allowed = pcall(self.guard, from, next_state, payload)
-        if not ok or allowed == false then
-            self.general:Publish("scene.rejected", { from = from, to = next_state, payload = payload })
-            return false
-        end
     end
 
     self.general:Publish("scene.exiting", { from = from, to = next_state, payload = payload })
@@ -227,6 +318,10 @@ function SceneManager:ApplyState(next_state, payload)
     self:EnterState(from, next_state, payload)
     self:EmitEntered(from, next_state, payload)
     return true
+end
+
+function SceneManager:ApplyState(next_state, payload)
+    return self:BeginStateTransition(next_state, payload)
 end
 
 return SceneManager
