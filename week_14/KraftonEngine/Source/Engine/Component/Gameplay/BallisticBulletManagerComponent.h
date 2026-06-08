@@ -93,6 +93,8 @@ private:
 	int32 MaxBallisticSubsteps = 2;
 	UPROPERTY(Edit, Save, Category="Sniper|Simulation")
 	float MaxBallisticSubstepDeltaTime = 1.0f / 120.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Simulation", DisplayName="Crosswind Influence Multiplier", Min=0.0f, Max=5.0f, Speed=0.05f)
+	float CrosswindInfluenceMultiplier = 1.85f;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
 	bool bEnablePreciseCharacterHitQuery = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")

@@ -572,7 +572,17 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	Bullet.PreviousPosition = Bullet.Position;
 
 	const FVector GravityAcceleration = WorldGravity * Bullet.GravityScale * SniperDebugGravityMultiplier;
-	const FVector WindDriftAcceleration = AppliedWindAcceleration * Bullet.WindInfluenceScale;
+	FVector WindDriftAcceleration = AppliedWindAcceleration * Bullet.WindInfluenceScale;
+	if (!AppliedWindAcceleration.IsNearlyZero() && !Bullet.Velocity.IsNearlyZero())
+	{
+		const FVector BulletDirection = Bullet.Velocity.Normalized();
+		const FVector ParallelWindAcceleration = BulletDirection * AppliedWindAcceleration.Dot(BulletDirection);
+		const FVector CrosswindAcceleration = AppliedWindAcceleration - ParallelWindAcceleration;
+		WindDriftAcceleration =
+			(ParallelWindAcceleration + CrosswindAcceleration * (std::max)(0.0f, CrosswindInfluenceMultiplier))
+			* Bullet.WindInfluenceScale;
+	}
+
 	const FVector DragAcceleration = ComputeBallisticDragAcceleration(Bullet);
 	const FVector TotalAcceleration = GravityAcceleration + WindDriftAcceleration + DragAcceleration;
 	Bullet.Position += Bullet.Velocity * DeltaTime + TotalAcceleration * (0.5f * DeltaTime * DeltaTime);
