@@ -159,6 +159,15 @@ local function force_scope_released()
     end
 end
 
+local function disable_sniper_killcam_shockwave()
+    if SniperKillCam ~= nil and SniperKillCam.EnableShockWave ~= nil then
+        SniperKillCam.EnableShockWave(false)
+    end
+    if CameraManager ~= nil and CameraManager.ClearShockWaves ~= nil then
+        CameraManager.ClearShockWaves()
+    end
+end
+
 local function get_raw_delta_time(fallback)
     if Time ~= nil and Time.RawDeltaTime ~= nil then
         local raw = tonumber(Time.RawDeltaTime()) or 0.0
@@ -1095,6 +1104,10 @@ local function apply_sniper_killcam_post_impact(current)
     local impact_time = tonumber(current.impact_time) or 0.0
     local elapsed = tonumber(current.elapsed) or 0.0
     local alpha = clamp01((elapsed - impact_time) / post_seconds)
+    if elapsed >= impact_time and current.shockwave_disabled_after_impact ~= true then
+        current.shockwave_disabled_after_impact = true
+        disable_sniper_killcam_shockwave()
+    end
     if alpha <= 0.0 then
         return
     end
@@ -1109,6 +1122,9 @@ local function apply_sniper_killcam_post_impact(current)
         CameraRailAlphaOverride = 1.0,
         LookRailAlphaOverride = 1.0,
         BulletRailAlphaOverride = 1.0,
+        bEnableShockWave = 0.0,
+        ShockWaveStrength = 0.0,
+        ShockWaveStartStrengthBoost = 0.0,
         BulletForwardOffset = impact_bullet_forward_offset + SNIPER_KILLCAM_POST_IMPACT_FORWARD_DISTANCE * eased,
         BulletScaleMultiplier = SNIPER_KILLCAM_IMPACT_BULLET_SCALE
     })
@@ -1146,6 +1162,7 @@ function CutSceneManager:Initialize()
             current.use_raw_delta_time = true
             current.previous_time_dilation = get_time_dilation()
             current.previous_world_paused = is_world_paused()
+            current.shockwave_disabled_after_impact = false
             current.impact_time = math.max(0.0, travel_duration)
             current.impact_bullet_forward_offset = nil
             force_scope_released()
@@ -1231,6 +1248,7 @@ function CutSceneManager:Initialize()
                 set_world_paused(false)
             end
             current.previous_world_paused = nil
+            disable_sniper_killcam_shockwave()
             force_scope_released()
             if self.general ~= nil and self.general.Publish ~= nil then
                 self.general:Publish("cutscene.presentation", {

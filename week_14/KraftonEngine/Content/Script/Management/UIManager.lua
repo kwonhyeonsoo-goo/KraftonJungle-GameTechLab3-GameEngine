@@ -394,6 +394,14 @@ function UIManager:Initialize()
         self:SetInGamePauseVisible(payload and payload.paused == true)
     end)
 
+    self.general:Subscribe("ingame.started", self, function(payload)
+        self:SetInGameTimer(payload)
+    end)
+
+    self.general:Subscribe("ingame.timer", self, function(payload)
+        self:SetInGameTimer(payload)
+    end)
+
     self.general:Subscribe("ingame.scope_telemetry", self, function(payload)
         self:SetScopeTelemetry(payload)
     end)
@@ -574,6 +582,10 @@ function UIManager:SetElementStyle(widget, element_id, property, value)
     call_widget(widget, "SetElementStyle", element_id, property, value)
 end
 
+function UIManager:RemoveElementStyle(widget, element_id, property)
+    call_widget(widget, "RemoveElementStyle", element_id, property)
+end
+
 function UIManager:HasElement(widget, element_id)
     if widget == nil or widget.HasElement == nil then
         return false
@@ -750,7 +762,9 @@ end
 
 function UIManager:TickMainHUD(dt)
     local widget = self:GetActiveHUDWidget()
-    self:PollMainActions(widget)
+    if not self.main_start_pending then
+        self:PollMainActions(widget)
+    end
 
     if not self.main_start_pending then
         return
@@ -795,6 +809,7 @@ function UIManager:BeginMainStartTransition()
 
     local widget = self:GetActiveHUDWidget()
     if widget ~= nil then
+        self:SetMainMenuButtonsEnabled(widget, false)
         log("Main menu fade started")
     else
         log("Game Start transition has no active HUD widget")
@@ -806,8 +821,12 @@ function UIManager:SetMainMenuButtonsEnabled(widget, enabled)
         call_widget(widget, "SetElementEnabled", element_id, enabled)
         if enabled then
             call_widget(widget, "RemoveElementAttribute", element_id, "disabled")
+            call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
+            self:RemoveElementStyle(widget, element_id, "transform")
         else
             call_widget(widget, "SetElementAttribute", element_id, "disabled", "true")
+            call_widget(widget, "RemoveElementAttribute", element_id, "data-hover-action")
+            self:SetElementStyle(widget, element_id, "transform", "scale(1.0)")
         end
     end
 end
@@ -1256,6 +1275,34 @@ function UIManager:SetBreathGroupAlpha(widget, alpha)
     end
 end
 
+function UIManager:FormatTimerSeconds(seconds)
+    seconds = math.max(0, math.ceil(tonumber(seconds) or 0.0))
+    local minutes = math.floor(seconds / 60)
+    local rest = seconds % 60
+    return string.format("%02d:%02d", minutes, rest)
+end
+
+function UIManager:SetInGameTimer(payload)
+    payload = payload or {}
+    local widget = payload.widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local remaining = payload.remaining_time
+    if remaining == nil and payload.match_duration ~= nil and payload.elapsed_time ~= nil then
+        remaining = (tonumber(payload.match_duration) or 0.0) - (tonumber(payload.elapsed_time) or 0.0)
+    elseif remaining == nil and payload.match_duration ~= nil and payload.timer ~= nil then
+        remaining = (tonumber(payload.match_duration) or 0.0) - (tonumber(payload.timer) or 0.0)
+    elseif remaining == nil then
+        remaining = 300.0
+    end
+
+    self:SetElementVisible(widget, "airSupportTimerPanel", true)
+    self:SetElementAlpha(widget, "airSupportTimerPanel", 1.0)
+    call_widget(widget, "SetText", "airSupportTimerValue", self:FormatTimerSeconds(remaining))
+end
+
 function UIManager:ConfigureInGameHUD(widget)
     self:ResetInGameHUDRuntime(true)
     self.pause_visible = false
@@ -1270,6 +1317,12 @@ function UIManager:ConfigureInGameHUD(widget)
     self:ConfigureScopeTelemetry(widget)
     self:SetElementAlpha(widget, "crosshairImage", 1.0)
     self:SetElementVisible(widget, "crosshairImage", true)
+    self:SetElementStyle(widget, "airSupportTimerLabel", "font-family", "\"Nexon\"")
+    self:SetElementStyle(widget, "airSupportTimerLabel", "font-weight", "bold")
+    self:SetElementStyle(widget, "airSupportTimerValue", "font-family", "\"Nexon\"")
+    self:SetElementStyle(widget, "airSupportTimerValue", "font-weight", "bold")
+    call_widget(widget, "SetText", "airSupportTimerLabel", "&#54637;&#44277; &#51648;&#50896; &#46020;&#52265; &#50696;&#51221;")
+    self:SetInGameTimer({ widget = widget, remaining_time = 300.0, match_duration = 300.0, elapsed_time = 0.0 })
 
     self:SetBreathGroupAlpha(widget, 0.0)
     self:SetElementVisible(widget, "breathPanel", false)
@@ -1336,6 +1389,7 @@ function UIManager:SetInGameHUDSuppressed(widget, suppressed)
     self:SetElementVisible(widget, "CompassArrow", visible)
     self:SetElementVisible(widget, "crosshairImage", visible and not self.scope_visible)
     self:SetElementVisible(widget, "scopeOverlay", visible and self.scope_visible)
+    self:SetElementVisible(widget, "airSupportTimerPanel", visible)
     self:SetElementVisible(widget, "breathPanel", visible and self.breath_visible)
     self:SetElementVisible(widget, "weaponInfoPanel", visible)
 end
