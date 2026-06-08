@@ -147,13 +147,27 @@ function EffectManager:EnsureBloodHitEffects()
     end
 
     for index = 1, BLOOD_HIT_POOL_SIZE do
-        local component = Particle.SpawnEmitterAtLocation(
+        local actor = Particle.SpawnEmitterAtLocation(
             BLOOD_HIT_PARTICLE_PATH,
             HIDDEN_LOCATION,
             Vec3(0.0, 0.0, 0.0),
+            BLOOD_HIT_SCALE,
             false)
-        if component == nil then
+        if actor == nil then
             log("failed to pre-spawn blood hit particle: " .. BLOOD_HIT_PARTICLE_PATH)
+            self:Clear()
+            return false
+        end
+
+        local component = nil
+        if actor.GetParticleSystemComponent ~= nil then
+            component = actor:GetParticleSystemComponent()
+        end
+        if component == nil then
+            log("pre-spawned blood hit particle has no component: " .. BLOOD_HIT_PARTICLE_PATH)
+            if actor.Destroy ~= nil then
+                actor:Destroy()
+            end
             self:Clear()
             return false
         end
@@ -161,7 +175,6 @@ function EffectManager:EnsureBloodHitEffects()
         component:Deactivate()
         component:ResetParticles()
 
-        local actor = component:GetOwner()
         if actor ~= nil then
             actor.Location = HIDDEN_LOCATION
             actor.Rotation = Vec3(0.0, 0.0, 0.0)
