@@ -13,10 +13,12 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/GameMode/GameplayStatics.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/World.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
+#include "Math/MathUtils.h"
 #include "Math/Quat.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Physics/IPhysicsScene.h"
@@ -53,6 +55,8 @@ namespace
 	constexpr float SniperBallisticSubstepMinDeltaTime = 1.0f / 480.0f;
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
+	constexpr const char* SniperBloodHitParticlePath = "Content/Particle System/BloodHit.uasset";
+	constexpr float SniperBloodHitSpawnOffset = 0.03f;
 
 	bool StartsWithToken(const FString& Value, const char* Prefix)
 	{
@@ -137,6 +141,64 @@ namespace
 			* MachFactor
 			* Bullet.DragScale
 			/ SafeBallisticCoefficient;
+	}
+
+	FRotator DirectionToRotator(const FVector& Direction)
+	{
+		FVector SafeDirection = Direction;
+		if (SafeDirection.IsNearlyZero())
+		{
+			SafeDirection = FVector(1.0f, 0.0f, 0.0f);
+		}
+		else
+		{
+			SafeDirection.Normalize();
+		}
+
+		constexpr float Rad2Deg = 180.0f / 3.14159265358979323846f;
+		const float Pitch = -std::asin(FMath::Clamp(SafeDirection.Z, -1.0f, 1.0f)) * Rad2Deg;
+		const float Yaw = std::atan2(SafeDirection.Y, SafeDirection.X) * Rad2Deg;
+		return FRotator(Pitch, Yaw, 0.0f);
+	}
+
+	bool ShouldSpawnBloodHitEffect(const FSniperHitInfo& HitInfo)
+	{
+		AActor* HitActor = HitInfo.HitActor;
+		if (!HitActor)
+		{
+			return false;
+		}
+
+		return HitActor->GetComponentByClass<USniperDamageReceiverComponent>() ||
+			Cast<ACombatCharacter>(HitActor) != nullptr;
+	}
+
+	void SpawnBloodHitEffect(const FSniperHitInfo& HitInfo, UWorld* World)
+	{
+		if (!World || !ShouldSpawnBloodHitEffect(HitInfo))
+		{
+			return;
+		}
+
+		FVector BloodDirection = HitInfo.ShotDirection.IsNearlyZero()
+			? HitInfo.HitNormal
+			: HitInfo.ShotDirection * -1.0f;
+		if (BloodDirection.IsNearlyZero())
+		{
+			BloodDirection = FVector(1.0f, 0.0f, 0.0f);
+		}
+		else
+		{
+			BloodDirection.Normalize();
+		}
+
+		const FVector SpawnLocation = HitInfo.HitLocation + BloodDirection * SniperBloodHitSpawnOffset;
+		FGameplayStatics::SpawnEmitterAtLocation(
+			World,
+			FString(SniperBloodHitParticlePath),
+			SpawnLocation,
+			DirectionToRotator(BloodDirection),
+			true);
 	}
 }
 
@@ -1051,6 +1113,8 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 				bUsedFallbackBone ? 1 : 0);
 		}
 	}
+
+	SpawnBloodHitEffect(HitInfo, World);
 
 	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
 	{
