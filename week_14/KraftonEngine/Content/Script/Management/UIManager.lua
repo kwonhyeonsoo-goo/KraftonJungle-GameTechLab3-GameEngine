@@ -104,6 +104,9 @@ local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
 local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
 local SCOPE_DISTANCE_TRACE_METERS = 2000.0
 local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
+local WIND_UI_MAX_CROSS_DISPLAY = 4.0
+local WIND_UI_MAX_HEAD_DISPLAY = 4.0
+local WIND_UI_SMOOTH_SPEED = 6.0
 local COMBAT_AGENT_ROW_COUNT = 5
 local COMBAT_AGENT_BAR_WIDTH = 210.0
 local HIT_NOTIFY_CENTER_X = 740.0
@@ -217,6 +220,24 @@ local function approach01(current, target, dt, speed)
     return clamp01(result)
 end
 
+local function exp_approach(current, target, dt, speed)
+    current = tonumber(current) or 0.0
+    target = tonumber(target) or 0.0
+    if math.abs(target - current) <= 0.001 then
+        return target
+    end
+    if dt == nil or dt <= 0.0 then
+        return current
+    end
+
+    local alpha = clamp01(1.0 - math.exp(-(speed or 1.0) * dt))
+    local result = current + (target - current) * alpha
+    if math.abs(target - result) <= 0.001 then
+        return target
+    end
+    return result
+end
+
 local function rgba255(color, alpha_scale)
     alpha_scale = clamp01(alpha_scale)
     local alpha = math.floor((color.a or 255) * alpha_scale + 0.5)
@@ -290,6 +311,142 @@ local function smooth_heading(current_degrees, target_degrees, dt, speed)
         alpha = 1.0 - math.exp(-speed * dt)
     end
     return normalize_degrees(current_degrees + shortest_angle_delta(current_degrees, target_degrees) * clamp01(alpha))
+end
+
+local function read_vector_xy(vector)
+    if vector == nil then
+        return 0.0, 0.0
+    end
+
+    local x = tonumber(vector.X or vector.x or 0.0) or 0.0
+    local y = tonumber(vector.Y or vector.y or 0.0) or 0.0
+    return x, y
+end
+
+local function planar_length(x, y)
+    return math.sqrt(x * x + y * y)
+end
+
+local function normalize_planar_xy(x, y)
+    local length = planar_length(x, y)
+    if length <= 0.0001 then
+        return 0.0, 0.0, 0.0
+    end
+
+    return x / length, y / length, length
+end
+
+local function get_camera_planar_forward(camera)
+    if camera == nil or camera.Forward == nil then
+        return nil
+    end
+
+    local x, y = read_vector_xy(camera.Forward)
+    local normalized_x, normalized_y, length = normalize_planar_xy(x, y)
+    if length <= 0.0001 then
+        return nil
+    end
+
+    return normalized_x, normalized_y
+end
+
+local function get_camera_planar_right(camera)
+    if camera ~= nil and camera.Right ~= nil then
+        local x, y = read_vector_xy(camera.Right)
+        local normalized_x, normalized_y, length = normalize_planar_xy(x, y)
+        if length > 0.0001 then
+            return normalized_x, normalized_y
+        end
+    end
+
+    local forward_x, forward_y = get_camera_planar_forward(camera)
+    if forward_x == nil or forward_y == nil then
+        return nil
+    end
+
+    return -forward_y, forward_x
+end
+
+local function classify_crosswind_side(value)
+    local magnitude = math.abs(tonumber(value) or 0.0)
+    if magnitude <= 0.05 then
+        return "Center"
+    end
+
+    if value > 0.0 then
+        return "Right"
+    end
+    return "Left"
+end
+
+local function classify_headwind_state(value)
+    local magnitude = math.abs(tonumber(value) or 0.0)
+    if magnitude <= 0.05 then
+        return "Neutral"
+    end
+
+    if value > 0.0 then
+        return "Head"
+    end
+    return "Tail"
+end
+
+local function classify_wind_strength(normalized_strength)
+    local normalized = clamp01(normalized_strength or 0.0)
+    if normalized < 0.10 then
+        return "Calm"
+    end
+    if normalized < 0.35 then
+        return "Light"
+    end
+    if normalized < 0.70 then
+        return "Medium"
+    end
+    return "Strong"
+end
+
+local function compute_relative_wind_snapshot(wind_vector, camera)
+    local result = {
+        wind_degrees = 0.0,
+        wind_mps = 0.0,
+        wind_cross = 0.0,
+        wind_head = 0.0,
+        wind_cross_abs = 0.0,
+        wind_head_abs = 0.0,
+        wind_cross_normalized = 0.0,
+        wind_head_normalized = 0.0,
+        wind_side = "Center",
+        wind_head_state = "Neutral",
+        wind_strength_level = "Calm"
+    }
+
+    if wind_vector == nil then
+        return result
+    end
+
+    local wind_x, wind_y = read_vector_xy(wind_vector)
+    local planar_speed = planar_length(wind_x, wind_y)
+    result.wind_mps = planar_speed
+    if planar_speed > 0.0001 then
+        result.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
+    end
+
+    local forward_x, forward_y = get_camera_planar_forward(camera)
+    local right_x, right_y = get_camera_planar_right(camera)
+    if forward_x == nil or forward_y == nil or right_x == nil or right_y == nil then
+        return result
+    end
+
+    result.wind_cross = wind_x * right_x + wind_y * right_y
+    result.wind_head = wind_x * forward_x + wind_y * forward_y
+    result.wind_cross_abs = math.abs(result.wind_cross)
+    result.wind_head_abs = math.abs(result.wind_head)
+    result.wind_cross_normalized = clamp01(result.wind_cross_abs / WIND_UI_MAX_CROSS_DISPLAY)
+    result.wind_head_normalized = clamp01(result.wind_head_abs / WIND_UI_MAX_HEAD_DISPLAY)
+    result.wind_side = classify_crosswind_side(result.wind_cross)
+    result.wind_head_state = classify_headwind_state(result.wind_head)
+    result.wind_strength_level = classify_wind_strength(result.wind_cross_normalized)
+    return result
 end
 
 local function enum_equals(value, expected)
@@ -416,6 +573,9 @@ function UIManager.new(general)
         compass_last_frame = -1,
         compass_smooth_speed = 18.0,
         smoothed_heading_degrees = nil,
+        scope_telemetry_last_update_time = nil,
+        smoothed_scope_wind_cross = 0.0,
+        smoothed_scope_wind_head = 0.0,
         sniper_pawn = nil,
         breath_visible = false,
         breath_bar_width = 288.0,
@@ -1769,6 +1929,15 @@ function UIManager:GetScopeTelemetrySnapshot()
         wind_text = "000 deg  0.0 m/s",
         wind_degrees = 0.0,
         wind_mps = 0.0,
+        wind_cross = 0.0,
+        wind_head = 0.0,
+        wind_cross_abs = 0.0,
+        wind_head_abs = 0.0,
+        wind_cross_normalized = 0.0,
+        wind_head_normalized = 0.0,
+        wind_side = "Center",
+        wind_head_state = "Neutral",
+        wind_strength_level = "Calm",
         zoom_text = "4x",
         zoom_multiplier = 4.0,
         zoom_min = 4.0,
@@ -1776,6 +1945,7 @@ function UIManager:GetScopeTelemetrySnapshot()
     }
 
     local pawn = self:GetSniperPawn()
+    local scope_camera = nil
     if pawn ~= nil then
         local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
         local min_zoom = read_float_method(pawn, { "GetMinScopeZoomMagnification" })
@@ -1804,6 +1974,7 @@ function UIManager:GetScopeTelemetrySnapshot()
                 return pawn:GetCamera()
             end)
             if ok_camera and camera ~= nil then
+                scope_camera = camera
                 local ok_trace, trace_result = pcall(function()
                     local trace_start = nil
                     if camera.GetLocation ~= nil then
@@ -1872,15 +2043,46 @@ function UIManager:GetScopeTelemetrySnapshot()
         end
     end
 
-    if wind_enabled and current_wind ~= nil then
-        local wind_x = tonumber(current_wind.X or current_wind.x or 0.0) or 0.0
-        local wind_y = tonumber(current_wind.Y or current_wind.y or 0.0) or 0.0
-        local planar_wind_speed = math.sqrt(wind_x * wind_x + wind_y * wind_y)
-        if planar_wind_speed > 0.0001 then
-            snapshot.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
-            snapshot.wind_mps = planar_wind_speed
-        end
+    local relative_wind = nil
+    if wind_enabled then
+        relative_wind = compute_relative_wind_snapshot(current_wind, scope_camera)
+    else
+        relative_wind = compute_relative_wind_snapshot(nil, scope_camera)
     end
+
+    local current_time = self:GetWorldTimeSeconds()
+    local telemetry_dt = 0.0
+    if type(self.scope_telemetry_last_update_time) == "number" then
+        telemetry_dt = math.max(0.0, current_time - self.scope_telemetry_last_update_time)
+    end
+    self.scope_telemetry_last_update_time = current_time
+
+    self.smoothed_scope_wind_cross = exp_approach(
+        self.smoothed_scope_wind_cross,
+        relative_wind.wind_cross,
+        telemetry_dt,
+        WIND_UI_SMOOTH_SPEED)
+    self.smoothed_scope_wind_head = exp_approach(
+        self.smoothed_scope_wind_head,
+        relative_wind.wind_head,
+        telemetry_dt,
+        WIND_UI_SMOOTH_SPEED)
+
+    snapshot.wind_degrees = relative_wind.wind_degrees
+    snapshot.wind_mps = relative_wind.wind_mps
+    snapshot.wind_cross = self.smoothed_scope_wind_cross
+    snapshot.wind_head = self.smoothed_scope_wind_head
+    snapshot.wind_cross_abs = math.abs(snapshot.wind_cross)
+    snapshot.wind_head_abs = math.abs(snapshot.wind_head)
+    snapshot.wind_cross_normalized = clamp01(snapshot.wind_cross_abs / WIND_UI_MAX_CROSS_DISPLAY)
+    snapshot.wind_head_normalized = clamp01(snapshot.wind_head_abs / WIND_UI_MAX_HEAD_DISPLAY)
+    snapshot.wind_side = classify_crosswind_side(snapshot.wind_cross)
+    snapshot.wind_head_state = classify_headwind_state(snapshot.wind_head)
+    snapshot.wind_strength_level = classify_wind_strength(snapshot.wind_cross_normalized)
+    snapshot.wind_text = string.format(
+        "%s %.2f",
+        snapshot.wind_side,
+        snapshot.wind_cross_abs)
 
     return snapshot
 end
@@ -1900,7 +2102,19 @@ function UIManager:SetScopeTelemetry(payload)
     if type(payload.distance_meters) == "number" then
         distance_text = string.format("%dm", math.floor(payload.distance_meters + 0.5))
     end
-    if type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
+    if payload.wind_side ~= nil or payload.wind_strength_level ~= nil then
+        local side = tostring(payload.wind_side or "Center")
+        local strength = tostring(payload.wind_strength_level or "Calm")
+        if side == "Left" then
+            wind_direction_text = "LEFT"
+        elseif side == "Right" then
+            wind_direction_text = "RIGHT"
+        else
+            wind_direction_text = "CALM"
+        end
+        wind_speed_text = string.upper(strength)
+        wind_text = wind_direction_text .. "  " .. wind_speed_text
+    elseif type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
         wind_direction_text = string.format("%03d deg", math.floor(payload.wind_degrees + 0.5) % 360)
         wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
         wind_text = wind_direction_text .. "  " .. wind_speed_text
@@ -2163,6 +2377,9 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.scope_distance_last_valid_time = -1000.0
     self.compass_last_frame = -1
     self.smoothed_heading_degrees = nil
+    self.scope_telemetry_last_update_time = nil
+    self.smoothed_scope_wind_cross = 0.0
+    self.smoothed_scope_wind_head = 0.0
     self.breath_visible = false
     self.breath_last_width = -1.0
     self.breath_hide_time_remaining = 0.0
