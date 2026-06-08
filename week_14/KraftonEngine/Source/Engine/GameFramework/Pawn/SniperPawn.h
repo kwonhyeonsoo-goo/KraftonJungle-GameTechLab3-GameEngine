@@ -37,6 +37,8 @@ public:
 	UBallisticBulletManagerComponent* GetBallisticBulletManagerComponent() const { return BulletManagerComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsScoped() const { return ScopeState.bIsScoped; }
+	UFUNCTION(Callable, Category="Sniper|State")
+	void ForceScopeReleased();
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetScopeBlendAlpha() const;
 	UFUNCTION(Pure, Category="Sniper|State")
@@ -58,6 +60,10 @@ public:
 
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathInputHeld() const { return InputState.bHoldBreathHeld; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsHoldBreathRecovering() const { return AimSwayState.bForcedRecovery; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsHoldBreathReleaseRequired() const { return AimSwayState.bRequireHoldBreathRelease; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetHoldBreathDuration() const
 	{
@@ -114,6 +120,10 @@ public:
 
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Radius", Min=0.01f, Max=1.0f, Speed=0.01f)
 	float ScopeLensRadius = 0.688889f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Center X", Min=0.0f, Max=1.0f, Speed=0.001f)
+	float ScopeLensCenterX = 0.5f;
+	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Center Y", Min=0.0f, Max=1.0f, Speed=0.001f)
+	float ScopeLensCenterY = 0.5f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Feather", Min=0.001f, Max=0.5f, Speed=0.01f)
 	float ScopeLensFeather = 0.08f;
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Outer Blur Radius", Min=0.0f, Max=32.0f, Speed=0.1f)

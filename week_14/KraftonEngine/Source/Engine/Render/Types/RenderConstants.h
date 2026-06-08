@@ -340,7 +340,26 @@ struct FScopeLensConstants
 	float EdgeBlurRadius;
 	float Intensity;
 	float AspectRatio;
+	float CenterX;
+	float CenterY;
 	float CenterOffset[2];
+};
+
+static constexpr uint32 MAX_CAMERA_SHOCK_WAVES = 4;
+
+struct FCameraShockWaveGPU
+{
+	FVector4 CenterAndRadius;
+	FVector4 DirectionAndStrength;
+	FVector4 FalloffAgeDuration;
+};
+
+struct FCameraShockWaveConstants
+{
+	uint32 Count = 0;
+	FVector2 InvViewportSize = FVector2(1.0f, 1.0f);
+	float _pad = 0.0f;
+	FCameraShockWaveGPU Waves[MAX_CAMERA_SHOCK_WAVES];
 };
 
 // ============================================================

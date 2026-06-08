@@ -21,6 +21,7 @@ class FEditorViewportClient;
 class FOverlayStatSystem;
 class AActor;
 class UGameViewportClient;
+class UActorSequenceComponent;
 class IEditorPreviewViewportClient;
 struct FPerspectiveCameraData;
 
@@ -60,6 +61,7 @@ public:
 	bool IsSceneDirty() const;
 	void RefreshContentBrowser() { MainPanel.RefreshContentBrowser(); }
 	void OpenAssetEditorForObject(UObject* Object) { MainPanel.OpenAssetEditorForObject(Object); }
+	void OpenLevelActorSequencer(UActorSequenceComponent* SequenceComp) { MainPanel.OpenLevelActorSequencer(SequenceComp); }
 	void OpenRuntimeUIPreviewDocument(const FString& DocumentPath) { MainPanel.OpenRuntimeUIPreviewDocument(DocumentPath); }
 	void SetContentBrowserIconSize(float Size) { MainPanel.SetContentBrowserIconSize(Size); }
 	float GetContentBrowserIconSize() const { return MainPanel.GetContentBrowserIconSize(); }

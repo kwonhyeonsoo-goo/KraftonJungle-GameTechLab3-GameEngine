@@ -81,16 +81,34 @@ namespace
         return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
     }
 
+    uint32 GetPhysicsAssetSelfCollisionGroup(const USkeletalMeshComponent* Component)
+    {
+        if (!Component)
+        {
+            return 0;
+        }
+
+        const uint32 ComponentId = Component->GetUUID();
+        if (ComponentId != 0)
+        {
+            return ComponentId;
+        }
+
+        return Component->GetOwner() ? Component->GetOwner()->GetUUID() : 0;
+    }
+
     void FillShapeFilterDataFromComponent(
         FPhysicsFilterData& OutFilterData,
         const USkeletalMeshComponent* Component,
         bool bForceQueryAndPhysicsCollision,
+        bool bDisableSelfCollision,
         bool bUseIndependentRagdollCollision,
         ECollisionEnabled IndependentCollisionEnabled,
         bool bIndependentGenerateOverlapEvents,
         bool bIsPartialRagdollBody,
         bool bSuppressSameActorPrimitiveCollisionForPartial,
-        bool bSuppressSameActorPrimitiveOverlapForPartial)
+        bool bSuppressSameActorPrimitiveOverlapForPartial,
+        bool bSuppressSameActorRagdollBodyCollision)
     {
         if (!Component)
         {
@@ -100,13 +118,11 @@ namespace
         OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
-        // Keep ragdoll-vs-ragdoll self-collision decisions at the PhysicsAsset constraint
-        // layer, but still stamp the owning actor so filter policy can reject ragdoll
-        // body vs same-actor character primitive pairs.
-        OutFilterData.IgnoreGroup =
-            (bUseIndependentRagdollCollision && Component->GetOwner())
+        OutFilterData.IgnoreGroup = bDisableSelfCollision
+            ? GetPhysicsAssetSelfCollisionGroup(Component)
+            : ((bUseIndependentRagdollCollision && Component->GetOwner())
                 ? Component->GetOwner()->GetUUID()
-                : 0;
+                : 0);
         OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
             ? IndependentCollisionEnabled
             : (bForceQueryAndPhysicsCollision
@@ -119,6 +135,7 @@ namespace
             : (bForceQueryAndPhysicsCollision
                 ? false
                 : Component->GetGenerateOverlapEvents());
+        OutFilterData.bIgnoreSameActor = bDisableSelfCollision;
         OutFilterData.bIsIndependentRagdoll = bUseIndependentRagdollCollision;
         OutFilterData.bIsPartialRagdoll = bIsPartialRagdollBody;
         OutFilterData.CollisionRole = bIsPartialRagdollBody
@@ -134,6 +151,9 @@ namespace
             (!bIsPartialRagdollBody ||
                 bSuppressSameActorPrimitiveCollisionForPartial ||
                 bSuppressSameActorPrimitiveOverlapForPartial);
+        OutFilterData.bSuppressSameActorRagdollPairs =
+            bSuppressSameActorRagdollBodyCollision &&
+            (bUseIndependentRagdollCollision || bIsPartialRagdollBody);
         OutFilterData.GameplayOverlapOwnership =
             GetDefaultGameplayOverlapOwnershipForRole(OutFilterData.CollisionRole);
 
@@ -178,12 +198,14 @@ namespace
                 ShapeDesc.FilterData,
                 OwnerComponent,
                 Options.bForceQueryAndPhysicsCollision,
+                Options.bDisableSelfCollision,
                 Options.bUseIndependentRagdollCollision,
                 Options.IndependentCollisionEnabled,
                 Options.bIndependentGenerateOverlapEvents,
                 Options.bPartialSimulation,
                 Options.bSuppressSameActorPrimitiveCollisionForPartial,
-                Options.bSuppressSameActorPrimitiveOverlapForPartial);
+                Options.bSuppressSameActorPrimitiveOverlapForPartial,
+                Options.bSuppressSameActorRagdollBodyCollision);
             ShapeDesc.FilterData.bEnableCCD = BodySetup.bEnableCCD;
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
@@ -413,15 +435,20 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
 
-    const bool bStrictPartialSimulation = Options.bPartialSimulation;
-    const bool bRestrictSimulationScope = Options.bPartialSimulation || Options.bSelectedOnly;
+    FPhysicsAssetSimulationOptions EffectiveOptions = Options;
+    EffectiveOptions.bSuppressSameActorRagdollBodyCollision =
+        EffectiveOptions.bSuppressSameActorRagdollBodyCollision ||
+        Asset->ShouldDisableSameActorRagdollBodyCollision();
+
+    const bool bStrictPartialSimulation = EffectiveOptions.bPartialSimulation;
+    const bool bRestrictSimulationScope = EffectiveOptions.bPartialSimulation || EffectiveOptions.bSelectedOnly;
     const FName ScopeRootBoneName =
-        Options.bPartialSimulation
-            ? Options.PartialRootBoneName
-            : Options.SelectedBoneName;
+        EffectiveOptions.bPartialSimulation
+            ? EffectiveOptions.PartialRootBoneName
+            : EffectiveOptions.SelectedBoneName;
     const bool bIncludeScopeDescendants =
-        Options.bPartialSimulation
-            ? Options.bIncludePartialDescendants
+        EffectiveOptions.bPartialSimulation
+            ? EffectiveOptions.bIncludePartialDescendants
             : true;
 
     TArray<uint8> SimulatedBodyMask;
@@ -471,9 +498,9 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
     }
     ResetRuntimeState();
     const bool bRequestedPartialSameActorPrimitiveSuppression =
-        Options.bPartialSimulation &&
-        (Options.bSuppressSameActorPrimitiveCollisionForPartial ||
-            Options.bSuppressSameActorPrimitiveOverlapForPartial);
+        EffectiveOptions.bPartialSimulation &&
+        (EffectiveOptions.bSuppressSameActorPrimitiveCollisionForPartial ||
+            EffectiveOptions.bSuppressSameActorPrimitiveOverlapForPartial);
 
     int32 CreatedBodyCount = 0;
     int32 CreatedConstraintCount = 0;
@@ -500,7 +527,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
                 Owner,
                 BodySetup,
                 BoneWorldTransform,
-                Options,
+                EffectiveOptions,
                 BodyDesc))
         {
             UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",
@@ -518,17 +545,17 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
             continue;
         }
 
-        if (Options.bCreateKinematicQueryOnlyBodies)
+        if (EffectiveOptions.bCreateKinematicQueryOnlyBodies)
         {
             BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
             BodyDesc.bEnableGravity = false;
         }
-        else if (Options.bSelectedOnly && !Options.bPartialSimulation && !bSimulateThisBody)
+        else if (EffectiveOptions.bSelectedOnly && !EffectiveOptions.bPartialSimulation && !bSimulateThisBody)
         {
             BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
             BodyDesc.bEnableGravity = false;
         }
-        else if (Options.bNoGravity)
+        else if (EffectiveOptions.bNoGravity)
         {
             BodyDesc.bEnableGravity = false;
         }
@@ -567,7 +594,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
                 continue;
             }
         }
-        else if (Options.bSelectedOnly)
+        else if (EffectiveOptions.bSelectedOnly)
         {
             const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
             const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
@@ -624,7 +651,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         Owner->GetName().c_str(),
         CreatedBodyCount,
         CreatedConstraintCount,
-        Options.bPartialSimulation ? "true" : "false",
+        EffectiveOptions.bPartialSimulation ? "true" : "false",
         ScopeRootBoneName.ToString().c_str(),
         bPartialSameActorPrimitiveSuppressionActive ? "true" : "false");
 

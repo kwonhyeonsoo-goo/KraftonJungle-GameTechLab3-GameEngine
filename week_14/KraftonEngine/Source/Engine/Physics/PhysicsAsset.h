@@ -96,9 +96,11 @@ public:
     FPhysicsAssetConstraintSetup* FindMutableConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName);
     TArray<const FPhysicsAssetConstraintSetup*> FindConstraintSetupsForBone(const FName& BoneName) const;
     EEditorSetupState GetConstraintSetupEditorState(int32 ConstraintIndex) const;
+    bool ShouldDisableSameActorRagdollBodyCollision() const { return bDisableSameActorRagdollBodyCollision; }
+    void SetDisableSameActorRagdollBodyCollision(bool bInDisable) { bDisableSameActorRagdollBodyCollision = bInDisable; }
 
 private:
-    void SerializePayload(FArchive& Ar, bool bUseStringConstraintNames);
+    void SerializePayload(FArchive& Ar, bool bUseStringConstraintNames, uint32 PackageVersion);
     void SerializeConstraintSetups(FArchive& Ar, bool bUseStringConstraintNames);
 
 private:
@@ -107,4 +109,5 @@ private:
     FSkeletonBinding SkeletonBinding;
     TArray<FPhysicsAssetBodySetup> BodySetups;
     TArray<FPhysicsAssetConstraintSetup> ConstraintSetups;
+    bool bDisableSameActorRagdollBodyCollision = false;
 };

@@ -903,6 +903,7 @@ void UEditorEngine::EndPlayMap()
 	}
 
 	UUIManager::Get().ClearViewport();
+	FAudioManager::Get().StopAllSounds();
 
 	// PIE WorldContext 제거 전에 require 캐시/코루틴/registry 의 월드 참조를 먼저 끊는다.
 	// DestroyWorldContext 중 Lua EndPlay 가 돌 수 있으므로 stale UObject 를 들고 있는 Lua 전역 상태를 선제 정리한다.

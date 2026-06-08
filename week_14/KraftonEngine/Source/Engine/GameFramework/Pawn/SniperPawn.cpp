@@ -5,6 +5,7 @@
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/SceneComponent.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "Math/MathUtils.h"
@@ -51,6 +52,11 @@ namespace
 	{
 		const float Alpha = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
 		return MinValue + (MaxValue - MinValue) * Alpha;
+	}
+
+	bool IsSniperKillCamPlaying(const AActor* Actor)
+	{
+		return Actor && ASniperKillCamDirector::IsPlayingInWorld(Actor->GetWorld());
 	}
 }
 
@@ -167,6 +173,11 @@ void ASniperPawn::Tick(float DeltaTime)
 {
 	APawn::Tick(DeltaTime);
 
+	if (IsSniperKillCamPlaying(this))
+	{
+		ForceScopeReleased();
+	}
+
 	UpdateScopeState(DeltaTime);
 	UpdateHoldBreathState(DeltaTime);
 	UpdateAimSwayState(DeltaTime);
@@ -269,6 +280,8 @@ void ASniperPawn::SyncSniperRuntimeState()
 				ScopeLensIntensity,
 				ScopeState.CurrentSensitivity,
 				ScopeLensBlendTime,
+				ScopeLensCenterX,
+				ScopeLensCenterY,
 				ScopeLensCenterOffsetX,
 				ScopeLensCenterOffsetY);
 			CameraManager->SetScopeZoomEnabled(false);
@@ -322,6 +335,8 @@ void ASniperPawn::UpdateScopeState(float DeltaTime)
 				ScopeLensIntensity,
 				ScopeState.CurrentSensitivity,
 				ScopeLensBlendTime,
+				ScopeLensCenterX,
+				ScopeLensCenterY,
 				ScopeLensCenterOffsetX,
 				ScopeLensCenterOffsetY);
 			CameraManager->SetScopeZoomEnabled(ScopeState.bIsScoped);
@@ -460,6 +475,32 @@ float ASniperPawn::GetScopeBlendAlpha() const
 	return ComputeScopeAlpha(ScopeState);
 }
 
+void ASniperPawn::ForceScopeReleased()
+{
+	InputState.bScopeHeld = false;
+	InputState.bHoldBreathHeld = false;
+	ScopeState.bIsScoped = false;
+	ScopeState.TargetFOV = ScopeState.NormalFOV;
+	ScopeState.CurrentFOV = ScopeState.NormalFOV;
+	ScopeState.CurrentSensitivity = ScopeState.NormalSensitivity;
+	AimSwayState.BreathMultiplier = 1.0f;
+	AimSwayState.bRequireHoldBreathRelease = false;
+
+	if (Camera)
+	{
+		Camera->SetFOV(ScopeState.NormalFOV);
+	}
+
+	if (APlayerController* PC = GetController())
+	{
+		if (APlayerCameraManager* CameraManager = PC->GetPlayerCameraManager())
+		{
+			CameraManager->SetScopeZoomEnabled(false);
+			CameraManager->ClearScopeLens();
+		}
+	}
+}
+
 bool ASniperPawn::IsHoldBreathActive() const
 {
 	return ScopeState.bIsScoped
@@ -581,6 +622,12 @@ void ASniperPawn::HandleScopeZoomAxis(float Value)
 
 void ASniperPawn::HandleScopePressed()
 {
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bScopeHeld = false;
+		return;
+	}
+
 	InputState.bScopeHeld = true;
 }
 
@@ -591,6 +638,12 @@ void ASniperPawn::HandleScopeReleased()
 
 void ASniperPawn::HandleHoldBreathPressed()
 {
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bHoldBreathHeld = false;
+		return;
+	}
+
 	InputState.bHoldBreathHeld = true;
 }
 

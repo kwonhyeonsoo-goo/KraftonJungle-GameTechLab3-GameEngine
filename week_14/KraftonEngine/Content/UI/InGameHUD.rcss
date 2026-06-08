@@ -26,7 +26,7 @@ body {
 #compassImage {
     position: absolute;
     left: 560.000000px;
-    top: 18.000000px;
+    top: 2.000000px;
     width: 800.000000px;
     height: 50.000000px;
     box-sizing: border-box;
@@ -83,10 +83,129 @@ body {
     text-align: center;
 }
 
+#scopeTelemetryPanel {
+    position: absolute;
+    left: 490.000000px;
+    top: 340.000000px;
+    width: 330.000000px;
+    height: 230.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-family: "Nexon";
+    font-size: 24.000000px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.scope-info-row {
+    position: absolute;
+    height: 52.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-family: "Nexon";
+    font-size: 24.000000px;
+    font-weight: bold;
+    text-align: left;
+}
+
+#scopeDistanceRow {
+    left: 22.000000px;
+    top: 0.000000px;
+    width: 210.000000px;
+}
+
+#scopeWindRow {
+    left: 22.000000px;
+    top: 72.000000px;
+    width: 306.000000px;
+    height: 74.000000px;
+}
+
+#scopeZoomRow {
+    left: 22.000000px;
+    top: 152.000000px;
+    width: 150.000000px;
+}
+
+.scope-info-icon {
+    position: absolute;
+    left: 0.000000px;
+    top: 10.000000px;
+    width: 28.000000px;
+    height: 28.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 0px;
+    text-align: center;
+}
+
+.scope-info-value {
+    position: absolute;
+    left: 40.000000px;
+    top: 7.000000px;
+    width: 222.000000px;
+    height: 34.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(255, 255, 255, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-family: "Nexon";
+    font-size: 23.000000px;
+    font-weight: bold;
+    text-align: left;
+}
+
+#scopeDistanceValue {
+    width: 126.000000px;
+}
+
+#scopeWindValue {
+    top: 0.000000px;
+    width: 140.000000px;
+    height: 28.000000px;
+}
+
+#scopeWindSpeedValue {
+    top: 29.000000px;
+    width: 140.000000px;
+    height: 28.000000px;
+    font-size: 21.000000px;
+}
+
+#scopeZoomValue {
+    width: 68.000000px;
+}
+
 #CompassArrow {
     position: absolute;
     left: 948.000000px;
-    top: 76.000000px;
+    top: 60.000000px;
     width: 16.000000px;
     height: 16.000000px;
     box-sizing: border-box;
@@ -131,7 +250,7 @@ body {
     overflow: hidden;
     opacity: 0;
     background-color: rgba(0, 0, 0, 25);
-    color: rgba(236, 242, 255, 235);
+    color: rgba(236, 242, 255, 255);
     border-color: rgba(255, 255, 255, 0);
     border-width: 0px 0px 0px 0px;
     border-radius: 0px;
@@ -226,7 +345,7 @@ body {
     overflow: hidden;
     opacity: 1;
     background-color: rgba(0, 0, 0, 0);
-    color: rgba(255, 255, 255, 235);
+    color: rgba(255, 255, 255, 255);
     border-color: rgba(255, 255, 255, 0);
     border-width: 0px 0px 0px 0px;
     border-radius: 0px;
@@ -318,3 +437,372 @@ body {
     font-weight: bold;
     text-align: left;
 }
+
+#cutsceneLetterboxTop,
+#cutsceneLetterboxBottom {
+    position: absolute;
+    left: 0.000000px;
+    width: 1920.000000px;
+    height: 130.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 255);
+    color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    font-size: 0px;
+    z-index: 20;
+}
+
+#cutsceneLetterboxTop {
+    top: -130.000000px;
+}
+
+#cutsceneLetterboxBottom {
+    top: 1080.000000px;
+}
+
+#cutsceneSkipPrompt {
+    position: absolute;
+    left: 1508.000000px;
+    top: 1018.000000px;
+    width: 328.000000px;
+    height: 30.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(245, 238, 210, 255);
+    border-color: rgba(255, 255, 255, 0);
+    border-width: 0px 0px 0px 0px;
+    border-radius: 0px;
+    padding: 0px 0px 0px 0px;
+    font-size: 22.000000px;
+    font-family: "Nexon";
+    font-weight: bold;
+    text-align: right;
+    z-index: 30;
+}
+
+#pauseLayer {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 1920.000000px;
+    height: 1080.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+    font-family: "Nexon";
+    color: rgba(236, 241, 235, 255);
+}
+
+#pauseMenuPanel,
+#pauseSettingsPanel,
+#pauseControlsPanel {
+    position: absolute;
+    left: 1280.000000px;
+    top: 184.000000px;
+    width: 470.000000px;
+    height: 640.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 1px;
+    padding: 0px;
+}
+
+#pauseTitle,
+#pauseSettingsTitle,
+#pauseControlsTitle {
+    position: absolute;
+    left: 44.000000px;
+    top: 42.000000px;
+    width: 382.000000px;
+    height: 58.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    color: rgba(245, 238, 210, 255);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px 0px 1px 0px;
+    border-color: rgba(224, 205, 142, 176);
+    padding: 0px;
+    font-size: 38.000000px;
+    font-weight: 700;
+    text-align: left;
+}
+
+#btnPauseResume,
+#btnPauseMain,
+#btnPauseSettings,
+#btnPauseControls {
+    position: absolute;
+    left: 44.000000px;
+    width: 382.000000px;
+    height: 66.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    color: rgba(226, 232, 235, 255);
+    font-family: "Nexon";
+    font-size: 34.000000px;
+    font-weight: 700;
+    text-align: left;
+    transform: scale(1.0);
+    transform-origin: left center;
+}
+
+#btnPauseResume { top: 164.000000px; }
+#btnPauseMain { top: 244.000000px; }
+#btnPauseSettings { top: 324.000000px; }
+#btnPauseControls { top: 404.000000px; }
+
+#btnPauseResume:hover,
+#btnPauseMain:hover,
+#btnPauseSettings:hover,
+#btnPauseControls:hover {
+    color: rgba(255, 213, 118, 255);
+    transform: scale(1.06);
+}
+
+#btnPauseResume span,
+#btnPauseMain span,
+#btnPauseSettings span,
+#btnPauseControls span {
+    position: absolute;
+    left: 0px;
+    top: 8.000000px;
+    width: 382.000000px;
+    height: 46.000000px;
+    color: rgba(226, 232, 235, 255);
+    font-family: "Nexon";
+    font-size: 34.000000px;
+    font-weight: 700;
+    text-align: left;
+}
+
+#btnPauseResume:hover span,
+#btnPauseMain:hover span,
+#btnPauseSettings:hover span,
+#btnPauseControls:hover span {
+    color: rgba(255, 213, 118, 255);
+}
+
+#btnPauseSettingsBack,
+#btnPauseControlsBack {
+    position: absolute;
+    left: 326.000000px;
+    top: 46.000000px;
+    width: 100.000000px;
+    height: 42.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: rgba(30, 36, 39, 228);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    color: rgba(244, 239, 220, 255);
+    font-family: "Nexon";
+    font-size: 18.000000px;
+    font-weight: 700;
+    text-align: center;
+}
+
+#btnPauseSettingsBack span,
+#btnPauseControlsBack span {
+    position: absolute;
+    left: 0px;
+    top: 10.000000px;
+    width: 100.000000px;
+    height: 22.000000px;
+    color: rgba(244, 239, 220, 255);
+    text-align: center;
+}
+
+#btnPauseSettingsBack:hover,
+#btnPauseControlsBack:hover {
+    background-color: rgba(94, 78, 44, 240);
+    color: rgba(255, 223, 134, 255);
+}
+
+#pauseSettingBgmRow,
+#pauseSettingSfxRow,
+#pauseSettingZoomRow,
+#pauseSettingMouseRow {
+    position: absolute;
+    left: 44.000000px;
+    width: 382.000000px;
+    height: 76.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+}
+
+#pauseSettingBgmRow { top: 136.000000px; }
+#pauseSettingSfxRow { top: 232.000000px; }
+#pauseSettingZoomRow { top: 328.000000px; }
+#pauseSettingMouseRow { top: 424.000000px; }
+
+#pauseBgmLabel,
+#pauseSfxLabel,
+#pauseZoomLabel,
+#pauseMouseLabel {
+    position: absolute;
+    left: 22.000000px;
+    top: 23.000000px;
+    width: 190.000000px;
+    height: 30.000000px;
+    color: rgba(226, 232, 235, 255);
+    font-family: "Nexon";
+    font-size: 22.000000px;
+    font-weight: 700;
+    text-align: left;
+}
+
+#pauseBgmValue,
+#pauseSfxValue,
+#pauseMouseValue {
+    position: absolute;
+    left: 274.000000px;
+    top: 22.000000px;
+    width: 58.000000px;
+    height: 32.000000px;
+    color: rgba(255, 223, 134, 255);
+    font-family: "Nexon";
+    font-size: 22.000000px;
+    font-weight: 700;
+    text-align: center;
+}
+
+#btnPauseBgmDown,
+#btnPauseSfxDown,
+#btnPauseMouseDown,
+#btnPauseBgmUp,
+#btnPauseSfxUp,
+#btnPauseMouseUp {
+    position: absolute;
+    top: 17.000000px;
+    width: 42.000000px;
+    height: 42.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: rgba(32, 42, 43, 220);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    color: rgba(244, 239, 220, 255);
+    font-family: "Nexon";
+    font-size: 22.000000px;
+    font-weight: 700;
+    text-align: center;
+}
+
+#btnPauseBgmDown,
+#btnPauseSfxDown,
+#btnPauseMouseDown { left: 226.000000px; }
+
+#btnPauseBgmUp,
+#btnPauseSfxUp,
+#btnPauseMouseUp { left: 338.000000px; }
+
+#btnPauseBgmDown span,
+#btnPauseSfxDown span,
+#btnPauseMouseDown span,
+#btnPauseBgmUp span,
+#btnPauseSfxUp span,
+#btnPauseMouseUp span {
+    position: absolute;
+    left: 0px;
+    top: 8.000000px;
+    width: 42.000000px;
+    height: 26.000000px;
+    color: rgba(244, 239, 220, 255);
+    text-align: center;
+}
+
+#btnPauseZoomMode {
+    position: absolute;
+    left: 226.000000px;
+    top: 17.000000px;
+    width: 154.000000px;
+    height: 42.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: rgba(32, 42, 43, 220);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    color: rgba(244, 239, 220, 255);
+    font-family: "Nexon";
+    font-size: 19.000000px;
+    font-weight: 700;
+    text-align: center;
+}
+
+#pauseZoomModeValue {
+    position: absolute;
+    left: 0px;
+    top: 10.000000px;
+    width: 154.000000px;
+    height: 24.000000px;
+    color: rgba(244, 239, 220, 255);
+    text-align: center;
+}
+
+#btnPauseBgmDown:hover,
+#btnPauseSfxDown:hover,
+#btnPauseMouseDown:hover,
+#btnPauseBgmUp:hover,
+#btnPauseSfxUp:hover,
+#btnPauseMouseUp:hover,
+#btnPauseZoomMode:hover {
+    background-color: rgba(94, 78, 44, 240);
+    color: rgba(255, 223, 134, 255);
+}
+
+#pauseControlMove,
+#pauseControlAim,
+#pauseControlBreath,
+#pauseControlPause {
+    position: absolute;
+    left: 44.000000px;
+    width: 382.000000px;
+    height: 42.000000px;
+    color: rgba(226, 232, 235, 255);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 9.000000px 18.000000px 0px 18.000000px;
+    font-family: "Nexon";
+    font-size: 21.000000px;
+    font-weight: 700;
+    text-align: left;
+}
+
+#pauseControlMove { top: 146.000000px; }
+#pauseControlAim { top: 216.000000px; }
+#pauseControlBreath { top: 286.000000px; }
+#pauseControlPause { top: 356.000000px; }

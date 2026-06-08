@@ -1,4 +1,5 @@
 local GameState = require("Management/GameState")
+local LoadingTips = require("Management/LoadingTips")
 
 local UIManager = {}
 UIManager.__index = UIManager
@@ -7,7 +8,7 @@ local MAIN_HUD_MODE = "Main"
 local PRE_INGAME_HUD_MODE = "PreInGame"
 local LOADING_HUD_MODE = "Loading"
 local IN_GAME_HUD_MODE = "InGame"
-local DEFAULT_LOADING_TIP = "Tip: Hold your breath only when the shot really matters."
+local DEFAULT_LOADING_TIP = LoadingTips[1] or "Tip: Hold your breath only when the shot really matters."
 local MAIN_MENU_BUTTON_IDS = { "btnGameStart", "btnScoreBoard", "btnSettings", "btnCredits", "btnExit" }
 local MAIN_MENU_BUTTON_TEXTS = {
     { button = "btnGameStart", label = "btnGameStartLabel", text = "Game Start" },
@@ -41,6 +42,57 @@ local MAIN_BUTTON_HOVER_SFX = "SFX/ButtonHovering.mp3"
 local MAIN_BUTTON_CLICK_SFX = "SFX/ButtonClickMain.mp3"
 local MAIN_GAME_START_SFX = "SFX/ButtonClickGameStart.mp3"
 local LOADING_END_SFX = "SFX/LoadingEnd.mp3"
+local POPUP_LAYER_ID = "popupLayer"
+local POPUP_BACKDROP_ID = "popupBackdrop"
+local POPUP_IDS = {
+    Settings = "settingsPopup",
+    ScoreBoard = "scorePopup",
+    Credits = "creditsPopup"
+}
+local POPUP_BUTTON_IDS = {
+    "btnCloseSettings",
+    "btnCloseScore",
+    "btnCloseCredits",
+    "btnBgmDown",
+    "btnBgmUp",
+    "btnSfxDown",
+    "btnSfxUp",
+    "btnZoomMode",
+    "btnMouseDown",
+    "btnMouseUp"
+}
+local SCORE_ROW_COUNT = 8
+local PAUSE_LAYER_ID = "pauseLayer"
+local PAUSE_PANEL_IDS = {
+    Menu = "pauseMenuPanel",
+    Settings = "pauseSettingsPanel",
+    Controls = "pauseControlsPanel"
+}
+local PAUSE_MENU_BUTTON_IDS = {
+    "btnPauseResume",
+    "btnPauseMain",
+    "btnPauseSettings",
+    "btnPauseControls"
+}
+local PAUSE_SETTING_BUTTON_IDS = {
+    "btnPauseSettingsBack",
+    "btnPauseBgmDown",
+    "btnPauseBgmUp",
+    "btnPauseSfxDown",
+    "btnPauseSfxUp",
+    "btnPauseZoomMode",
+    "btnPauseMouseDown",
+    "btnPauseMouseUp"
+}
+local PAUSE_CONTROL_BUTTON_IDS = {
+    "btnPauseControlsBack"
+}
+local CUTSCENE_LETTERBOX_TOP_ID = "cutsceneLetterboxTop"
+local CUTSCENE_LETTERBOX_BOTTOM_ID = "cutsceneLetterboxBottom"
+local CUTSCENE_LETTERBOX_THICKNESS = 130.0
+local CUTSCENE_LETTERBOX_SCREEN_HEIGHT = 1080.0
+local CUTSCENE_LETTERBOX_ENTER_SPEED = 18.0
+local CUTSCENE_LETTERBOX_EXIT_SPEED = 14.0
 
 local function log(message)
     if Debug and Debug.Log then
@@ -70,10 +122,46 @@ local function clamp01(value)
     return value
 end
 
+local function approach01(current, target, dt, speed)
+    current = clamp01(current or 0.0)
+    target = clamp01(target or 0.0)
+    if math.abs(target - current) <= 0.001 then
+        return target
+    end
+    if dt == nil or dt <= 0.0 then
+        return current
+    end
+
+    local alpha = clamp01(1.0 - math.exp(-(speed or 1.0) * dt))
+    local result = current + (target - current) * alpha
+    if math.abs(target - result) <= 0.001 then
+        return target
+    end
+    return clamp01(result)
+end
+
 local function rgba255(color, alpha_scale)
     alpha_scale = clamp01(alpha_scale)
     local alpha = math.floor((color.a or 255) * alpha_scale + 0.5)
     return string.format("rgba(%d, %d, %d, %d)", color.r or 255, color.g or 255, color.b or 255, alpha)
+end
+
+local function random_int(min_value, max_value)
+    if Random ~= nil and Random.RandomInt ~= nil then
+        return Random.RandomInt(min_value, max_value)
+    end
+    return math.random(min_value, max_value)
+end
+
+local function select_loading_tip(payload)
+    if payload ~= nil and payload.tip ~= nil and payload.tip ~= "" then
+        return payload.tip
+    end
+    if type(LoadingTips) == "table" and #LoadingTips > 0 then
+        local index = random_int(1, #LoadingTips)
+        return LoadingTips[index] or DEFAULT_LOADING_TIP
+    end
+    return DEFAULT_LOADING_TIP
 end
 
 local function normalize_degrees(degrees)
@@ -160,6 +248,47 @@ local function read_number_method(target, method_names)
     return nil
 end
 
+local function read_float_method(target, method_names)
+    if target == nil then
+        return nil
+    end
+
+    for _, method_name in ipairs(method_names) do
+        if target[method_name] ~= nil then
+            local ok, value = pcall(function()
+                return target[method_name](target)
+            end)
+            if ok and value ~= nil then
+                local number = tonumber(value)
+                if number ~= nil then
+                    return number
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function read_bool_method(target, method_names)
+    if target == nil then
+        return false
+    end
+
+    for _, method_name in ipairs(method_names) do
+        if target[method_name] ~= nil then
+            local ok, value = pcall(function()
+                return target[method_name](target)
+            end)
+            if ok then
+                return value == true
+            end
+        end
+    end
+
+    return false
+end
+
 local function read_string_method(target, method_names)
     if target == nil then
         return nil
@@ -206,10 +335,19 @@ function UIManager.new(general)
         breath_fade_out_duration = 0.3,
         breath_fade_out_time_remaining = 0.0,
         breath_fade_elements = { "breathPanel", "breathLabel", "breathBarTrack", "breathBarFill" },
+        breath_warning_time = 0.0,
+        breath_warning_style_key = "",
         breath_missing_pawn_warned = false,
         weapon_last_name = nil,
         weapon_last_ammo_text = nil,
-        weapon_last_ammo_type = nil
+        weapon_last_ammo_type = nil,
+        cutscene_active = false,
+        cutscene_letterbox_alpha = 0.0,
+        cutscene_letterbox_target = 0.0,
+        cutscene_letterbox_last_alpha = -1.0,
+        active_popup = nil,
+        pause_visible = false,
+        pause_panel = "Menu"
     }, UIManager)
 end
 
@@ -250,6 +388,22 @@ function UIManager:Initialize()
 
     self.general:Subscribe("preingame.subtitle", self, function(payload)
         self:SetPreInGameSubtitle(payload)
+    end)
+
+    self.general:Subscribe("ingame.pause_changed", self, function(payload)
+        self:SetInGamePauseVisible(payload and payload.paused == true)
+    end)
+
+    self.general:Subscribe("ingame.scope_telemetry", self, function(payload)
+        self:SetScopeTelemetry(payload)
+    end)
+
+    self.general:Subscribe("cutscene.skip_prompt", self, function(payload)
+        self:SetCutSceneSkipPrompt(payload)
+    end)
+
+    self.general:Subscribe("cutscene.presentation", self, function(payload)
+        self:SetCutScenePresentation(payload)
     end)
 end
 
@@ -342,6 +496,9 @@ function UIManager:Clear()
     self.main_start_pending = false
     self.main_start_elapsed = 0.0
     self.main_state_requested = false
+    self.active_popup = nil
+    self.pause_visible = false
+    self.pause_panel = "Menu"
 end
 
 function UIManager:ApplySceneHUDRequest(payload)
@@ -484,6 +641,7 @@ function UIManager:ConfigureMainHUD(widget)
     self:SetMainMenuTextVisible(widget, true)
     self:SetMainMenuAlpha(widget, 1.0)
     self:SetMainMenuButtonsEnabled(widget, true)
+    self:HideAllPopups(widget)
 
     self:ConfigureMainButtonActions(widget)
     if widget ~= nil and widget.bind_click ~= nil then
@@ -499,10 +657,34 @@ function UIManager:ConfigureMainButtonActions(widget)
     end
 
     for _, element_id in ipairs(MAIN_MENU_BUTTON_IDS) do
-        local click_action = element_id == "btnGameStart" and "GameStart" or "MainButtonClick"
+        local click_action = "MainButtonClick"
+        if element_id == "btnGameStart" then
+            click_action = "GameStart"
+        elseif element_id == "btnScoreBoard" then
+            click_action = "OpenScoreBoard"
+        elseif element_id == "btnSettings" then
+            click_action = "OpenSettings"
+        elseif element_id == "btnCredits" then
+            click_action = "OpenCredits"
+        end
         call_widget(widget, "SetActionEvent", element_id, click_action)
         call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
     end
+
+    call_widget(widget, "SetActionEvent", POPUP_BACKDROP_ID, "ModalBlock")
+    for _, element_id in ipairs(POPUP_BUTTON_IDS) do
+        call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
+    end
+    call_widget(widget, "SetActionEvent", "btnCloseSettings", "ClosePopup")
+    call_widget(widget, "SetActionEvent", "btnCloseScore", "ClosePopup")
+    call_widget(widget, "SetActionEvent", "btnCloseCredits", "ClosePopup")
+    call_widget(widget, "SetActionEvent", "btnBgmDown", "BgmDown")
+    call_widget(widget, "SetActionEvent", "btnBgmUp", "BgmUp")
+    call_widget(widget, "SetActionEvent", "btnSfxDown", "SfxDown")
+    call_widget(widget, "SetActionEvent", "btnSfxUp", "SfxUp")
+    call_widget(widget, "SetActionEvent", "btnZoomMode", "ToggleZoomMode")
+    call_widget(widget, "SetActionEvent", "btnMouseDown", "MouseDown")
+    call_widget(widget, "SetActionEvent", "btnMouseUp", "MouseUp")
 end
 
 function UIManager:PlayUISFX(path, volume)
@@ -532,9 +714,33 @@ function UIManager:PollMainActions(widget)
     local hover_played = false
     for _, action in ipairs(events) do
         if action == "GameStart" or action == "StartGame" then
-            self:BeginMainStartTransition()
+            if self.active_popup == nil then
+                self:BeginMainStartTransition()
+            end
         elseif action == "MainButtonClick" then
             self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+        elseif action == "OpenSettings" then
+            self:OpenPopup("Settings")
+        elseif action == "OpenScoreBoard" then
+            self:OpenPopup("ScoreBoard")
+        elseif action == "OpenCredits" then
+            self:OpenPopup("Credits")
+        elseif action == "ClosePopup" then
+            self:ClosePopup()
+        elseif action == "BgmDown" then
+            self:AdjustSetting("bgm_volume", -0.1)
+        elseif action == "BgmUp" then
+            self:AdjustSetting("bgm_volume", 0.1)
+        elseif action == "SfxDown" then
+            self:AdjustSetting("sfx_volume", -0.1)
+        elseif action == "SfxUp" then
+            self:AdjustSetting("sfx_volume", 0.1)
+        elseif action == "ToggleZoomMode" then
+            self:ToggleZoomMode()
+        elseif action == "MouseDown" then
+            self:AdjustSetting("mouse_sensitivity", -0.1)
+        elseif action == "MouseUp" then
+            self:AdjustSetting("mouse_sensitivity", 0.1)
         elseif action == "MainButtonHover" and not hover_played then
             hover_played = true
             self:PlayUISFX(MAIN_BUTTON_HOVER_SFX, 0.8)
@@ -604,6 +810,274 @@ function UIManager:SetMainMenuButtonsEnabled(widget, enabled)
             call_widget(widget, "SetElementAttribute", element_id, "disabled", "true")
         end
     end
+end
+
+function UIManager:SetElementDisplay(widget, element_id, visible)
+    self:SetElementVisible(widget, element_id, visible)
+    self:SetElementStyle(widget, element_id, "display", visible and "block" or "none")
+    self:SetElementAlpha(widget, element_id, visible and 1.0 or 0.0)
+end
+
+function UIManager:SetCutSceneSkipPrompt(payload)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local visible = payload ~= nil and payload.visible == true
+    local text = "Press Space to Skip"
+    if payload ~= nil and payload.text ~= nil and payload.text ~= "" then
+        text = tostring(payload.text)
+    end
+
+    call_widget(widget, "SetText", "cutsceneSkipPrompt", visible and text or "")
+    self:SetElementDisplay(widget, "cutsceneSkipPrompt", visible)
+end
+
+function UIManager:ApplyCutSceneLetterbox(widget, alpha)
+    if widget == nil then
+        return
+    end
+
+    alpha = clamp01(alpha)
+    local visible = alpha > 0.001 or self.cutscene_letterbox_target > 0.001
+    local top_y = -CUTSCENE_LETTERBOX_THICKNESS + CUTSCENE_LETTERBOX_THICKNESS * alpha
+    local bottom_y = CUTSCENE_LETTERBOX_SCREEN_HEIGHT - CUTSCENE_LETTERBOX_THICKNESS * alpha
+
+    self:SetElementVisible(widget, CUTSCENE_LETTERBOX_TOP_ID, visible)
+    self:SetElementVisible(widget, CUTSCENE_LETTERBOX_BOTTOM_ID, visible)
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_TOP_ID, "display", visible and "block" or "none")
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_BOTTOM_ID, "display", visible and "block" or "none")
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_TOP_ID, "top", string.format("%.3fpx", top_y))
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_BOTTOM_ID, "top", string.format("%.3fpx", bottom_y))
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_TOP_ID, "height", string.format("%.3fpx", CUTSCENE_LETTERBOX_THICKNESS))
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_BOTTOM_ID, "height", string.format("%.3fpx", CUTSCENE_LETTERBOX_THICKNESS))
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_TOP_ID, "background-color", "rgba(0, 0, 0, 255)")
+    self:SetElementStyle(widget, CUTSCENE_LETTERBOX_BOTTOM_ID, "background-color", "rgba(0, 0, 0, 255)")
+    self:SetElementAlpha(widget, CUTSCENE_LETTERBOX_TOP_ID, visible and 1.0 or 0.0)
+    self:SetElementAlpha(widget, CUTSCENE_LETTERBOX_BOTTOM_ID, visible and 1.0 or 0.0)
+end
+
+function UIManager:SetCutSceneLetterboxTarget(widget, active)
+    self.cutscene_letterbox_target = active and 1.0 or 0.0
+    if active then
+        self:ApplyCutSceneLetterbox(widget, self.cutscene_letterbox_alpha)
+    end
+end
+
+function UIManager:TickCutSceneLetterbox(widget, dt)
+    if widget == nil then
+        return
+    end
+
+    local speed = self.cutscene_letterbox_target > self.cutscene_letterbox_alpha and
+        CUTSCENE_LETTERBOX_ENTER_SPEED or CUTSCENE_LETTERBOX_EXIT_SPEED
+    self.cutscene_letterbox_alpha = approach01(
+        self.cutscene_letterbox_alpha,
+        self.cutscene_letterbox_target,
+        dt,
+        speed)
+
+    if math.abs(self.cutscene_letterbox_alpha - self.cutscene_letterbox_last_alpha) > 0.0005 then
+        self.cutscene_letterbox_last_alpha = self.cutscene_letterbox_alpha
+        self:ApplyCutSceneLetterbox(widget, self.cutscene_letterbox_alpha)
+    end
+end
+
+function UIManager:SetCutScenePresentation(payload)
+    local active = payload ~= nil and payload.active == true
+    self.cutscene_active = active
+
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        return
+    end
+
+    self:SetCutSceneLetterboxTarget(widget, active)
+    if active then
+        self:SetInGameHUDSuppressed(widget, true)
+        self:SetElementDisplay(widget, PAUSE_LAYER_ID, false)
+    elseif not self.pause_visible then
+        self:SetInGameHUDSuppressed(widget, false)
+    end
+end
+
+function UIManager:HideAllPopups(widget)
+    widget = widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        self.active_popup = nil
+        return
+    end
+
+    self:SetElementDisplay(widget, POPUP_LAYER_ID, false)
+    for _, popup_id in pairs(POPUP_IDS) do
+        self:SetElementDisplay(widget, popup_id, false)
+    end
+    self.active_popup = nil
+    self:SetMainMenuButtonsEnabled(widget, true)
+end
+
+function UIManager:OpenPopup(popup_name)
+    local widget = self:GetActiveHUDWidget()
+    local popup_id = POPUP_IDS[popup_name]
+    if widget == nil or popup_id == nil or self.main_start_pending then
+        return
+    end
+
+    self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+    self:SetMainMenuButtonsEnabled(widget, false)
+    self:SetElementDisplay(widget, POPUP_LAYER_ID, true)
+    self:SetElementDisplay(widget, POPUP_BACKDROP_ID, true)
+
+    for name, id in pairs(POPUP_IDS) do
+        self:SetElementDisplay(widget, id, name == popup_name)
+    end
+
+    self.active_popup = popup_name
+    if popup_name == "Settings" then
+        self:RefreshSettingsPopup(widget)
+    elseif popup_name == "ScoreBoard" then
+        self:RefreshScoreBoardPopup(widget)
+    end
+end
+
+function UIManager:ClosePopup()
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil or self.active_popup == nil then
+        return
+    end
+
+    self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.9)
+    self:HideAllPopups(widget)
+end
+
+function UIManager:GetDataManager()
+    if self.general ~= nil and self.general.managers ~= nil then
+        return self.general.managers.Data
+    end
+    return nil
+end
+
+function UIManager:GetAudioManager()
+    if self.general ~= nil and self.general.managers ~= nil then
+        return self.general.managers.Audio
+    end
+    return nil
+end
+
+function UIManager:GetSettings()
+    local data = self:GetDataManager()
+    if data ~= nil and data.GetSettings ~= nil then
+        return data:GetSettings()
+    end
+    return {
+        bgm_volume = 1.0,
+        sfx_volume = 1.0,
+        zoom_toggle = true,
+        mouse_sensitivity = 1.0
+    }
+end
+
+function UIManager:SetSetting(key, value)
+    local data = self:GetDataManager()
+    if data ~= nil and data.SetSetting ~= nil then
+        data:SetSetting(key, value)
+    end
+
+    local audio = self:GetAudioManager()
+    if audio ~= nil then
+        if key == "bgm_volume" and audio.SetBGMVolume ~= nil then
+            audio:SetBGMVolume(value)
+        elseif key == "sfx_volume" and audio.SetSFXVolume ~= nil then
+            audio:SetSFXVolume(value)
+        end
+    end
+
+    self:RefreshSettingsPopup()
+end
+
+function UIManager:AdjustSetting(key, delta)
+    local settings = self:GetSettings()
+    local current = tonumber(settings[key]) or 0.0
+    local min_value = key == "mouse_sensitivity" and 0.1 or 0.0
+    local max_value = key == "mouse_sensitivity" and 5.0 or 1.0
+    local next_value = current + delta
+    if next_value < min_value then
+        next_value = min_value
+    elseif next_value > max_value then
+        next_value = max_value
+    end
+    self:SetSetting(key, next_value)
+    self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.65)
+end
+
+function UIManager:ToggleZoomMode()
+    local settings = self:GetSettings()
+    self:SetSetting("zoom_toggle", not (settings.zoom_toggle == true))
+    self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.65)
+end
+
+function UIManager:RefreshSettingsPopup(widget)
+    widget = widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local settings = self:GetSettings()
+    call_widget(widget, "SetText", "bgmValue", string.format("%d%%", math.floor((settings.bgm_volume or 1.0) * 100.0 + 0.5)))
+    call_widget(widget, "SetText", "sfxValue", string.format("%d%%", math.floor((settings.sfx_volume or 1.0) * 100.0 + 0.5)))
+    call_widget(widget, "SetText", "mouseValue", string.format("%.2fx", settings.mouse_sensitivity or 1.0))
+    call_widget(widget, "SetText", "zoomModeValue", settings.zoom_toggle and "Toggle" or "Hold")
+
+    call_widget(widget, "SetText", "pauseBgmValue", string.format("%d%%", math.floor((settings.bgm_volume or 1.0) * 100.0 + 0.5)))
+    call_widget(widget, "SetText", "pauseSfxValue", string.format("%d%%", math.floor((settings.sfx_volume or 1.0) * 100.0 + 0.5)))
+    call_widget(widget, "SetText", "pauseMouseValue", string.format("%.2fx", settings.mouse_sensitivity or 1.0))
+    call_widget(widget, "SetText", "pauseZoomModeValue", settings.zoom_toggle and "Toggle" or "Hold")
+end
+
+function UIManager:NormalizeRunResult(result)
+    local text = string.lower(tostring(result or "Unknown"))
+    if text == "victory" or text == "win" or text == "success" then
+        return "Victory"
+    end
+    if text == "defeat" or text == "lose" or text == "loss" or text == "fail" then
+        return "Defeat"
+    end
+    return tostring(result or "Unknown")
+end
+
+function UIManager:RefreshScoreBoardPopup(widget)
+    widget = widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local entries = {}
+    local data = self:GetDataManager()
+    if data ~= nil and data.GetScoreEntries ~= nil then
+        entries = data:GetScoreEntries()
+    end
+
+    if #entries <= 0 then
+        entries = {
+            { nickname = "Player", result = "Defeat", score = 0 }
+        }
+    end
+
+    for index = 1, SCORE_ROW_COUNT do
+        local entry = entries[index]
+        local visible = entry ~= nil
+        self:SetElementVisible(widget, "scoreRow" .. tostring(index), visible)
+        if visible then
+            call_widget(widget, "SetText", "scoreRank" .. tostring(index), tostring(index))
+            call_widget(widget, "SetText", "scoreName" .. tostring(index), tostring(entry.nickname or "Player"))
+            call_widget(widget, "SetText", "scoreResult" .. tostring(index), self:NormalizeRunResult(entry.result))
+            call_widget(widget, "SetText", "scoreValue" .. tostring(index), tostring(math.floor(tonumber(entry.score) or 0)))
+        end
+    end
+
+    local thumb_height = #entries > SCORE_ROW_COUNT and 96 or 406
+    self:SetElementStyle(widget, "scoreScrollThumb", "height", tostring(thumb_height) .. "px")
 end
 
 function UIManager:ConfigurePreInGameHUD(widget)
@@ -748,7 +1222,7 @@ function UIManager:ConfigureLoadingHUD(widget, payload)
     call_widget(widget, "SetBlocksGameInput", false)
 
     call_widget(widget, "SetText", "loadingTitle", "Loading")
-    call_widget(widget, "SetText", "loadingTip", payload.tip or DEFAULT_LOADING_TIP)
+    call_widget(widget, "SetText", "loadingTip", select_loading_tip(payload))
     call_widget(widget, "SetText", "pressPrompt", "Press Space to Play")
     self:SetElementAlpha(widget, "pressPrompt", 0.0)
     self:SetElementVisible(widget, "pressPrompt", false)
@@ -784,9 +1258,16 @@ end
 
 function UIManager:ConfigureInGameHUD(widget)
     self:ResetInGameHUDRuntime(true)
+    self.pause_visible = false
+    self.pause_panel = "Menu"
+
+    call_widget(widget, "SetWantsMouse", false)
+    call_widget(widget, "SetBlocksGameMouseLook", false)
+    call_widget(widget, "SetBlocksGameInput", false)
 
     self:SetElementAlpha(widget, "scopeOverlay", 0.0)
     self:SetElementVisible(widget, "scopeOverlay", false)
+    self:ConfigureScopeTelemetry(widget)
     self:SetElementAlpha(widget, "crosshairImage", 1.0)
     self:SetElementVisible(widget, "crosshairImage", true)
 
@@ -797,6 +1278,7 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementStyle(widget, "breathLabel", "color", "rgba(255, 255, 255, 255)")
     call_widget(widget, "SetText", "breathLabel", "&#49704;&#52280;&#44592;")
     self:SetElementStyle(widget, "breathBarFill", "width", "0px")
+    self:SetBreathWarning(widget, false, 0.0)
     call_widget(widget, "SetElementValue", "breathProgress", "0")
 
     self:SetElementVisible(widget, "weaponInfoPanel", true)
@@ -810,8 +1292,187 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementStyle(widget, "weaponNameLabel", "color", "rgba(255, 255, 255, 255)")
     self:SetElementStyle(widget, "ammoTypeLabel", "color", "rgba(255, 255, 255, 255)")
     self:UpdateWeaponHUD(true)
+    self:SetCutSceneSkipPrompt({ visible = false })
+    self:ApplyCutSceneLetterbox(widget, self.cutscene_letterbox_alpha)
 
     self:SetElementImage(widget, "compassImage", "Image/Hor-Compass/Window/Compass_Window_000.png")
+    self:ConfigurePauseMenuActions(widget)
+    self:SetInGamePauseVisible(false)
+end
+
+function UIManager:ConfigurePauseMenuActions(widget)
+    if widget == nil then
+        return
+    end
+
+    call_widget(widget, "SetActionEvent", "btnPauseResume", "PauseResume")
+    call_widget(widget, "SetActionEvent", "btnPauseMain", "PauseGoMain")
+    call_widget(widget, "SetActionEvent", "btnPauseSettings", "PauseOpenSettings")
+    call_widget(widget, "SetActionEvent", "btnPauseControls", "PauseOpenControls")
+    call_widget(widget, "SetActionEvent", "btnPauseSettingsBack", "PauseBackMenu")
+    call_widget(widget, "SetActionEvent", "btnPauseControlsBack", "PauseBackMenu")
+    call_widget(widget, "SetActionEvent", "btnPauseBgmDown", "BgmDown")
+    call_widget(widget, "SetActionEvent", "btnPauseBgmUp", "BgmUp")
+    call_widget(widget, "SetActionEvent", "btnPauseSfxDown", "SfxDown")
+    call_widget(widget, "SetActionEvent", "btnPauseSfxUp", "SfxUp")
+    call_widget(widget, "SetActionEvent", "btnPauseZoomMode", "ToggleZoomMode")
+    call_widget(widget, "SetActionEvent", "btnPauseMouseDown", "MouseDown")
+    call_widget(widget, "SetActionEvent", "btnPauseMouseUp", "MouseUp")
+
+    for _, element_id in ipairs(PAUSE_MENU_BUTTON_IDS) do
+        call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
+    end
+    for _, element_id in ipairs(PAUSE_SETTING_BUTTON_IDS) do
+        call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
+    end
+    for _, element_id in ipairs(PAUSE_CONTROL_BUTTON_IDS) do
+        call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
+    end
+end
+
+function UIManager:SetInGameHUDSuppressed(widget, suppressed)
+    local visible = not suppressed
+    self:SetElementVisible(widget, "compassImage", visible)
+    self:SetElementVisible(widget, "CompassArrow", visible)
+    self:SetElementVisible(widget, "crosshairImage", visible and not self.scope_visible)
+    self:SetElementVisible(widget, "scopeOverlay", visible and self.scope_visible)
+    self:SetElementVisible(widget, "breathPanel", visible and self.breath_visible)
+    self:SetElementVisible(widget, "weaponInfoPanel", visible)
+end
+
+function UIManager:SetPausePanel(panel_name)
+    self.pause_panel = panel_name or "Menu"
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    for name, element_id in pairs(PAUSE_PANEL_IDS) do
+        self:SetElementDisplay(widget, element_id, name == self.pause_panel)
+    end
+    if self.pause_panel == "Settings" then
+        self:RefreshSettingsPopup(widget)
+    end
+end
+
+function UIManager:SetInGamePauseVisible(visible)
+    if self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        return
+    end
+
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        self.pause_visible = visible
+        return
+    end
+
+    self.pause_visible = visible
+    if visible then
+        if Input ~= nil and Input.SetInputModeGameAndUI ~= nil then
+            Input.SetInputModeGameAndUI()
+        end
+        if Input ~= nil and Input.SetCursorVisible ~= nil then
+            Input.SetCursorVisible(true)
+        end
+        if Input ~= nil and Input.ReleaseMouseCapture ~= nil then
+            Input.ReleaseMouseCapture()
+        end
+        call_widget(widget, "SetWantsMouse", true)
+        call_widget(widget, "SetBlocksGameMouseLook", true)
+        call_widget(widget, "SetBlocksGameInput", false)
+        call_widget(widget, "SetBlocksGameKeyboard", false)
+        self:SetElementDisplay(widget, PAUSE_LAYER_ID, true)
+        self:SetInGameHUDSuppressed(widget, true)
+        self:SetPausePanel(self.pause_panel or "Menu")
+        self:RefreshSettingsPopup(widget)
+    else
+        if Input ~= nil and Input.SetInputModeGameOnly ~= nil then
+            Input.SetInputModeGameOnly()
+        end
+        if Input ~= nil and Input.SetCursorVisible ~= nil then
+            Input.SetCursorVisible(false)
+        end
+        if Input ~= nil and Input.SetMouseCaptured ~= nil then
+            Input.SetMouseCaptured(true)
+        end
+        call_widget(widget, "SetWantsMouse", false)
+        call_widget(widget, "SetBlocksGameMouseLook", false)
+        call_widget(widget, "SetBlocksGameInput", false)
+        call_widget(widget, "SetBlocksGameKeyboard", false)
+        self.pause_panel = "Menu"
+        self:SetElementDisplay(widget, PAUSE_LAYER_ID, false)
+        for _, element_id in pairs(PAUSE_PANEL_IDS) do
+            self:SetElementDisplay(widget, element_id, false)
+        end
+        self:SetInGameHUDSuppressed(widget, false)
+    end
+end
+
+function UIManager:ConfigureScopeTelemetry(widget)
+    if widget == nil then
+        return
+    end
+
+    self:SetScopeTelemetry({
+        widget = widget,
+        distance_text = "-- m",
+        wind_text = "000 deg  0.0 m/s",
+        zoom_text = "4x"
+    })
+end
+
+function UIManager:SetScopeTelemetry(payload)
+    payload = payload or {}
+    local widget = payload.widget or self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    local distance_text = payload.distance_text or payload.distance or "-- m"
+    local wind_text = payload.wind_text or payload.wind or "000 deg  0.0 m/s"
+    local wind_direction_text = "000 deg"
+    local wind_speed_text = "0.0 m/s"
+    local zoom_text = payload.zoom_text or payload.zoom or "4x"
+    if type(payload.distance_meters) == "number" then
+        distance_text = string.format("%dm", math.floor(payload.distance_meters + 0.5))
+    end
+    if type(payload.wind_degrees) == "number" and type(payload.wind_mps) == "number" then
+        wind_direction_text = string.format("%03d deg", math.floor(payload.wind_degrees + 0.5) % 360)
+        wind_speed_text = string.format("%.1f m/s", payload.wind_mps)
+        wind_text = wind_direction_text .. "  " .. wind_speed_text
+    else
+        local parsed_direction, parsed_speed = tostring(wind_text):match("^%s*([%+%-]?%d+%s*deg)%s+([%+%-]?[%d%.]+%s*m/s)%s*$")
+        if parsed_direction ~= nil and parsed_speed ~= nil then
+            wind_direction_text = parsed_direction
+            wind_speed_text = parsed_speed
+        else
+            wind_direction_text = tostring(wind_text)
+            wind_speed_text = ""
+        end
+    end
+    if type(payload.zoom_multiplier) == "number" then
+        local clamped_zoom = payload.zoom_multiplier
+        if clamped_zoom < 4 then
+            clamped_zoom = 4
+        elseif clamped_zoom > 32 then
+            clamped_zoom = 32
+        end
+        zoom_text = string.format("%dx", math.floor(clamped_zoom + 0.5))
+    end
+
+    local telemetry_values = {
+        scopeDistanceValue = tostring(distance_text),
+        scopeWindValue = tostring(wind_direction_text),
+        scopeWindSpeedValue = tostring(wind_speed_text),
+        scopeZoomValue = tostring(zoom_text)
+    }
+
+    for element_id, text in pairs(telemetry_values) do
+        self:SetElementStyle(widget, element_id, "font-family", "\"Nexon\"")
+        self:SetElementStyle(widget, element_id, "font-weight", "bold")
+        self:SetElementStyle(widget, element_id, "color", "rgba(255, 255, 255, 255)")
+        call_widget(widget, "SetText", element_id, text)
+    end
 end
 
 function UIManager:ResetInGameHUDRuntime(clear_pawn)
@@ -822,10 +1483,16 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.breath_last_width = -1.0
     self.breath_hide_time_remaining = 0.0
     self.breath_fade_out_time_remaining = 0.0
+    self.breath_warning_time = 0.0
+    self.breath_warning_style_key = ""
     self.breath_missing_pawn_warned = false
     self.weapon_last_name = nil
     self.weapon_last_ammo_text = nil
     self.weapon_last_ammo_type = nil
+    self.cutscene_active = false
+    self.cutscene_letterbox_alpha = 0.0
+    self.cutscene_letterbox_target = 0.0
+    self.cutscene_letterbox_last_alpha = -1.0
     if clear_pawn then
         self.sniper_pawn = nil
     end
@@ -839,7 +1506,11 @@ function UIManager:GetSniperPawn()
             end
             return true
         end)
-        if ok and is_valid and self.sniper_pawn.GetHoldBreathGaugeRatio ~= nil then
+        if ok and is_valid and (
+            self.sniper_pawn.GetHoldBreathGaugeRatio ~= nil or
+            self.sniper_pawn.GetHoldBreathGauge ~= nil or
+            self.sniper_pawn.IsHoldBreathActive ~= nil
+        ) then
             return self.sniper_pawn
         end
     end
@@ -850,7 +1521,10 @@ function UIManager:GetSniperPawn()
     end
 
     local actor = nil
-    if World.FindFirstActorByClass ~= nil then
+    if World.FindFirstSniperPawn ~= nil then
+        actor = World.FindFirstSniperPawn()
+    end
+    if actor == nil and World.FindFirstActorByClass ~= nil then
         actor = World.FindFirstActorByClass("ASniperPawn")
         if actor == nil then
             actor = World.FindFirstActorByClass("SniperPawn")
@@ -873,7 +1547,7 @@ function UIManager:GetSniperPawn()
         end
     end
 
-    if actor.GetHoldBreathGaugeRatio ~= nil then
+    if actor.GetHoldBreathGaugeRatio ~= nil or actor.GetHoldBreathGauge ~= nil or actor.IsHoldBreathActive ~= nil then
         self.sniper_pawn = actor
         return self.sniper_pawn
     end
@@ -1021,6 +1695,25 @@ function UIManager:GetScopeVisibleFromInputOrPawn()
     return Input ~= nil and Input.GetKey ~= nil and Input.GetKey("RightMouseButton") == true
 end
 
+function UIManager:GetHoldBreathGaugeRatio(pawn)
+    if pawn == nil then
+        return 0.0
+    end
+
+    local ratio = read_float_method(pawn, { "GetHoldBreathGaugeRatio" })
+    if ratio ~= nil then
+        return clamp01(ratio)
+    end
+
+    local gauge = read_float_method(pawn, { "GetHoldBreathGauge" })
+    local max_gauge = read_float_method(pawn, { "GetMaxHoldBreathGauge" })
+    if gauge ~= nil and max_gauge ~= nil and max_gauge > 0.0 then
+        return clamp01(gauge / max_gauge)
+    end
+
+    return 0.0
+end
+
 function UIManager:SetScopeHUDVisible(visible)
     local widget = self:GetActiveHUDWidget()
     if widget == nil or self.scope_visible == visible then
@@ -1055,6 +1748,38 @@ function UIManager:SetBreathBarRatio(widget, ratio)
     call_widget(widget, "SetElementValue", "breathProgress", string.format("%.3f", ratio))
 end
 
+function UIManager:SetBreathWarning(widget, warning, dt)
+    if widget == nil then
+        return
+    end
+
+    local fill_color = "rgba(255, 255, 255, 255)"
+    local track_background_color = "rgba(12, 18, 26, 220)"
+    local track_color = "rgba(236, 242, 255, 175)"
+    if warning then
+        self.breath_warning_time = (self.breath_warning_time or 0.0) + (dt or 0.0)
+        local pulse = 0.5 + 0.5 * math.sin(self.breath_warning_time * 13.0)
+        local green = math.floor(34 + 92 * (1.0 - pulse))
+        local blue = math.floor(30 + 58 * (1.0 - pulse))
+        local track_alpha = math.floor(90 + 120 * pulse)
+        fill_color = string.format("rgba(255, %d, %d, 255)", green, blue)
+        track_background_color = string.format("rgba(120, %d, %d, %d)", math.floor(green * 0.35), math.floor(blue * 0.35), track_alpha)
+        track_color = string.format("rgba(255, %d, %d, 230)", math.floor(green * 0.85), math.floor(blue * 0.85))
+    else
+        self.breath_warning_time = 0.0
+    end
+
+    local style_key = fill_color .. "|" .. track_background_color .. "|" .. track_color
+    if self.breath_warning_style_key == style_key then
+        return
+    end
+
+    self.breath_warning_style_key = style_key
+    self:SetElementStyle(widget, "breathBarFill", "background-color", fill_color)
+    self:SetElementStyle(widget, "breathBarTrack", "background-color", track_background_color)
+    self:SetElementStyle(widget, "breathBarTrack", "border-color", track_color)
+end
+
 function UIManager:SetBreathHUDVisible(visible)
     local widget = self:GetActiveHUDWidget()
     if widget == nil then
@@ -1076,6 +1801,7 @@ function UIManager:SetBreathHUDVisible(visible)
 
         self.breath_visible = false
         if self.breath_fade_out_time_remaining <= 0.0 then
+            self:SetBreathWarning(widget, false, 0.0)
             self:SetBreathGroupAlpha(widget, 0.0)
             self:SetElementVisible(widget, "breathPanel", false)
         end
@@ -1092,6 +1818,7 @@ function UIManager:UpdateBreathFade(dt)
     if self.breath_fade_out_time_remaining <= 0.0 then
         self.breath_fade_out_time_remaining = 0.0
         if widget ~= nil and not self.breath_visible then
+            self:SetBreathWarning(widget, false, 0.0)
             self:SetBreathGroupAlpha(widget, 0.0)
             self:SetElementVisible(widget, "breathPanel", false)
         end
@@ -1112,14 +1839,24 @@ function UIManager:UpdateBreathHUD(dt)
     local pawn = self:GetSniperPawn()
     local requested = false
     local ratio = 0.0
+    local warning = false
     if pawn ~= nil then
-        local active = pawn.IsHoldBreathActive ~= nil and pawn:IsHoldBreathActive()
-        local scoped = pawn.IsScoped ~= nil and pawn:IsScoped()
-        local held = pawn.IsHoldBreathInputHeld ~= nil and pawn:IsHoldBreathInputHeld()
+        local active = read_bool_method(pawn, { "IsHoldBreathActive" })
+        local scoped = read_bool_method(pawn, { "IsScoped" })
+        local held = read_bool_method(pawn, { "IsHoldBreathInputHeld" })
+        if pawn.IsHoldBreathInputHeld == nil then
+            held = self:IsRawHoldBreathRequested()
+        end
         requested = active or (scoped and held)
 
-        if pawn.GetHoldBreathGaugeRatio ~= nil then
-            ratio = clamp01(pawn:GetHoldBreathGaugeRatio())
+        ratio = self:GetHoldBreathGaugeRatio(pawn)
+
+        local recovering = read_bool_method(pawn, { "IsHoldBreathRecovering", "IsHoldBreathInForcedRecovery" })
+        local release_required = read_bool_method(pawn, { "IsHoldBreathReleaseRequired", "IsHoldBreathReleasePending" })
+        local exhausted = ratio <= 0.001
+        warning = (requested and exhausted) or recovering or release_required
+        if scoped and held and not active and ratio < 0.999 then
+            warning = true
         end
     elseif self:IsRawHoldBreathRequested() then
         requested = true
@@ -1136,6 +1873,7 @@ function UIManager:UpdateBreathHUD(dt)
             if self.breath_hide_time_remaining > 0.0 then
                 self:SetBreathHUDVisible(true)
                 self:SetBreathBarRatio(widget, ratio)
+                self:SetBreathWarning(widget, warning, dt)
                 self:UpdateBreathFade(dt)
                 return
             end
@@ -1143,6 +1881,7 @@ function UIManager:UpdateBreathHUD(dt)
 
         self.breath_hide_time_remaining = 0.0
         self.breath_last_width = -1.0
+        self:SetBreathWarning(widget, false, 0.0)
         self:SetBreathHUDVisible(false)
         self:UpdateBreathFade(dt)
         return
@@ -1151,6 +1890,7 @@ function UIManager:UpdateBreathHUD(dt)
     self.breath_hide_time_remaining = self.breath_hide_delay
     self:SetBreathHUDVisible(true)
     self:SetBreathBarRatio(widget, ratio)
+    self:SetBreathWarning(widget, warning, dt)
 end
 
 function UIManager:GetHeadingSource()
@@ -1207,7 +1947,76 @@ function UIManager:UpdateCompass(dt)
     end
 end
 
+function UIManager:PollInGameActions(widget)
+    if widget == nil or widget.PollActionEvents == nil then
+        return
+    end
+
+    local ok, events = pcall(function()
+        return widget:PollActionEvents()
+    end)
+    if not ok or events == nil then
+        log("InGame HUD action polling failed")
+        return
+    end
+
+    local hover_played = false
+    for _, action in ipairs(events) do
+        if action == "PauseResume" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+            if self.general ~= nil then
+                self.general:Publish("ingame.pause_resume_requested", { reason = "ui" })
+            end
+        elseif action == "PauseGoMain" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+            if self.general ~= nil then
+                self.general:Publish("ingame.pause_main_requested", { reason = "ui" })
+            end
+        elseif action == "PauseOpenSettings" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.9)
+            self:SetPausePanel("Settings")
+        elseif action == "PauseOpenControls" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.9)
+            self:SetPausePanel("Controls")
+        elseif action == "PauseBackMenu" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 0.8)
+            self:SetPausePanel("Menu")
+        elseif action == "BgmDown" then
+            self:AdjustSetting("bgm_volume", -0.1)
+        elseif action == "BgmUp" then
+            self:AdjustSetting("bgm_volume", 0.1)
+        elseif action == "SfxDown" then
+            self:AdjustSetting("sfx_volume", -0.1)
+        elseif action == "SfxUp" then
+            self:AdjustSetting("sfx_volume", 0.1)
+        elseif action == "ToggleZoomMode" then
+            self:ToggleZoomMode()
+        elseif action == "MouseDown" then
+            self:AdjustSetting("mouse_sensitivity", -0.1)
+        elseif action == "MouseUp" then
+            self:AdjustSetting("mouse_sensitivity", 0.1)
+        elseif action == "MainButtonHover" and not hover_played then
+            hover_played = true
+            self:PlayUISFX(MAIN_BUTTON_HOVER_SFX, 0.8)
+        end
+    end
+end
+
 function UIManager:TickInGameHUD(dt)
+    local widget = self:GetActiveHUDWidget()
+    self:PollInGameActions(widget)
+    self:TickCutSceneLetterbox(widget, dt)
+    if self.cutscene_active then
+        if widget ~= nil then
+            self:SetInGameHUDSuppressed(widget, true)
+        end
+        return
+    end
+
+    if self.pause_visible then
+        return
+    end
+
     self:UpdateCompass(dt)
     self:SetScopeHUDVisible(self:GetScopeVisibleFromInputOrPawn())
     self:UpdateBreathHUD(dt)

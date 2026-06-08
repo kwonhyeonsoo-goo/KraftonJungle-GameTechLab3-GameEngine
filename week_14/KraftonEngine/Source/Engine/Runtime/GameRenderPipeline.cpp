@@ -120,6 +120,7 @@ void FGameRenderPipeline::BuildFrame(FViewport* VP, const FMinimalViewInfo& POV,
 		Frame.CameraVignette.Softness = CamManager->GetVignetteSoftness();
 		Frame.CameraVignette.Color = CamManager->GetVignetteColor();
 	}
+	Frame.CameraShockWaves = CamManager ? CamManager->GetWorldShockWaves() : TArray<FCameraShockWaveState>();
 
 	if (CamManager && CamManager->IsDepthOfFieldEnabled())
 	{

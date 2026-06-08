@@ -142,6 +142,7 @@ struct FBallisticBullet
 {
 	GENERATED_BODY()
 
+	int32 BulletId = 0;
 	FVector Position = FVector::ZeroVector;
 	FVector PreviousPosition = FVector::ZeroVector;
 	FVector Velocity = FVector::ZeroVector;
@@ -166,10 +167,28 @@ struct FBallisticBullet
 };
 
 USTRUCT()
+struct FBulletCinematicSnapshot
+{
+	GENERATED_BODY()
+
+	int32 BulletId = 0;
+	FVector Position = FVector::ZeroVector;
+	FVector PreviousPosition = FVector::ZeroVector;
+	FVector Velocity = FVector::ZeroVector;
+	float TraveledDistance = 0.0f;
+	float LifeTime = 0.0f;
+	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
+	AActor* Owner = nullptr;
+	bool bIsAlive = false;
+	bool bWasScopedShot = false;
+};
+
+USTRUCT()
 struct FSniperHitInfo
 {
 	GENERATED_BODY()
 
+	int32 BulletId = 0;
 	AActor* HitActor = nullptr;
 	FVector HitLocation = FVector::ZeroVector;
 	FVector HitNormal = FVector::ZeroVector;
@@ -194,4 +213,5 @@ struct FSniperHitInfo
 	FName HitBoneName = FName::None;
 };
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FBulletSpawnedEventSignature, const FBulletCinematicSnapshot&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FSniperHitEventSignature, const FSniperHitInfo&);

@@ -807,6 +807,9 @@
     <FxCompile Include="Shaders\PostProcess\CameraVignette.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\WorldAnchoredShockWave.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DebugViewModeResolve.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
@@ -1244,6 +1247,9 @@
     <ClCompile Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.cpp">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\KillCamRailRigComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.cpp">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
@@ -1466,6 +1472,9 @@
     <ClCompile Include="Source\Engine\GameFramework\Actor\SkeletalMeshActor.cpp">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\Actor\SniperKillCamDirector.cpp">
+      <Filter>Source\Engine\GameFramework\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\Actor\SphereActor.cpp">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClCompile>
@@ -1650,6 +1659,9 @@
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\Importer\Fbx\FbxSceneQuery.cpp">
+      <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\Importer\Fbx\FbxScaleBakeUtil.cpp">
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Mesh\Importer\Fbx\FbxSkeletalMeshImporter.cpp">
@@ -2058,6 +2070,9 @@
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\ViewModeMeshPass.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\WorldAnchoredShockWavePass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderState\BlendStateManager.cpp">
@@ -2680,6 +2695,9 @@
     <ClInclude Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.h">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\KillCamRailRigComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.h">
       <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
@@ -2932,6 +2950,9 @@
     <ClInclude Include="Source\Engine\GameFramework\Actor\TextActor.h">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\Actor\SniperKillCamDirector.h">
+      <Filter>Source\Engine\GameFramework\Actor</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\Actor\TriggerVolumeBase.h">
       <Filter>Source\Engine\GameFramework\Actor</Filter>
     </ClInclude>
@@ -3131,6 +3152,9 @@
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\Importer\Fbx\FbxSceneQuery.h">
+      <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Mesh\Importer\Fbx\FbxScaleBakeUtil.h">
       <Filter>Source\Engine\Mesh\Importer\Fbx</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Mesh\Importer\Fbx\FbxSkeletalMeshImporter.h">
@@ -3653,6 +3677,9 @@
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\ViewModeMeshPass.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\WorldAnchoredShockWavePass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderState\BlendStateManager.h">

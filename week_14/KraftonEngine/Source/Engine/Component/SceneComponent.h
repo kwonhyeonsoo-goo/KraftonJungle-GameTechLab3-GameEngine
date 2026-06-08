@@ -145,6 +145,7 @@ protected:
 	TWeakObjectPtr<USceneComponent> ParentComponent;
 	TArray<USceneComponent*> ChildComponents;
 
+	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Absolute Scale")
 	bool bAbsoluteScale = false;
 
 	mutable bool bTransformDirty = true;

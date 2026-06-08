@@ -53,7 +53,7 @@ public:
 	UFUNCTION(Pure, Category="Script")
 	FString GetScriptFileValue() const { return ScriptFile; }
 	UFUNCTION(Callable, Category="Script")
-	void SetScriptFile(const FString& InScriptFile) { ScriptFile = InScriptFile; }
+	void SetScriptFile(const FString& InScriptFile);
 	UFUNCTION(Pure, Category="General Manager")
 	EGeneralManagerStartState GetInitialGameState() const { return InitialGameState; }
 	UFUNCTION(Pure, Category="General Manager")
@@ -70,6 +70,7 @@ protected:
 
 private:
 	void EnsureDefaultScriptFile();
+	void UpdatePauseTickEligibility();
 	void BindOwnerCollisionEvents();
 	void BindOwnerSniperEvents();
 	void ClearCollisionBindings();

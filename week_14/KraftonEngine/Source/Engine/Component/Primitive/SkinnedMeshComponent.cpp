@@ -1,4 +1,5 @@
 #include "SkinnedMeshComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/GarbageCollection.h"
 #include "Animation/Skeleton/Skeleton.h"
@@ -298,7 +299,7 @@ FTransform USkinnedMeshComponent::GetSocketTransform(const FName& SocketName) co
 	}
 
 	const FMatrix SocketWorldMatrix = Socket->GetRelativeTransform() * BoneGlobals[BoneIndex] * GetWorldMatrix();
-	return FTransform(SocketWorldMatrix);
+	return MatrixToEditorTransform(SocketWorldMatrix);
 }
 
 bool USkinnedMeshComponent::SetSkeletalMeshByPath(const FString& InPath)
@@ -1300,6 +1301,10 @@ void USkinnedMeshComponent::MarkSocketAttachedChildrenDirty()
 		if (Child && Child->GetAttachSocketName().IsValid() && Child->GetAttachSocketName() != FName::None)
 		{
 			Child->MarkTransformDirty();
+			if (UPrimitiveComponent* PrimitiveChild = Cast<UPrimitiveComponent>(Child))
+			{
+				PrimitiveChild->MarkWorldBoundsDirty();
+			}
 		}
 	}
 }

@@ -33,6 +33,10 @@ public:
 	UFUNCTION(Pure, Category="Sniper|Bullet")
 	const TArray<FBallisticBullet>& GetActiveBullets() const { return ActiveBullets; }
 	UFUNCTION(Pure, Category="Sniper|Bullet")
+	bool GetBulletSnapshotById(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot) const;
+	UFUNCTION(Pure, Category="Sniper|Bullet")
+	FBulletCinematicSnapshot GetLatestBulletSnapshot() const;
+	UFUNCTION(Pure, Category="Sniper|Bullet")
 	USniperWeaponComponent* GetWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Wind")
 	bool IsWindEnabled() const;
@@ -42,6 +46,8 @@ public:
 	FVector GetWindAcceleration() const;
 	UFUNCTION(Callable, Category="Sniper|Wind")
 	void SetWindAcceleration(const FVector& InWindAcceleration);
+
+	FBulletSpawnedEventSignature OnBulletSpawned;
 
 protected:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
@@ -74,6 +80,7 @@ private:
 	ESniperHitRegion ClassifyHitRegion(const FName& BoneName) const;
 	bool IsHeadshotBoneNameNormalized(const FString& BoneName) const;
 	bool IsHeadshotBoneName(const FName& BoneName) const;
+	FBulletCinematicSnapshot BuildBulletSnapshot(const FBallisticBullet& Bullet) const;
 	void CompactDeadBullets();
 	void ResolveWeaponComponent();
 
@@ -123,4 +130,5 @@ private:
 	TWeakObjectPtr<UMaterial> BulletTracerVisualMaterial;
 	TWeakObjectPtr<UMaterial> ImpactVisualMaterial;
 	TArray<FBallisticBullet> ActiveBullets;
+	int32 NextBulletId = 1;
 };

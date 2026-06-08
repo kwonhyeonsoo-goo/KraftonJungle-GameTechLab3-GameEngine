@@ -59,15 +59,22 @@ namespace
 	FVector4 PhysicsPreviewSwingLimitColor(bool bSelectedConstraint)
 	{
 		return bSelectedConstraint
-			? ConstraintLimitColorFromHex(0xff, 0xcd, 0x37, 0.66f)
-			: ConstraintLimitColorFromHex(0xc5, 0x00, 0x00, 0.42f);
+			? ConstraintLimitColorFromHex(0xff, 0x30, 0x20, 0.36f)
+			: ConstraintLimitColorFromHex(0xff, 0x14, 0x0d, 0.26f);
 	}
 
-	FVector4 PhysicsPreviewTwistLimitColor(bool bSelectedConstraint)
+	FVector4 PhysicsPreviewSwingLimitRimColor(bool bSelectedConstraint)
 	{
 		return bSelectedConstraint
-			? ConstraintLimitColorFromHex(0x50, 0xdc, 0xff, 0.66f)
-			: ConstraintLimitColorFromHex(0x00, 0x80, 0x20, 0.42f);
+			? ConstraintLimitColorFromHex(0xff, 0x38, 0x26, 0.88f)
+			: ConstraintLimitColorFromHex(0xff, 0x38, 0x26, 0.75f);
+	}
+
+	FVector4 PhysicsPreviewTwistSectorColor(bool bSelectedConstraint)
+	{
+		return bSelectedConstraint
+			? ConstraintLimitColorFromHex(0x20, 0xff, 0x46, 0.62f)
+			: ConstraintLimitColorFromHex(0x0d, 0xe6, 0x2e, 0.50f);
 	}
 
 	float ClampLimitDegreesForPreview(float Degrees)
@@ -1000,15 +1007,25 @@ void UPhysicsAssetPreviewComponent::AppendConstraintLimitSurfaces(
 	const bool bSelectedConstraint = SelectedConstraintIndex == ConstraintIndex;
 	const float Radius = ComputeConstraintLimitSurfaceRadius(ParentFrameWorld, ChildFrameWorld);
 	const FConstraintLimitDesc& Limits = Constraints[ConstraintIndex].Limits;
-	AppendSwingLimitSurface(ParentFrameWorld, Limits, Radius, PhysicsPreviewSwingLimitColor(bSelectedConstraint));
-	AppendTwistLimitSurface(ParentFrameWorld, Limits, Radius, PhysicsPreviewTwistLimitColor(bSelectedConstraint));
+	AppendSwingLimitCone(
+		ParentFrameWorld,
+		Limits,
+		Radius,
+		PhysicsPreviewSwingLimitColor(bSelectedConstraint),
+		PhysicsPreviewSwingLimitRimColor(bSelectedConstraint));
+	AppendTwistLimitSector(
+		ParentFrameWorld,
+		Limits,
+		Radius * 0.86f,
+		PhysicsPreviewTwistSectorColor(bSelectedConstraint));
 }
 
-void UPhysicsAssetPreviewComponent::AppendSwingLimitSurface(
+void UPhysicsAssetPreviewComponent::AppendSwingLimitCone(
 	const FTransform& ParentFrameWorld,
 	const FConstraintLimitDesc& Limits,
 	float Radius,
-	const FVector4& Color)
+	const FVector4& ConeColor,
+	const FVector4& RimColor)
 {
 	if (Radius <= 0.0f)
 	{
@@ -1027,33 +1044,63 @@ void UPhysicsAssetPreviewComponent::AppendSwingLimitSurface(
 
 	const FQuat Rotation = ParentFrameWorld.Rotation.GetNormalized();
 	const FVector Center = ParentFrameWorld.Location;
-	const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
-	const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
-	const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+	FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+	FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+	FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+	AxisX.Normalize();
+	AxisY.Normalize();
+	AxisZ.Normalize();
 
-	const FVector DiskCenter = Center + AxisX * Radius;
-	const float DiskRadiusY = (std::max)(Radius * sinf(Swing1Radians), Radius * 0.025f);
-	const float DiskRadiusZ = (std::max)(Radius * sinf(Swing2Radians), Radius * 0.025f);
+	const float Swing1Tan = tanf(Swing1Radians);
+	const float Swing2Tan = tanf(Swing2Radians);
+	const float RimWidth = (std::max)(Radius * 0.035f, 0.004f);
+	constexpr int32 ConeSegments = 36;
 
-	TArray<uint32> RimIndices;
-	RimIndices.reserve(ConstraintLimitCircleSegments + 1);
-	for (int32 Segment = 0; Segment <= ConstraintLimitCircleSegments; ++Segment)
+	auto MakeConePoint = [&](float Angle, float Length)
 	{
-		const float Angle = 2.0f * FMath::Pi * static_cast<float>(Segment) / static_cast<float>(ConstraintLimitCircleSegments);
-		const FVector Point = DiskCenter + AxisY * (cosf(Angle) * DiskRadiusY) + AxisZ * (sinf(Angle) * DiskRadiusZ);
-		RimIndices.push_back(AddVertexWorld(Point, Color));
-	}
+		FVector Direction = AxisX
+			+ AxisY * (cosf(Angle) * Swing2Tan)
+			+ AxisZ * (sinf(Angle) * Swing1Tan);
+		if (Direction.IsNearlyZero())
+		{
+			Direction = AxisX;
+		}
+		Direction.Normalize();
+		return Center + Direction * Length;
+	};
 
-	const uint32 CenterIndex = AddVertexWorld(DiskCenter, Color);
-	for (int32 Segment = 0; Segment < ConstraintLimitCircleSegments; ++Segment)
+	FVector PrevInner = MakeConePoint(0.0f, Radius);
+	FVector PrevOuter = MakeConePoint(0.0f, Radius + RimWidth);
+	for (int32 Segment = 1; Segment <= ConeSegments; ++Segment)
 	{
-		PreviewMeshData.Indices.push_back(CenterIndex);
-		PreviewMeshData.Indices.push_back(RimIndices[Segment]);
-		PreviewMeshData.Indices.push_back(RimIndices[Segment + 1]);
+		const float Angle = 2.0f * FMath::Pi * static_cast<float>(Segment) / static_cast<float>(ConeSegments);
+		const FVector NextInner = MakeConePoint(Angle, Radius);
+		const FVector NextOuter = MakeConePoint(Angle, Radius + RimWidth);
+
+		const uint32 ApexIndex = AddVertexWorld(Center, ConeColor);
+		const uint32 PrevInnerIndex = AddVertexWorld(PrevInner, ConeColor);
+		const uint32 NextInnerIndex = AddVertexWorld(NextInner, ConeColor);
+		PreviewMeshData.Indices.push_back(ApexIndex);
+		PreviewMeshData.Indices.push_back(PrevInnerIndex);
+		PreviewMeshData.Indices.push_back(NextInnerIndex);
+
+		const uint32 RimPrevInnerIndex = AddVertexWorld(PrevInner, RimColor);
+		const uint32 RimPrevOuterIndex = AddVertexWorld(PrevOuter, RimColor);
+		const uint32 RimNextInnerIndex = AddVertexWorld(NextInner, RimColor);
+		const uint32 RimNextOuterIndex = AddVertexWorld(NextOuter, RimColor);
+		PreviewMeshData.Indices.push_back(RimPrevInnerIndex);
+		PreviewMeshData.Indices.push_back(RimPrevOuterIndex);
+		PreviewMeshData.Indices.push_back(RimNextInnerIndex);
+		PreviewMeshData.Indices.push_back(RimNextInnerIndex);
+		PreviewMeshData.Indices.push_back(RimPrevOuterIndex);
+		PreviewMeshData.Indices.push_back(RimNextOuterIndex);
+
+		PrevInner = NextInner;
+		PrevOuter = NextOuter;
 	}
 }
 
-void UPhysicsAssetPreviewComponent::AppendTwistLimitSurface(
+void UPhysicsAssetPreviewComponent::AppendTwistLimitSector(
 	const FTransform& ParentFrameWorld,
 	const FConstraintLimitDesc& Limits,
 	float Radius,
@@ -1086,27 +1133,27 @@ void UPhysicsAssetPreviewComponent::AppendTwistLimitSurface(
 		? ConstraintLimitCircleSegments
 		: ConstraintArcSegments(AngleRange);
 	const FQuat Rotation = ParentFrameWorld.Rotation.GetNormalized();
-	const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
-	const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
-	const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
-	const FVector Center = ParentFrameWorld.Location + AxisX * (Radius * 0.12f);
-	const float RingRadius = Radius * 0.32f;
+	const FVector Center = ParentFrameWorld.Location;
+	FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+	FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+	AxisY.Normalize();
+	AxisZ.Normalize();
 
-	const uint32 CenterIndex = AddVertexWorld(Center, Color);
-	uint32 PrevIndex = 0;
-	for (int32 Segment = 0; Segment <= Segments; ++Segment)
+	FVector Prev = Center + (AxisY * cosf(StartAngle) + AxisZ * sinf(StartAngle)) * Radius;
+	for (int32 Segment = 1; Segment <= Segments; ++Segment)
 	{
 		const float Alpha = static_cast<float>(Segment) / static_cast<float>(Segments);
 		const float Angle = StartAngle + AngleRange * Alpha;
-		const FVector Point = Center + (AxisY * cosf(Angle) + AxisZ * sinf(Angle)) * RingRadius;
-		const uint32 PointIndex = AddVertexWorld(Point, Color);
-		if (Segment > 0)
-		{
-			PreviewMeshData.Indices.push_back(CenterIndex);
-			PreviewMeshData.Indices.push_back(PrevIndex);
-			PreviewMeshData.Indices.push_back(PointIndex);
-		}
-		PrevIndex = PointIndex;
+		const FVector Next = Center + (AxisY * cosf(Angle) + AxisZ * sinf(Angle)) * Radius;
+
+		const uint32 CenterIndex = AddVertexWorld(Center, Color);
+		const uint32 PrevIndex = AddVertexWorld(Prev, Color);
+		const uint32 NextIndex = AddVertexWorld(Next, Color);
+		PreviewMeshData.Indices.push_back(CenterIndex);
+		PreviewMeshData.Indices.push_back(PrevIndex);
+		PreviewMeshData.Indices.push_back(NextIndex);
+
+		Prev = Next;
 	}
 }
 

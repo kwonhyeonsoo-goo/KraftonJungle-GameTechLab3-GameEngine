@@ -19,6 +19,12 @@ ULuaScriptComponent::ULuaScriptComponent()
 {
 }
 
+void ULuaScriptComponent::SetScriptFile(const FString& InScriptFile)
+{
+	ScriptFile = InScriptFile;
+	UpdatePauseTickEligibility();
+}
+
 namespace
 {
 	bool IsGeneralManagerScriptFile(const FString& ScriptFile)
@@ -182,6 +188,7 @@ bool ULuaScriptComponent::ReloadScript()
 void ULuaScriptComponent::BeginPlay()
 {
 	EnsureDefaultScriptFile();
+	UpdatePauseTickEligibility();
 	UActorComponent::BeginPlay();
 
 	const bool bLuaLoaded = InitializeLua();
@@ -661,6 +668,7 @@ void ULuaScriptComponent::PreGetEditableProperties()
 {
 	UActorComponent::PreGetEditableProperties();
 	EnsureDefaultScriptFile();
+	UpdatePauseTickEligibility();
 }
 
 bool ULuaScriptComponent::ShouldExposeProperty(const FProperty& Property) const
@@ -703,4 +711,9 @@ void ULuaScriptComponent::EnsureDefaultScriptFile()
 	}
 
 	ScriptFile = Level->GetFName().ToString() + "_" + OwnerActor->GetFName().ToString() + ".lua";
+}
+
+void ULuaScriptComponent::UpdatePauseTickEligibility()
+{
+	PrimaryComponentTick.bTickEvenWhenPaused = IsGeneralManagerScriptFile(ScriptFile);
 }

@@ -226,6 +226,36 @@ namespace FAssetRegistry
 			}
 			return RmlDocumentCache;
 		}
+		if (std::strcmp(AssetTypeName, "Prefab") == 0
+			|| std::strcmp(AssetTypeName, "ActorPrefab") == 0)
+		{
+			static TArray<FAssetListItem> PrefabCache;
+			PrefabCache.clear();
+
+			namespace fs = std::filesystem;
+			const fs::path ContentRoot = fs::path(FPaths::RootDir()) / L"Content";
+			const fs::path ProjectRoot(FPaths::RootDir());
+			if (fs::exists(ContentRoot) && fs::is_directory(ContentRoot))
+			{
+				std::error_code IterError;
+				for (fs::recursive_directory_iterator It(ContentRoot, fs::directory_options::skip_permission_denied, IterError), End;
+				     !IterError && It != End; It.increment(IterError))
+				{
+					std::error_code EntryError;
+					if (!It->is_regular_file(EntryError) || EntryError) continue;
+
+					std::wstring Ext = It->path().extension().wstring();
+					std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+					if (Ext != L".prefab") continue;
+
+					FAssetListItem Item;
+					Item.DisplayName = FPaths::ToUtf8(It->path().stem().wstring());
+					Item.FullPath = FPaths::ToUtf8(It->path().lexically_relative(ProjectRoot).generic_wstring());
+					PrefabCache.push_back(std::move(Item));
+				}
+			}
+			return PrefabCache;
+		}
 		if (std::strcmp(AssetTypeName, "UCameraShakeAsset") == 0 || std::strcmp(AssetTypeName, "CameraShake") == 0)
 		{
 			static TArray<FAssetListItem> CameraShakeCache;

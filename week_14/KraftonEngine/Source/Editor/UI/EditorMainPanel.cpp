@@ -8,6 +8,7 @@
 #include "GameFramework/World.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
+#include "Component/ActorSequenceComponent.h"
 #include "Object/Object.h"
 #include "Engine/Platform/Paths.h"
 #include "Engine/Platform/WindowsWindow.h"
@@ -1637,6 +1638,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ShadowMapDebugWidget.Initialize(InEditorEngine);
 	AnimationDebugWidget.Initialize(InEditorEngine);
 	CombatMapEditorWidget.Initialize(InEditorEngine);
+	LevelActorSequencerWidget.Initialize(InEditorEngine);
 	AssetEditorManager.Initialize(InEditorEngine);
 
 	AssetEditorManager.RegisterEditor<FFloatCurveEditorWidget>();
@@ -1654,6 +1656,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 void FEditorMainPanel::Release()
 {
 	UnmountRuntimeUIPreviewFromViewport();
+	LevelActorSequencerWidget.Close();
 	AssetEditorManager.CloseAll();
 	ConsoleWidget.Shutdown();
 	ImGui_ImplDX11_Shutdown();
@@ -1669,6 +1672,7 @@ void FEditorMainPanel::SaveToSettings() const
 void FEditorMainPanel::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	AssetEditorManager.AddReferencedObjects(Collector);
+	LevelActorSequencerWidget.AddReferencedObjects(Collector);
 	Collector.AddReferencedObject(static_cast<UObject*>(RuntimeUIPreviewViewportWidget), "RuntimeUIPreviewViewportWidget");
 }
 
@@ -1777,6 +1781,12 @@ void FEditorMainPanel::Render(float DeltaTime)
 	if (!bHideEditorWindows && bLevelDocumentActive)
 	{
 		RenderEditorDebugPanel();
+	}
+
+	if (!bHideEditorWindows && bLevelDocumentActive && LevelActorSequencerWidget.IsOpen())
+	{
+		LevelActorSequencerWidget.Tick(DeltaTime);
+		LevelActorSequencerWidget.Render(DeltaTime);
 	}
 
 	if (!bHideEditorWindows && !bLevelDocumentActive)
@@ -2557,6 +2567,8 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 	{
 		static bool bDebugScopeLensEnabled = false;
 		static float DebugScopeLensRadius = 0.42f;
+		static float DebugScopeLensCenterX = 0.5f;
+		static float DebugScopeLensCenterY = 0.5f;
 		static float DebugScopeLensFeather = 0.08f;
 		static float DebugScopeLensOuterBlur = 3.0f;
 		static float DebugScopeLensEdgeBlur = 1.25f;
@@ -2572,6 +2584,8 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 			const FCameraScopeLensState& ScopeLens = CameraManager->GetScopeLensProfile();
 			bDebugScopeLensEnabled = CameraManager->IsScopeZoomEnabled();
 			DebugScopeLensRadius = ScopeLens.Radius;
+			DebugScopeLensCenterX = ScopeLens.CenterX;
+			DebugScopeLensCenterY = ScopeLens.CenterY;
 			DebugScopeLensFeather = ScopeLens.Feather;
 			DebugScopeLensOuterBlur = ScopeLens.OuterBlurRadius;
 			DebugScopeLensEdgeBlur = ScopeLens.EdgeBlurRadius;
@@ -2584,6 +2598,8 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 		bool bChanged = false;
 		bChanged |= ImGui::Checkbox("Enabled", &bDebugScopeLensEnabled);
 		bChanged |= ImGui::SliderFloat("Radius", &DebugScopeLensRadius, 0.05f, 0.95f, "%.3f");
+		bChanged |= ImGui::SliderFloat("Center X", &DebugScopeLensCenterX, 0.0f, 1.0f, "%.3f");
+		bChanged |= ImGui::SliderFloat("Center Y", &DebugScopeLensCenterY, 0.0f, 1.0f, "%.3f");
 		bChanged |= ImGui::SliderFloat("Feather", &DebugScopeLensFeather, 0.001f, 0.35f, "%.3f");
 		bChanged |= ImGui::SliderFloat("Outer Blur", &DebugScopeLensOuterBlur, 0.0f, 12.0f, "%.2f");
 		bChanged |= ImGui::SliderFloat("Edge Blur", &DebugScopeLensEdgeBlur, 0.0f, 8.0f, "%.2f");
@@ -2602,7 +2618,9 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 				DebugScopeLensEdgeBlur,
 				DebugScopeLensIntensity,
 				DebugScopeLensLookScale,
-				DebugScopeLensBlendTime);
+				DebugScopeLensBlendTime,
+				DebugScopeLensCenterX,
+				DebugScopeLensCenterY);
 			CameraManager->SetScopeZoomEnabled(bDebugScopeLensEnabled);
 		}
 	}
@@ -3263,6 +3281,17 @@ void FEditorMainPanel::OpenAssetEditorForObject(UObject* Object)
 	{
 		DocumentTabs.OpenOrFocusTab(Result.TabId, Result.Label, true);
 	}
+}
+
+void FEditorMainPanel::OpenLevelActorSequencer(UActorSequenceComponent* SequenceComp)
+{
+	if (!IsValid(SequenceComp))
+	{
+		return;
+	}
+
+	LevelActorSequencerWidget.Open(SequenceComp);
+	LevelActorSequencerWidget.RequestFocus();
 }
 
 void FEditorMainPanel::OpenRuntimeUIPreviewDocument(const FString& DocumentPath)
