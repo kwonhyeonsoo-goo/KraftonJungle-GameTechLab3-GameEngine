@@ -1475,6 +1475,46 @@ function UIManager:ConfigureScopeTelemetry(widget)
     })
 end
 
+function UIManager:GetScopeTelemetrySnapshot()
+    local snapshot = {
+        distance_text = "-- m",
+        wind_text = "000 deg  0.0 m/s",
+        zoom_text = "4x",
+        zoom_multiplier = 4.0,
+        zoom_min = 4.0,
+        zoom_max = 16.0
+    }
+
+    local pawn = self:GetSniperPawn()
+    if pawn == nil then
+        return snapshot
+    end
+
+    local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
+    local min_zoom = read_float_method(pawn, { "GetMinScopeZoomMagnification" })
+    local max_zoom = read_float_method(pawn, { "GetMaxScopeZoomMagnification" })
+
+    if type(min_zoom) == "number" and min_zoom > 0.0 then
+        snapshot.zoom_min = min_zoom
+    end
+    if type(max_zoom) == "number" and max_zoom > 0.0 then
+        snapshot.zoom_max = max_zoom
+    end
+    if snapshot.zoom_max < snapshot.zoom_min then
+        local temp = snapshot.zoom_min
+        snapshot.zoom_min = snapshot.zoom_max
+        snapshot.zoom_max = temp
+    end
+
+    if type(current_zoom) == "number" then
+        snapshot.zoom_multiplier = current_zoom
+    else
+        snapshot.zoom_multiplier = snapshot.zoom_min
+    end
+
+    return snapshot
+end
+
 function UIManager:SetScopeTelemetry(payload)
     payload = payload or {}
     local widget = payload.widget or self:GetActiveHUDWidget()
@@ -1506,10 +1546,17 @@ function UIManager:SetScopeTelemetry(payload)
     end
     if type(payload.zoom_multiplier) == "number" then
         local clamped_zoom = payload.zoom_multiplier
-        if clamped_zoom < 4 then
-            clamped_zoom = 4
-        elseif clamped_zoom > 32 then
-            clamped_zoom = 32
+        local min_zoom = type(payload.zoom_min) == "number" and payload.zoom_min or 4
+        local max_zoom = type(payload.zoom_max) == "number" and payload.zoom_max or 16
+        if max_zoom < min_zoom then
+            local temp = min_zoom
+            min_zoom = max_zoom
+            max_zoom = temp
+        end
+        if clamped_zoom < min_zoom then
+            clamped_zoom = min_zoom
+        elseif clamped_zoom > max_zoom then
+            clamped_zoom = max_zoom
         end
         zoom_text = string.format("%dx", math.floor(clamped_zoom + 0.5))
     end
@@ -1527,6 +1574,19 @@ function UIManager:SetScopeTelemetry(payload)
         self:SetElementStyle(widget, element_id, "color", "rgba(255, 255, 255, 255)")
         call_widget(widget, "SetText", element_id, text)
     end
+end
+
+function UIManager:UpdateScopeTelemetryHUD(force)
+    local widget = self:GetActiveHUDWidget()
+    if widget == nil then
+        return
+    end
+
+    if not force and not self.scope_visible then
+        return
+    end
+
+    self:SetScopeTelemetry(self:GetScopeTelemetrySnapshot())
 end
 
 function UIManager:ResetInGameHUDRuntime(clear_pawn)
@@ -2065,6 +2125,7 @@ function UIManager:TickInGameHUD(dt)
 
     self:UpdateCompass(dt)
     self:SetScopeHUDVisible(self:GetScopeVisibleFromInputOrPawn())
+    self:UpdateScopeTelemetryHUD(false)
     self:UpdateBreathHUD(dt)
     self:UpdateWeaponHUD(false)
 end
