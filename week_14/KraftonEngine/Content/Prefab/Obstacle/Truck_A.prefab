@@ -1,7 +1,7 @@
 {
   "Actor" : {
     "ClassName" : "AStaticMeshActor",
-    "Name" : "AStaticMeshActor_48",
+    "Name" : "CoverNode_001",
     "NonSceneComponents" : [{
         "ClassName" : "UCombatCoverNodeComponent",
         "ObjectId" : 3,
@@ -10,7 +10,7 @@
           "DisplayName" : "",
           "Links" : [],
           "MaxOccupants" : 2,
-          "NodeId" : "",
+          "NodeId" : "CoverNode_001",
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_337",
           "Slots" : [{
@@ -62,7 +62,7 @@
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [2.000000, 1.000000, 0.000000],
               "Radius" : 1.000000,
-              "SlotId" : 0,
+              "SlotId" : 4,
               "SlotType" : 1,
               "Tags" : "Enemy,Cover",
               "Weight" : 1.000000,
@@ -73,7 +73,7 @@
               "LocalForward" : [1.000000, 0.000000, 0.000000],
               "LocalPosition" : [-2.000000, 1.000000, 0.000000],
               "Radius" : 1.000000,
-              "SlotId" : 0,
+              "SlotId" : 5,
               "SlotType" : 1,
               "Tags" : "Ally,Cover",
               "Weight" : 1.000000,
@@ -120,6 +120,7 @@
           "Responses[4]" : 2
         },
         "StaticMeshPath" : "Content/Data/Obstacle/Car/Truck_A_StaticMesh.uasset",
+        "bAbsoluteScale" : false,
         "bAutoActivate" : true,
         "bCastShadow" : true,
         "bCastShadowAsTwoSided" : false,
@@ -135,7 +136,7 @@
       }
     }
   },
-  "SourceActorName" : "AStaticMeshActor_48",
+  "SourceActorName" : "CoverNode_001",
   "Type" : "KraftonPrefab",
   "Version" : 1
 }
