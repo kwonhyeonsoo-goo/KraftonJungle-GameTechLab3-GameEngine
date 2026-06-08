@@ -6,6 +6,7 @@ local InGameManager = require("Management/InGameManager")
 local DataManager = require("Management/DataManager")
 local AudioManager = require("Management/AudioManager")
 local RadioManager = require("Management/RadioManager")
+local EffectManager = require("Management/EffectManager")
 local UIManager = require("Management/UIManager")
 local CutSceneManager = require("Management/CutSceneManager")
 local SceneManager = require("Management/SceneManager")
@@ -18,6 +19,7 @@ local CORE_ORDER = {
     "Data",
     "Audio",
     "Radio",
+    "Effect",
     "UI",
     "CutScene",
     "InGame",
@@ -66,7 +68,7 @@ function GeneralManager.Get()
             context = nil,
             event_bus = nil,
             managers = {},
-            tick_order = { "Scene", "InGame", "CutScene", "Radio", "UI", "Audio", "Data" }
+            tick_order = { "Scene", "InGame", "Effect", "CutScene", "Radio", "UI", "Audio", "Data" }
         }, GeneralManager)
     end
     return GeneralManager._instance
@@ -103,6 +105,7 @@ function GeneralManager:Initialize(context)
         Data = DataManager.new(self),
         Audio = AudioManager.new(self),
         Radio = RadioManager.new(self),
+        Effect = EffectManager.new(self),
         UI = UIManager.new(self),
         CutScene = CutSceneManager.new(self),
         InGame = InGameManager.new(self),
