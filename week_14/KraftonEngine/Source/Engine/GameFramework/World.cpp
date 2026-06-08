@@ -30,6 +30,7 @@ namespace
 	constexpr float RuntimeBallisticWindMinBlendSpeed = 0.0f;
 	constexpr float RuntimeBallisticWindMinInterval = 0.1f;
 	constexpr float RuntimeDegreesToRadians = 3.14159265358979323846f / 180.0f;
+	constexpr float RuntimeBallisticWindReverseGustChance = 0.45f;
 
 	float RandomFloat01()
 	{
@@ -681,10 +682,12 @@ void UWorld::PickNextRuntimeBallisticWindTarget()
 		RandomSignedUnit() * DirectionOffsetDegrees * DirectionAlpha * RuntimeDegreesToRadians;
 	const float GustMagnitudeScale = RandomFloatInRange(MinScale, MaxScale);
 	const float BaseMagnitude = BaseWind.Length();
-	FVector GustDirection = RotateVectorAroundZ(BasePlanar, DirectionOffsetRadians);
+	const bool bReverseFlow = RandomFloat01() < RuntimeBallisticWindReverseGustChance;
+	const FVector GustBasis = bReverseFlow ? (BasePlanar * -1.0f) : BasePlanar;
+	FVector GustDirection = RotateVectorAroundZ(GustBasis, DirectionOffsetRadians);
 	if (GustDirection.Length() <= RuntimeBallisticWindEpsilon)
 	{
-		GustDirection = BasePlanar;
+		GustDirection = GustBasis;
 	}
 	else
 	{

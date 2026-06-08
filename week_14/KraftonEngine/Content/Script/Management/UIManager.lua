@@ -107,6 +107,8 @@ local SCOPE_DISTANCE_HOLD_SECONDS = 0.20
 local WIND_UI_MAX_CROSS_DISPLAY = 4.0
 local WIND_UI_MAX_HEAD_DISPLAY = 4.0
 local WIND_UI_SMOOTH_SPEED = 6.0
+local SCOPE_WIND_BAR_MAX_WIDTH = 108.0
+local SCOPE_WIND_BAR_CENTER_X = 110.0
 local COMBAT_AGENT_ROW_COUNT = 5
 local COMBAT_AGENT_BAR_WIDTH = 210.0
 local HIT_NOTIFY_CENTER_X = 740.0
@@ -403,6 +405,20 @@ local function classify_wind_strength(normalized_strength)
         return "Medium"
     end
     return "Strong"
+end
+
+local function get_wind_strength_color(strength_level)
+    local strength = tostring(strength_level or "Calm")
+    if strength == "Strong" then
+        return "rgba(255, 120, 70, 240)"
+    end
+    if strength == "Medium" then
+        return "rgba(255, 210, 90, 230)"
+    end
+    if strength == "Light" then
+        return "rgba(80, 210, 220, 220)"
+    end
+    return "rgba(120, 145, 150, 140)"
 end
 
 local function compute_relative_wind_snapshot(wind_vector, camera)
@@ -1885,6 +1901,18 @@ function UIManager:ConfigureScopeTelemetry(widget)
 end
 
 function UIManager:GetWorldTimeSeconds()
+    if World ~= nil and World.GetGameTime ~= nil then
+        local ok, value = pcall(function()
+            return World.GetGameTime()
+        end)
+        if ok then
+            local seconds = tonumber(value)
+            if seconds ~= nil then
+                return seconds
+            end
+        end
+    end
+
     if World ~= nil and World.GetTimeSeconds ~= nil then
         local ok, value = pcall(function()
             return World.GetTimeSeconds()
@@ -2057,16 +2085,21 @@ function UIManager:GetScopeTelemetrySnapshot()
     end
     self.scope_telemetry_last_update_time = current_time
 
-    self.smoothed_scope_wind_cross = exp_approach(
-        self.smoothed_scope_wind_cross,
-        relative_wind.wind_cross,
-        telemetry_dt,
-        WIND_UI_SMOOTH_SPEED)
-    self.smoothed_scope_wind_head = exp_approach(
-        self.smoothed_scope_wind_head,
-        relative_wind.wind_head,
-        telemetry_dt,
-        WIND_UI_SMOOTH_SPEED)
+    if telemetry_dt <= 0.0 then
+        self.smoothed_scope_wind_cross = relative_wind.wind_cross
+        self.smoothed_scope_wind_head = relative_wind.wind_head
+    else
+        self.smoothed_scope_wind_cross = exp_approach(
+            self.smoothed_scope_wind_cross,
+            relative_wind.wind_cross,
+            telemetry_dt,
+            WIND_UI_SMOOTH_SPEED)
+        self.smoothed_scope_wind_head = exp_approach(
+            self.smoothed_scope_wind_head,
+            relative_wind.wind_head,
+            telemetry_dt,
+            WIND_UI_SMOOTH_SPEED)
+    end
 
     snapshot.wind_degrees = relative_wind.wind_degrees
     snapshot.wind_mps = relative_wind.wind_mps
@@ -2158,6 +2191,49 @@ function UIManager:SetScopeTelemetry(payload)
         self:SetElementStyle(widget, element_id, "color", "rgba(255, 255, 255, 255)")
         call_widget(widget, "SetText", element_id, text)
     end
+
+    local wind_side = tostring(payload.wind_side or "Center")
+    local wind_strength_level = tostring(payload.wind_strength_level or "Calm")
+    local wind_normalized = clamp01(payload.wind_cross_normalized or 0.0)
+    local active_width = math.floor(SCOPE_WIND_BAR_MAX_WIDTH * wind_normalized + 0.5)
+    local left_width = 0
+    local right_width = 0
+    local left_left = SCOPE_WIND_BAR_CENTER_X
+    local right_left = SCOPE_WIND_BAR_CENTER_X
+
+    if wind_side == "Left" then
+        left_width = active_width
+        left_left = SCOPE_WIND_BAR_CENTER_X - left_width
+    elseif wind_side == "Right" then
+        right_width = active_width
+    end
+
+    local bar_color = get_wind_strength_color(wind_strength_level)
+    self:SetElementStyle(widget, "scopeWindBarLeft", "left", string.format("%.3fpx", left_left))
+    self:SetElementStyle(widget, "scopeWindBarLeft", "width", string.format("%dpx", left_width))
+    self:SetElementStyle(widget, "scopeWindBarLeft", "background-color", bar_color)
+    self:SetElementStyle(widget, "scopeWindBarRight", "left", string.format("%.3fpx", right_left))
+    self:SetElementStyle(widget, "scopeWindBarRight", "width", string.format("%dpx", right_width))
+    self:SetElementStyle(widget, "scopeWindBarRight", "background-color", bar_color)
+    self:SetElementStyle(
+        widget,
+        "scopeWindBarTrack",
+        "border-color",
+        wind_strength_level == "Calm" and "rgba(210, 232, 238, 72)" or "rgba(210, 232, 238, 120)")
+    self:SetElementStyle(
+        widget,
+        "scopeWindBarTrack",
+        "background-color",
+        wind_strength_level == "Calm" and "rgba(90, 112, 122, 52)" or "rgba(90, 112, 122, 80)")
+    self:SetElementStyle(
+        widget,
+        "scopeWindCenterLine",
+        "background-color",
+        wind_strength_level == "Calm" and "rgba(240, 248, 252, 150)" or "rgba(240, 248, 252, 220)")
+    self:SetElementStyle(widget, "scopeWindValue", "display", "none")
+    self:SetElementStyle(widget, "scopeWindSpeedValue", "display", "none")
+    self:SetElementAlpha(widget, "scopeWindValue", 0.0)
+    self:SetElementAlpha(widget, "scopeWindSpeedValue", 0.0)
 end
 
 function UIManager:UpdateScopeTelemetryHUD(force)

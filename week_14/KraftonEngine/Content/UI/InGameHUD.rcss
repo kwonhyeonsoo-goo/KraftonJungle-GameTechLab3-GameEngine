@@ -135,6 +135,81 @@ body {
     height: 74.000000px;
 }
 
+#scopeWindGauge {
+    position: absolute;
+    left: 40.000000px;
+    top: 18.000000px;
+    width: 220.000000px;
+    height: 24.000000px;
+    box-sizing: border-box;
+    overflow: visible;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+    padding: 0px;
+}
+
+#scopeWindBarTrack {
+    position: absolute;
+    left: 0.000000px;
+    top: 8.000000px;
+    width: 220.000000px;
+    height: 8.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(90, 112, 122, 72);
+    border-color: rgba(210, 232, 238, 96);
+    border-width: 1px 1px 1px 1px;
+    border-radius: 6px;
+    padding: 0px;
+}
+
+#scopeWindBarLeft {
+    position: absolute;
+    left: 110.000000px;
+    top: 9.000000px;
+    width: 0.000000px;
+    height: 6.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(80, 210, 220, 220);
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 0px;
+}
+
+#scopeWindBarRight {
+    position: absolute;
+    left: 110.000000px;
+    top: 9.000000px;
+    width: 0.000000px;
+    height: 6.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(80, 210, 220, 220);
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 0px;
+}
+
+#scopeWindCenterLine {
+    position: absolute;
+    left: 109.000000px;
+    top: 3.000000px;
+    width: 2.000000px;
+    height: 18.000000px;
+    box-sizing: border-box;
+    overflow: hidden;
+    opacity: 1;
+    background-color: rgba(240, 248, 252, 220);
+    border-width: 0px;
+    border-radius: 1px;
+    padding: 0px;
+}
+
 #scopeZoomRow {
     left: 22.000000px;
     top: 152.000000px;
@@ -189,6 +264,8 @@ body {
     top: 0.000000px;
     width: 140.000000px;
     height: 28.000000px;
+    display: none;
+    opacity: 0;
 }
 
 #scopeWindSpeedValue {
@@ -196,6 +273,8 @@ body {
     width: 140.000000px;
     height: 28.000000px;
     font-size: 21.000000px;
+    display: none;
+    opacity: 0;
 }
 
 #scopeZoomValue {

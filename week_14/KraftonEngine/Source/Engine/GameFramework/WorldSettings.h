@@ -32,7 +32,7 @@ struct FWorldSettings
 	bool bEnableDynamicBallisticWind = true;
 	float BallisticWindChangeIntervalMin = 1.2f;
 	float BallisticWindChangeIntervalMax = 3.0f;
-	float BallisticWindDirectionOffsetDegrees = 65.0f;
+	float BallisticWindDirectionOffsetDegrees = 90.0f;
 	float BallisticWindMagnitudeScaleMin = 0.25f;
 	float BallisticWindMagnitudeScaleMax = 0.90f;
 	float BallisticWindBlendSpeed = 3.0f;

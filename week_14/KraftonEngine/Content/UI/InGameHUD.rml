@@ -13,6 +13,12 @@
                 </div>
                 <div id="scopeWindRow" class="scope-info-row" data-ui-type="Panel" data-ui-name="Scope Wind Row">
                     <img id="scopeWindIcon" class="scope-info-icon" data-ui-type="Image" data-ui-name="Scope Wind Icon" src="Image/Scope/Wind.png" data-ui-fit="contain" />
+                    <div id="scopeWindGauge" data-ui-type="Panel" data-ui-name="Scope Wind Gauge">
+                        <div id="scopeWindBarTrack" data-ui-type="Panel" data-ui-name="Scope Wind Bar Track"></div>
+                        <div id="scopeWindBarLeft" data-ui-type="Panel" data-ui-name="Scope Wind Bar Left"></div>
+                        <div id="scopeWindBarRight" data-ui-type="Panel" data-ui-name="Scope Wind Bar Right"></div>
+                        <div id="scopeWindCenterLine" data-ui-type="Panel" data-ui-name="Scope Wind Center Line"></div>
+                    </div>
                     <div id="scopeWindValue" class="scope-info-value" data-ui-type="Text" data-ui-name="Scope Wind Value">000 deg</div>
                     <div id="scopeWindSpeedValue" class="scope-info-value" data-ui-type="Text" data-ui-name="Scope Wind Speed Value">0.0 m/s</div>
                 </div>
