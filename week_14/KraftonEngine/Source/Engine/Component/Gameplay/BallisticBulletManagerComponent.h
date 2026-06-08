@@ -11,6 +11,7 @@ class UBillboardComponent;
 class UMaterial;
 class USkeletalMeshComponent;
 class USniperWeaponComponent;
+class FPhysicsAssetInstance;
 
 UCLASS()
 class UBallisticBulletManagerComponent : public UActorComponent
@@ -60,6 +61,9 @@ private:
 	UMaterial* ResolveImpactVisualMaterial();
 	void SpawnImpactVisual(const FVector& ImpactLocation);
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
+	bool ShouldRunPreciseCharacterHitQuery(const struct FHitResult& BroadHit) const;
+	bool EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const;
+	bool QueryPreciseCharacterHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	USkeletalMeshComponent* ResolveHitSkeletalMeshComponent(const struct FHitResult& Hit) const;
@@ -79,6 +83,12 @@ private:
 	int32 MaxBallisticSubsteps = 2;
 	UPROPERTY(Edit, Save, Category="Sniper|Simulation")
 	float MaxBallisticSubstepDeltaTime = 1.0f / 120.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	bool bEnablePreciseCharacterHitQuery = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	bool bRequirePreciseCharacterHit = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	float MaxPreciseCharacterHitDistance = 0.25f;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bEnableBulletVisuals = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Head Visual Material", AssetType="Material")

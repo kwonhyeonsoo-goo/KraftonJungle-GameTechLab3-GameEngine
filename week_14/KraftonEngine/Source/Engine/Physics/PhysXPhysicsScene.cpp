@@ -1927,6 +1927,8 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
                 const ECollisionChannel QueryChannel       = PendingQueryTraceChannel;
                 const uint32            QueryObjectMask    = PendingQueryObjectTypeMask;
                 const uint32            QueryIgnoreActorId = PendingQueryIgnoreActorId;
+                const uint32            QueryTargetActorId = PendingQueryTargetActorId;
+                const bool              bQueryRagdollBodiesOnly = bPendingQueryRagdollBodiesOnly;
 
                 bPhysicsQueryPending    = false;
                 bPhysicsQueryInProgress = true;
@@ -1938,13 +1940,13 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
                 if (bSweepQuery)
                 {
                     bHit = bObjectTypes
-                            ? ExecuteSweepByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryRotation, QueryShape, QueryObjectMask, QueryIgnoreActorId, SweepResult)
+                            ? ExecuteSweepByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryRotation, QueryShape, QueryObjectMask, QueryIgnoreActorId, QueryTargetActorId, bQueryRagdollBodiesOnly, SweepResult)
                             : ExecuteSweep_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryRotation, QueryShape, QueryChannel, QueryIgnoreActorId, SweepResult);
                 }
                 else
                 {
                     bHit = bObjectTypes
-                            ? ExecuteRaycastByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryObjectMask, QueryIgnoreActorId, RaycastResult)
+                            ? ExecuteRaycastByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryObjectMask, QueryIgnoreActorId, QueryTargetActorId, bQueryRagdollBodiesOnly, RaycastResult)
                             : ExecuteRaycast_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryChannel, QueryIgnoreActorId, RaycastResult);
                 }
 
@@ -2334,6 +2336,8 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
     ECollisionChannel      TraceChannel,
     uint32                 ObjectTypeMask,
     uint32                 IgnoreActorId,
+    uint32                 TargetActorId,
+    bool                   bRagdollBodiesOnly,
     FPhysicsRaycastResult& OutResult
 )
 {
@@ -2370,7 +2374,7 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
     {
         Lock.unlock();
         return bObjectTypes
-                ? ExecuteRaycastByObjectTypes_PhysicsThread(Start, RayDir, MaxDist, ObjectTypeMask, IgnoreActorId, OutResult)
+                ? ExecuteRaycastByObjectTypes_PhysicsThread(Start, RayDir, MaxDist, ObjectTypeMask, IgnoreActorId, TargetActorId, bRagdollBodiesOnly, OutResult)
                 : ExecuteRaycast_PhysicsThread(Start, RayDir, MaxDist, TraceChannel, IgnoreActorId, OutResult);
     }
 
@@ -2382,6 +2386,8 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
     PendingQueryTraceChannel   = TraceChannel;
     PendingQueryObjectTypeMask = ObjectTypeMask;
     PendingQueryIgnoreActorId  = IgnoreActorId;
+    PendingQueryTargetActorId  = TargetActorId;
+    bPendingQueryRagdollBodiesOnly = bRagdollBodiesOnly;
     bPendingQueryObjectTypes   = bObjectTypes;
     bPendingQuerySweep         = false;
     bPendingQueryHit           = false;
@@ -2461,6 +2467,8 @@ bool FPhysXPhysicsScene::SubmitSweepQuery_GameThread(
     ECollisionChannel            TraceChannel,
     uint32                       ObjectTypeMask,
     uint32                       IgnoreActorId,
+    uint32                       TargetActorId,
+    bool                         bRagdollBodiesOnly,
     FPhysicsSweepResult&         OutResult
 )
 {
@@ -2504,7 +2512,7 @@ bool FPhysXPhysicsScene::SubmitSweepQuery_GameThread(
     {
         Lock.unlock();
         return bObjectTypes
-                ? ExecuteSweepByObjectTypes_PhysicsThread(Start, SweepDir, MaxDist, Rotation, Shape, ObjectTypeMask, IgnoreActorId, OutResult)
+                ? ExecuteSweepByObjectTypes_PhysicsThread(Start, SweepDir, MaxDist, Rotation, Shape, ObjectTypeMask, IgnoreActorId, TargetActorId, bRagdollBodiesOnly, OutResult)
                 : ExecuteSweep_PhysicsThread(Start, SweepDir, MaxDist, Rotation, Shape, TraceChannel, IgnoreActorId, OutResult);
     }
 
@@ -2516,6 +2524,8 @@ bool FPhysXPhysicsScene::SubmitSweepQuery_GameThread(
     PendingQueryTraceChannel   = TraceChannel;
     PendingQueryObjectTypeMask = ObjectTypeMask;
     PendingQueryIgnoreActorId  = IgnoreActorId;
+    PendingQueryTargetActorId  = TargetActorId;
+    bPendingQueryRagdollBodiesOnly = bRagdollBodiesOnly;
     bPendingQueryObjectTypes   = bObjectTypes;
     bPendingQuerySweep         = true;
     bPendingQueryHit           = false;
@@ -2656,6 +2666,8 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
     float                  MaxDist,
     uint32                 ObjectTypeMask,
     uint32                 IgnoreActorId,
+    uint32                 TargetActorId,
+    bool                   bRagdollBodiesOnly,
     FPhysicsRaycastResult& OutResult
 ) const
 {
@@ -2675,10 +2687,14 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
     struct FObjectTypeRaycastFilter : PxQueryFilterCallback
     {
         uint32 IgnoreActorId  = 0;
+        uint32 TargetActorId  = 0;
         PxU32  ObjectTypeMask = 0;
+        bool   bRagdollBodiesOnly = false;
 
-        FObjectTypeRaycastFilter(uint32 InIgnoreActorId, PxU32 InMask) : IgnoreActorId(InIgnoreActorId)
+        FObjectTypeRaycastFilter(uint32 InIgnoreActorId, uint32 InTargetActorId, PxU32 InMask, bool bInRagdollBodiesOnly) : IgnoreActorId(InIgnoreActorId)
+                                                                       , TargetActorId(InTargetActorId)
                                                                        , ObjectTypeMask(InMask)
+                                                                       , bRagdollBodiesOnly(bInRagdollBodiesOnly)
         {
         }
 
@@ -2692,6 +2708,12 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
             const uint32 ShapeActorId = GetActorIdFromShape(Shape);
             const uint32 BodyActorId  = GetActorIdFromActor(Actor);
             if (IgnoreActorId != 0 && (ShapeActorId == IgnoreActorId || BodyActorId == IgnoreActorId))
+            {
+                return PxQueryHitType::eNONE;
+            }
+
+            const uint32 CandidateActorId = ShapeActorId != 0 ? ShapeActorId : BodyActorId;
+            if (TargetActorId != 0 && CandidateActorId != TargetActorId)
             {
                 return PxQueryHitType::eNONE;
             }
@@ -2711,6 +2733,15 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
                 }
             }
 
+            if (bRagdollBodiesOnly)
+            {
+                FBodyInstance* Body = GetBodyInstance(Actor);
+                if (!Body || Body->State != EPhysicsRuntimeObjectState::Alive || Body->Domain != EPhysicsBodyDomain::Ragdoll)
+                {
+                    return PxQueryHitType::eNONE;
+                }
+            }
+
             return PxQueryHitType::eBLOCK;
         }
 
@@ -2720,7 +2751,7 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
         }
     };
 
-    FObjectTypeRaycastFilter FilterCallback(IgnoreActorId, ObjectTypeMask);
+    FObjectTypeRaycastFilter FilterCallback(IgnoreActorId, TargetActorId, ObjectTypeMask, bRagdollBodiesOnly);
 
     PxRaycastBuffer Hit;
     PxQueryFilterData FilterData;
@@ -2909,6 +2940,8 @@ bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
     const FCollisionShape& Shape,
     uint32                 ObjectTypeMask,
     uint32                 IgnoreActorId,
+    uint32                 TargetActorId,
+    bool                   bRagdollBodiesOnly,
     FPhysicsSweepResult&   OutResult
 ) const
 {
@@ -2935,10 +2968,14 @@ bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
     struct FObjectTypeSweepFilter : PxQueryFilterCallback
     {
         uint32 IgnoreActorId  = 0;
+        uint32 TargetActorId  = 0;
         PxU32  ObjectTypeMask = 0;
+        bool   bRagdollBodiesOnly = false;
 
-        FObjectTypeSweepFilter(uint32 InIgnoreActorId, PxU32 InMask) : IgnoreActorId(InIgnoreActorId)
+        FObjectTypeSweepFilter(uint32 InIgnoreActorId, uint32 InTargetActorId, PxU32 InMask, bool bInRagdollBodiesOnly) : IgnoreActorId(InIgnoreActorId)
+                                                                     , TargetActorId(InTargetActorId)
                                                                      , ObjectTypeMask(InMask)
+                                                                     , bRagdollBodiesOnly(bInRagdollBodiesOnly)
         {
         }
 
@@ -2952,6 +2989,12 @@ bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
             const uint32 ShapeActorId = GetActorIdFromShape(Shape);
             const uint32 BodyActorId  = GetActorIdFromActor(Actor);
             if (IgnoreActorId != 0 && (ShapeActorId == IgnoreActorId || BodyActorId == IgnoreActorId))
+            {
+                return PxQueryHitType::eNONE;
+            }
+
+            const uint32 CandidateActorId = ShapeActorId != 0 ? ShapeActorId : BodyActorId;
+            if (TargetActorId != 0 && CandidateActorId != TargetActorId)
             {
                 return PxQueryHitType::eNONE;
             }
@@ -2971,6 +3014,15 @@ bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
                 }
             }
 
+            if (bRagdollBodiesOnly)
+            {
+                FBodyInstance* Body = GetBodyInstance(Actor);
+                if (!Body || Body->State != EPhysicsRuntimeObjectState::Alive || Body->Domain != EPhysicsBodyDomain::Ragdoll)
+                {
+                    return PxQueryHitType::eNONE;
+                }
+            }
+
             return PxQueryHitType::eBLOCK;
         }
 
@@ -2980,7 +3032,7 @@ bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
         }
     };
 
-    FObjectTypeSweepFilter FilterCallback(IgnoreActorId, ObjectTypeMask);
+    FObjectTypeSweepFilter FilterCallback(IgnoreActorId, TargetActorId, ObjectTypeMask, bRagdollBodiesOnly);
 
     PxSweepBuffer Hit;
     PxQueryFilterData FilterData;
@@ -3060,7 +3112,7 @@ bool FPhysXPhysicsScene::Raycast(
     const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
 
     FPhysicsRaycastResult PhysicsResult;
-    if (!SubmitRaycastQuery_GameThread(false, Start, Dir, MaxDist, TraceChannel, 0, IgnoreActorId, PhysicsResult))
+    if (!SubmitRaycastQuery_GameThread(false, Start, Dir, MaxDist, TraceChannel, 0, IgnoreActorId, 0, false, PhysicsResult))
     {
         return false;
     }
@@ -3081,7 +3133,7 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
     const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
 
     FPhysicsRaycastResult PhysicsResult;
-    if (!SubmitRaycastQuery_GameThread(true, Start, Dir, MaxDist, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, PhysicsResult))
+    if (!SubmitRaycastQuery_GameThread(true, Start, Dir, MaxDist, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, 0, false, PhysicsResult))
     {
         return false;
     }
@@ -3107,7 +3159,35 @@ bool FPhysXPhysicsScene::RaycastPhysicsByObjectTypes(
         ECollisionChannel::WorldStatic,
         ObjectTypeMask,
         IgnoreActorId,
+        0,
+        false,
         OutResult);
+}
+
+bool FPhysXPhysicsScene::RaycastRagdollBodiesByObjectTypes(
+    const FVector& Start,
+    const FVector& Dir,
+    float MaxDist,
+    FHitResult& OutHit,
+    uint32 ObjectTypeMask,
+    const AActor* TargetActor,
+    const AActor* IgnoreActor)
+{
+    OutHit = FHitResult();
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+    const uint32 TargetActorId = TargetActor ? TargetActor->GetUUID() : 0;
+    if (TargetActorId == 0)
+    {
+        return false;
+    }
+
+    FPhysicsRaycastResult PhysicsResult;
+    if (!SubmitRaycastQuery_GameThread(true, Start, Dir, MaxDist, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, TargetActorId, true, PhysicsResult))
+    {
+        return false;
+    }
+
+    return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
 }
 
 bool FPhysXPhysicsScene::Sweep(
@@ -3133,7 +3213,7 @@ bool FPhysXPhysicsScene::Sweep(
     const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
 
     FPhysicsSweepResult PhysicsResult;
-    if (!SubmitSweepQuery_GameThread(false, Start, SweepDir, MaxDist, Rotation, Shape, TraceChannel, 0, IgnoreActorId, PhysicsResult))
+    if (!SubmitSweepQuery_GameThread(false, Start, SweepDir, MaxDist, Rotation, Shape, TraceChannel, 0, IgnoreActorId, 0, false, PhysicsResult))
     {
         return false;
     }
@@ -3164,7 +3244,38 @@ bool FPhysXPhysicsScene::SweepByObjectTypes(
     const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
 
     FPhysicsSweepResult PhysicsResult;
-    if (!SubmitSweepQuery_GameThread(true, Start, SweepDir, MaxDist, Rotation, Shape, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, PhysicsResult))
+    if (!SubmitSweepQuery_GameThread(true, Start, SweepDir, MaxDist, Rotation, Shape, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, 0, false, PhysicsResult))
+    {
+        return false;
+    }
+
+    return ResolveSweepResult_GameThread(PhysicsResult, OutHit);
+}
+
+bool FPhysXPhysicsScene::SweepRagdollBodiesByObjectTypes(
+    const FVector& Start,
+    const FVector& End,
+    const FQuat& Rotation,
+    const FCollisionShape& Shape,
+    FHitResult& OutHit,
+    uint32 ObjectTypeMask,
+    const AActor* TargetActor,
+    const AActor* IgnoreActor)
+{
+    OutHit = FHitResult();
+
+    const FVector Delta = End - Start;
+    const float MaxDist = Delta.Length();
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+    const uint32 TargetActorId = TargetActor ? TargetActor->GetUUID() : 0;
+    if (MaxDist <= 1.e-6f || ObjectTypeMask == 0 || TargetActorId == 0)
+    {
+        return false;
+    }
+
+    FVector SweepDir = Delta / MaxDist;
+    FPhysicsSweepResult PhysicsResult;
+    if (!SubmitSweepQuery_GameThread(true, Start, SweepDir, MaxDist, Rotation, Shape, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, TargetActorId, true, PhysicsResult))
     {
         return false;
     }

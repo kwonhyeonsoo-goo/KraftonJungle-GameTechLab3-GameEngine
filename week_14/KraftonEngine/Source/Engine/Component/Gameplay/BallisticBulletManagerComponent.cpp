@@ -5,6 +5,7 @@
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/Shape/CapsuleComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/Pawn/CombatCharacter.h"
 #include "Core/Types/CollisionTypes.h"
@@ -17,6 +18,8 @@
 #include "Materials/MaterialManager.h"
 #include "Math/Quat.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsAssetInstance.h"
 
 #include <cmath>
 #include <cctype>
@@ -754,17 +757,206 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 			SniperBulletQueryObjectMask,
 			Bullet.Owner))
 		{
-			return OutHit.bHit;
+			if (!OutHit.bHit)
+			{
+				return false;
+			}
+
+			if (!ShouldRunPreciseCharacterHitQuery(OutHit))
+			{
+				return true;
+			}
+
+			FHitResult PreciseHit;
+			if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+			{
+				OutHit = PreciseHit;
+				return true;
+			}
+
+			return !bRequirePreciseCharacterHit;
 		}
 	}
 
-	return World->PhysicsRaycastByObjectTypes(
+	if (!World->PhysicsRaycastByObjectTypes(
 		Bullet.PreviousPosition,
 		Segment / SegmentLength,
 		SegmentLength,
 		OutHit,
 		SniperBulletQueryObjectMask,
-		Bullet.Owner);
+		Bullet.Owner))
+	{
+		return false;
+	}
+
+	if (!OutHit.bHit)
+	{
+		return false;
+	}
+
+	if (!ShouldRunPreciseCharacterHitQuery(OutHit))
+	{
+		return true;
+	}
+
+	FHitResult PreciseHit;
+	if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+	{
+		OutHit = PreciseHit;
+		return true;
+	}
+
+	return !bRequirePreciseCharacterHit;
+}
+
+bool UBallisticBulletManagerComponent::ShouldRunPreciseCharacterHitQuery(const FHitResult& BroadHit) const
+{
+	if (!bEnablePreciseCharacterHitQuery || !BroadHit.bHit || !BroadHit.HitActor)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	if (Cast<UCapsuleComponent>(BroadHit.HitComponent))
+	{
+		return true;
+	}
+
+	if (!Cast<USkeletalMeshComponent>(BroadHit.HitComponent))
+	{
+		return true;
+	}
+
+	return BroadHit.HitBoneName == FName::None;
+}
+
+bool UBallisticBulletManagerComponent::EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const
+{
+	bOutCreatedTemporaryBodies = false;
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	if (FPhysicsAssetInstance* ExistingInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
+	{
+		if (ExistingInstance->HasLivePhysicsObjects())
+		{
+			return true;
+		}
+	}
+
+	FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetOrCreatePhysicsAssetInstance();
+	if (!PhysicsAssetInstance)
+	{
+		return false;
+	}
+
+	FPhysicsAssetSimulationOptions QueryOnlyOptions;
+	QueryOnlyOptions.bNoGravity = true;
+	QueryOnlyOptions.bCreateKinematicQueryOnlyBodies = true;
+	QueryOnlyOptions.bUseIndependentRagdollCollision = true;
+	QueryOnlyOptions.IndependentCollisionEnabled = ECollisionEnabled::QueryOnly;
+	QueryOnlyOptions.bIndependentGenerateOverlapEvents = false;
+
+	if (!PhysicsAssetInstance->CreateBodiesAndConstraints(QueryOnlyOptions))
+	{
+		return false;
+	}
+
+	bOutCreatedTemporaryBodies = true;
+	return PhysicsAssetInstance->HasLivePhysicsObjects();
+}
+
+bool UBallisticBulletManagerComponent::QueryPreciseCharacterHit(
+	const FBallisticBullet& Bullet,
+	UWorld* World,
+	const FHitResult& BroadHit,
+	FHitResult& OutPreciseHit) const
+{
+	OutPreciseHit = FHitResult();
+	if (!World || !BroadHit.HitActor)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	IPhysicsScene* PhysicsScene = World->GetPhysicsScene();
+	if (!PhysicsScene)
+	{
+		return false;
+	}
+
+	bool bCreatedTemporaryBodies = false;
+	if (!EnsurePreciseHitQueryBodies(SkeletalMeshComponent, bCreatedTemporaryBodies))
+	{
+		return false;
+	}
+
+	const auto CleanupTemporaryBodies = [&]()
+	{
+		if (bCreatedTemporaryBodies)
+		{
+			if (FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
+			{
+				PhysicsAssetInstance->DestroyBodiesAndConstraints();
+			}
+		}
+	};
+
+	bool bPreciseHit = false;
+	if (Bullet.Radius > SniperBulletMinSweepRadius)
+	{
+		const FCollisionShape SweepShape = FCollisionShape::MakeSphere(Bullet.Radius);
+		bPreciseHit = PhysicsScene->SweepRagdollBodiesByObjectTypes(
+			Bullet.PreviousPosition,
+			Bullet.Position,
+			FQuat::Identity,
+			SweepShape,
+			OutPreciseHit,
+			ObjectTypeBit(ECollisionChannel::Pawn),
+			BroadHit.HitActor,
+			Bullet.Owner);
+	}
+	else
+	{
+		const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
+		const float SegmentLength = Segment.Length();
+		if (SegmentLength > SniperBulletMinSweepRadius)
+		{
+			bPreciseHit = PhysicsScene->RaycastRagdollBodiesByObjectTypes(
+				Bullet.PreviousPosition,
+				Segment / SegmentLength,
+				SegmentLength,
+				OutPreciseHit,
+				ObjectTypeBit(ECollisionChannel::Pawn),
+				BroadHit.HitActor,
+				Bullet.Owner);
+		}
+	}
+
+	if (bPreciseHit && MaxPreciseCharacterHitDistance > 0.0f)
+	{
+		const float MaxDistanceSquared = MaxPreciseCharacterHitDistance * MaxPreciseCharacterHitDistance;
+		if (FVector::DistSquared(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation) > MaxDistanceSquared)
+		{
+			bPreciseHit = false;
+			OutPreciseHit = FHitResult();
+		}
+	}
+
+	CleanupTemporaryBodies();
+	return bPreciseHit;
 }
 
 void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet, const FHitResult& Hit, UWorld* World)
