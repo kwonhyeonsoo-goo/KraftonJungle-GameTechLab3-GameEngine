@@ -8,6 +8,7 @@
 #include "ContentBrowserElement.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Subsystem/AssetFactory.h"
+#include "Editor/UI/Util/EditorMeshThumbnailManager.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "FloatCurve/FloatCurveAsset.h"
@@ -527,6 +528,7 @@ void FEditorContentBrowserWidget::SaveToSettings() const
 void FEditorContentBrowserWidget::RefreshContent()
 {
 	FEditorTextureManager::Get().ClearThumbnails();
+	FEditorMeshThumbnailManager::Get().ClearThumbnails();
 	CachedBrowserElements.clear();
 	TArray<FContentItem> CurrentContents = ReadDirectory(BrowserContext.CurrentPath);
 	for (const auto& Content : CurrentContents)
@@ -600,6 +602,7 @@ void FEditorContentBrowserWidget::RefreshContent()
 				{
 				case EAssetPackageType::StaticMesh:
 					Element = std::make_shared<ObjectElement>();
+					Element->SetMeshThumbnailRequest(PackagePath, EMeshThumbnailType::StaticMesh);
 					break;
 				case EAssetPackageType::SkeletalMesh:
 					Element = std::make_shared<MeshElement>();

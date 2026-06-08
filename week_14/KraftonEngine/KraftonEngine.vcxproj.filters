@@ -1019,6 +1019,9 @@
     <ClCompile Include="Source\Editor\UI\Util\EditorFileUtils.cpp">
       <Filter>Source\Editor\UI\Util</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Util\EditorMeshThumbnailManager.cpp">
+      <Filter>Source\Editor\UI\Util</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Util\EditorTextureManager.cpp">
       <Filter>Source\Editor\UI\Util</Filter>
     </ClCompile>
@@ -2408,6 +2411,9 @@
       <Filter>Source\Editor\UI\Util</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Util\EditorFileUtils.h">
+      <Filter>Source\Editor\UI\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Util\EditorMeshThumbnailManager.h">
       <Filter>Source\Editor\UI\Util</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Util\EditorTextureManager.h">
