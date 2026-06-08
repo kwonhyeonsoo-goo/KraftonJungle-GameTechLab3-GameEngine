@@ -31,6 +31,10 @@ public:
 	UFUNCTION(Pure, Category="Sniper|Bullet")
 	const TArray<FBallisticBullet>& GetActiveBullets() const { return ActiveBullets; }
 	UFUNCTION(Pure, Category="Sniper|Bullet")
+	bool GetBulletSnapshotById(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot) const;
+	UFUNCTION(Pure, Category="Sniper|Bullet")
+	FBulletCinematicSnapshot GetLatestBulletSnapshot() const;
+	UFUNCTION(Pure, Category="Sniper|Bullet")
 	USniperWeaponComponent* GetWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Wind")
 	bool IsWindEnabled() const { return bEnableWind; }
@@ -40,6 +44,8 @@ public:
 	FVector GetWindAcceleration() const { return WindAcceleration; }
 	UFUNCTION(Callable, Category="Sniper|Wind")
 	void SetWindAcceleration(const FVector& InWindAcceleration) { WindAcceleration = InWindAcceleration; }
+
+	FBulletSpawnedEventSignature OnBulletSpawned;
 
 protected:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
@@ -61,6 +67,7 @@ private:
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
+	FBulletCinematicSnapshot BuildBulletSnapshot(const FBallisticBullet& Bullet) const;
 	void CompactDeadBullets();
 	void ResolveWeaponComponent();
 
@@ -108,4 +115,5 @@ private:
 	TWeakObjectPtr<UMaterial> BulletTracerVisualMaterial;
 	TWeakObjectPtr<UMaterial> ImpactVisualMaterial;
 	TArray<FBallisticBullet> ActiveBullets;
+	int32 NextBulletId = 1;
 };

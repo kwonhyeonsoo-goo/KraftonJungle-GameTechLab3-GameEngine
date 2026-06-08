@@ -8,6 +8,7 @@
 #include "GameFramework/World.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
+#include "Component/ActorSequenceComponent.h"
 #include "Object/Object.h"
 #include "Engine/Platform/Paths.h"
 #include "Engine/Platform/WindowsWindow.h"
@@ -1637,6 +1638,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ShadowMapDebugWidget.Initialize(InEditorEngine);
 	AnimationDebugWidget.Initialize(InEditorEngine);
 	CombatMapEditorWidget.Initialize(InEditorEngine);
+	LevelActorSequencerWidget.Initialize(InEditorEngine);
 	AssetEditorManager.Initialize(InEditorEngine);
 
 	AssetEditorManager.RegisterEditor<FFloatCurveEditorWidget>();
@@ -1654,6 +1656,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 void FEditorMainPanel::Release()
 {
 	UnmountRuntimeUIPreviewFromViewport();
+	LevelActorSequencerWidget.Close();
 	AssetEditorManager.CloseAll();
 	ConsoleWidget.Shutdown();
 	ImGui_ImplDX11_Shutdown();
@@ -1669,6 +1672,7 @@ void FEditorMainPanel::SaveToSettings() const
 void FEditorMainPanel::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	AssetEditorManager.AddReferencedObjects(Collector);
+	LevelActorSequencerWidget.AddReferencedObjects(Collector);
 	Collector.AddReferencedObject(static_cast<UObject*>(RuntimeUIPreviewViewportWidget), "RuntimeUIPreviewViewportWidget");
 }
 
@@ -1777,6 +1781,12 @@ void FEditorMainPanel::Render(float DeltaTime)
 	if (!bHideEditorWindows && bLevelDocumentActive)
 	{
 		RenderEditorDebugPanel();
+	}
+
+	if (!bHideEditorWindows && bLevelDocumentActive && LevelActorSequencerWidget.IsOpen())
+	{
+		LevelActorSequencerWidget.Tick(DeltaTime);
+		LevelActorSequencerWidget.Render(DeltaTime);
 	}
 
 	if (!bHideEditorWindows && !bLevelDocumentActive)
@@ -3263,6 +3273,17 @@ void FEditorMainPanel::OpenAssetEditorForObject(UObject* Object)
 	{
 		DocumentTabs.OpenOrFocusTab(Result.TabId, Result.Label, true);
 	}
+}
+
+void FEditorMainPanel::OpenLevelActorSequencer(UActorSequenceComponent* SequenceComp)
+{
+	if (!IsValid(SequenceComp))
+	{
+		return;
+	}
+
+	LevelActorSequencerWidget.Open(SequenceComp);
+	LevelActorSequencerWidget.RequestFocus();
 }
 
 void FEditorMainPanel::OpenRuntimeUIPreviewDocument(const FString& DocumentPath)

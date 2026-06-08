@@ -495,6 +495,89 @@ void APlayerCameraManager::ClearCameraVignette()
 	VignetteIntensity = 0.0f;
 }
 
+int32 APlayerCameraManager::AddWorldShockWave(
+	FVector WorldPosition,
+	FVector WorldDirection,
+	float Duration,
+	float Radius,
+	float Width,
+	float Strength,
+	float Falloff,
+	float DirectionalStretch)
+{
+	constexpr size_t MaxShockWaves = 8;
+	if (ShockWaves.size() >= MaxShockWaves)
+	{
+		ShockWaves.erase(ShockWaves.begin());
+	}
+
+	FCameraShockWaveState Wave;
+	Wave.Handle = NextShockWaveHandle++;
+	if (NextShockWaveHandle <= 0)
+	{
+		NextShockWaveHandle = 1;
+	}
+	Wave.bEnabled = true;
+	Wave.WorldPosition = WorldPosition;
+	Wave.WorldDirection = WorldDirection.IsNearlyZero() ? FVector::ForwardVector : WorldDirection.Normalized();
+	Wave.Duration = std::max(0.0f, Duration);
+	Wave.Radius = std::max(0.0f, Radius);
+	Wave.Width = std::max(0.001f, Width);
+	Wave.Strength = std::max(0.0f, Strength);
+	Wave.Falloff = std::max(0.01f, Falloff);
+	Wave.DirectionalStretch = std::max(0.0f, DirectionalStretch);
+	ShockWaves.push_back(Wave);
+	return Wave.Handle;
+}
+
+bool APlayerCameraManager::UpdateWorldShockWave(
+	int32 Handle,
+	FVector WorldPosition,
+	FVector WorldDirection,
+	float Radius,
+	float Width,
+	float Strength,
+	float Falloff,
+	float DirectionalStretch)
+{
+	for (FCameraShockWaveState& Wave : ShockWaves)
+	{
+		if (Wave.Handle != Handle)
+		{
+			continue;
+		}
+
+		Wave.bEnabled = true;
+		Wave.WorldPosition = WorldPosition;
+		Wave.WorldDirection = WorldDirection.IsNearlyZero() ? FVector::ForwardVector : WorldDirection.Normalized();
+		Wave.Radius = std::max(0.0f, Radius);
+		Wave.Width = std::max(0.001f, Width);
+		Wave.Strength = std::max(0.0f, Strength);
+		Wave.Falloff = std::max(0.01f, Falloff);
+		Wave.DirectionalStretch = std::max(0.0f, DirectionalStretch);
+		return true;
+	}
+	return false;
+}
+
+void APlayerCameraManager::ClearWorldShockWave(int32 Handle)
+{
+	ShockWaves.erase(
+		std::remove_if(
+			ShockWaves.begin(),
+			ShockWaves.end(),
+			[Handle](const FCameraShockWaveState& Wave)
+			{
+				return Wave.Handle == Handle;
+			}),
+		ShockWaves.end());
+}
+
+void APlayerCameraManager::ClearAllWorldShockWaves()
+{
+	ShockWaves.clear();
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Camera Depth of Field / Bokeh
 // ─────────────────────────────────────────────────────────────────
@@ -801,6 +884,20 @@ void APlayerCameraManager::UpdateCamera(float DeltaTime)
 	}
 
 	// (6) Cache commit — 외부는 GetCameraCachePOV 로 read (shake/blend 적용된 최종 POV).
+	for (FCameraShockWaveState& Wave : ShockWaves)
+	{
+		Wave.Age += std::max(0.0f, DeltaTime);
+	}
+	ShockWaves.erase(
+		std::remove_if(
+			ShockWaves.begin(),
+			ShockWaves.end(),
+			[](const FCameraShockWaveState& Wave)
+			{
+				return Wave.Duration > 0.0f && Wave.Age >= Wave.Duration;
+			}),
+		ShockWaves.end());
+
 	UpdateScopeZoomBlend(DeltaTime);
 
 	if (bHasBasePOV)

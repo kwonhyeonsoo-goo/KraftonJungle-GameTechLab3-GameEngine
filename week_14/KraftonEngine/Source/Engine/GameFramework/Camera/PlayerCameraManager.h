@@ -215,6 +215,31 @@ public:
 	const FCameraScopeLensState& GetScopeLensState() const;
 	UFUNCTION(Pure, Category="Camera|PostProcess")
 	const FCameraScopeLensState& GetScopeLensProfile() const;
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	int32 AddWorldShockWave(
+		FVector WorldPosition,
+		FVector WorldDirection,
+		float Duration = 0.35f,
+		float Radius = 0.12f,
+		float Width = 0.035f,
+		float Strength = 0.02f,
+		float Falloff = 1.5f,
+		float DirectionalStretch = 0.0f);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	bool UpdateWorldShockWave(
+		int32 Handle,
+		FVector WorldPosition,
+		FVector WorldDirection,
+		float Radius,
+		float Width,
+		float Strength,
+		float Falloff,
+		float DirectionalStretch);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	void ClearWorldShockWave(int32 Handle);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	void ClearAllWorldShockWaves();
+	const TArray<FCameraShockWaveState>& GetWorldShockWaves() const { return ShockWaves; }
 
 	// ─── Camera Blend ──────────────────────────────────────────────
 	bool GetCameraView(FMinimalViewInfo& OutPOV) const;
@@ -298,6 +323,8 @@ private:
 	FCameraScopeLensState ScopeLensProfile;
 	bool bScopeZoomDesired = false;
 	float ScopeZoomBlendAlpha = 0.0f;
+	TArray<FCameraShockWaveState> ShockWaves;
+	int32 NextShockWaveHandle = 1;
 
 	// POV cache — UpdateCamera 가 채우고, 외부는 GetCameraCachePOV 로 read.
 	// ActiveCamera 가 한 번도 없었으면 bCameraCacheValid=false → caller 가 fallback 처리.

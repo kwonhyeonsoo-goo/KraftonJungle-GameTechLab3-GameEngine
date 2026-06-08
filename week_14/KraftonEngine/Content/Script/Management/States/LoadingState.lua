@@ -6,7 +6,6 @@ LoadingState.__index = LoadingState
 local SCENE_PATH = "Content/Scene/Loading.Scene"
 local DEFAULT_TARGET_STATE = GameState.InGame
 local DEFAULT_TARGET_SCENE = "Content/Scene/ScopeTest.Scene"
-local DEFAULT_TIP = "Tip: Hold your breath only when the shot really matters."
 local HUD = {
     name = "LoadingHUD",
     path = "Content/UI/LoadingHUD.rml",
@@ -60,7 +59,7 @@ function LoadingState.new(general)
         loading_duration = 3.0,
         target_state = DEFAULT_TARGET_STATE,
         target_scene = DEFAULT_TARGET_SCENE,
-        tip = DEFAULT_TIP,
+        tip = nil,
         transition_requested = false
     }, LoadingState)
 end
@@ -79,7 +78,7 @@ function LoadingState:Enter(payload)
     self.loading_duration = payload.loading_duration or 3.0
     self.target_state = payload.target_state or DEFAULT_TARGET_STATE
     self.target_scene = payload.target_scene or DEFAULT_TARGET_SCENE
-    self.tip = payload.tip or DEFAULT_TIP
+    self.tip = payload.tip
 
     if not is_current_scene(SCENE_PATH) then
         transition_to_scene(SCENE_PATH)

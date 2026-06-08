@@ -211,6 +211,24 @@ function GeneralManager:GetScore()
     return self.managers.Data:GetScore()
 end
 
+function GeneralManager:GetSettings()
+    self:_EnsureInitialized()
+    return self.managers.Data:GetSettings()
+end
+
+function GeneralManager:SetSetting(key, value)
+    self:_EnsureInitialized()
+    local result = self.managers.Data:SetSetting(key, value)
+    if result then
+        if key == "bgm_volume" then
+            self.managers.Audio:SetBGMVolume(value)
+        elseif key == "sfx_volume" then
+            self.managers.Audio:SetSFXVolume(value)
+        end
+    end
+    return result
+end
+
 function GeneralManager:CommitRun(result)
     self:_EnsureInitialized()
     self.managers.Data:CommitRun(result)

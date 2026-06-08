@@ -5,6 +5,7 @@
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/SceneComponent.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "Math/MathUtils.h"
@@ -51,6 +52,11 @@ namespace
 	{
 		const float Alpha = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
 		return MinValue + (MaxValue - MinValue) * Alpha;
+	}
+
+	bool IsSniperKillCamPlaying(const AActor* Actor)
+	{
+		return Actor && ASniperKillCamDirector::IsPlayingInWorld(Actor->GetWorld());
 	}
 }
 
@@ -160,6 +166,12 @@ void ASniperPawn::SetupInputComponent()
 void ASniperPawn::Tick(float DeltaTime)
 {
 	APawn::Tick(DeltaTime);
+
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bScopeHeld = false;
+		InputState.bHoldBreathHeld = false;
+	}
 
 	UpdateScopeState(DeltaTime);
 	UpdateHoldBreathState(DeltaTime);
@@ -487,6 +499,12 @@ void ASniperPawn::HandleLookUpInput(float Value)
 
 void ASniperPawn::HandleScopePressed()
 {
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bScopeHeld = false;
+		return;
+	}
+
 	InputState.bScopeHeld = true;
 }
 
@@ -497,6 +515,12 @@ void ASniperPawn::HandleScopeReleased()
 
 void ASniperPawn::HandleHoldBreathPressed()
 {
+	if (IsSniperKillCamPlaying(this))
+	{
+		InputState.bHoldBreathHeld = false;
+		return;
+	}
+
 	InputState.bHoldBreathHeld = true;
 }
 

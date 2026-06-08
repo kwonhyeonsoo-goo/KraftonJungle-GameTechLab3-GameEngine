@@ -59,6 +59,7 @@ enum class ERenderPass : uint32
 	SelectionMask,	// 선택 스텐실 마스크
 	EditorLines,	// 디버그 라인 + 그리드 (LINELIST)
 	PostProcess,	// 아웃라인 등 일반 fullscreen postprocess
+	WorldAnchoredShockWave, // World-position anchored screen-space shockwave distortion
 	FXAA,			// FXAA 안티앨리어싱 (SceneColor 복사 후 실행)
 	Bloom,			// HDR SceneColor bright-pass blur and composite
 	EditorIcon,		// 에디터 아이콘 빌보드 오버레이 (포스트프로세스 이후, NoDepth/AlphaBlend — 항상 위)
@@ -91,6 +92,7 @@ inline const char* GetRenderPassName(ERenderPass Pass)
 		"RenderPass::SelectionMask",
 		"RenderPass::EditorLines",
 		"RenderPass::PostProcess",
+		"RenderPass::WorldAnchoredShockWave",
 		"RenderPass::FXAA",
 		"RenderPass::Bloom",
 		"RenderPass::EditorIcon",
@@ -126,6 +128,7 @@ namespace RenderStateStrings
 		{ "SelectionMask", (int)ERenderPass::SelectionMask },
 		{ "EditorLines",   (int)ERenderPass::EditorLines },
 		{ "PostProcess",   (int)ERenderPass::PostProcess },
+		{ "WorldAnchoredShockWave", (int)ERenderPass::WorldAnchoredShockWave },
 		{ "FXAA",          (int)ERenderPass::FXAA },
 		{ "Bloom",         (int)ERenderPass::Bloom },
 		{ "EditorIcon",    (int)ERenderPass::EditorIcon },

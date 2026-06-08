@@ -107,6 +107,7 @@ private:
 	FConstantBuffer CameraVignetteCB;
 	FConstantBuffer CameraLetterboxCB;
 	FConstantBuffer ScopeLensCB;
+	FConstantBuffer CameraShockWaveCB;
 	FConstantBuffer MeshScalarOverlayCB;
 	FConstantBuffer MeshScalarOverlayWireCB;
 

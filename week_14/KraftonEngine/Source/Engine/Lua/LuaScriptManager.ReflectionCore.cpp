@@ -11,6 +11,7 @@
 #include "Core/Logging/Log.h"
 #include "Diagnostics/ActorSequenceDiagnostics.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/Camera/SequenceCameraShake.h"
 #include "GameFramework/Camera/WaveOscillatorCameraShake.h"
@@ -39,6 +40,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <initializer_list>
 #include <random>
 
@@ -1636,6 +1638,134 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     CameraManager.set_function(
+        "AddShockWave",
+        [](float X, float Y, float Z, sol::optional<float> Duration, sol::optional<float> Radius, sol::optional<float> Strength)
+        {
+            if (!GEngine || !GEngine->GetWorld()) return 0;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            return Manager
+                ? Manager->AddWorldShockWave(
+                    FVector(X, Y, Z),
+                    FVector::ForwardVector,
+                    Duration.value_or(0.35f),
+                    Radius.value_or(0.12f),
+                    0.035f,
+                    Strength.value_or(0.02f),
+                    1.5f,
+                    0.0f)
+                : 0;
+        }
+    );
+    CameraManager.set_function(
+        "AddDirectedShockWave",
+        [](
+            float X,
+            float Y,
+            float Z,
+            float DirX,
+            float DirY,
+            float DirZ,
+            sol::optional<float> Duration,
+            sol::optional<float> Radius,
+            sol::optional<float> Width,
+            sol::optional<float> Strength,
+            sol::optional<float> Falloff,
+            sol::optional<float> DirectionalStretch)
+        {
+            if (!GEngine || !GEngine->GetWorld()) return 0;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            FVector Direction(DirX, DirY, DirZ);
+            if (Direction.IsNearlyZero())
+            {
+                Direction = FVector::ForwardVector;
+            }
+            else
+            {
+                Direction.Normalize();
+            }
+            return Manager
+                ? Manager->AddWorldShockWave(
+                    FVector(X, Y, Z),
+                    Direction,
+                    Duration.value_or(0.35f),
+                    Radius.value_or(0.12f),
+                    Width.value_or(0.035f),
+                    Strength.value_or(0.02f),
+                    Falloff.value_or(1.5f),
+                    DirectionalStretch.value_or(0.0f))
+                : 0;
+        }
+    );
+    CameraManager.set_function(
+        "UpdateShockWave",
+        [](
+            int32 Handle,
+            float X,
+            float Y,
+            float Z,
+            float DirX,
+            float DirY,
+            float DirZ,
+            float Radius,
+            float Width,
+            float Strength,
+            sol::optional<float> Falloff,
+            sol::optional<float> DirectionalStretch)
+        {
+            if (!GEngine || !GEngine->GetWorld()) return false;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            FVector Direction(DirX, DirY, DirZ);
+            if (Direction.IsNearlyZero())
+            {
+                Direction = FVector::ForwardVector;
+            }
+            else
+            {
+                Direction.Normalize();
+            }
+            return Manager
+                ? Manager->UpdateWorldShockWave(
+                    Handle,
+                    FVector(X, Y, Z),
+                    Direction,
+                    Radius,
+                    Width,
+                    Strength,
+                    Falloff.value_or(1.5f),
+                    DirectionalStretch.value_or(0.0f))
+                : false;
+        }
+    );
+    CameraManager.set_function(
+        "ClearShockWave",
+        [](int32 Handle)
+        {
+            if (!GEngine || !GEngine->GetWorld()) return;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            if (Manager)
+            {
+                Manager->ClearWorldShockWave(Handle);
+            }
+        }
+    );
+    CameraManager.set_function(
+        "ClearShockWaves",
+        []()
+        {
+            if (!GEngine || !GEngine->GetWorld()) return;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            if (Manager)
+            {
+                Manager->ClearAllWorldShockWaves();
+            }
+        }
+    );
+    CameraManager.set_function(
         "SetViewTargetWithBlend",
         [](AActor* Target, float BlendTime)
         {
@@ -1832,6 +1962,270 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             {
                 Manager->ClearScopeLens();
             }
+        }
+    );
+
+    sol::table SniperKillCam = Lua.create_named_table("SniperKillCam");
+    SniperKillCam.set_function(
+        "ConsumePendingBulletId",
+        []()
+        {
+            return ASniperKillCamDirector::ConsumePendingBulletId();
+        }
+    );
+    SniperKillCam.set_function(
+        "ClearPendingBullets",
+        []()
+        {
+            ASniperKillCamDirector::ClearPendingBullets();
+        }
+    );
+    SniperKillCam.set_function(
+        "Start",
+        [](int32 BulletId, sol::optional<float> Duration, sol::optional<int32> CameraMode)
+        {
+            if (!GEngine || !GEngine->GetWorld())
+            {
+                return false;
+            }
+            return ASniperKillCamDirector::StartForBulletIdInWorld(
+                GEngine->GetWorld(),
+                BulletId,
+                Duration.value_or(10.0f),
+                CameraMode.value_or(0));
+        }
+    );
+    SniperKillCam.set_function(
+        "Stop",
+        []()
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                ASniperKillCamDirector::StopInWorld(GEngine->GetWorld());
+            }
+        }
+    );
+    SniperKillCam.set_function(
+        "IsPlaying",
+        []()
+        {
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::IsPlayingInWorld(GEngine->GetWorld())
+                : false;
+        }
+    );
+    auto SetSniperKillCamRigScalar = [](const FString& PropertyName, float Value)
+    {
+        return GEngine && GEngine->GetWorld()
+            ? ASniperKillCamDirector::SetRailRigScalarInWorld(GEngine->GetWorld(), PropertyName, Value)
+            : false;
+    };
+    auto GetSniperKillCamRigScalar = [](const FString& PropertyName, float Fallback)
+    {
+        return GEngine && GEngine->GetWorld()
+            ? ASniperKillCamDirector::GetRailRigScalarInWorld(GEngine->GetWorld(), PropertyName, Fallback)
+            : Fallback;
+    };
+    auto ApplyOptionalRigScalar = [SetSniperKillCamRigScalar](const sol::table& Options, const char* LuaName, const char* RigName)
+    {
+        const sol::object Value = Options.get<sol::object>(LuaName);
+        if (!Value.valid() || Value.get_type() == sol::type::nil)
+        {
+            return false;
+        }
+        return SetSniperKillCamRigScalar(RigName, Value.as<float>());
+    };
+    auto ApplyOptionalRigBool = [SetSniperKillCamRigScalar](const sol::table& Options, const char* LuaName, const char* RigName)
+    {
+        const sol::object Value = Options.get<sol::object>(LuaName);
+        if (!Value.valid() || Value.get_type() == sol::type::nil)
+        {
+            return false;
+        }
+        return SetSniperKillCamRigScalar(RigName, Value.as<bool>() ? 1.0f : 0.0f);
+    };
+    SniperKillCam.set_function(
+        "SetRigScalar",
+        [SetSniperKillCamRigScalar](const FString& PropertyName, float Value)
+        {
+            return SetSniperKillCamRigScalar(PropertyName, Value);
+        }
+    );
+    SniperKillCam.set_function(
+        "GetRigScalar",
+        [GetSniperKillCamRigScalar](const FString& PropertyName, sol::optional<float> DefaultValue)
+        {
+            const float Fallback = DefaultValue.value_or(0.0f);
+            return GetSniperKillCamRigScalar(PropertyName, Fallback);
+        }
+    );
+    SniperKillCam.set_function(
+        "SetRigScalars",
+        [ApplyOptionalRigScalar](const sol::table& Values)
+        {
+            bool bAnyApplied = false;
+            for (const auto& Pair : Values)
+            {
+                if (Pair.first.get_type() != sol::type::string || Pair.second.get_type() == sol::type::nil)
+                {
+                    continue;
+                }
+                const std::string Name = Pair.first.as<std::string>();
+                if (!Name.empty())
+                {
+                    bAnyApplied = ApplyOptionalRigScalar(Values, Name.c_str(), Name.c_str()) || bAnyApplied;
+                }
+            }
+            return bAnyApplied;
+        }
+    );
+    SniperKillCam.set_function(
+        "SetBulletSpin",
+        [SetSniperKillCamRigScalar](float Revolutions, sol::optional<float> Phase)
+        {
+            bool bOk = SetSniperKillCamRigScalar("BulletSpinRevolutions", Revolutions);
+            if (Phase.has_value())
+            {
+                bOk = SetSniperKillCamRigScalar("BulletSpinPhase", Phase.value()) && bOk;
+            }
+            return bOk;
+        }
+    );
+    SniperKillCam.set_function(
+        "ConfigureBullet",
+        [ApplyOptionalRigScalar](const sol::table& Options)
+        {
+            bool bAnyApplied = false;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "forwardOffset", "BulletForwardOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "sideOffset", "BulletSideOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "upOffset", "BulletUpOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "scale", "BulletScaleMultiplier") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "scaleX", "BulletScaleXMultiplier") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "scaleY", "BulletScaleYMultiplier") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "scaleZ", "BulletScaleZMultiplier") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "pitchOffset", "BulletPitchOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "yawOffset", "BulletYawOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "rollOffset", "BulletRollOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "spinRevolutions", "BulletSpinRevolutions") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "spinPhase", "BulletSpinPhase") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "railAlphaOverride", "BulletRailAlphaOverride") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "railAlphaScale", "BulletRailAlphaScale") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "railAlphaOffset", "BulletRailAlphaOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "railAlphaEase", "BulletRailAlphaEase") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "railAlphaPower", "BulletRailAlphaPower") || bAnyApplied;
+            return bAnyApplied;
+        }
+    );
+    SniperKillCam.set_function(
+        "EnableShockWave",
+        [SetSniperKillCamRigScalar](bool bEnabled)
+        {
+            return SetSniperKillCamRigScalar("bEnableShockWave", bEnabled ? 1.0f : 0.0f);
+        }
+    );
+    SniperKillCam.set_function(
+        "ConfigureShockWave",
+        [ApplyOptionalRigScalar, ApplyOptionalRigBool](const sol::table& Options)
+        {
+            bool bAnyApplied = false;
+            bAnyApplied = ApplyOptionalRigBool(Options, "enabled", "bEnableShockWave") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "forwardOffset", "ShockWaveForwardOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "sideOffset", "ShockWaveSideOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "upOffset", "ShockWaveUpOffset") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "radius", "ShockWaveRadius") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "startRadiusBoost", "ShockWaveStartRadiusBoost") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "width", "ShockWaveWidth") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "strength", "ShockWaveStrength") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "startStrengthBoost", "ShockWaveStartStrengthBoost") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "falloff", "ShockWaveFalloff") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "directionalStretch", "ShockWaveDirectionalStretch") || bAnyApplied;
+            bAnyApplied = ApplyOptionalRigScalar(Options, "decay", "ShockWaveDecay") || bAnyApplied;
+            return bAnyApplied;
+        }
+    );
+    SniperKillCam.set_function(
+        "SetScalar",
+        [](const FString& PropertyName, float Value)
+        {
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::SetKillCamScalarInWorld(GEngine->GetWorld(), PropertyName, Value)
+                : false;
+        }
+    );
+    SniperKillCam.set_function(
+        "GetScalar",
+        [](const FString& PropertyName, sol::optional<float> DefaultValue)
+        {
+            const float Fallback = DefaultValue.value_or(0.0f);
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::GetKillCamScalarInWorld(GEngine->GetWorld(), PropertyName, Fallback)
+                : Fallback;
+        }
+    );
+    SniperKillCam.set_function(
+        "SetString",
+        [](const FString& PropertyName, const FString& Value)
+        {
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::SetKillCamStringInWorld(GEngine->GetWorld(), PropertyName, Value)
+                : false;
+        }
+    );
+    SniperKillCam.set_function(
+        "GetString",
+        [](const FString& PropertyName, sol::optional<FString> DefaultValue)
+        {
+            const FString Fallback = DefaultValue.value_or("");
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::GetKillCamStringInWorld(GEngine->GetWorld(), PropertyName, Fallback)
+                : Fallback;
+        }
+    );
+    SniperKillCam.set_function(
+        "SetVector",
+        [](const FString& PropertyName, const FVector& Value)
+        {
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::SetKillCamVectorInWorld(GEngine->GetWorld(), PropertyName, Value)
+                : false;
+        }
+    );
+    SniperKillCam.set_function(
+        "GetVector",
+        [](const FString& PropertyName, sol::optional<FVector> DefaultValue)
+        {
+            const FVector Fallback = DefaultValue.value_or(FVector::ZeroVector);
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::GetKillCamVectorInWorld(GEngine->GetWorld(), PropertyName, Fallback)
+                : Fallback;
+        }
+    );
+    SniperKillCam.set_function(
+        "SetRotator",
+        [](const FString& PropertyName, const FVector& PitchYawRoll)
+        {
+            return GEngine && GEngine->GetWorld()
+                ? ASniperKillCamDirector::SetKillCamRotatorInWorld(
+                    GEngine->GetWorld(),
+                    PropertyName,
+                    FRotator(PitchYawRoll.X, PitchYawRoll.Y, PitchYawRoll.Z))
+                : false;
+        }
+    );
+    SniperKillCam.set_function(
+        "GetRotator",
+        [](const FString& PropertyName, sol::optional<FVector> DefaultValue)
+        {
+            const FVector Fallback = DefaultValue.value_or(FVector::ZeroVector);
+            if (!GEngine || !GEngine->GetWorld())
+            {
+                return Fallback;
+            }
+            const FRotator Value = ASniperKillCamDirector::GetKillCamRotatorInWorld(
+                GEngine->GetWorld(),
+                PropertyName,
+                FRotator(Fallback.X, Fallback.Y, Fallback.Z));
+            return FVector(Value.Pitch, Value.Yaw, Value.Roll);
         }
     );
 

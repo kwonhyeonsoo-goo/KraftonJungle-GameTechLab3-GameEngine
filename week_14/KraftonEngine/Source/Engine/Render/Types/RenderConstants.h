@@ -343,6 +343,23 @@ struct FScopeLensConstants
 	float _pad[2];
 };
 
+static constexpr uint32 MAX_CAMERA_SHOCK_WAVES = 4;
+
+struct FCameraShockWaveGPU
+{
+	FVector4 CenterAndRadius;     // xy = screen center, z = radius, w = width
+	FVector4 DirectionAndStrength; // xy = screen direction, z = strength, w = directional stretch
+	FVector4 FalloffAgeDuration;  // x = falloff, y = normalized age, z = duration, w = enabled
+};
+
+struct FCameraShockWaveConstants
+{
+	uint32 Count = 0;
+	FVector2 InvViewportSize = FVector2(1.0f, 1.0f);
+	float _pad = 0.0f;
+	FCameraShockWaveGPU Waves[MAX_CAMERA_SHOCK_WAVES];
+};
+
 // ============================================================
 // 타입별 CB 바인딩 디스크립터 — GPU CB에 업로드할 데이터를 인라인 보관
 // ============================================================
