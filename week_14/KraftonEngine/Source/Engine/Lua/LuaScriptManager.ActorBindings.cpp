@@ -3090,6 +3090,25 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &FSniperHitInfo::TargetMaxHP,
         "HitBoneName",
         &FSniperHitInfo::HitBoneName,
+        "HitBoneNameString",
+        sol::property(
+            [](const FSniperHitInfo& HitInfo) -> FString
+            {
+                return HitInfo.HitBoneName.IsValid() && HitInfo.HitBoneName != FName::None
+                    ? HitInfo.HitBoneName.ToString()
+                    : FString();
+            }
+        ),
+        "HitBodyName",
+        &FSniperHitInfo::HitBodyName,
+        "HitRegionName",
+        &FSniperHitInfo::HitRegionName,
+        "HitRegionDisplayName",
+        &FSniperHitInfo::HitRegionDisplayName,
+        "HitScoreMultiplier",
+        &FSniperHitInfo::HitScoreMultiplier,
+        "HitScoreValue",
+        &FSniperHitInfo::HitScoreValue,
         "bHasHitBodyCenterDistance",
         &FSniperHitInfo::bHasHitBodyCenterDistance,
         "HitBodyCenterLocation",

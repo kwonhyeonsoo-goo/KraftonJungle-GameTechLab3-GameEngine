@@ -1,6 +1,7 @@
 ﻿#include "CombatCoverAgentComponent.h"
 
 #include "Component/Gameplay/CombatFlowManagerComponent.h"
+#include "Component/Gameplay/SniperTypes.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Pawn/Character.h"
@@ -104,6 +105,50 @@ void UCombatCoverAgentComponent::PostEditProperty(const char* PropertyName)
     (void)PropertyName;
     ApplyCombatRoleDefaults();
     ClampRuntimeEditableValues();
+}
+
+void UCombatCoverAgentComponent::SetTeamTag(const FString& InTeamTag)
+{
+    TeamTag = InTeamTag.empty() ? FString("Enemy") : InTeamTag;
+}
+
+FString UCombatCoverAgentComponent::GetDisplayName() const
+{
+    if (!AgentDisplayName.empty())
+    {
+        return AgentDisplayName;
+    }
+
+    if (const AActor* Owner = GetOwner())
+    {
+        return Owner->GetFName().ToString();
+    }
+
+    return "Combat Agent";
+}
+
+void UCombatCoverAgentComponent::SetDisplayName(const FString& InDisplayName)
+{
+    AgentDisplayName = InDisplayName;
+}
+
+void UCombatCoverAgentComponent::RecordSniperHit(const FSniperHitInfo& HitInfo)
+{
+    bHasLastSniperHit = true;
+    LastHitBoneName = HitInfo.HitBoneName;
+    LastHitBodyName = !HitInfo.HitBodyName.empty()
+        ? HitInfo.HitBodyName
+        : (HitInfo.HitBoneName.IsValid() && HitInfo.HitBoneName != FName::None ? HitInfo.HitBoneName.ToString() : FString());
+    LastHitRegionName = !HitInfo.HitRegionName.empty()
+        ? HitInfo.HitRegionName
+        : FString(GetSniperHitRegionName(HitInfo.HitRegion));
+    LastHitRegionDisplayName = !HitInfo.HitRegionDisplayName.empty()
+        ? HitInfo.HitRegionDisplayName
+        : FString(GetSniperHitRegionDisplayName(HitInfo.HitRegion));
+    LastHitDamage = HitInfo.Damage;
+    LastHitScoreMultiplier = HitInfo.HitScoreMultiplier;
+    LastHitScoreValue = HitInfo.HitScoreValue;
+    bLastHitKilled = HitInfo.bKilled;
 }
 
 void UCombatCoverAgentComponent::RequestInitialSlot()
@@ -316,6 +361,25 @@ float UCombatCoverAgentComponent::GetHealthRatio() const
     }
 
     return (std::min)((std::max)(Health / MaxHealth, 0.0f), 1.0f);
+}
+
+void UCombatCoverAgentComponent::SetMaxHealth(float InMaxHealth)
+{
+    MaxHealth = (std::max)(1.0f, InMaxHealth);
+    Health = (std::min)((std::max)(0.0f, Health), MaxHealth);
+    if (Health <= 0.0f)
+    {
+        MarkDead();
+    }
+}
+
+void UCombatCoverAgentComponent::SetHealth(float InHealth)
+{
+    Health = (std::min)((std::max)(0.0f, InHealth), MaxHealth);
+    if (Health <= 0.0f)
+    {
+        MarkDead();
+    }
 }
 
 void UCombatCoverAgentComponent::MarkCombatDecisionMade()

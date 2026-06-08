@@ -66,6 +66,39 @@ local function get_combat_agent()
     return combatAgent
 end
 
+local function get_hit_body_name(hitInfo)
+    if hitInfo == nil then
+        return ""
+    end
+    if hitInfo.HitBodyName ~= nil and hitInfo.HitBodyName ~= "" then
+        return hitInfo.HitBodyName
+    end
+    if hitInfo.HitBoneNameString ~= nil then
+        return hitInfo.HitBoneNameString
+    end
+    return ""
+end
+
+local function get_hit_region_name(hitInfo)
+    if hitInfo == nil then
+        return "Unknown"
+    end
+    if hitInfo.HitRegionName ~= nil and hitInfo.HitRegionName ~= "" then
+        return hitInfo.HitRegionName
+    end
+    return "Unknown"
+end
+
+local function get_hit_region_display_name(hitInfo)
+    if hitInfo == nil then
+        return "UNKNOWN"
+    end
+    if hitInfo.HitRegionDisplayName ~= nil and hitInfo.HitRegionDisplayName ~= "" then
+        return hitInfo.HitRegionDisplayName
+    end
+    return string.upper(get_hit_region_name(hitInfo))
+end
+
 local function publish_sniper_event(eventName, hitInfo)
     if GameGeneralManager == nil or GameGeneralManager.Publish == nil then
         return
@@ -76,7 +109,12 @@ local function publish_sniper_event(eventName, hitInfo)
         target = obj,
         shooter = hitInfo ~= nil and hitInfo.Shooter or nil,
         killed = hitInfo ~= nil and hitInfo.bKilled == true or false,
-        friendly = hitInfo ~= nil and hitInfo.bFriendlyTarget == true or false
+        friendly = hitInfo ~= nil and hitInfo.bFriendlyTarget == true or false,
+        hit_body_name = get_hit_body_name(hitInfo),
+        hit_region_name = get_hit_region_name(hitInfo),
+        hit_region_display_name = get_hit_region_display_name(hitInfo),
+        hit_score_multiplier = hitInfo ~= nil and tonumber(hitInfo.HitScoreMultiplier) or 1.0,
+        hit_score_value = hitInfo ~= nil and math.floor(tonumber(hitInfo.HitScoreValue) or 0) or 0
     })
 end
 

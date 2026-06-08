@@ -5,6 +5,7 @@ local GameState = require("Management/GameState")
 local InGameManager = require("Management/InGameManager")
 local DataManager = require("Management/DataManager")
 local AudioManager = require("Management/AudioManager")
+local RadioManager = require("Management/RadioManager")
 local UIManager = require("Management/UIManager")
 local CutSceneManager = require("Management/CutSceneManager")
 local SceneManager = require("Management/SceneManager")
@@ -16,6 +17,7 @@ GeneralManager._instance = nil
 local CORE_ORDER = {
     "Data",
     "Audio",
+    "Radio",
     "UI",
     "CutScene",
     "InGame",
@@ -64,7 +66,7 @@ function GeneralManager.Get()
             context = nil,
             event_bus = nil,
             managers = {},
-            tick_order = { "Scene", "InGame", "CutScene", "UI", "Audio", "Data" }
+            tick_order = { "Scene", "InGame", "CutScene", "Radio", "UI", "Audio", "Data" }
         }, GeneralManager)
     end
     return GeneralManager._instance
@@ -100,6 +102,7 @@ function GeneralManager:Initialize(context)
     self.managers = {
         Data = DataManager.new(self),
         Audio = AudioManager.new(self),
+        Radio = RadioManager.new(self),
         UI = UIManager.new(self),
         CutScene = CutSceneManager.new(self),
         InGame = InGameManager.new(self),
@@ -276,6 +279,22 @@ end
 function GeneralManager:PlaySFXHandle(path_or_key, volume)
     self:_EnsureInitialized()
     return self.managers.Audio:PlaySFXHandle(path_or_key, volume)
+end
+
+function GeneralManager:QueueRadioComment(id, payload)
+    self:_EnsureInitialized()
+    if self.managers.Radio ~= nil and self.managers.Radio.Queue ~= nil then
+        return self.managers.Radio:Queue(id, payload)
+    end
+    return false
+end
+
+function GeneralManager:QueueOpeningRadioComment(payload)
+    self:_EnsureInitialized()
+    if self.managers.Radio ~= nil and self.managers.Radio.QueueOpening ~= nil then
+        return self.managers.Radio:QueueOpening(payload)
+    end
+    return false
 end
 
 function GeneralManager:FadeInSFX(handle, duration, target_volume)

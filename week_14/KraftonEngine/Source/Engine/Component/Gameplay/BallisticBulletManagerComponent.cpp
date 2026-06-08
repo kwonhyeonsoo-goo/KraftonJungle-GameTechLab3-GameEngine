@@ -1553,6 +1553,13 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.TargetCurrentHP = 0.0f;
 	HitInfo.TargetMaxHP = 0.0f;
 	HitInfo.HitBoneName = ResolvedHitBoneName;
+	HitInfo.HitBodyName = ResolvedHitBoneName.IsValid() && ResolvedHitBoneName != FName::None
+		? ResolvedHitBoneName.ToString()
+		: FString();
+	HitInfo.HitRegionName = GetSniperHitRegionName(HitRegion);
+	HitInfo.HitRegionDisplayName = GetSniperHitRegionDisplayName(HitRegion);
+	HitInfo.HitScoreMultiplier = GetDefaultSniperHitScoreMultiplier(HitRegion);
+	HitInfo.HitScoreValue = GetDefaultSniperHitScoreValue(HitRegion);
 	FVector HitBodyCenter = FVector::ZeroVector;
 	float HitBodyCenterDistance = 0.0f;
 	if (ResolveHitBodyCenterMetrics(Hit, ResolvedHitBoneName, HitBodyCenter, HitBodyCenterDistance))

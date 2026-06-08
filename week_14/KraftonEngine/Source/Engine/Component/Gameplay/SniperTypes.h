@@ -43,6 +43,77 @@ enum class ESniperHitRegion : uint8
 	COUNT
 };
 
+inline const char* GetSniperHitRegionName(ESniperHitRegion Region)
+{
+	switch (Region)
+	{
+	case ESniperHitRegion::Head:
+		return "Head";
+	case ESniperHitRegion::Torso:
+		return "Torso";
+	case ESniperHitRegion::Arm:
+		return "Arm";
+	case ESniperHitRegion::Leg:
+		return "Leg";
+	case ESniperHitRegion::Unknown:
+	default:
+		return "Unknown";
+	}
+}
+
+inline const char* GetSniperHitRegionDisplayName(ESniperHitRegion Region)
+{
+	switch (Region)
+	{
+	case ESniperHitRegion::Head:
+		return "HEAD";
+	case ESniperHitRegion::Torso:
+		return "TORSO";
+	case ESniperHitRegion::Arm:
+		return "ARM";
+	case ESniperHitRegion::Leg:
+		return "LEG";
+	case ESniperHitRegion::Unknown:
+	default:
+		return "UNKNOWN";
+	}
+}
+
+inline float GetDefaultSniperHitScoreMultiplier(ESniperHitRegion Region)
+{
+	switch (Region)
+	{
+	case ESniperHitRegion::Head:
+		return 2.0f;
+	case ESniperHitRegion::Torso:
+		return 1.0f;
+	case ESniperHitRegion::Arm:
+		return 0.65f;
+	case ESniperHitRegion::Leg:
+		return 0.75f;
+	case ESniperHitRegion::Unknown:
+	default:
+		return 1.0f;
+	}
+}
+
+inline int32 GetDefaultSniperHitScoreValue(ESniperHitRegion Region)
+{
+	switch (Region)
+	{
+	case ESniperHitRegion::Head:
+		return 50;
+	case ESniperHitRegion::Torso:
+		return 20;
+	case ESniperHitRegion::Arm:
+	case ESniperHitRegion::Leg:
+		return 10;
+	case ESniperHitRegion::Unknown:
+	default:
+		return 5;
+	}
+}
+
 USTRUCT()
 struct FSniperInputState
 {
@@ -211,6 +282,11 @@ struct FSniperHitInfo
 	float TargetCurrentHP = 0.0f;
 	float TargetMaxHP = 0.0f;
 	FName HitBoneName = FName::None;
+	FString HitBodyName;
+	FString HitRegionName = "Unknown";
+	FString HitRegionDisplayName = "UNKNOWN";
+	float HitScoreMultiplier = 1.0f;
+	int32 HitScoreValue = 0;
 	bool bHasHitBodyCenterDistance = false;
 	FVector HitBodyCenterLocation = FVector::ZeroVector;
 	float HitBodyCenterDistance = 0.0f;
