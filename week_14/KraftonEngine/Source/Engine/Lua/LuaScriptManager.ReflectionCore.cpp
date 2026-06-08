@@ -33,6 +33,7 @@
 #include "Texture/Texture2D.h"
 #include "Platform/Paths.h"
 #include "Platform/WindowsWindow.h"
+#include "UI/CursorSystem.h"
 #include "UI/UIManager.h"
 #include "Viewport/GameViewportClient.h"
 
@@ -942,6 +943,38 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             }
 
             return false;
+        }
+    );
+    Input.set_function(
+        "SetCursorImage",
+        [](const FString& TexturePath, float Width, float Height, float HotSpotX, float HotSpotY)
+        {
+            if (!GEngine)
+            {
+                return false;
+            }
+
+            UGameViewportClient* GameViewportClient = GetLuaGameViewportClient();
+            ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+            if (!GameViewportClient || !Device)
+            {
+                return false;
+            }
+
+            return FCursorSystem::Get().SetCursorImage(TexturePath, Width, Height, HotSpotX, HotSpotY);
+        }
+    );
+    Input.set_function(
+        "ClearCursorImage",
+        []()
+        {
+            if (!GEngine || !GetLuaGameViewportClient())
+            {
+                return false;
+            }
+
+            FCursorSystem::Get().ClearCursorImage();
+            return true;
         }
     );
     Input.set_function(

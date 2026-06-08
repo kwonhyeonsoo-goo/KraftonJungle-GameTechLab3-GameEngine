@@ -30,6 +30,7 @@ namespace
 	constexpr float RuntimeBallisticWindMinBlendSpeed = 0.0f;
 	constexpr float RuntimeBallisticWindMinInterval = 0.1f;
 	constexpr float RuntimeDegreesToRadians = 3.14159265358979323846f / 180.0f;
+	constexpr float RuntimeBallisticWindReverseGustChance = 0.45f;
 
 	float RandomFloat01()
 	{
@@ -69,6 +70,22 @@ namespace
 			Vector.X * CosTheta - Vector.Y * SinTheta,
 			Vector.X * SinTheta + Vector.Y * CosTheta,
 			Vector.Z);
+	}
+
+	FVector MakePlanarVector(const FVector& Vector)
+	{
+		return FVector(Vector.X, Vector.Y, 0.0f);
+	}
+
+	float RandomSignedUnit()
+	{
+		return RandomFloat01() < 0.5f ? -1.0f : 1.0f;
+	}
+
+	float BiasRandomTowardOne(float Bias)
+	{
+		const float SafeBias = (std::max)(Bias, 1.0f);
+		return 1.0f - std::pow(RandomFloat01(), SafeBias);
 	}
 }
 
@@ -606,8 +623,12 @@ void UWorld::InitWorld()
 
 void UWorld::ResetRuntimeBallisticWindState()
 {
-	RuntimeBallisticWindAcceleration = WorldSettings.BallisticWindAcceleration;
-	RuntimeBallisticWindTargetAcceleration = WorldSettings.BallisticWindAcceleration;
+	RuntimeBallisticBaseWindAcceleration = WorldSettings.BallisticWindAcceleration;
+	RuntimeBallisticCurrentGustAcceleration = FVector::ZeroVector;
+	RuntimeBallisticTargetGustAcceleration = FVector::ZeroVector;
+	RuntimeBallisticWindAcceleration = WorldSettings.bEnableBallisticWind
+		? RuntimeBallisticBaseWindAcceleration
+		: FVector::ZeroVector;
 	RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
 	bRuntimeBallisticWindInitialized = true;
 }
@@ -627,9 +648,12 @@ float UWorld::ComputeRuntimeBallisticWindChangeInterval() const
 void UWorld::PickNextRuntimeBallisticWindTarget()
 {
 	const FVector BaseWind = WorldSettings.BallisticWindAcceleration;
-	if (BaseWind.Length() <= RuntimeBallisticWindEpsilon)
+	RuntimeBallisticBaseWindAcceleration = BaseWind;
+	if (!WorldSettings.bEnableBallisticWind ||
+		!WorldSettings.bEnableDynamicBallisticWind ||
+		BaseWind.Length() <= RuntimeBallisticWindEpsilon)
 	{
-		RuntimeBallisticWindTargetAcceleration = BaseWind;
+		RuntimeBallisticTargetGustAcceleration = FVector::ZeroVector;
 		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
 		return;
 	}
@@ -641,12 +665,37 @@ void UWorld::PickNextRuntimeBallisticWindTarget()
 		std::swap(MinScale, MaxScale);
 	}
 
-	const float DirectionOffsetDegrees = std::abs(WorldSettings.BallisticWindDirectionOffsetDegrees);
-	const float DirectionOffsetRadians =
-		RandomFloatInRange(-DirectionOffsetDegrees, DirectionOffsetDegrees) * RuntimeDegreesToRadians;
-	const float MagnitudeScale = RandomFloatInRange(MinScale, MaxScale);
+	FVector BasePlanar = MakePlanarVector(BaseWind);
+	if (BasePlanar.Length() <= RuntimeBallisticWindEpsilon)
+	{
+		BasePlanar = FVector::XAxisVector;
+	}
+	else
+	{
+		BasePlanar.Normalize();
+	}
 
-	RuntimeBallisticWindTargetAcceleration = RotateVectorAroundZ(BaseWind, DirectionOffsetRadians) * MagnitudeScale;
+	const float DirectionOffsetDegrees = std::abs(WorldSettings.BallisticWindDirectionOffsetDegrees);
+	const float CrossBias = (std::max)(WorldSettings.BallisticWindCrossBias, 1.0f);
+	const float DirectionAlpha = BiasRandomTowardOne(CrossBias);
+	const float DirectionOffsetRadians =
+		RandomSignedUnit() * DirectionOffsetDegrees * DirectionAlpha * RuntimeDegreesToRadians;
+	const float GustMagnitudeScale = RandomFloatInRange(MinScale, MaxScale);
+	const float BaseMagnitude = BaseWind.Length();
+	const bool bReverseFlow = RandomFloat01() < RuntimeBallisticWindReverseGustChance;
+	const FVector GustBasis = bReverseFlow ? (BasePlanar * -1.0f) : BasePlanar;
+	FVector GustDirection = RotateVectorAroundZ(GustBasis, DirectionOffsetRadians);
+	if (GustDirection.Length() <= RuntimeBallisticWindEpsilon)
+	{
+		GustDirection = GustBasis;
+	}
+	else
+	{
+		GustDirection.Normalize();
+	}
+
+	RuntimeBallisticTargetGustAcceleration = GustDirection * (BaseMagnitude * GustMagnitudeScale);
+	RuntimeBallisticTargetGustAcceleration.Z = 0.0f;
 	RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
 }
 
@@ -657,18 +706,30 @@ void UWorld::TickRuntimeBallisticWind(float DeltaTime)
 		ResetRuntimeBallisticWindState();
 	}
 
-	if (!WorldSettings.bEnableDynamicBallisticWind)
+	RuntimeBallisticBaseWindAcceleration = WorldSettings.BallisticWindAcceleration;
+	if (!WorldSettings.bEnableBallisticWind)
 	{
-		RuntimeBallisticWindAcceleration = WorldSettings.BallisticWindAcceleration;
-		RuntimeBallisticWindTargetAcceleration = WorldSettings.BallisticWindAcceleration;
+		RuntimeBallisticCurrentGustAcceleration = FVector::ZeroVector;
+		RuntimeBallisticTargetGustAcceleration = FVector::ZeroVector;
+		RuntimeBallisticWindAcceleration = FVector::ZeroVector;
 		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
 		return;
 	}
 
-	if (WorldSettings.BallisticWindAcceleration.Length() <= RuntimeBallisticWindEpsilon)
+	if (!WorldSettings.bEnableDynamicBallisticWind)
 	{
+		RuntimeBallisticCurrentGustAcceleration = FVector::ZeroVector;
+		RuntimeBallisticTargetGustAcceleration = FVector::ZeroVector;
+		RuntimeBallisticWindAcceleration = RuntimeBallisticBaseWindAcceleration;
+		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
+		return;
+	}
+
+	if (RuntimeBallisticBaseWindAcceleration.Length() <= RuntimeBallisticWindEpsilon)
+	{
+		RuntimeBallisticCurrentGustAcceleration = FVector::ZeroVector;
+		RuntimeBallisticTargetGustAcceleration = FVector::ZeroVector;
 		RuntimeBallisticWindAcceleration = FVector::ZeroVector;
-		RuntimeBallisticWindTargetAcceleration = FVector::ZeroVector;
 		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
 		return;
 	}
@@ -680,10 +741,14 @@ void UWorld::TickRuntimeBallisticWind(float DeltaTime)
 	}
 
 	const float BlendAlpha = ExponentialInterpAlpha(DeltaTime, WorldSettings.BallisticWindBlendSpeed);
-	RuntimeBallisticWindAcceleration = FVector::Lerp(
-		RuntimeBallisticWindAcceleration,
-		RuntimeBallisticWindTargetAcceleration,
+	RuntimeBallisticCurrentGustAcceleration = FVector::Lerp(
+		RuntimeBallisticCurrentGustAcceleration,
+		RuntimeBallisticTargetGustAcceleration,
 		BlendAlpha);
+	RuntimeBallisticCurrentGustAcceleration.Z = 0.0f;
+	RuntimeBallisticWindAcceleration =
+		RuntimeBallisticBaseWindAcceleration + RuntimeBallisticCurrentGustAcceleration;
+	RuntimeBallisticWindAcceleration.Z = RuntimeBallisticBaseWindAcceleration.Z;
 }
 
 void UWorld::SetBallisticWindAcceleration(const FVector& InWindAcceleration)

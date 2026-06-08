@@ -256,7 +256,7 @@ void UGameViewportClient::SetCursorLocked(bool bLocked)
 void UGameViewportClient::RefreshCursorVisibility()
 {
 	const bool bShowHardwareCursor = !bCursorCaptured &&
-		(!bInputPossessed || !FCursorSystem::Get().IsSoftwareCursorActive());
+		!FCursorSystem::Get().IsSoftwareCursorActive();
 	if (bShowHardwareCursor)
 	{
 		while (::ShowCursor(TRUE) < 0) {}

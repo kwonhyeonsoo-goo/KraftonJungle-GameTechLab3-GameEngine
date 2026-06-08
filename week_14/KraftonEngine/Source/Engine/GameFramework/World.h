@@ -188,8 +188,10 @@ private:
     float                             GameTimeSeconds     = 0.0f;
     bool                              bWorldDestroyRouted = false;
     FWorldSettings                    WorldSettings;
+    FVector                           RuntimeBallisticBaseWindAcceleration = FVector::ZeroVector;
+    FVector                           RuntimeBallisticCurrentGustAcceleration = FVector::ZeroVector;
+    FVector                           RuntimeBallisticTargetGustAcceleration = FVector::ZeroVector;
     FVector                           RuntimeBallisticWindAcceleration = FVector::ZeroVector;
-    FVector                           RuntimeBallisticWindTargetAcceleration = FVector::ZeroVector;
     float                             RuntimeBallisticWindChangeRemaining = 0.0f;
     bool                              bRuntimeBallisticWindInitialized = false;
     FVector                           ClothWorldWindVelocity = FVector::ZeroVector;

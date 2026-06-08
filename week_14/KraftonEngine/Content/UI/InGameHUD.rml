@@ -20,6 +20,17 @@
                     <img id="scopeZoomIcon" class="scope-info-icon" data-ui-type="Image" data-ui-name="Scope Zoom Icon" src="Image/Scope/Scale.png" data-ui-fit="contain" />
                     <div id="scopeZoomValue" class="scope-info-value" data-ui-type="Text" data-ui-name="Scope Zoom Value">4x</div>
                 </div>
+                <div id="scopeWindBarRow" data-ui-type="Panel" data-ui-name="Scope Wind Bar Row">
+                    <div id="scopeWindGauge" data-ui-type="Panel" data-ui-name="Scope Wind Gauge">
+                        <div id="scopeWindPulseGlow" data-ui-type="Panel" data-ui-name="Scope Wind Pulse Glow"></div>
+                        <div id="scopeWindBarTrack" data-ui-type="Panel" data-ui-name="Scope Wind Bar Track"></div>
+                        <div id="scopeWindBarLeft" data-ui-type="Panel" data-ui-name="Scope Wind Bar Left"></div>
+                        <div id="scopeWindBarRight" data-ui-type="Panel" data-ui-name="Scope Wind Bar Right"></div>
+                        <div id="scopeWindBarLeftTip" data-ui-type="Panel" data-ui-name="Scope Wind Bar Left Tip"></div>
+                        <div id="scopeWindBarRightTip" data-ui-type="Panel" data-ui-name="Scope Wind Bar Right Tip"></div>
+                        <div id="scopeWindCenterLine" data-ui-type="Panel" data-ui-name="Scope Wind Center Line"></div>
+                    </div>
+                </div>
             </div>
         </div>
         <img id="compassImage" data-ui-type="Image" data-ui-name="Compass Image" src="Image/Hor-Compass/Window/Compass_Window_000.png" data-ui-fit="contain" />

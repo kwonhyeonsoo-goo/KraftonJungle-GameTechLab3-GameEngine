@@ -142,6 +142,13 @@ void EditorWorldSettingsWidget::Render()
 				0.0f,
 				20.0f,
 				"%.2f");
+			bWindSettingsChanged |= ImGui::DragFloat(
+				"Wind Cross Bias",
+				&WS.BallisticWindCrossBias,
+				0.01f,
+				1.0f,
+				5.0f,
+				"%.2f");
 		}
 		ImGui::EndDisabled();
 		if (bWindSettingsChanged)
