@@ -1,5 +1,91 @@
 #include "Engine/Input/InputSystem.h"
+#include <xinput.h>
+#include <algorithm>
 #include <cmath>
+#include <cstring>
+
+namespace
+{
+    typedef DWORD(WINAPI* PFN_XInputGetState)(DWORD, XINPUT_STATE*);
+
+    struct FXInputRuntime
+    {
+        HMODULE XInputDLL = nullptr;
+        PFN_XInputGetState XInputGetState = nullptr;
+        bool bLoadAttempted = false;
+
+        void EnsureLoaded()
+        {
+            if (bLoadAttempted)
+            {
+                return;
+            }
+
+            bLoadAttempted = true;
+            const char* XInputDllNames[] = {
+                "xinput1_4.dll",
+                "xinput1_3.dll",
+                "xinput9_1_0.dll",
+                "xinput1_2.dll",
+                "xinput1_1.dll"
+            };
+
+            for (const char* DllName : XInputDllNames)
+            {
+                if (HMODULE Candidate = ::LoadLibraryA(DllName))
+                {
+                    PFN_XInputGetState CandidateGetState = reinterpret_cast<PFN_XInputGetState>(::GetProcAddress(Candidate, "XInputGetState"));
+                    if (CandidateGetState != nullptr)
+                    {
+                        XInputDLL = Candidate;
+                        XInputGetState = CandidateGetState;
+                        return;
+                    }
+
+                    ::FreeLibrary(Candidate);
+                }
+            }
+        }
+    };
+
+    FXInputRuntime& GetXInputRuntime()
+    {
+        static FXInputRuntime Runtime;
+        Runtime.EnsureLoaded();
+        return Runtime;
+    }
+
+    float NormalizeThumbstickAxis(SHORT RawValue, SHORT DeadZone)
+    {
+        const float AbsValue = static_cast<float>(std::abs(static_cast<int>(RawValue)));
+        if (AbsValue <= static_cast<float>(DeadZone))
+        {
+            return 0.0f;
+        }
+
+        const float MaxMagnitude = RawValue < 0 ? 32768.0f : 32767.0f;
+        const float Normalized = (AbsValue - static_cast<float>(DeadZone)) / (MaxMagnitude - static_cast<float>(DeadZone));
+        const float Clamped = (std::max)(0.0f, (std::min)(Normalized, 1.0f));
+        return RawValue < 0 ? -Clamped : Clamped;
+    }
+
+    float NormalizeTriggerAxis(BYTE RawValue)
+    {
+        if (RawValue <= XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
+        {
+            return 0.0f;
+        }
+
+        const float Numerator = static_cast<float>(RawValue - XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+        const float Denominator = 255.0f - static_cast<float>(XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+        return (std::max)(0.0f, (std::min)(Numerator / Denominator, 1.0f));
+    }
+
+    int32 ToGamepadButtonIndex(EGamepadButton Button)
+    {
+        return static_cast<int32>(Button);
+    }
+}
 
 void InputSystem::Tick()
 {
@@ -18,6 +104,9 @@ void InputSystem::Tick()
         PrevStates[i] = CurrentStates[i];
         CurrentStates[i] = (GetAsyncKeyState(i) & 0x8000) != 0;
     }
+
+    std::memcpy(PrevGamepadButtons, CurrentGamepadButtons, sizeof(CurrentGamepadButtons));
+    PollGamepadState();
 
     bLeftDragJustStarted = false;
     bRightDragJustStarted = false;
@@ -144,6 +233,7 @@ void InputSystem::ResetTransientState()
     bRightDragJustStarted = false;
     bLeftDragJustEnded = false;
     bRightDragJustEnded = false;
+    ResetGamepadTransientState();
     ResetDragState();
     ResetMouseDelta();
     ResetWheelDelta();
@@ -159,6 +249,8 @@ void InputSystem::ResetAllKeyStates()
         CurrentStates[VK] = false;
         PrevStates[VK] = false;
     }
+    ResetGamepadState();
+    std::memset(PrevGamepadButtons, 0, sizeof(PrevGamepadButtons));
     UpdateCurrentSnapshot();
 }
 
@@ -189,6 +281,65 @@ void InputSystem::ResetCaptureStateForPIEEnd()
     GuiState.bUsingKeyboard = false;
     GuiState.bUsingTextInput = false;
     UpdateCurrentSnapshot();
+}
+
+void InputSystem::PollGamepadState()
+{
+    ResetGamepadState();
+
+    FXInputRuntime& Runtime = GetXInputRuntime();
+    if (Runtime.XInputGetState == nullptr)
+    {
+        return;
+    }
+
+    XINPUT_STATE XInputState{};
+    if (Runtime.XInputGetState(0, &XInputState) != ERROR_SUCCESS)
+    {
+        return;
+    }
+
+    bGamepadConnected = true;
+
+    const XINPUT_GAMEPAD& Gamepad = XInputState.Gamepad;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::FaceBottom)] = (Gamepad.wButtons & XINPUT_GAMEPAD_A) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::FaceRight)] = (Gamepad.wButtons & XINPUT_GAMEPAD_B) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::FaceLeft)] = (Gamepad.wButtons & XINPUT_GAMEPAD_X) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::FaceTop)] = (Gamepad.wButtons & XINPUT_GAMEPAD_Y) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::LeftShoulder)] = (Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::RightShoulder)] = (Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::Back)] = (Gamepad.wButtons & XINPUT_GAMEPAD_BACK) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::Start)] = (Gamepad.wButtons & XINPUT_GAMEPAD_START) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::LeftThumb)] = (Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::RightThumb)] = (Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::DPadUp)] = (Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::DPadDown)] = (Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::DPadLeft)] = (Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) != 0;
+    CurrentGamepadButtons[ToGamepadButtonIndex(EGamepadButton::DPadRight)] = (Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) != 0;
+
+    GamepadLeftStickX = NormalizeThumbstickAxis(Gamepad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+    GamepadLeftStickY = NormalizeThumbstickAxis(Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+    GamepadRightStickX = NormalizeThumbstickAxis(Gamepad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+    GamepadRightStickY = NormalizeThumbstickAxis(Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+    GamepadLeftTrigger = NormalizeTriggerAxis(Gamepad.bLeftTrigger);
+    GamepadRightTrigger = NormalizeTriggerAxis(Gamepad.bRightTrigger);
+}
+
+void InputSystem::ResetGamepadState()
+{
+    bGamepadConnected = false;
+    std::memset(CurrentGamepadButtons, 0, sizeof(CurrentGamepadButtons));
+    GamepadLeftStickX = 0.0f;
+    GamepadLeftStickY = 0.0f;
+    GamepadRightStickX = 0.0f;
+    GamepadRightStickY = 0.0f;
+    GamepadLeftTrigger = 0.0f;
+    GamepadRightTrigger = 0.0f;
+}
+
+void InputSystem::ResetGamepadTransientState()
+{
+    std::memcpy(PrevGamepadButtons, CurrentGamepadButtons, sizeof(CurrentGamepadButtons));
 }
 
 void InputSystem::UpdateCurrentSnapshot()
@@ -237,6 +388,19 @@ void InputSystem::UpdateCurrentSnapshot()
     Snapshot.bGuiUsingKeyboard = GuiState.bUsingKeyboard;
     Snapshot.bGuiUsingTextInput = GuiState.bUsingTextInput;
     Snapshot.bWindowFocused = bWindowFocused;
+    Snapshot.bGamepadConnected = bGamepadConnected;
+    for (int32 ButtonIndex = 0; ButtonIndex < FInputSystemSnapshot::GamepadButtonCount; ++ButtonIndex)
+    {
+        Snapshot.GamepadButtonDown[ButtonIndex] = CurrentGamepadButtons[ButtonIndex];
+        Snapshot.GamepadButtonPressed[ButtonIndex] = CurrentGamepadButtons[ButtonIndex] && !PrevGamepadButtons[ButtonIndex];
+        Snapshot.GamepadButtonReleased[ButtonIndex] = !CurrentGamepadButtons[ButtonIndex] && PrevGamepadButtons[ButtonIndex];
+    }
+    Snapshot.GamepadLeftStickX = GamepadLeftStickX;
+    Snapshot.GamepadLeftStickY = GamepadLeftStickY;
+    Snapshot.GamepadRightStickX = GamepadRightStickX;
+    Snapshot.GamepadRightStickY = GamepadRightStickY;
+    Snapshot.GamepadLeftTrigger = GamepadLeftTrigger;
+    Snapshot.GamepadRightTrigger = GamepadRightTrigger;
     CurrentSnapshot = Snapshot;
 }
 
