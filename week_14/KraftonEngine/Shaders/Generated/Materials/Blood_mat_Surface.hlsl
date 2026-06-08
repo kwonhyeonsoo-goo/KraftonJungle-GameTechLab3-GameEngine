@@ -1,4 +1,4 @@
-// Generated from Content/Material/Auto/Material.skybox.uasset
+// Generated from C:/Users/jungle/source/repos/Jungle_Week14_Team7/KraftonEngine/Content/Material/Particle/Blood_mat.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
@@ -46,8 +46,6 @@ float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, flo
     return SpecularLight * SpecularColor;
 }
 
-Texture2D Tex_DiffuseTexture : register(t0);
-
 cbuffer PerMaterial : register(b2)
 {
     float4 Param_EmissiveColor;
@@ -62,17 +60,15 @@ float3 GetCommonMaterialEmissive()
 
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
-    float4 n_3 = Tex_DiffuseTexture.Sample(LinearWrapSampler, Input.UV0);
-    float4 n_51 = float4(4.400000f, 4.400000f, 4.400000f, 4.400000f);
-    float4 n_46 = pow(n_3, n_51);
-    float n_33 = 1.000000f;
+    float3 n_1 = float3(1.000000f, 1.000000f, 1.000000f);
+    float n_3 = 1.000000f;
     FMaterialResult Result;
-    Result.BaseColor = (n_46).xyz;
+    Result.BaseColor = n_1;
     Result.Normal = float3(0, 0, 1);
     Result.Roughness = 0.5f;
     Result.Metallic = 0.0f;
     Result.Emissive = float3(0, 0, 0);
-    Result.Opacity = n_33;
+    Result.Opacity = n_3;
     return Result;
 }
 

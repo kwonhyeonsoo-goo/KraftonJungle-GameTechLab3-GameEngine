@@ -461,6 +461,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Editor\UI\Toolbar\ViewportToolbar.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\EditorDragSource.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\EditorFileUtils.cpp" />
+    <ClCompile Include="Source\Editor\UI\Util\EditorMeshThumbnailManager.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\EditorTextureManager.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\ImGuiSetting.cpp" />
     <ClCompile Include="Source\Editor\UI\Util\NotificationToast.cpp" />
@@ -707,6 +708,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Particle\Distributions\DistributionVectorUniform.cpp" />
     <ClCompile Include="Source\Engine\Particle\Distributions\DistributionVectorUniformCurve.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleAcceleration.cpp" />
+    <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleBloodSpray.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleBeamNoise.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleBeamSource.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleBeamTarget.cpp" />
@@ -931,6 +933,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Editor\UI\Toolbar\ViewportToolbar.h" />
     <ClInclude Include="Source\Editor\UI\Util\EditorDragSource.h" />
     <ClInclude Include="Source\Editor\UI\Util\EditorFileUtils.h" />
+    <ClInclude Include="Source\Editor\UI\Util\EditorMeshThumbnailManager.h" />
     <ClInclude Include="Source\Editor\UI\Util\EditorTextureManager.h" />
     <ClInclude Include="Source\Editor\UI\Util\ImGuiSetting.h" />
     <ClInclude Include="Source\Editor\UI\Util\NotificationToast.h" />
@@ -1221,6 +1224,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Particle\Distributions\DistributionVectorUniform.h" />
     <ClInclude Include="Source\Engine\Particle\Distributions\DistributionVectorUniformCurve.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleAcceleration.h" />
+    <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleBloodSpray.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleBeamNoise.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleBeamSource.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleBeamTarget.h" />

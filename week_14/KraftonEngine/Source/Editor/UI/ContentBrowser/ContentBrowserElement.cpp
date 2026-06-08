@@ -28,6 +28,7 @@
 #include "Materials/MaterialManager.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
+#include "Editor/UI/Util/EditorMeshThumbnailManager.h"
 #include "Editor/Subsystem/AssetFactory.h"
 #include "Editor/Undo/EditorUndoSystem.h"
 #include "Physics/PhysicsAsset.h"
@@ -645,6 +646,7 @@ bool ContentBrowserElement::RenderSelectSpace(ContentBrowserContext& Context)
 	const bool bClicked = ImGui::InvisibleButton("##ElementCard", CardSize);
 
 	const bool bHovered = ImGui::IsItemHovered();
+	const bool bVisible = ImGui::IsItemVisible();
 
 	ImVec2 Min = ImGui::GetItemRectMin();
 	ImVec2 Max = ImGui::GetItemRectMax();
@@ -686,7 +688,17 @@ bool ContentBrowserElement::RenderSelectSpace(ContentBrowserContext& Context)
 
 	if (Icon && IconMax.y > IconMin.y)
 	{
-		DrawList->AddImage(Icon, IconMin, IconMax);
+		ID3D11ShaderResourceView* DrawIcon = Icon;
+		if (bVisible && bUseMeshThumbnail)
+		{
+			if (ID3D11ShaderResourceView* Thumbnail =
+				FEditorMeshThumbnailManager::Get().GetOrRequestThumbnail(MeshThumbnailAssetPath, MeshThumbnailType))
+			{
+				DrawIcon = Thumbnail;
+			}
+		}
+
+		DrawList->AddImage(DrawIcon, IconMin, IconMax);
 	}
 
 	const char* TypeLabel = GetTypeLabel();

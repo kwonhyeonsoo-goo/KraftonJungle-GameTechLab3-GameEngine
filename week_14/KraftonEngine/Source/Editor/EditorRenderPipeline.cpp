@@ -2,6 +2,7 @@
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
 #include "Editor/Viewport/EditorPreviewViewportClient.h"
+#include "Editor/UI/Util/EditorMeshThumbnailManager.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Scene/FScene.h"
 #include "Viewport/Viewport.h"
@@ -102,6 +103,7 @@ void FEditorRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 
 	TArray<IEditorPreviewViewportClient*> PreviewViewportClients;
 	Editor->CollectAssetEditorPreviewViewportClients(PreviewViewportClients);
+	FEditorMeshThumbnailManager::Get().CollectPreviewViewports(PreviewViewportClients);
 
 	for (IEditorPreviewViewportClient* PreviewVC : PreviewViewportClients)
 	{

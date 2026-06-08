@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Types/ClassTypes.h"
 #include "Editor/UI/ContentBrowser/ContentBrowserContext.h"
+#include "Editor/UI/Util/EditorMeshThumbnailManager.h"
 #include "ContentItem.h"
 #include <d3d11.h>
 #include <shellapi.h>
@@ -18,6 +19,12 @@ public:
 
 	void SetIcon(ID3D11ShaderResourceView* InIcon) { Icon = InIcon; }
 	void SetContent(FContentItem InContent) { ContentItem = InContent; }
+	void SetMeshThumbnailRequest(const FString& AssetPath, EMeshThumbnailType Type)
+	{
+		MeshThumbnailAssetPath = AssetPath;
+		MeshThumbnailType = Type;
+		bUseMeshThumbnail = true;
+	}
 
 	std::wstring GetFileName() { return ContentItem.Path.filename(); }
 
@@ -49,6 +56,10 @@ protected:
 	ID3D11ShaderResourceView* Icon = nullptr;
 	FContentItem ContentItem;
 	bool bIsSelected = false;
+
+	bool bUseMeshThumbnail = false;
+	FString MeshThumbnailAssetPath;
+	EMeshThumbnailType MeshThumbnailType = EMeshThumbnailType::StaticMesh;
 };
 
 class DirectoryElement final : public ContentBrowserElement
