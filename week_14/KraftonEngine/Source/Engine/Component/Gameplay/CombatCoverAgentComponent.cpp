@@ -614,7 +614,7 @@ const char* UCombatCoverAgentComponent::GetResolvedCombatRoleName() const
 
 void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent* Target)
 {
-    if (State == ECombatCoverAgentState::Dead || State == ECombatCoverAgentState::Suppressed)
+    if (State == ECombatCoverAgentState::Dead)
     {
         return;
     }
@@ -626,9 +626,13 @@ void UCombatCoverAgentComponent::SetEngagementTarget(UCombatCoverAgentComponent*
     }
 
     CurrentTarget.Reset(Target);
-    CoverHoldTimer = 0.0f;
 
-    if (!bCanFireWhileMoving && State != ECombatCoverAgentState::Engaging)
+    if (State != ECombatCoverAgentState::Suppressed)
+    {
+        CoverHoldTimer = 0.0f;
+    }
+
+    if (State != ECombatCoverAgentState::Suppressed && !bCanFireWhileMoving && State != ECombatCoverAgentState::Engaging)
     {
         StateBeforeEngage = State;
         State = ECombatCoverAgentState::Engaging;
@@ -713,12 +717,6 @@ void UCombatCoverAgentComponent::ApplySuppression(float Duration)
         return;
     }
 
-    CurrentTarget.Reset();
-    CoverHoldTimer = 0.0f;
-    bMoveToCombatSlotAfterCoverHold = false;
-    AdvanceTimer = 0.0f;
-    RetryTimer = 0.0f;
-
     if (State != ECombatCoverAgentState::Suppressed)
     {
         StateBeforeSuppressed = State;
@@ -763,6 +761,11 @@ void UCombatCoverAgentComponent::FinishSuppression()
         break;
 
     case ECombatCoverAgentState::Engaging:
+        State = CurrentTarget.Get() && CurrentTarget.Get()->IsAlive()
+            ? ECombatCoverAgentState::Engaging
+            : (CurrentNodeId.empty() ? ECombatCoverAgentState::Idle : ECombatCoverAgentState::InCover);
+        break;
+
     case ECombatCoverAgentState::Suppressed:
     case ECombatCoverAgentState::InCover:
     default:

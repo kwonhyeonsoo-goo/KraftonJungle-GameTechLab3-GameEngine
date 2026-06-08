@@ -143,6 +143,9 @@ public:
     float GetAttackIntervalMax() const { return AttackIntervalMax; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
+    float GetSuppressedAttackSpeedMultiplier() const { return SuppressedAttackSpeedMultiplier; }
+
+    UFUNCTION(Pure, Category="CombatAgent|Combat")
     int32 GetIncomingFireCount() const { return IncomingFireCount; }
 
     UFUNCTION(Pure, Category="CombatAgent|Combat")
@@ -372,6 +375,9 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Can Fire While Moving")
     bool bCanFireWhileMoving = false;
+
+    UPROPERTY(Edit, Save, Category="CombatAgent|Combat", DisplayName="Suppressed Attack Speed Multiplier", Min=0.01f, Max=1.0f, Speed=0.01f)
+    float SuppressedAttackSpeedMultiplier = 0.25f;
 
     UPROPERTY(Edit, Save, Category="CombatAgent|Animation", DisplayName="Hit Reaction Duration", Min=0.0f, Max=10.0f, Speed=0.01f)
     float HitReactionDuration = 0.45f;

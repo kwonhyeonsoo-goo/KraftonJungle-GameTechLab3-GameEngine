@@ -588,11 +588,6 @@ FCombatCoverGraphValidationResult UCombatFlowManagerComponent::ValidateGraph(boo
             }
         }
 
-        if (!Node->GetSlots().empty() && CombatCoverSlotCount == 0)
-        {
-            AddValidationMessage(Result, false, MakeNodeDebugName(Node) + ": has no CombatCover slots.");
-        }
-
         if (FullCoverSlotCount > 0 && CombatCoverSlotCount == 0 && Node->GetLinks().empty())
         {
             AddValidationMessage(Result, false, MakeNodeDebugName(Node) + ": has only FullCover/Exposed slots and no outgoing links.");
@@ -1414,7 +1409,7 @@ const FCombatCoverLink* UCombatFlowManagerComponent::FindTraversalLink(
 
 UCombatCoverAgentComponent* UCombatFlowManagerComponent::FindBestTargetFor(UCombatCoverAgentComponent* Agent) const
 {
-    if (!IsValidCombatAgent(Agent) || Agent->IsSuppressed())
+    if (!IsValidCombatAgent(Agent))
     {
         return nullptr;
     }
@@ -1539,7 +1534,7 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             continue;
         }
 
-        if (!Agent->IsMovingForCombatRange() && Agent->CanMakeCombatDecision() && !Agent->GetCurrentNodeId().empty() &&
+        if (!Agent->IsSuppressed() && !Agent->IsMovingForCombatRange() && Agent->CanMakeCombatDecision() && !Agent->GetCurrentNodeId().empty() &&
             Agent->GetHealthRatio() <= Agent->GetLowHealthFullCoverRatio() &&
             !IsAgentInSlotType(Agent, ECombatCoverSlotType::FullCover))
         {
@@ -1571,7 +1566,7 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             continue;
         }
 
-        if (Agent->CanMakeCombatDecision())
+        if (!Agent->IsSuppressed() && Agent->CanMakeCombatDecision())
         {
             const float TakeCoverChance = (std::min)((std::max)(0.0f, Agent->GetTakeCoverChanceWhenInRange()), 1.0f);
             const float RepositionChance = (std::min)((std::max)(0.0f, Agent->GetRepositionChanceWhenInRange()), 1.0f);
@@ -1663,7 +1658,6 @@ void UCombatFlowManagerComponent::UpdateCombatSimulation(float DeltaTime)
             if (SuppressionState.IncomingHitCount >= (std::max)(1, SuppressionIncomingFireThreshold))
             {
                 Target->ApplySuppression(SuppressionDuration);
-                AttackStateByAgent.erase(Target);
                 It = SuppressionStateByAgent.erase(It);
                 continue;
             }
@@ -1747,12 +1741,19 @@ float UCombatFlowManagerComponent::PickAttackInterval(const UCombatCoverAgentCom
 
     const float MinInterval = (std::max)(0.0f, Agent->GetAttackIntervalMin());
     const float MaxInterval = (std::max)(MinInterval, Agent->GetAttackIntervalMax());
-    if (MaxInterval <= MinInterval)
+    float Interval = MinInterval;
+    if (MaxInterval > MinInterval)
     {
-        return MinInterval;
+        Interval = std::uniform_real_distribution<float>(MinInterval, MaxInterval)(GetCombatRandomGenerator());
     }
 
-    return std::uniform_real_distribution<float>(MinInterval, MaxInterval)(GetCombatRandomGenerator());
+    if (Agent->IsSuppressed())
+    {
+        const float SpeedMultiplier = (std::max)(0.01f, Agent->GetSuppressedAttackSpeedMultiplier());
+        Interval /= SpeedMultiplier;
+    }
+
+    return Interval;
 }
 
 float UCombatFlowManagerComponent::PickCoverHoldDuration(const UCombatCoverAgentComponent* Agent) const
