@@ -7,14 +7,19 @@ local ENEMY_KILL_SCORE = 100
 local FRIENDLY_KILL_PENALTY = 150
 local HEADSHOT_BONUS = 50
 local PENETRATION_BONUS = 25
+local KILLCAM_TRIGGER_BONUS = 200
 local DEFAULT_HIT_SCORE = 5
 
 local PAUSE_CAMERA_NAME = "PauseMenu_Camera"
 local PAUSE_RIFLE_NAME = "PauseMenu_Rifle"
+local PAUSE_CLOTH_NAME = "PauseMenu_ClothBackdrop"
 local PAUSE_FADE_TIME = 0.080
 local PAUSE_BLEND_TIME = 0.120
 local PAUSE_TOGGLE_KEY_CODE = 81
 local DEFAULT_MATCH_DURATION = 300.0
+local PAUSE_CLOTH_BASE_WIND_Y = 12.0
+local PAUSE_CLOTH_SWAY_X = 1.6
+local PAUSE_CLOTH_SWAY_Z = 0.9
 
 local function log(message)
     if Debug and Debug.Log then
@@ -22,6 +27,29 @@ local function log(message)
     else
         print("[InGameManager] " .. message)
     end
+end
+
+local function is_world_paused()
+    if Engine ~= nil and Engine.IsPaused ~= nil then
+        return Engine.IsPaused() == true
+    end
+    return false
+end
+
+local function set_world_paused(paused)
+    if Engine == nil then
+        return false
+    end
+    if paused == true then
+        if Engine.PauseGame ~= nil then
+            Engine.PauseGame()
+            return true
+        end
+    elseif Engine.ResumeGame ~= nil then
+        Engine.ResumeGame()
+        return true
+    end
+    return false
 end
 
 local function get_hit_region_score(hit)
@@ -124,9 +152,17 @@ function InGameManager.new(general)
         pause_transition = nil,
         pause_transition_time = 0.0,
         pause_previous_view_target = nil,
+        pause_previous_world_paused = false,
+        pause_world_pause_captured = false,
         pause_camera = nil,
         pause_rifle = nil,
-        pause_rifle_sequence = nil
+        pause_rifle_sequence = nil,
+        pause_cloth = nil,
+        pause_cloth_component = nil,
+        pause_cloth_time = 0.0,
+        pause_cloth_active = false,
+        pause_cloth_warned = false,
+        pending_kill_score_payloads = {}
     }, InGameManager)
 end
 
@@ -148,6 +184,9 @@ function InGameManager:Initialize()
     end)
 
     self.general:Subscribe("sniper.target_damaged", self, function(payload)
+        if not self.running then
+            self:EnsureRunningForCurrentState("sniper_target_damaged")
+        end
         if not self.running then
             return
         end
@@ -180,6 +219,11 @@ function InGameManager:Initialize()
             timer = self.timer,
             wave = self.wave,
             phase = self.phase,
+            hit = hit,
+            killed = payload ~= nil and payload.killed == true,
+            target = payload ~= nil and payload.target or nil,
+            shooter = payload ~= nil and payload.shooter or nil,
+            friendly = isFriendly,
             payload = payload,
             score_delta = scoreDelta,
             total_score = self.general:GetScore(),
@@ -190,6 +234,9 @@ function InGameManager:Initialize()
     end)
 
     self.general:Subscribe("sniper.target_killed", self, function(payload)
+        if not self.running then
+            self:EnsureRunningForCurrentState("sniper_target_killed")
+        end
         if not self.running then
             return
         end
@@ -214,10 +261,15 @@ function InGameManager:Initialize()
         end
 
         self.general:AddScore(scoreDelta)
-        self.general:Publish("ingame.sniper_killed", {
+        local scorePayload = {
             timer = self.timer,
             wave = self.wave,
             phase = self.phase,
+            hit = hit,
+            killed = true,
+            target = payload ~= nil and payload.target or nil,
+            shooter = payload ~= nil and payload.shooter or nil,
+            friendly = isFriendly,
             payload = payload,
             score_delta = scoreDelta,
             total_score = self.general:GetScore(),
@@ -226,7 +278,36 @@ function InGameManager:Initialize()
             hit_body_name = get_hit_body_name(hit),
             hit_region_name = get_hit_region_name(hit),
             hit_region_display_name = get_hit_region_display_name(hit)
-        })
+        }
+
+        local bulletId = hit ~= nil and tonumber(hit.BulletId) or nil
+        if bulletId ~= nil and bulletId ~= 0 and not isFriendly then
+            self.pending_kill_score_payloads[bulletId] = scorePayload
+        end
+
+        self.general:Publish("ingame.sniper_killed", scorePayload)
+    end)
+
+    self.general:Subscribe("sniper.killcam_triggered", self, function(payload)
+        local bulletId = payload ~= nil and tonumber(payload.bullet_id) or nil
+        if bulletId == nil or bulletId == 0 then
+            return
+        end
+
+        local scorePayload = self.pending_kill_score_payloads ~= nil and self.pending_kill_score_payloads[bulletId] or nil
+        if scorePayload == nil then
+            return
+        end
+
+        self.pending_kill_score_payloads[bulletId] = nil
+        scorePayload.killcam_bonus = KILLCAM_TRIGGER_BONUS
+        scorePayload.score_delta = (tonumber(scorePayload.score_delta) or 0) + KILLCAM_TRIGGER_BONUS
+        if scorePayload.payload ~= nil then
+            scorePayload.payload.killcam_bonus = KILLCAM_TRIGGER_BONUS
+            scorePayload.payload.score_delta = scorePayload.score_delta
+        end
+        self.general:AddScore(KILLCAM_TRIGGER_BONUS)
+        scorePayload.total_score = self.general:GetScore()
     end)
 
     self.general:Subscribe("ingame.pause_resume_requested", self, function()
@@ -266,9 +347,17 @@ function InGameManager:Start(settings)
     self.pause_transition = nil
     self.pause_transition_time = 0.0
     self.pause_previous_view_target = nil
+    self.pause_previous_world_paused = false
+    self.pause_world_pause_captured = false
     self.pause_camera = nil
     self.pause_rifle = nil
     self.pause_rifle_sequence = nil
+    self.pause_cloth = nil
+    self.pause_cloth_component = nil
+    self.pause_cloth_time = 0.0
+    self.pause_cloth_active = false
+    self.pause_cloth_warned = false
+    self.pending_kill_score_payloads = {}
     self.general:Publish("ingame.started", self:GetSnapshot())
     self.general:Publish("ingame.timer", self:GetSnapshot())
     self.general:Publish("ingame.pause_changed", { paused = false, reason = "start" })
@@ -282,6 +371,7 @@ function InGameManager:Stop(reason)
     local snapshot = self:GetSnapshot()
     snapshot.reason = reason
     self:EndPausePresentation(false)
+    self:RestorePauseWorld(true)
     self.running = false
     self.phase = "Idle"
     self.general:Publish("ingame.stopped", snapshot)
@@ -302,6 +392,7 @@ function InGameManager:Tick(dt)
     self:PollPauseInput()
     self:TickPauseTransition(dt)
     if self.paused or self.pause_transition ~= nil then
+        self:UpdatePauseClothWind(dt)
         return
     end
 
@@ -455,6 +546,110 @@ function InGameManager:GetPauseRifleSequence()
     return self.pause_rifle_sequence
 end
 
+function InGameManager:FindPauseCloth()
+    if self.pause_cloth ~= nil then
+        return self.pause_cloth
+    end
+    if World ~= nil and World.FindActorByName ~= nil then
+        self.pause_cloth = World.FindActorByName(PAUSE_CLOTH_NAME)
+    end
+    return self.pause_cloth
+end
+
+function InGameManager:GetPauseClothComponent()
+    if self.pause_cloth_component ~= nil then
+        return self.pause_cloth_component
+    end
+
+    local cloth = self:FindPauseCloth()
+    if cloth == nil then
+        return nil
+    end
+
+    if cloth.GetSkeletalMeshComponent ~= nil then
+        self.pause_cloth_component = cloth:GetSkeletalMeshComponent()
+    end
+    if self.pause_cloth_component == nil and cloth.GetRootComponent ~= nil then
+        local root = cloth:GetRootComponent()
+        if root ~= nil and root.SetClothPreviewWindOverride ~= nil then
+            self.pause_cloth_component = root
+        end
+    end
+    return self.pause_cloth_component
+end
+
+function InGameManager:SetPauseClothWindEnabled(enabled)
+    local comp = self:GetPauseClothComponent()
+    if comp == nil then
+        if enabled and not self.pause_cloth_warned then
+            log("pause cloth missing: " .. PAUSE_CLOTH_NAME)
+            self.pause_cloth_warned = true
+        end
+        self.pause_cloth_active = false
+        return
+    end
+
+    self.pause_cloth_active = enabled == true
+    if comp.SetTickWhenPaused ~= nil then
+        comp:SetTickWhenPaused(self.pause_cloth_active)
+    end
+
+    if self.pause_cloth_active then
+        self.pause_cloth_time = 0.0
+        if comp.ResetClothSimulation ~= nil then
+            comp:ResetClothSimulation()
+        end
+        if comp.SetClothPreviewWindOverride ~= nil then
+            comp:SetClothPreviewWindOverride(true, 0.0, PAUSE_CLOTH_BASE_WIND_Y, 0.0)
+        end
+    elseif comp.ClearClothWindOverride ~= nil then
+        comp:ClearClothWindOverride()
+    elseif comp.SetClothPreviewWindOverride ~= nil then
+        comp:SetClothPreviewWindOverride(false, 0.0, 0.0, 0.0)
+    end
+end
+
+function InGameManager:UpdatePauseClothWind(dt)
+    if not self.pause_cloth_active then
+        return
+    end
+
+    local comp = self:GetPauseClothComponent()
+    if comp == nil or comp.SetClothPreviewWindOverride == nil then
+        self.pause_cloth_active = false
+        return
+    end
+
+    self.pause_cloth_time = (self.pause_cloth_time or 0.0) + (dt or 0.0)
+    local t = self.pause_cloth_time
+    local gust = math.sin(t * 1.7) * 2.2 + math.sin(t * 4.3) * 0.9
+    local wind_x = math.sin(t * 2.6) * PAUSE_CLOTH_SWAY_X
+    local wind_y = PAUSE_CLOTH_BASE_WIND_Y + gust
+    local wind_z = math.sin(t * 3.8) * PAUSE_CLOTH_SWAY_Z
+    comp:SetClothPreviewWindOverride(true, wind_x, wind_y, wind_z)
+end
+
+function InGameManager:CaptureAndPauseWorld()
+    if self.pause_world_pause_captured then
+        return
+    end
+
+    self.pause_previous_world_paused = is_world_paused()
+    self.pause_world_pause_captured = true
+    set_world_paused(true)
+end
+
+function InGameManager:RestorePauseWorld(force_resume)
+    if force_resume == true then
+        set_world_paused(false)
+    elseif self.pause_world_pause_captured and self.pause_previous_world_paused ~= true then
+        set_world_paused(false)
+    end
+
+    self.pause_previous_world_paused = false
+    self.pause_world_pause_captured = false
+end
+
 function InGameManager:TogglePause(reason)
     if self.pause_transition ~= nil then
         return
@@ -489,6 +684,8 @@ function InGameManager:BeginPause(reason)
     self.paused = true
     self.pause_transition = "enter_fade_out"
     self.pause_transition_time = 0.0
+    self:CaptureAndPauseWorld()
+    self:SetPauseClothWindEnabled(true)
     if CameraManager ~= nil and CameraManager.FadeOut ~= nil then
         CameraManager.FadeOut(PAUSE_FADE_TIME)
     end
@@ -522,6 +719,9 @@ function InGameManager:TickPauseTransition(dt)
         end
         local seq = self:GetPauseRifleSequence()
         if seq ~= nil and seq.Play ~= nil then
+            if seq.SetTickWhenPaused ~= nil then
+                seq:SetTickWhenPaused(true)
+            end
             seq:Play()
             log("pause rifle sequence play: " .. PAUSE_RIFLE_NAME)
         else
@@ -543,6 +743,7 @@ function InGameManager:TickPauseTransition(dt)
 
     if self.pause_transition == "exit_fade_out" and self.pause_transition_time >= PAUSE_FADE_TIME then
         self:EndPausePresentation(true)
+        self:RestorePauseWorld(false)
         if CameraManager ~= nil and CameraManager.FadeIn ~= nil then
             CameraManager.FadeIn(PAUSE_FADE_TIME)
         end
@@ -566,6 +767,9 @@ function InGameManager:EndPausePresentation(restore_camera)
     end
     if seq ~= nil and seq.Stop ~= nil then
         seq:Stop()
+        if seq.SetTickWhenPaused ~= nil then
+            seq:SetTickWhenPaused(false)
+        end
     end
 
     if restore_camera and self.pause_previous_view_target ~= nil and
@@ -573,6 +777,7 @@ function InGameManager:EndPausePresentation(restore_camera)
         CameraManager.SetViewTargetWithBlend(self.pause_previous_view_target, PAUSE_BLEND_TIME)
     end
 
+    self:SetPauseClothWindEnabled(false)
     self.pause_transition = nil
     self.pause_transition_time = 0.0
     self.pause_rifle_sequence = nil
@@ -580,6 +785,7 @@ end
 
 function InGameManager:GoToMain(reason)
     self:EndPausePresentation(false)
+    self:RestorePauseWorld(true)
     self.paused = false
     self.general:Publish("ingame.pause_changed", { paused = false, reason = reason or "go_main" })
     if self.general ~= nil and self.general.RequestState ~= nil then

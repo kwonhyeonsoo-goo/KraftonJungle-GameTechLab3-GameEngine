@@ -1,4 +1,4 @@
-// Generated from C:/Projects/Jungle_Week13_Team2/KraftonEngine/Content/Material/NewMaterial.uasset
+// Generated from C:/Users/jungle/Desktop/YG/Week14/Project/Week14_Engine/KraftonEngine/Content/UI/NewMaterial.uasset
 // Domain: Surface
 
 #include "Common/ConstantBuffers.hlsli"
@@ -28,19 +28,49 @@ struct FMaterialResult
     float Opacity;
 };
 
+float MaterialRoughnessToShininess(float Roughness)
+{
+    float R = saturate(Roughness);
+    return lerp(256.0f, 2.0f, R * R);
+}
+
+float3 ApplyMaterialMetallicDiffuse(float3 BaseColor, float Metallic)
+{
+    return BaseColor * (1.0f - saturate(Metallic));
+}
+
+float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, float Metallic)
+{
+    float M = saturate(Metallic);
+    float3 SpecularColor = lerp(float3(0.04f, 0.04f, 0.04f), BaseColor, M);
+    return SpecularLight * SpecularColor;
+}
+
 Texture2D Tex_Diffuse : register(t0);
+
+cbuffer PerMaterial : register(b2)
+{
+    float4 Param_EmissiveColor;
+    float Param_EmissiveIntensity;
+    float3 _Pad0;
+};
+
+float3 GetCommonMaterialEmissive()
+{
+    return Param_EmissiveColor.rgb * max(Param_EmissiveIntensity, 0.0f);
+}
 
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
-    float4 n_5 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
-    float n_47 = 0.400000f;
+    float4 n_17 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
+    float n_3 = 1.000000f;
     FMaterialResult Result;
-    Result.BaseColor = (n_5).xyz;
+    Result.BaseColor = (n_17).rgb;
     Result.Normal = float3(0, 0, 1);
     Result.Roughness = 0.5f;
     Result.Metallic = 0.0f;
     Result.Emissive = float3(0, 0, 0);
-    Result.Opacity = n_47;
+    Result.Opacity = n_3;
     return Result;
 }
 
@@ -83,7 +113,8 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
     float3 N = normalize(input.normal);
 
-    float3 finalRgb = Result.BaseColor + Result.Emissive;
+    float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
+    float OutOpacity = saturate(Result.Opacity);
 
-    return float4(finalRgb, saturate(Result.Opacity));
+    return float4(finalRgb, OutOpacity);
 }

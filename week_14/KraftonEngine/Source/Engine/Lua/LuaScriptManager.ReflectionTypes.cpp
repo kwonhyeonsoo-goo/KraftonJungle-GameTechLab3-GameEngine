@@ -1523,6 +1523,16 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &UActorComponent::Activate,
         "Deactivate",
         &UActorComponent::Deactivate,
+        "SetTickWhenPaused",
+        [](UActorComponent& Component, bool bTickWhenPaused)
+        {
+            Component.PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused;
+        },
+        "IsTickWhenPaused",
+        [](const UActorComponent& Component)
+        {
+            return Component.PrimaryComponentTick.bTickEvenWhenPaused;
+        },
         "HasTag",
         [](UActorComponent& Component, const FString& Tag)
         {
@@ -1640,6 +1650,10 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &UActorSequenceComponent::Pause,
         "Stop",
         &UActorSequenceComponent::Stop,
+        "SetTickWhenPaused",
+        &UActorSequenceComponent::SetTickWhenPaused,
+        "IsTickWhenPaused",
+        &UActorSequenceComponent::IsTickWhenPaused,
         "GetSequence",
         &UActorSequenceComponent::GetSequence,
         "GetSequencePlayer",

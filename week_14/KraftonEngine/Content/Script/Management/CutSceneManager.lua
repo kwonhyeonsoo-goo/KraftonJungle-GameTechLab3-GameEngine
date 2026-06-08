@@ -1355,6 +1355,11 @@ function CutSceneManager:PollSniperKillCam()
         camera_mode = 0,
         profile = take_next_sniper_killcam_profile_id()
     })
+    if self.general ~= nil and self.general.Publish ~= nil then
+        self.general:Publish("sniper.killcam_triggered", {
+            bullet_id = bullet_id
+        })
+    end
 end
 
 return CutSceneManager

@@ -264,8 +264,10 @@ void ASniperPawn::SyncSniperRuntimeState()
 	AimSwayState.CurrentSwayYaw = 0.0f;
 	AimSwayState.BreathMultiplier = 1.0f;
 	AimSwayState.HoldBreathGauge = AimSwayState.MaxHoldBreathGauge;
+	AimSwayState.HoldBreathCooldownRemaining = 0.0f;
 	AimSwayState.bForcedRecovery = false;
 	AimSwayState.bRequireHoldBreathRelease = false;
+	AimSwayState.bWasHoldBreathActive = false;
 	RecoilState = FRecoilState{};
 
 	if (Camera)
@@ -303,7 +305,13 @@ void ASniperPawn::SyncSniperRuntimeState()
 
 void ASniperPawn::UpdateScopeState(float DeltaTime)
 {
-	ScopeState.bIsScoped = InputState.bScopeHeld;
+	if (!CanEnterScope())
+	{
+		InputState.bScopeHeld = false;
+		InputState.bHoldBreathHeld = false;
+	}
+
+	ScopeState.bIsScoped = InputState.bScopeHeld && CanEnterScope();
 	ScopeState.TargetZoomMagnification = ClampScopeZoomMagnification(ScopeState.TargetZoomMagnification);
 	ScopeState.CurrentZoomMagnification = ScopeState.TargetZoomMagnification;
 	ScopeState.ScopedFOV = ComputeScopedFOVForMagnification(ScopeState.CurrentZoomMagnification);
@@ -358,12 +366,25 @@ void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
 		AimSwayState.bRequireHoldBreathRelease = false;
 	}
 
+	if (AimSwayState.HoldBreathCooldownRemaining > 0.0f)
+	{
+		AimSwayState.HoldBreathCooldownRemaining = (std::max)(
+			0.0f,
+			AimSwayState.HoldBreathCooldownRemaining - DeltaTime);
+	}
+
 	const bool bCanHoldBreath =
 		InputState.bHoldBreathHeld &&
 		ScopeState.bIsScoped &&
 		!AimSwayState.bForcedRecovery &&
 		!AimSwayState.bRequireHoldBreathRelease &&
+		AimSwayState.HoldBreathCooldownRemaining <= 0.0f &&
 		AimSwayState.HoldBreathGauge > 0.0f;
+
+	if (AimSwayState.bWasHoldBreathActive && !bCanHoldBreath && !AimSwayState.bForcedRecovery)
+	{
+		AimSwayState.HoldBreathCooldownRemaining = (std::max)(HoldBreathReentryDelay, 0.0f);
+	}
 
 	if (bCanHoldBreath)
 	{
@@ -418,6 +439,8 @@ void ASniperPawn::UpdateHoldBreathState(float DeltaTime)
 	{
 		AimSwayState.bForcedRecovery = false;
 	}
+
+	AimSwayState.bWasHoldBreathActive = bCanHoldBreath;
 }
 
 void ASniperPawn::UpdateAimSwayState(float DeltaTime)
@@ -481,6 +504,24 @@ float ASniperPawn::GetScopeBlendAlpha() const
 	return ComputeScopeAlpha(ScopeState);
 }
 
+bool ASniperPawn::IsReloading() const
+{
+	const USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+	return SniperWeapon && SniperWeapon->IsReloading();
+}
+
+float ASniperPawn::GetReloadRemaining() const
+{
+	const USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+	return SniperWeapon ? SniperWeapon->GetReloadRemaining() : 0.0f;
+}
+
+float ASniperPawn::GetReloadProgress() const
+{
+	const USniperWeaponComponent* SniperWeapon = WeaponComponent.Get();
+	return SniperWeapon ? SniperWeapon->GetReloadProgress() : 0.0f;
+}
+
 void ASniperPawn::ForceScopeReleased()
 {
 	InputState.bScopeHeld = false;
@@ -512,6 +553,7 @@ bool ASniperPawn::IsHoldBreathActive() const
 	return ScopeState.bIsScoped
 		&& !AimSwayState.bForcedRecovery
 		&& !AimSwayState.bRequireHoldBreathRelease
+		&& AimSwayState.HoldBreathCooldownRemaining <= 0.0f
 		&& InputState.bHoldBreathHeld
 		&& AimSwayState.HoldBreathGauge > 0.0f
 		&& AimSwayState.BreathMultiplier < 1.0f;
@@ -525,6 +567,11 @@ FRotator ASniperPawn::BuildEffectiveAimRotation() const
 	EffectiveRotation.Pitch = ClampSniperPitch(EffectiveRotation.Pitch, MinCameraPitch, MaxCameraPitch);
 	EffectiveRotation.Roll = 0.0f;
 	return EffectiveRotation;
+}
+
+bool ASniperPawn::CanEnterScope() const
+{
+	return !IsSniperKillCamPlaying(this) && !IsReloading();
 }
 
 float ASniperPawn::ClampScopeZoomMagnification(float Magnification) const
@@ -618,7 +665,7 @@ void ASniperPawn::HandleLookUpInput(float Value)
 
 void ASniperPawn::HandleScopeZoomAxis(float Value)
 {
-	if (!ScopeState.bIsScoped || std::abs(Value) <= 0.0001f)
+	if (!ScopeState.bIsScoped || IsReloading() || std::abs(Value) <= 0.0001f)
 	{
 		return;
 	}
@@ -628,7 +675,7 @@ void ASniperPawn::HandleScopeZoomAxis(float Value)
 
 void ASniperPawn::HandleScopePressed()
 {
-	if (IsSniperKillCamPlaying(this))
+	if (!CanEnterScope())
 	{
 		InputState.bScopeHeld = false;
 		return;
@@ -695,7 +742,10 @@ void ASniperPawn::HandleReloadPressed()
 	InputState.bReloadPressed = true;
 	if (USniperWeaponComponent* SniperWeapon = WeaponComponent.Get())
 	{
-		SniperWeapon->RequestReload();
+		if (SniperWeapon->RequestReload())
+		{
+			ForceScopeReleased();
+		}
 	}
 	InputState.bReloadPressed = false;
 }

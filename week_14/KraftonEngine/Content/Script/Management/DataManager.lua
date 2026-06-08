@@ -112,6 +112,38 @@ function DataManager:GetScore()
     return self.data.score or 0
 end
 
+function DataManager:SetTempRun(result, score)
+    self.data.temp_run = {
+        nickname = "TEMP",
+        result = tostring(result or "Unknown"),
+        score = math.max(0, math.floor(tonumber(score) or self:GetScore()))
+    }
+    self:Save()
+    self.general:Publish("data.temp_run_changed", self.data.temp_run)
+end
+
+function DataManager:GetTempRun(default_result)
+    local temp = type(self.data.temp_run) == "table" and self.data.temp_run or {}
+    if next(temp) == nil then
+        for index = #(self.data.runs or {}), 1, -1 do
+            local run = self.data.runs[index]
+            if type(run) == "table" and tostring(run.nickname or "") == "TEMP" then
+                temp = run
+                break
+            end
+        end
+    end
+    return {
+        result = tostring(temp.result or default_result or "Unknown"),
+        score = math.max(0, math.floor(tonumber(temp.score) or self:GetScore()))
+    }
+end
+
+function DataManager:ClearTempRun()
+    self.data.temp_run = nil
+    self:Save()
+end
+
 function DataManager:GetHighScore()
     return self.data.high_score or 0
 end
@@ -158,12 +190,24 @@ function DataManager:CommitRun(result)
     result = result or {}
     result.score = tonumber(result.score) or self:GetScore()
     result.state = result.state or "Unknown"
+    result.result = result.result or result.state
+    result.nickname = tostring(result.nickname or self.data.nickname or "Player")
+
+    for index = #(self.data.runs or {}), 1, -1 do
+        local run = self.data.runs[index]
+        if type(run) == "table" and tostring(run.nickname or "") == "TEMP" then
+            table.remove(self.data.runs, index)
+        end
+    end
+
     table.insert(self.data.runs, result)
 
     if result.score > (self.data.high_score or 0) then
         self.data.high_score = result.score
     end
 
+    self.data.nickname = result.nickname
+    self.data.temp_run = nil
     self:Save()
     self.general:Publish("data.run_committed", result)
 end

@@ -733,6 +733,45 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         )
     );
     Input.set_function(
+        "GetRawKeyDown",
+        sol::overload(
+            [](const FString& KeyName)
+            {
+                return InputSystem::Get().GetKeyDown(ResolveInputKeyCode(KeyName));
+            },
+            [](int VK)
+            {
+                return InputSystem::Get().GetKeyDown(VK);
+            }
+        )
+    );
+    Input.set_function(
+        "GetRawKey",
+        sol::overload(
+            [](const FString& KeyName)
+            {
+                return InputSystem::Get().GetKey(ResolveInputKeyCode(KeyName));
+            },
+            [](int VK)
+            {
+                return InputSystem::Get().GetKey(VK);
+            }
+        )
+    );
+    Input.set_function(
+        "GetRawKeyUp",
+        sol::overload(
+            [](const FString& KeyName)
+            {
+                return InputSystem::Get().GetKeyUp(ResolveInputKeyCode(KeyName));
+            },
+            [](int VK)
+            {
+                return InputSystem::Get().GetKeyUp(VK);
+            }
+        )
+    );
+    Input.set_function(
         "GetMouseDeltaX",
         []()
         {
@@ -1486,6 +1525,45 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             if (GEngine && GEngine->GetWorld())
             {
                 GEngine->GetWorld()->SetBallisticWindAcceleration(WindAcceleration);
+            }
+        }
+    );
+    Engine.set_function(
+        "SetClothWorldWindVelocity",
+        [](const FVector& WindVelocity)
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->SetClothWorldWindVelocity(WindVelocity);
+            }
+        }
+    );
+    Engine.set_function(
+        "SetClothWorldWindVelocityXYZ",
+        [](float X, float Y, float Z)
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->SetClothWorldWindVelocity(FVector(X, Y, Z));
+            }
+        }
+    );
+    Engine.set_function(
+        "GetClothWorldWindVelocity",
+        []()
+        {
+            return GEngine && GEngine->GetWorld()
+                ? GEngine->GetWorld()->GetClothWorldWindVelocityValue()
+                : FVector::ZeroVector;
+        }
+    );
+    Engine.set_function(
+        "ClearClothWorldWindVelocity",
+        []()
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->ClearClothWorldWindVelocity();
             }
         }
     );
