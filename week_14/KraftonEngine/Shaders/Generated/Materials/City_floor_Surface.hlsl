@@ -64,7 +64,7 @@ float3 GetCommonMaterialEmissive()
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
     float4 n_17 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
-    float3 n_1 = float3(2.200000f, 2.200000f, 2.200000f);
+    float3 n_1 = float3(3.000000f, 3.000000f, 3.000000f);
     float3 n_28 = pow((n_17).rgb, n_1);
     float n_3 = 1.000000f;
     FMaterialResult Result;

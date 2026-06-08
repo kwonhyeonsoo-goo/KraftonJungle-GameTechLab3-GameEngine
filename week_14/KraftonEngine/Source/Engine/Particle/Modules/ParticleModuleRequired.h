@@ -68,6 +68,8 @@ public:
 	UPROPERTY(Edit, Save, Category="Required", DisplayName="Material", AssetType="Material")
 	FSoftObjectPtr MaterialSlot;
 	UMaterial* CachedMaterial = nullptr; // ResolveMaterial() 에서 resolve
+	FString CachedMaterialPath;
+	uint64 CachedMaterialGeneration = 0;
 
 	UMaterial* ResolveMaterial(); // soft → hard
 

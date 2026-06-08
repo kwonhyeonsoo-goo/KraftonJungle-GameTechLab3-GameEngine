@@ -224,6 +224,13 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	return DefaultMaterial;
 }
 
+void FMaterialManager::ClearCache()
+{
+	MaterialCache.clear();
+	AvailableMaterialFiles.clear();
+	++CacheGeneration;
+}
+
 // ============================================================
 // 바이너리(.uasset) 직렬화 — exemplar = FParticleSystemManager
 // ============================================================
@@ -845,6 +852,7 @@ void FMaterialManager::Release()
         }
     }
     MaterialCache.clear();
+    ++CacheGeneration;
 
     // TemplateCache 는 UMaterial::Template 이 non-owning 으로 가리킨다.
     // 살아 있는 UMaterial GPU buffer 해제를 먼저 끝낸 뒤 template 을 해제해야 한다.
