@@ -1,5 +1,6 @@
 ﻿#include "Component/Gameplay/SniperWeaponComponent.h"
 
+#include "Audio/AudioManager.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -248,6 +249,7 @@ bool USniperWeaponComponent::RequestFire(
 		return false;
 	}
 
+	PlayWeaponSFX(FireSFXPath, FireSFXVolume);
 	FireCooldownRemaining = AmmoData->FireInterval;
 	AmmoInMagazine = (std::max)(0, AmmoInMagazine - 1);
 	return true;
@@ -270,6 +272,7 @@ bool USniperWeaponComponent::RequestReload()
 
 	bIsReloading = true;
 	ReloadRemaining = SafeReloadDuration;
+	PlayWeaponSFX(ReloadSFXPath, ReloadSFXVolume);
 	return true;
 }
 
@@ -432,6 +435,16 @@ void USniperWeaponComponent::CompleteReload()
 	ReloadRemaining = 0.0f;
 	bIsReloading = false;
 	NormalizeMagazineState();
+}
+
+void USniperWeaponComponent::PlayWeaponSFX(const FString& SoundPath, float VolumeScale) const
+{
+	if (SoundPath.empty() || VolumeScale <= 0.0f)
+	{
+		return;
+	}
+
+	FAudioManager::Get().PlaySFX(SoundPath, FMath::Clamp(VolumeScale, 0.0f, 1.0f));
 }
 
 void USniperWeaponComponent::InitializeDefaultAmmoData()

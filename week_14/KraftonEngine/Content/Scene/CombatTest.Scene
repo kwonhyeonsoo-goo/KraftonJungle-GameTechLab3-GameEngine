@@ -6270,7 +6270,7 @@
             "MagazineCapacity" : 5,
             "PendingTagsString" : "",
             "PersistentGuid" : "Component_1710",
-            "ReloadDuration" : 2.000000,
+            "ReloadDuration" : 3.528000,
             "ZeroRangeMeters" : 200.000000,
             "bAutoActivate" : true,
             "bEditorOnly" : false,

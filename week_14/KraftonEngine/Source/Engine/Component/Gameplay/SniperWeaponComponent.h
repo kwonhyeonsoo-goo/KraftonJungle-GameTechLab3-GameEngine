@@ -68,6 +68,7 @@ private:
 	void NormalizeMagazineState();
 	void CompleteReload();
 	void InitializeDefaultAmmoData();
+	void PlayWeaponSFX(const FString& SoundPath, float VolumeScale) const;
 	void ResolveBulletManagerComponent();
 
 	UPROPERTY(Edit, Save, Category="Sniper|Weapon")
@@ -79,7 +80,15 @@ private:
 	UPROPERTY(Edit, Save, Category="Sniper|Reload", Min=0, Max=100, Speed=1)
 	int32 AmmoInMagazine = 5;
 	UPROPERTY(Edit, Save, Category="Sniper|Reload", Min=0.0f, Max=10.0f, Speed=0.1f)
-	float ReloadDuration = 2.0f;
+	float ReloadDuration = 3.528f;
+	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Fire SFX Path")
+	FString FireSFXPath = "SFX/Sniper/Shoot1.wav";
+	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Reload SFX Path")
+	FString ReloadSFXPath = "SFX/Sniper/rifle_reload.mp3";
+	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Fire SFX Volume", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float FireSFXVolume = 1.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Audio", DisplayName="Reload SFX Volume", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float ReloadSFXVolume = 1.0f;
 	ESniperAmmoType CurrentAmmoType = ESniperAmmoType::Normal;
 	float FireCooldownRemaining = 0.0f;
 	float ReloadRemaining = 0.0f;
