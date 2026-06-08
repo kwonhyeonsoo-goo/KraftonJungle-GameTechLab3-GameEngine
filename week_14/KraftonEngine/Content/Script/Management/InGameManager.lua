@@ -13,6 +13,7 @@ local PAUSE_RIFLE_NAME = "PauseMenu_Rifle"
 local PAUSE_FADE_TIME = 0.080
 local PAUSE_BLEND_TIME = 0.120
 local PAUSE_TOGGLE_KEY_CODE = 81
+local DEFAULT_MATCH_DURATION = 300.0
 
 local function log(message)
     if Debug and Debug.Log then
@@ -27,10 +28,12 @@ function InGameManager.new(general)
         general = general,
         running = false,
         timer = 0.0,
+        match_duration = DEFAULT_MATCH_DURATION,
         phase = "Idle",
         wave = 0,
         settings = {},
         last_timer_second = -1,
+        result_requested = false,
         sniper_kills = 0,
         friendly_fire_kills = 0,
         paused = false,
@@ -134,10 +137,12 @@ end
 function InGameManager:Start(settings)
     self.running = true
     self.timer = 0.0
+    self.match_duration = self:ResolveMatchDuration(settings)
     self.phase = "Wave"
     self.wave = 1
     self.settings = settings or self.settings or {}
     self.last_timer_second = -1
+    self.result_requested = false
     self.sniper_kills = 0
     self.friendly_fire_kills = 0
     self.general:SetScore(0)
@@ -149,6 +154,7 @@ function InGameManager:Start(settings)
     self.pause_rifle = nil
     self.pause_rifle_sequence = nil
     self.general:Publish("ingame.started", self:GetSnapshot())
+    self.general:Publish("ingame.timer", self:GetSnapshot())
     self.general:Publish("ingame.pause_changed", { paused = false, reason = "start" })
 end
 
@@ -184,11 +190,89 @@ function InGameManager:Tick(dt)
     end
 
     self.timer = self.timer + dt
-    local second = math.floor(self.timer)
+    if self:GetRemainingTime() <= 0.0 then
+        self.timer = self.match_duration
+        self.general:Publish("ingame.timer", self:GetSnapshot())
+        self:RequestVictory("air_support_arrived")
+        return
+    end
+
+    local second = math.ceil(self:GetRemainingTime())
     if second ~= self.last_timer_second then
         self.last_timer_second = second
         self.general:Publish("ingame.timer", self:GetSnapshot())
     end
+end
+
+function InGameManager:ResolveMatchDuration(settings)
+    local duration = nil
+    if type(settings) == "table" then
+        duration = settings.match_duration_seconds or settings.air_support_duration_seconds or settings.duration_seconds
+    end
+    duration = tonumber(duration) or self.match_duration or DEFAULT_MATCH_DURATION
+    if duration <= 0.0 then
+        duration = DEFAULT_MATCH_DURATION
+    end
+    return duration
+end
+
+function InGameManager:SetMatchDuration(seconds)
+    if self.running then
+        return false
+    end
+    seconds = tonumber(seconds) or DEFAULT_MATCH_DURATION
+    self.match_duration = math.max(1.0, seconds)
+    return true
+end
+
+function InGameManager:GetRemainingTime()
+    return math.max(0.0, (self.match_duration or DEFAULT_MATCH_DURATION) - (self.timer or 0.0))
+end
+
+function InGameManager:RequestVictory(reason)
+    return self:CompleteVictory(reason or "victory_requested")
+end
+
+function InGameManager:CompleteVictory(reason)
+    if self.result_requested then
+        return false
+    end
+
+    self.result_requested = true
+    local snapshot = self:GetSnapshot()
+    snapshot.result = "Victory"
+    snapshot.reason = reason or "victory"
+    self.general:Publish("ingame.victory_requested", snapshot)
+    self.general:Publish("ingame.completed", snapshot)
+
+    if self.general ~= nil and self.general.CommitRun ~= nil then
+        self.general:CommitRun({
+            nickname = "Player",
+            result = "Victory",
+            state = "Victory",
+            score = self.general.GetScore ~= nil and self.general:GetScore() or 0,
+            elapsed_time = snapshot.elapsed_time,
+            remaining_time = snapshot.remaining_time,
+            reason = snapshot.reason
+        })
+    end
+
+    self:EndPausePresentation(false)
+    self.running = false
+    self.phase = "Result"
+    local scene_manager = self.general ~= nil and self.general.managers ~= nil and self.general.managers.Scene or nil
+    if scene_manager ~= nil and scene_manager.IsRegisteredState ~= nil and
+        scene_manager:IsRegisteredState(GameState.Victory) and
+        self.general.RequestState ~= nil then
+        return self.general:RequestState(GameState.Victory, {
+            reason = snapshot.reason,
+            result = "Victory",
+            elapsed_time = snapshot.elapsed_time
+        })
+    end
+
+    log("victory completed without state transition; Victory state is not registered yet")
+    return true
 end
 
 function InGameManager:EnsureRunningForCurrentState(reason)
@@ -426,13 +510,17 @@ function InGameManager:GetSnapshot()
     return {
         running = self.running,
         timer = self.timer,
+        elapsed_time = self.timer,
+        remaining_time = self:GetRemainingTime(),
+        match_duration = self.match_duration,
         phase = self.phase,
         wave = self.wave,
         settings = self.settings,
         sniper_kills = self.sniper_kills,
         friendly_fire_kills = self.friendly_fire_kills,
         score = self.general:GetScore(),
-        paused = self.paused
+        paused = self.paused,
+        result_requested = self.result_requested
     }
 end
 

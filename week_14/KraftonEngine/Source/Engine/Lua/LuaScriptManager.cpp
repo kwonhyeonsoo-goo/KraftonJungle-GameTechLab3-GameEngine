@@ -258,6 +258,20 @@ void FLuaScriptManager::InvalidateChangedModules(const TSet<FString>& ChangedFil
 
         Loaded[ModuleName] = sol::nil;
         UE_LOG("[LuaHotReload] Invalidated module: %s", ModuleName.c_str());
+
+        FString SlashModuleName = ModuleName;
+        for (char& Ch : SlashModuleName)
+        {
+            if (Ch == '.')
+            {
+                Ch = '/';
+            }
+        }
+        if (SlashModuleName != ModuleName)
+        {
+            Loaded[SlashModuleName] = sol::nil;
+            UE_LOG("[LuaHotReload] Invalidated module: %s", SlashModuleName.c_str());
+        }
     }
 }
 

@@ -43,6 +43,8 @@ public:
 	UFUNCTION(Callable, Category="Action")
 	void StopAllActions();
 
+	static void ResetGlobalTimeDilationState();
+
 private:
 	float GetRawDeltaTime(float FallbackDeltaTime) const;
 	USceneComponent* GetTargetSceneComponent() const;

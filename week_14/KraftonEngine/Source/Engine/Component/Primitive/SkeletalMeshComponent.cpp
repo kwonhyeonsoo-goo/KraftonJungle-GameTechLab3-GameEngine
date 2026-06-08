@@ -3120,6 +3120,21 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
     if (IsValid(AnimInstance)) AnimInstance->PostEditProperty(PropertyName);
 }
 
+void USkeletalMeshComponent::OnPostLoad(FArchive& Ar)
+{
+    USkinnedMeshComponent::OnPostLoad(Ar);
+    if (GetSkeletalMesh())
+    {
+        InitializeAnimation();
+    }
+}
+
+void USkeletalMeshComponent::PostDuplicate()
+{
+    USkinnedMeshComponent::PostDuplicate();
+    InitializeAnimation();
+}
+
 void USkeletalMeshComponent::Serialize(FArchive& Ar)
 {
     Super::Serialize(Ar);
@@ -3141,6 +3156,10 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
     Ar << AnimationData.bLooping;
     Ar << AnimationData.bPlaying;
 
+    if (Ar.IsLoading() && GetSkeletalMesh())
+    {
+        InitializeAnimation();
+    }
 }
 
 bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
