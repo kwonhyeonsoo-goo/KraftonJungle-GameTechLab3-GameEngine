@@ -54,7 +54,7 @@ protected:
 
 private:
 	void UpdateBullets(float DeltaTime);
-	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, const FVector& AppliedWindAcceleration, float DeltaTime, class UWorld* World);
+	void UpdateSingleBullet(FBallisticBullet& Bullet, const FVector& WorldGravity, const FVector& AppliedWindAcceleration, float DeltaTime, float LifetimeDeltaTime, class UWorld* World);
 	void UpdateImpactVisuals(float DeltaTime);
 	void SyncBulletVisuals();
 	void HideAllBulletVisuals();

@@ -23,6 +23,8 @@
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetInstance.h"
 #include "Physics/PhysicsAssetPreviewUtils.h"
+#include "Profiling/Time/Timer.h"
+#include "Runtime/Engine.h"
 
 #include <cmath>
 #include <cctype>
@@ -535,11 +537,21 @@ void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
 		SubstepCount = 1;
 	}
 
+	const FTimer* Timer = GEngine ? GEngine->GetTimer() : nullptr;
+	const float RawFrameDeltaTime = Timer ? Timer->GetRawDeltaTime() : DeltaTime;
+	const float LifetimeStepDeltaTime = RawFrameDeltaTime / static_cast<float>(SubstepCount);
+
 	for (int32 SubstepIndex = 0; SubstepIndex < SubstepCount; ++SubstepIndex)
 	{
 		for (FBallisticBullet& Bullet : ActiveBullets)
 		{
-			UpdateSingleBullet(Bullet, WorldGravity, AppliedWindAcceleration, DeltaTime / static_cast<float>(SubstepCount), World);
+			UpdateSingleBullet(
+				Bullet,
+				WorldGravity,
+				AppliedWindAcceleration,
+				DeltaTime / static_cast<float>(SubstepCount),
+				LifetimeStepDeltaTime,
+				World);
 		}
 	}
 }
@@ -549,6 +561,7 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	const FVector& WorldGravity,
 	const FVector& AppliedWindAcceleration,
 	float DeltaTime,
+	float LifetimeDeltaTime,
 	UWorld* World)
 {
 	if (!Bullet.bIsAlive)
@@ -564,7 +577,7 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 	const FVector TotalAcceleration = GravityAcceleration + WindDriftAcceleration + DragAcceleration;
 	Bullet.Position += Bullet.Velocity * DeltaTime + TotalAcceleration * (0.5f * DeltaTime * DeltaTime);
 	Bullet.Velocity += TotalAcceleration * DeltaTime;
-	Bullet.LifeTime -= DeltaTime;
+	Bullet.LifeTime -= LifetimeDeltaTime;
 	const float SegmentDistance = (Bullet.Position - Bullet.PreviousPosition).Length();
 
 	FHitResult Hit;
@@ -1636,11 +1649,6 @@ bool UBallisticBulletManagerComponent::ResolveHitBodyCenterMetrics(
 
 bool UBallisticBulletManagerComponent::ShouldNotifyKillCamForHit(const FSniperHitInfo& HitInfo) const
 {
-	if (!bEnableKillCamBodyCenterDistanceFilter)
-	{
-		return true;
-	}
-
 	if (!HitInfo.HitActor)
 	{
 		return false;
@@ -1650,6 +1658,11 @@ bool UBallisticBulletManagerComponent::ShouldNotifyKillCamForHit(const FSniperHi
 		Cast<ACombatCharacter>(HitInfo.HitActor) ||
 		HitInfo.HitActor->GetComponentByClass<USniperDamageReceiverComponent>() != nullptr;
 	if (!bCharacterLikeHit)
+	{
+		return false;
+	}
+
+	if (!bEnableKillCamBodyCenterDistanceFilter)
 	{
 		return true;
 	}

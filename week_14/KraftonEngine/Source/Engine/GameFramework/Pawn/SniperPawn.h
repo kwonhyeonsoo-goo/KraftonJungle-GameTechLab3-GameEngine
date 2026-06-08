@@ -10,6 +10,7 @@ class UBallisticBulletManagerComponent;
 class UCameraComponent;
 class USceneComponent;
 class USniperWeaponComponent;
+class UActionComponent;
 
 UCLASS()
 class ASniperPawn : public APawn
@@ -36,6 +37,8 @@ public:
 	USniperWeaponComponent* GetSniperWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
 	UBallisticBulletManagerComponent* GetBallisticBulletManagerComponent() const { return BulletManagerComponent.Get(); }
+	UFUNCTION(Pure, Category="Sniper|Components")
+	UActionComponent* GetSniperActionComponent() const { return ActionComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsScoped() const { return ScopeState.bIsScoped; }
 	UFUNCTION(Callable, Category="Sniper|State")
@@ -152,10 +155,18 @@ public:
 	UPROPERTY(Edit, Save, Category="Sniper|Scope Lens", DisplayName="Blend Time", Min=0.0f, Max=2.0f, Speed=0.01f)
 	float ScopeLensBlendTime = 0.08f;
 
+	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Enable Bullet Flight Slomo")
+	bool bEnableBulletFlightSlomo = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Bullet Flight Slomo Duration", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float BulletFlightSlomoDuration = 0.18f;
+	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Bullet Flight Slomo Time Dilation", Min=0.01f, Max=1.0f, Speed=0.01f)
+	float BulletFlightSlomoTimeDilation = 0.22f;
+
 private:
 	void CacheComponentReferences();
 	void CacheInputSensitivityBases();
 	void SyncSniperRuntimeState();
+	void UpdateBulletFlightSlomo(float DeltaTime);
 	void UpdateScopeState(float DeltaTime);
 	void UpdateHoldBreathState(float DeltaTime);
 	void UpdateAimSwayState(float DeltaTime);
@@ -194,6 +205,7 @@ private:
 	TWeakObjectPtr<UCameraComponent> Camera;
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
 	TWeakObjectPtr<UBallisticBulletManagerComponent> BulletManagerComponent;
+	TWeakObjectPtr<UActionComponent> ActionComponent;
 
 	FSniperInputState InputState;
 	FScopeState ScopeState;
@@ -205,6 +217,7 @@ private:
 	bool bKeyboardHoldBreathInputHeld = false;
 	bool bGamepadHoldBreathInputHeld = false;
 	bool bGamepadFireTriggerHeld = false;
+	bool bBulletFlightSlomoActive = false;
 	bool bInputSensitivityBaseInitialized = false;
 	float BaseMouseSensitivity = 0.2f;
 	float BaseGamepadLookSensitivity = 90.0f;

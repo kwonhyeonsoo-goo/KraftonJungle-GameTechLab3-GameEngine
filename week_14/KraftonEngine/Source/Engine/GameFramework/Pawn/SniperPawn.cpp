@@ -1,5 +1,6 @@
 ﻿#include "GameFramework/Pawn/SniperPawn.h"
 
+#include "Component/Input/ActionComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
@@ -10,6 +11,8 @@
 #include "GameFramework/GameMode/PlayerController.h"
 #include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
+#include "Profiling/Time/Timer.h"
+#include "Runtime/Engine.h"
 
 #include <algorithm>
 #include <cmath>
@@ -53,6 +56,16 @@ namespace
 	{
 		const float Alpha = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
 		return MinValue + (MaxValue - MinValue) * Alpha;
+	}
+
+	float GetSniperInputTimeScale()
+	{
+		if (!GEngine || !GEngine->GetTimer())
+		{
+			return 1.0f;
+		}
+
+		return FMath::Clamp(GEngine->GetTimer()->GetTimeDilation(), 0.01f, 1.0f);
 	}
 
 	bool IsSniperKillCamPlaying(const AActor* Actor)
@@ -255,6 +268,7 @@ void ASniperPawn::Tick(float DeltaTime)
 	UpdateHoldBreathState(DeltaTime);
 	UpdateAimSwayState(DeltaTime);
 	UpdateRecoilState(DeltaTime);
+	UpdateBulletFlightSlomo(DeltaTime);
 	ApplySniperControlRotation();
 
 	InputState.MouseDeltaX = 0.0f;
@@ -291,6 +305,11 @@ void ASniperPawn::InitDefaultComponents()
 	{
 		BulletManagerComponent = AddComponent<UBallisticBulletManagerComponent>();
 	}
+
+	if (!ActionComponent)
+	{
+		ActionComponent = AddComponent<UActionComponent>();
+	}
 }
 
 void ASniperPawn::CacheComponentReferences()
@@ -299,6 +318,7 @@ void ASniperPawn::CacheComponentReferences()
 	Camera = GetComponentByClass<UCameraComponent>();
 	WeaponComponent = GetComponentByClass<USniperWeaponComponent>();
 	BulletManagerComponent = GetComponentByClass<UBallisticBulletManagerComponent>();
+	ActionComponent = GetComponentByClass<UActionComponent>();
 }
 
 void ASniperPawn::CacheInputSensitivityBases()
@@ -322,6 +342,7 @@ void ASniperPawn::SyncSniperRuntimeState()
 	bKeyboardHoldBreathInputHeld = false;
 	bGamepadHoldBreathInputHeld = false;
 	bGamepadFireTriggerHeld = false;
+	bBulletFlightSlomoActive = false;
 	bUseControllerRotationPitch = true;
 	bUseControllerRotationYaw = true;
 	CacheInputSensitivityBases();
@@ -537,6 +558,41 @@ void ASniperPawn::UpdateRecoilState(float DeltaTime)
 		RecoilState.RecoilRecoverSpeed);
 }
 
+void ASniperPawn::UpdateBulletFlightSlomo(float DeltaTime)
+{
+	UActionComponent* SniperAction = ActionComponent.Get();
+	UBallisticBulletManagerComponent* BulletManager = BulletManagerComponent.Get();
+	if (!SniperAction)
+	{
+		bBulletFlightSlomoActive = false;
+		return;
+	}
+
+	if (!bEnableBulletFlightSlomo || IsSniperKillCamPlaying(this) || !BulletManager)
+	{
+		if (bBulletFlightSlomoActive)
+		{
+			SniperAction->StopSlomo();
+			bBulletFlightSlomoActive = false;
+		}
+		return;
+	}
+
+	if (BulletManager->GetAliveBulletCount() > 0)
+	{
+		const float RefreshDuration = (std::max)(BulletFlightSlomoDuration, (std::max)(DeltaTime * 2.0f, 0.05f));
+		SniperAction->Slomo(RefreshDuration, BulletFlightSlomoTimeDilation);
+		bBulletFlightSlomoActive = true;
+		return;
+	}
+
+	if (bBulletFlightSlomoActive)
+	{
+		SniperAction->StopSlomo();
+		bBulletFlightSlomoActive = false;
+	}
+}
+
 void ASniperPawn::ApplySniperControlRotation()
 {
 	USceneComponent* Root = GetRootComponent();
@@ -714,7 +770,7 @@ void ASniperPawn::HandleTurnInput(float Value)
 	}
 
 	FRotator Control = GetControlRotation();
-	Control.Yaw += Value * MouseSensitivity * ScopeState.CurrentSensitivity;
+	Control.Yaw += Value * MouseSensitivity * ScopeState.CurrentSensitivity * GetSniperInputTimeScale();
 	SetControlRotation(Control);
 	ApplySniperControlRotation();
 }
@@ -742,7 +798,7 @@ void ASniperPawn::HandleLookUpInput(float Value)
 
 	const float Direction = bInvertMouseY ? -1.0f : 1.0f;
 	FRotator Control = GetControlRotation();
-	Control.Pitch += Value * MouseSensitivity * ScopeState.CurrentSensitivity * Direction;
+	Control.Pitch += Value * MouseSensitivity * ScopeState.CurrentSensitivity * Direction * GetSniperInputTimeScale();
 	Control.Pitch = ClampSniperPitch(Control.Pitch, MinCameraPitch, MaxCameraPitch);
 	SetControlRotation(Control);
 	ApplySniperControlRotation();
@@ -981,6 +1037,16 @@ bool ASniperPawn::FireCurrentRound()
 	if (bFired)
 	{
 		ApplyFireRecoil();
+
+		if (bEnableBulletFlightSlomo && !IsSniperKillCamPlaying(this))
+		{
+			if (UActionComponent* SniperAction = ActionComponent.Get())
+			{
+				const float InitialSlomoDuration = (std::max)(BulletFlightSlomoDuration, 0.05f);
+				SniperAction->Slomo(InitialSlomoDuration, BulletFlightSlomoTimeDilation);
+				bBulletFlightSlomoActive = true;
+			}
+		}
 	}
 
 	InputState.bFirePressed = false;
