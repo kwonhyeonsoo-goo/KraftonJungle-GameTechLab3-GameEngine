@@ -197,6 +197,8 @@ public:
 	FSoftObjectPtr WeaponHandsMeshPath = "Content/Data/CombatAI/SK_Bandit_SkeletalMesh.uasset";
 	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Idle Animation")
 	FString WeaponHandsIdleAnimationPath = "Content/Data/CombatAI/retargeted_Crouch_Idle_Anim_Unreal_Take.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Reload Animation")
+	FString WeaponHandsReloadAnimationPath = "Content/Data/CombatAI/Reload_Anim_Unreal_Take.uasset";
 	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Location", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.1f)
 	FVector WeaponHandsRelativeLocation = FVector(10.0f, 0.0f, -16.0f);
 	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Rotation", Type=Rotator, Min=0.0f, Max=0.0f, Speed=0.1f)
@@ -221,6 +223,10 @@ private:
 	void SyncSniperRuntimeState();
 	void SyncWeaponVisualComponent();
 	void UpdateWeaponVisualScopeVisibility();
+	bool PlayWeaponHandsAnimation(const FString& AnimationPath, bool bLooping);
+	bool PlayWeaponHandsAnimationSyncedToDuration(const FString& AnimationPath, float TargetDuration);
+	void PlayWeaponHandsIdleAnimation();
+	void UpdateWeaponHandsReloadAnimation();
 	void UpdateBulletFlightSlomo(float DeltaTime);
 	void UpdateScopeState(float DeltaTime);
 	void UpdateHoldBreathState(float DeltaTime);
@@ -276,6 +282,8 @@ private:
 	bool bGamepadHoldBreathInputHeld = false;
 	bool bGamepadFireTriggerHeld = false;
 	bool bBulletFlightSlomoActive = false;
+	bool bWasWeaponReloading = false;
+	bool bWeaponHandsReloadAnimationActive = false;
 	bool bInputSensitivityBaseInitialized = false;
 	float BaseMouseSensitivity = 0.2f;
 	float BaseGamepadLookSensitivity = 90.0f;
