@@ -2,6 +2,7 @@
 
 #include "GameFramework/Pawn/Pawn.h"
 #include "Component/Gameplay/SniperTypes.h"
+#include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Pawn/SniperPawn.generated.h"
@@ -11,6 +12,9 @@ class UCameraComponent;
 class USceneComponent;
 class USniperWeaponComponent;
 class UActionComponent;
+class USkeletalMeshComponent;
+class UStaticMeshComponent;
+class FArchive;
 
 UCLASS()
 class ASniperPawn : public APawn
@@ -23,6 +27,8 @@ public:
 	void BeginPlay() override;
 	void EndPlay() override;
 	void PostDuplicate() override;
+	void OnPostLoad(FArchive& Ar) override;
+	void PreGetEditableProperties() override;
 	void SetupInputComponent() override;
 	void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime) override;
 	void Tick(float DeltaTime) override;
@@ -33,6 +39,10 @@ public:
 	USceneComponent* GetSniperRoot() const { return SniperRoot.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
 	UCameraComponent* GetCamera() const { return Camera.Get(); }
+	UFUNCTION(Pure, Category="Sniper|Components")
+	USkeletalMeshComponent* GetWeaponHandsMeshComponent() const { return WeaponHandsMeshComponent.Get(); }
+	UFUNCTION(Pure, Category="Sniper|Components")
+	UStaticMeshComponent* GetWeaponVisualComponent() const { return WeaponVisualComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
 	USniperWeaponComponent* GetSniperWeaponComponent() const { return WeaponComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|Components")
@@ -161,11 +171,38 @@ public:
 	float BulletFlightSlomoDuration = 0.18f;
 	UPROPERTY(Edit, Save, Category="Sniper|Presentation", DisplayName="Bullet Flight Slomo Time Dilation", Min=0.01f, Max=1.0f, Speed=0.01f)
 	float BulletFlightSlomoTimeDilation = 0.22f;
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Enable Weapon Visual")
+	bool bEnableWeaponVisual = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Enable Weapon Hands Mesh")
+	bool bEnableWeaponHandsMesh = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Mesh", AssetType="SkeletalMesh")
+	FSoftObjectPtr WeaponHandsMeshPath = "Content/Data/CombatAI/SK_Bandit_SkeletalMesh.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Idle Animation")
+	FString WeaponHandsIdleAnimationPath = "Content/Data/CombatAI/retargeted_Crouch_Idle_Anim_Unreal_Take.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Location", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.1f)
+	FVector WeaponHandsRelativeLocation = FVector(10.0f, 0.0f, -16.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Rotation", Type=Rotator, Min=0.0f, Max=0.0f, Speed=0.1f)
+	FRotator WeaponHandsRelativeRotation = FRotator(0.0f, 90.0f, 0.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Hands Scale", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.01f)
+	FVector WeaponHandsRelativeScale = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Visual Mesh", AssetType="StaticMesh")
+	FSoftObjectPtr WeaponVisualMeshPath = "Content/Data/Sniper_Rifle/Sniper_Rifle_merge_StaticMesh.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Visual Socket")
+	FName WeaponVisualSocketName = "GunSocket";
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Visual Location", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.1f)
+	FVector WeaponVisualRelativeLocation = FVector(0.03f, 0.125f, 0.07f);
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Visual Rotation", Type=Rotator, Min=0.0f, Max=0.0f, Speed=0.1f)
+	FRotator WeaponVisualRelativeRotation = FRotator(13.8f, 170.0f, -6.0f);
+	UPROPERTY(Edit, Save, Category="Sniper|Weapon Visual", DisplayName="Weapon Visual Scale", Type=Vec3, Min=0.0f, Max=0.0f, Speed=0.01f)
+	FVector WeaponVisualRelativeScale = FVector(1.1f, 1.1f, 1.1f);
 
 private:
+	void EnsureWeaponVisualComponents();
 	void CacheComponentReferences();
 	void CacheInputSensitivityBases();
 	void SyncSniperRuntimeState();
+	void SyncWeaponVisualComponent();
+	void UpdateWeaponVisualScopeVisibility();
 	void UpdateBulletFlightSlomo(float DeltaTime);
 	void UpdateScopeState(float DeltaTime);
 	void UpdateHoldBreathState(float DeltaTime);
@@ -203,6 +240,8 @@ private:
 
 	TWeakObjectPtr<USceneComponent> SniperRoot;
 	TWeakObjectPtr<UCameraComponent> Camera;
+	TWeakObjectPtr<USkeletalMeshComponent> WeaponHandsMeshComponent;
+	TWeakObjectPtr<UStaticMeshComponent> WeaponVisualComponent;
 	TWeakObjectPtr<USniperWeaponComponent> WeaponComponent;
 	TWeakObjectPtr<UBallisticBulletManagerComponent> BulletManagerComponent;
 	TWeakObjectPtr<UActionComponent> ActionComponent;
