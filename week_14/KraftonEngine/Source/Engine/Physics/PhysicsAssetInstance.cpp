@@ -545,7 +545,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
             continue;
         }
 
-        if (EffectiveOptions.bSelectedOnly && !EffectiveOptions.bPartialSimulation && !bSimulateThisBody)
+        if (EffectiveOptions.bCreateKinematicQueryOnlyBodies)
+        {
+            BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
+            BodyDesc.bEnableGravity = false;
+        }
+        else if (EffectiveOptions.bSelectedOnly && !EffectiveOptions.bPartialSimulation && !bSimulateThisBody)
         {
             BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
             BodyDesc.bEnableGravity = false;

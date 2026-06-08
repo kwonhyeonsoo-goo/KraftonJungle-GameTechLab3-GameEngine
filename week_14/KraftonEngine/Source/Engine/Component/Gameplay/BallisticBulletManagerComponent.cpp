@@ -4,6 +4,8 @@
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/Shape/CapsuleComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/Pawn/CombatCharacter.h"
 #include "Core/Types/CollisionTypes.h"
@@ -16,13 +18,19 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "Math/Quat.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsAssetInstance.h"
 
 #include <cmath>
+#include <cctype>
 
 #include <algorithm>
 
 namespace
 {
+	constexpr bool SniperDefaultWindEnabled = true;
+	const FVector SniperDefaultWindAcceleration = FVector(0.0f, 1.5f, 0.0f);
 	constexpr uint32 SniperBulletQueryObjectMask =
 		ObjectTypeBit(ECollisionChannel::WorldStatic) |
 		ObjectTypeBit(ECollisionChannel::WorldDynamic) |
@@ -45,6 +53,53 @@ namespace
 	constexpr float SniperBallisticSubstepMinDeltaTime = 1.0f / 480.0f;
 	constexpr float SniperSpeedOfSoundMetersPerSecond = 343.0f;
 	constexpr float SniperBaseDragScale = 0.00008f;
+
+	bool StartsWithToken(const FString& Value, const char* Prefix)
+	{
+		if (!Prefix)
+		{
+			return false;
+		}
+
+		const size_t PrefixLength = std::char_traits<char>::length(Prefix);
+		return Value.size() >= PrefixLength && Value.compare(0, PrefixLength, Prefix) == 0;
+	}
+
+	bool IsTokenSeparator(char Character)
+	{
+		return Character == '_';
+	}
+
+	bool HasNormalizedBoneToken(const FString& NormalizedBoneName, const char* Token)
+	{
+		if (!Token || *Token == '\0' || NormalizedBoneName.empty())
+		{
+			return false;
+		}
+
+		size_t SegmentStart = 0;
+		while (SegmentStart < NormalizedBoneName.size())
+		{
+			size_t SegmentEnd = SegmentStart;
+			while (SegmentEnd < NormalizedBoneName.size() && !IsTokenSeparator(NormalizedBoneName[SegmentEnd]))
+			{
+				++SegmentEnd;
+			}
+
+			if (SegmentEnd > SegmentStart)
+			{
+				const FString Segment = NormalizedBoneName.substr(SegmentStart, SegmentEnd - SegmentStart);
+				if (Segment == Token || StartsWithToken(Segment, Token))
+				{
+					return true;
+				}
+			}
+
+			SegmentStart = SegmentEnd + 1;
+		}
+
+		return false;
+	}
 
 	float ComputeMachDragMultiplier(float Speed)
 	{
@@ -101,6 +156,40 @@ void UBallisticBulletManagerComponent::EndPlay()
 	ResetBullets();
 	HideAllBulletVisuals();
 	UActorComponent::EndPlay();
+}
+
+bool UBallisticBulletManagerComponent::IsWindEnabled() const
+{
+	const AActor* OwnerActor = GetOwner();
+	const UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	return World ? World->GetWorldSettings().bEnableBallisticWind : SniperDefaultWindEnabled;
+}
+
+void UBallisticBulletManagerComponent::SetWindEnabled(bool bInEnableWind)
+{
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	if (World)
+	{
+		World->GetWorldSettings().bEnableBallisticWind = bInEnableWind;
+	}
+}
+
+FVector UBallisticBulletManagerComponent::GetWindAcceleration() const
+{
+	const AActor* OwnerActor = GetOwner();
+	const UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	return World ? World->GetWorldSettings().BallisticWindAcceleration : SniperDefaultWindAcceleration;
+}
+
+void UBallisticBulletManagerComponent::SetWindAcceleration(const FVector& InWindAcceleration)
+{
+	AActor* OwnerActor = GetOwner();
+	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+	if (World)
+	{
+		World->GetWorldSettings().BallisticWindAcceleration = InWindAcceleration;
+	}
 }
 
 bool UBallisticBulletManagerComponent::SpawnBullet(const FBallisticBullet& Bullet)
@@ -187,7 +276,9 @@ void UBallisticBulletManagerComponent::UpdateBullets(float DeltaTime)
 	AActor* OwnerActor = GetOwner();
 	UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
 	const FVector WorldGravity = World ? World->GetWorldSettings().Gravity : FVector(0.0f, 0.0f, -9.81f);
-	const FVector AppliedWindAcceleration = bEnableWind ? WindAcceleration : FVector::ZeroVector;
+	const bool bWindEnabled = World ? World->GetWorldSettings().bEnableBallisticWind : SniperDefaultWindEnabled;
+	const FVector WorldWindAcceleration = World ? World->GetWorldSettings().BallisticWindAcceleration : SniperDefaultWindAcceleration;
+	const FVector AppliedWindAcceleration = bWindEnabled ? WorldWindAcceleration : FVector::ZeroVector;
 
 	if (World)
 	{
@@ -275,11 +366,12 @@ void UBallisticBulletManagerComponent::UpdateSingleBullet(
 
 void UBallisticBulletManagerComponent::DrawWindDebug(UWorld* World) const
 {
-	if (!World || !bEnableWind)
+	if (!World || !World->GetWorldSettings().bEnableBallisticWind)
 	{
 		return;
 	}
 
+	const FVector WindAcceleration = World->GetWorldSettings().BallisticWindAcceleration;
 	if (WindAcceleration.Length() <= SniperWindDebugMinMagnitude)
 	{
 		return;
@@ -708,17 +800,188 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 			SniperBulletQueryObjectMask,
 			Bullet.Owner))
 		{
-			return OutHit.bHit;
+			if (!OutHit.bHit)
+			{
+				return false;
+			}
+
+			if (!ShouldRunPreciseCharacterHitQuery(OutHit))
+			{
+				return true;
+			}
+
+			FHitResult PreciseHit;
+			if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+			{
+				OutHit = PreciseHit;
+				return true;
+			}
+
+			return !bRequirePreciseCharacterHit;
 		}
 	}
 
-	return World->PhysicsRaycastByObjectTypes(
+	if (!World->PhysicsRaycastByObjectTypes(
 		Bullet.PreviousPosition,
 		Segment / SegmentLength,
 		SegmentLength,
 		OutHit,
 		SniperBulletQueryObjectMask,
-		Bullet.Owner);
+		Bullet.Owner))
+	{
+		return false;
+	}
+
+	if (!OutHit.bHit)
+	{
+		return false;
+	}
+
+	if (!ShouldRunPreciseCharacterHitQuery(OutHit))
+	{
+		return true;
+	}
+
+	FHitResult PreciseHit;
+	if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+	{
+		OutHit = PreciseHit;
+		return true;
+	}
+
+	return !bRequirePreciseCharacterHit;
+}
+
+bool UBallisticBulletManagerComponent::ShouldRunPreciseCharacterHitQuery(const FHitResult& BroadHit) const
+{
+	if (!bEnablePreciseCharacterHitQuery || !BroadHit.bHit || !BroadHit.HitActor)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	if (Cast<UCapsuleComponent>(BroadHit.HitComponent))
+	{
+		return true;
+	}
+
+	if (!Cast<USkeletalMeshComponent>(BroadHit.HitComponent))
+	{
+		return true;
+	}
+
+	return BroadHit.HitBoneName == FName::None;
+}
+
+bool UBallisticBulletManagerComponent::EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const
+{
+	bOutCreatedTemporaryBodies = false;
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	// Do not auto-create temporary PhysicsAsset bodies for precise hit queries.
+	// If the character is not already running with live bodies, we skip the precise pass
+	// and keep the normal broad-hit path so gameplay actors never enter a transient
+	// physics-pose state during ordinary PIE startup or hits.
+	if (FPhysicsAssetInstance* ExistingInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
+	{
+		return ExistingInstance->HasLivePhysicsObjects();
+	}
+
+	return false;
+}
+
+bool UBallisticBulletManagerComponent::QueryPreciseCharacterHit(
+	const FBallisticBullet& Bullet,
+	UWorld* World,
+	const FHitResult& BroadHit,
+	FHitResult& OutPreciseHit) const
+{
+	OutPreciseHit = FHitResult();
+	if (!World || !BroadHit.HitActor)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(BroadHit);
+	if (!SkeletalMeshComponent)
+	{
+		return false;
+	}
+
+	IPhysicsScene* PhysicsScene = World->GetPhysicsScene();
+	if (!PhysicsScene)
+	{
+		return false;
+	}
+
+	bool bCreatedTemporaryBodies = false;
+	if (!EnsurePreciseHitQueryBodies(SkeletalMeshComponent, bCreatedTemporaryBodies))
+	{
+		return false;
+	}
+
+	const auto CleanupTemporaryBodies = [&]()
+	{
+		if (bCreatedTemporaryBodies)
+		{
+			if (FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
+			{
+				PhysicsAssetInstance->DestroyBodiesAndConstraints();
+			}
+		}
+	};
+
+	bool bPreciseHit = false;
+	if (Bullet.Radius > SniperBulletMinSweepRadius)
+	{
+		const FCollisionShape SweepShape = FCollisionShape::MakeSphere(Bullet.Radius);
+		bPreciseHit = PhysicsScene->SweepRagdollBodiesByObjectTypes(
+			Bullet.PreviousPosition,
+			Bullet.Position,
+			FQuat::Identity,
+			SweepShape,
+			OutPreciseHit,
+			ObjectTypeBit(ECollisionChannel::Pawn),
+			BroadHit.HitActor,
+			Bullet.Owner);
+	}
+	else
+	{
+		const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
+		const float SegmentLength = Segment.Length();
+		if (SegmentLength > SniperBulletMinSweepRadius)
+		{
+			bPreciseHit = PhysicsScene->RaycastRagdollBodiesByObjectTypes(
+				Bullet.PreviousPosition,
+				Segment / SegmentLength,
+				SegmentLength,
+				OutPreciseHit,
+				ObjectTypeBit(ECollisionChannel::Pawn),
+				BroadHit.HitActor,
+				Bullet.Owner);
+		}
+	}
+
+	if (bPreciseHit && MaxPreciseCharacterHitDistance > 0.0f)
+	{
+		const float MaxDistanceSquared = MaxPreciseCharacterHitDistance * MaxPreciseCharacterHitDistance;
+		if (FVector::DistSquared(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation) > MaxDistanceSquared)
+		{
+			bPreciseHit = false;
+			OutPreciseHit = FHitResult();
+		}
+	}
+
+	CleanupTemporaryBodies();
+	return bPreciseHit;
 }
 
 void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet, const FHitResult& Hit, UWorld* World)
@@ -742,22 +1005,50 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);
 	if (AActor* HitActor = HitInfo.HitActor)
 	{
+		float HealthBeforeHit = -1.0f;
+		float HealthAfterHit = -1.0f;
+		const FString RawHitBoneName = Hit.HitBoneName.ToString();
+		const FString ResolvedHitBoneName = HitInfo.HitBoneName.ToString();
+		const FString NormalizedHitBoneName = NormalizeBoneNameForHitClassification(HitInfo.HitBoneName);
+		const bool bUsedFallbackBone =
+			Hit.HitBoneName == FName::None || Hit.HitBoneName != HitInfo.HitBoneName;
+		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
+		{
+			HealthBeforeHit = DamageReceiver->GetCurrentHP();
+			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);
+			DamageReceiver->ApplyResolvedSniperHit(HitInfo);
+			HealthAfterHit = DamageReceiver->GetCurrentHP();
+		}
+
 		if (ACombatCharacter* CombatCharacter = Cast<ACombatCharacter>(HitActor))
 		{
 			UCombatCoverAgentComponent* CombatAgent = CombatCharacter->GetCombatCoverAgentComponent();
+			const float FallbackCurrentHealth = CombatAgent ? CombatAgent->GetHealth() : -1.0f;
+			if (HealthBeforeHit < 0.0f)
+			{
+				HealthBeforeHit = FallbackCurrentHealth;
+			}
+			if (HealthAfterHit < 0.0f)
+			{
+				HealthAfterHit = FallbackCurrentHealth;
+			}
+
 			UE_LOG(
-				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s Health=%.1f Damage=%.1f Outcome=%d",
+				"[SniperDebug] Bullet hit CombatCharacter: Actor=%s Team=%s HealthBefore=%.1f HealthAfter=%.1f Damage=%.1f RegionMultiplier=%.2f Outcome=%d Region=%d Killed=%d Headshot=%d RawHitBone=%s HitBone=%s NormalizedHitBone=%s UsedFallbackBone=%d",
 				CombatCharacter->GetName().c_str(),
 				CombatAgent ? CombatAgent->GetTeamTag().c_str() : "Unknown",
-				CombatAgent ? CombatAgent->GetHealth() : -1.0f,
+				HealthBeforeHit,
+				HealthAfterHit,
 				HitInfo.Damage,
-				static_cast<int32>(HitInfo.HitOutcome));
-		}
-
-		if (USniperDamageReceiverComponent* DamageReceiver = HitActor->GetComponentByClass<USniperDamageReceiverComponent>())
-		{
-			HitInfo = DamageReceiver->ResolveSniperHit(HitInfo);
-			DamageReceiver->ApplyResolvedSniperHit(HitInfo);
+				HitInfo.RegionDamageMultiplier,
+				static_cast<int32>(HitInfo.HitOutcome),
+				static_cast<int32>(HitInfo.HitRegion),
+				HealthBeforeHit > 0.0f && HealthAfterHit <= 0.0f ? 1 : 0,
+				HitInfo.bIsHeadshot ? 1 : 0,
+				RawHitBoneName.c_str(),
+				ResolvedHitBoneName.c_str(),
+				NormalizedHitBoneName.c_str(),
+				bUsedFallbackBone ? 1 : 0);
 		}
 	}
 
@@ -772,6 +1063,8 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBallisticBullet& Bullet, const FHitResult& Hit) const
 {
 	FSniperHitInfo HitInfo;
+	const FName ResolvedHitBoneName = ResolvePreciseHitBoneName(Hit);
+	const ESniperHitRegion HitRegion = ClassifyHitRegion(ResolvedHitBoneName);
 	HitInfo.BulletId = Bullet.BulletId;
 	HitInfo.HitActor = Hit.HitActor;
 	HitInfo.HitLocation = Hit.WorldHitLocation;
@@ -784,12 +1077,243 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.RagdollImpulseStrength = Bullet.Damage + HitInfo.ImpactSpeed * 0.1f;
 	HitInfo.AmmoType = Bullet.AmmoType;
 	HitInfo.HitOutcome = ESniperHitOutcome::Normal;
+	HitInfo.HitRegion = HitRegion;
 	HitInfo.bIsScopedShot = Bullet.bWasScopedShot;
-	HitInfo.bIsHeadshot = false;
+	HitInfo.bIsHeadshot = HitRegion == ESniperHitRegion::Head;
 	HitInfo.bIsArmorPiercing = Bullet.bCanDamageArmor;
 	HitInfo.bShouldRagdoll = HitInfo.ImpactSpeed >= SniperRagdollImpactSpeedThreshold;
+	HitInfo.bKilled = false;
+	HitInfo.bFriendlyTarget = false;
 	HitInfo.Shooter = Bullet.Owner;
+	HitInfo.RegionDamageMultiplier = 1.0f;
+	HitInfo.TargetCurrentHP = 0.0f;
+	HitInfo.TargetMaxHP = 0.0f;
+	HitInfo.HitBoneName = ResolvedHitBoneName;
 	return HitInfo;
+}
+
+USkeletalMeshComponent* UBallisticBulletManagerComponent::ResolveHitSkeletalMeshComponent(const FHitResult& Hit) const
+{
+	if (USkeletalMeshComponent* HitSkeletalMesh = Cast<USkeletalMeshComponent>(Hit.HitComponent))
+	{
+		return HitSkeletalMesh;
+	}
+
+	if (AActor* HitActor = Hit.HitActor)
+	{
+		return HitActor->GetComponentByClass<USkeletalMeshComponent>();
+	}
+
+	return nullptr;
+}
+
+FName UBallisticBulletManagerComponent::ResolvePreciseHitBoneName(const FHitResult& Hit, bool* bOutUsedFallback) const
+{
+	if (bOutUsedFallback)
+	{
+		*bOutUsedFallback = false;
+	}
+
+	if (Hit.HitBoneName.IsValid() && Hit.HitBoneName != FName::None)
+	{
+		const FString NormalizedRawBoneName = NormalizeBoneNameForHitClassification(Hit.HitBoneName);
+		if (!NormalizedRawBoneName.empty() && !IsAuxiliaryBoneNameNormalized(NormalizedRawBoneName))
+		{
+			return Hit.HitBoneName;
+		}
+	}
+
+	USkeletalMeshComponent* SkeletalMeshComponent = ResolveHitSkeletalMeshComponent(Hit);
+	if (!SkeletalMeshComponent)
+	{
+		return FName::None;
+	}
+
+	if (FPhysicsAssetInstance* PhysicsAssetInstance = SkeletalMeshComponent->GetPhysicsAssetInstance())
+	{
+		FName NearestBodyBoneName = FName::None;
+		FVector NearestBodyLocation = FVector::ZeroVector;
+		if (PhysicsAssetInstance->FindNearestBodyToWorldLocation(
+				Hit.WorldHitLocation,
+				NearestBodyBoneName,
+				NearestBodyLocation))
+		{
+			const FString NormalizedNearestBodyBoneName = NormalizeBoneNameForHitClassification(NearestBodyBoneName);
+			if (!NormalizedNearestBodyBoneName.empty() && !IsAuxiliaryBoneNameNormalized(NormalizedNearestBodyBoneName))
+			{
+				if (bOutUsedFallback)
+				{
+					*bOutUsedFallback = true;
+				}
+				return NearestBodyBoneName;
+			}
+		}
+	}
+
+	USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+	FSkeletalMesh* MeshAsset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!MeshAsset || MeshAsset->Bones.empty())
+	{
+		return FName::None;
+	}
+
+	float BestDistanceSquared = 0.0f;
+	int32 BestBoneIndex = -1;
+	for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+	{
+		const FString& BoneName = MeshAsset->Bones[BoneIndex].Name;
+		if (BoneName.empty())
+		{
+			continue;
+		}
+
+		const FString NormalizedBoneName = NormalizeBoneNameForHitClassification(FName(BoneName));
+		if (NormalizedBoneName.empty() || IsAuxiliaryBoneNameNormalized(NormalizedBoneName))
+		{
+			continue;
+		}
+
+		const FVector BoneLocation = SkeletalMeshComponent->GetBoneLocationByIndex(BoneIndex);
+		const float DistanceSquared = FVector::DistSquared(Hit.WorldHitLocation, BoneLocation);
+		if (BestBoneIndex < 0 || DistanceSquared < BestDistanceSquared)
+		{
+			BestDistanceSquared = DistanceSquared;
+			BestBoneIndex = BoneIndex;
+		}
+	}
+
+	if (BestBoneIndex < 0 || BestBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+	{
+		return FName::None;
+	}
+
+	if (bOutUsedFallback)
+	{
+		*bOutUsedFallback = true;
+	}
+	return FName(MeshAsset->Bones[BestBoneIndex].Name);
+}
+
+FString UBallisticBulletManagerComponent::NormalizeBoneNameForHitClassification(const FName& BoneName) const
+{
+	if (!BoneName.IsValid() || BoneName == FName::None)
+	{
+		return FString();
+	}
+
+	const FString RawBoneName = BoneName.ToString();
+	FString NormalizedBoneName;
+	NormalizedBoneName.reserve(RawBoneName.size());
+
+	bool bLastCharacterWasSeparator = false;
+	for (char Character : RawBoneName)
+	{
+		const unsigned char UnsignedCharacter = static_cast<unsigned char>(Character);
+		if (std::isalnum(UnsignedCharacter) != 0)
+		{
+			NormalizedBoneName.push_back(static_cast<char>(std::tolower(UnsignedCharacter)));
+			bLastCharacterWasSeparator = false;
+		}
+		else if (!bLastCharacterWasSeparator && !NormalizedBoneName.empty())
+		{
+			NormalizedBoneName.push_back('_');
+			bLastCharacterWasSeparator = true;
+		}
+	}
+
+	while (!NormalizedBoneName.empty() && NormalizedBoneName.back() == '_')
+	{
+		NormalizedBoneName.pop_back();
+	}
+
+	return NormalizedBoneName;
+}
+
+bool UBallisticBulletManagerComponent::IsAuxiliaryBoneNameNormalized(const FString& BoneName) const
+{
+	return HasNormalizedBoneToken(BoneName, "ik") ||
+		HasNormalizedBoneToken(BoneName, "weapon") ||
+		HasNormalizedBoneToken(BoneName, "camera") ||
+		HasNormalizedBoneToken(BoneName, "twist") ||
+		HasNormalizedBoneToken(BoneName, "socket") ||
+		HasNormalizedBoneToken(BoneName, "ctrl") ||
+		HasNormalizedBoneToken(BoneName, "control") ||
+		HasNormalizedBoneToken(BoneName, "target") ||
+		HasNormalizedBoneToken(BoneName, "pole") ||
+		HasNormalizedBoneToken(BoneName, "end") ||
+		HasNormalizedBoneToken(BoneName, "nub") ||
+		HasNormalizedBoneToken(BoneName, "offset") ||
+		HasNormalizedBoneToken(BoneName, "attach") ||
+		HasNormalizedBoneToken(BoneName, "helper");
+}
+
+ESniperHitRegion UBallisticBulletManagerComponent::ClassifyHitRegionNormalized(const FString& BoneName) const
+{
+	if (BoneName.empty())
+	{
+		return ESniperHitRegion::Unknown;
+	}
+
+	if (IsHeadshotBoneNameNormalized(BoneName))
+	{
+		return ESniperHitRegion::Head;
+	}
+
+	if (HasNormalizedBoneToken(BoneName, "spine") ||
+		HasNormalizedBoneToken(BoneName, "pelvis") ||
+		HasNormalizedBoneToken(BoneName, "hips") ||
+		HasNormalizedBoneToken(BoneName, "hip") ||
+		HasNormalizedBoneToken(BoneName, "chest") ||
+		HasNormalizedBoneToken(BoneName, "upperchest") ||
+		HasNormalizedBoneToken(BoneName, "torso") ||
+		HasNormalizedBoneToken(BoneName, "rib") ||
+		HasNormalizedBoneToken(BoneName, "clavicle") ||
+		HasNormalizedBoneToken(BoneName, "neck"))
+	{
+		return ESniperHitRegion::Torso;
+	}
+
+	if (HasNormalizedBoneToken(BoneName, "arm") ||
+		HasNormalizedBoneToken(BoneName, "shoulder") ||
+		HasNormalizedBoneToken(BoneName, "elbow") ||
+		HasNormalizedBoneToken(BoneName, "forearm") ||
+		HasNormalizedBoneToken(BoneName, "hand") ||
+		HasNormalizedBoneToken(BoneName, "wrist"))
+	{
+		return ESniperHitRegion::Arm;
+	}
+
+	if (HasNormalizedBoneToken(BoneName, "leg") ||
+		HasNormalizedBoneToken(BoneName, "thigh") ||
+		HasNormalizedBoneToken(BoneName, "calf") ||
+		HasNormalizedBoneToken(BoneName, "knee") ||
+		HasNormalizedBoneToken(BoneName, "foot") ||
+		HasNormalizedBoneToken(BoneName, "ankle") ||
+		HasNormalizedBoneToken(BoneName, "toe"))
+	{
+		return ESniperHitRegion::Leg;
+	}
+
+	return ESniperHitRegion::Unknown;
+}
+
+ESniperHitRegion UBallisticBulletManagerComponent::ClassifyHitRegion(const FName& BoneName) const
+{
+	return ClassifyHitRegionNormalized(NormalizeBoneNameForHitClassification(BoneName));
+}
+
+bool UBallisticBulletManagerComponent::IsHeadshotBoneNameNormalized(const FString& BoneName) const
+{
+	return HasNormalizedBoneToken(BoneName, "head") ||
+		HasNormalizedBoneToken(BoneName, "skull") ||
+		HasNormalizedBoneToken(BoneName, "face") ||
+		HasNormalizedBoneToken(BoneName, "jaw") ||
+		HasNormalizedBoneToken(BoneName, "eye");
+}
+
+bool UBallisticBulletManagerComponent::IsHeadshotBoneName(const FName& BoneName) const
+{
+	return IsHeadshotBoneNameNormalized(NormalizeBoneNameForHitClassification(BoneName));
 }
 
 FBulletCinematicSnapshot UBallisticBulletManagerComponent::BuildBulletSnapshot(const FBallisticBullet& Bullet) const

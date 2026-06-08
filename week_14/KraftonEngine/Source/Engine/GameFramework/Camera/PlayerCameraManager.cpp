@@ -602,9 +602,9 @@ void APlayerCameraManager::ClearDepthOfField()
 	bEnableDepthOfField = false;
 }
 
-void APlayerCameraManager::SetScopeLens(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather, float EdgeBlurRadius, float Intensity, float LookSensitivityScale, float BlendTime, float CenterX, float CenterY)
+void APlayerCameraManager::SetScopeLens(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather, float EdgeBlurRadius, float Intensity, float LookSensitivityScale, float BlendTime, float CenterX, float CenterY, float CenterOffsetX, float CenterOffsetY)
 {
-	SetScopeLensProfile(Radius, OuterBlurRadius, ZoomFOV, Feather, EdgeBlurRadius, Intensity, LookSensitivityScale, BlendTime, CenterX, CenterY);
+	SetScopeLensProfile(Radius, OuterBlurRadius, ZoomFOV, Feather, EdgeBlurRadius, Intensity, LookSensitivityScale, BlendTime, CenterX, CenterY, CenterOffsetX, CenterOffsetY);
 	bScopeZoomDesired = true;
 	ScopeZoomBlendAlpha = 1.0f;
 	ScopeLensState = ScopeLensProfile;
@@ -619,7 +619,7 @@ void APlayerCameraManager::ClearScopeLens()
 	ScopeZoomBlendAlpha = 0.0f;
 }
 
-void APlayerCameraManager::SetScopeLensProfile(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather, float EdgeBlurRadius, float Intensity, float LookSensitivityScale, float BlendTime, float CenterX, float CenterY)
+void APlayerCameraManager::SetScopeLensProfile(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather, float EdgeBlurRadius, float Intensity, float LookSensitivityScale, float BlendTime, float CenterX, float CenterY, float CenterOffsetX, float CenterOffsetY)
 {
 	ScopeLensProfile.bEnabled = false;
 	ScopeLensProfile.Radius = std::clamp(Radius, 0.01f, 1.0f);
@@ -630,6 +630,8 @@ void APlayerCameraManager::SetScopeLensProfile(float Radius, float OuterBlurRadi
 	ScopeLensProfile.EdgeBlurRadius = std::max(0.0f, EdgeBlurRadius);
 	ScopeLensProfile.ZoomFOV = std::clamp(ZoomFOV, 0.01f, 3.0f);
 	ScopeLensProfile.Intensity = std::clamp(Intensity, 0.0f, 1.0f);
+	ScopeLensProfile.CenterOffsetX = std::clamp(CenterOffsetX, -1.0f, 1.0f);
+	ScopeLensProfile.CenterOffsetY = std::clamp(CenterOffsetY, -1.0f, 1.0f);
 	ScopeLensProfile.LookSensitivityScale = std::clamp(LookSensitivityScale, 0.01f, 1.0f);
 	ScopeLensProfile.BlendTime = std::max(0.0f, BlendTime);
 

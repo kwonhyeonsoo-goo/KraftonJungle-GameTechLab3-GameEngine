@@ -342,15 +342,16 @@ struct FScopeLensConstants
 	float AspectRatio;
 	float CenterX;
 	float CenterY;
+	float CenterOffset[2];
 };
 
 static constexpr uint32 MAX_CAMERA_SHOCK_WAVES = 4;
 
 struct FCameraShockWaveGPU
 {
-	FVector4 CenterAndRadius;     // xy = screen center, z = radius, w = width
-	FVector4 DirectionAndStrength; // xy = screen direction, z = strength, w = directional stretch
-	FVector4 FalloffAgeDuration;  // x = falloff, y = normalized age, z = duration, w = enabled
+	FVector4 CenterAndRadius;
+	FVector4 DirectionAndStrength;
+	FVector4 FalloffAgeDuration;
 };
 
 struct FCameraShockWaveConstants

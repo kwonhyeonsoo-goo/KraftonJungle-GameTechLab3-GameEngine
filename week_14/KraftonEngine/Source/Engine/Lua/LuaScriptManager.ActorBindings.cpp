@@ -439,7 +439,7 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetDoFBokehIntensity",
         &APlayerCameraManager::GetDoFBokehIntensity,
         "SetScopeLens",
-        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY)
+        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             M.SetScopeLens(
                 Radius,
@@ -451,10 +451,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 LookSensitivityScale.value_or(0.275f),
                 BlendTime.value_or(0.08f),
                 CenterX.value_or(0.5f),
-                CenterY.value_or(0.5f));
+                CenterY.value_or(0.5f),
+                CenterOffsetX.value_or(0.0f),
+                CenterOffsetY.value_or(0.0f));
         },
         "SetScopeLensProfile",
-        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY)
+        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             M.SetScopeLensProfile(
                 Radius,
@@ -466,7 +468,9 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 LookSensitivityScale.value_or(0.275f),
                 BlendTime.value_or(0.08f),
                 CenterX.value_or(0.5f),
-                CenterY.value_or(0.5f));
+                CenterY.value_or(0.5f),
+                CenterOffsetX.value_or(0.0f),
+                CenterOffsetY.value_or(0.0f));
         },
         "SetScopeZoomEnabled",
         &APlayerCameraManager::SetScopeZoomEnabled,
@@ -2403,6 +2407,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &ASniperPawn::GetScopeBlendAlpha,
         "GetCurrentScopeFOV",
         &ASniperPawn::GetCurrentScopeFOV,
+        "GetCurrentScopeZoomMagnification",
+        &ASniperPawn::GetCurrentScopeZoomMagnification,
+        "GetMinScopeZoomMagnification",
+        &ASniperPawn::GetMinScopeZoomMagnification,
+        "GetMaxScopeZoomMagnification",
+        &ASniperPawn::GetMaxScopeZoomMagnification,
         "GetCurrentScopeSensitivity",
         &ASniperPawn::GetCurrentScopeSensitivity,
         "IsHoldBreathActive",
@@ -2998,6 +3008,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &FSniperHitInfo::AmmoType,
         "HitOutcome",
         &FSniperHitInfo::HitOutcome,
+        "HitRegion",
+        &FSniperHitInfo::HitRegion,
         "bIsScopedShot",
         &FSniperHitInfo::bIsScopedShot,
         "bIsHeadshot",
@@ -3006,6 +3018,16 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &FSniperHitInfo::bIsArmorPiercing,
         "bShouldRagdoll",
         &FSniperHitInfo::bShouldRagdoll,
+        "bKilled",
+        &FSniperHitInfo::bKilled,
+        "bFriendlyTarget",
+        &FSniperHitInfo::bFriendlyTarget,
+        "RegionDamageMultiplier",
+        &FSniperHitInfo::RegionDamageMultiplier,
+        "TargetCurrentHP",
+        &FSniperHitInfo::TargetCurrentHP,
+        "TargetMaxHP",
+        &FSniperHitInfo::TargetMaxHP,
         "HitBoneName",
         &FSniperHitInfo::HitBoneName
     );
@@ -3019,6 +3041,13 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
     SniperHitOutcome["Blocked"] = ESniperHitOutcome::Blocked;
     SniperHitOutcome["Ricochet"] = ESniperHitOutcome::Ricochet;
     SniperHitOutcome["Penetrated"] = ESniperHitOutcome::Penetrated;
+
+    sol::table SniperHitRegion = Lua.create_named_table("SniperHitRegion");
+    SniperHitRegion["Unknown"] = ESniperHitRegion::Unknown;
+    SniperHitRegion["Head"] = ESniperHitRegion::Head;
+    SniperHitRegion["Torso"] = ESniperHitRegion::Torso;
+    SniperHitRegion["Arm"] = ESniperHitRegion::Arm;
+    SniperHitRegion["Leg"] = ESniperHitRegion::Leg;
 
     // 게임 특화 usertype/enum/global(GetGameState 등) 은 Game 모듈의
     // RegisterGameLuaBindings 가 등록한다. 호출 순서는 GameEngine/EditorEngine::Init

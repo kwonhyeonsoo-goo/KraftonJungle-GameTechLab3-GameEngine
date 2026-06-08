@@ -31,6 +31,18 @@ enum class ESniperHitOutcome : uint8
 	COUNT
 };
 
+UENUM()
+enum class ESniperHitRegion : uint8
+{
+	Unknown = 0,
+	Head = 1,
+	Torso = 2,
+	Arm = 3,
+	Leg = 4,
+
+	COUNT
+};
+
 USTRUCT()
 struct FSniperInputState
 {
@@ -57,8 +69,15 @@ struct FScopeState
 	float TargetFOV = 1.22173048f;
 	float NormalSensitivity = 1.0f;
 	float ScopedSensitivity = 0.25f;
+	float MaxZoomScopedSensitivity = 0.10f;
 	float CurrentSensitivity = 1.0f;
 	float ScopeBlendSpeed = 12.0f;
+	float MinZoomMagnification = 4.0f;
+	float MaxZoomMagnification = 16.0f;
+	float DefaultZoomMagnification = 4.0f;
+	float CurrentZoomMagnification = 4.0f;
+	float TargetZoomMagnification = 4.0f;
+	float ZoomStep = 1.0f;
 };
 
 USTRUCT()
@@ -74,7 +93,7 @@ struct FAimSwayState
 	float BreathMultiplier = 1.0f;
 	float HoldBreathGauge = 10.0f;
 	float MaxHoldBreathGauge = 10.0f;
-	float HoldBreathRecoverSpeed = 0.8f;
+	float HoldBreathRecoverSpeed = 1.5f;
 	float HoldBreathConsumeSpeed = 1.0f;
 	bool bForcedRecovery = false;
 	bool bRequireHoldBreathRelease = false;
@@ -180,11 +199,17 @@ struct FSniperHitInfo
 	float RagdollImpulseStrength = 0.0f;
 	ESniperAmmoType AmmoType = ESniperAmmoType::Normal;
 	ESniperHitOutcome HitOutcome = ESniperHitOutcome::Normal;
+	ESniperHitRegion HitRegion = ESniperHitRegion::Unknown;
 	bool bIsScopedShot = false;
 	bool bIsHeadshot = false;
 	bool bIsArmorPiercing = false;
 	bool bShouldRagdoll = false;
+	bool bKilled = false;
+	bool bFriendlyTarget = false;
 	AActor* Shooter = nullptr;
+	float RegionDamageMultiplier = 1.0f;
+	float TargetCurrentHP = 0.0f;
+	float TargetMaxHP = 0.0f;
 	FName HitBoneName = FName::None;
 };
 

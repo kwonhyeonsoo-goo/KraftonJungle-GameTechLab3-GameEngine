@@ -1442,6 +1442,44 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     Engine.set_function(
+        "GetBallisticWindEnabled",
+        []()
+        {
+            return GEngine && GEngine->GetWorld()
+                ? GEngine->GetWorld()->GetWorldSettings().bEnableBallisticWind
+                : true;
+        }
+    );
+    Engine.set_function(
+        "SetBallisticWindEnabled",
+        [](bool bEnabled)
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->GetWorldSettings().bEnableBallisticWind = bEnabled;
+            }
+        }
+    );
+    Engine.set_function(
+        "GetBallisticWindAcceleration",
+        []()
+        {
+            return GEngine && GEngine->GetWorld()
+                ? GEngine->GetWorld()->GetWorldSettings().BallisticWindAcceleration
+                : FVector(0.0f, 1.5f, 0.0f);
+        }
+    );
+    Engine.set_function(
+        "SetBallisticWindAcceleration",
+        [](const FVector& WindAcceleration)
+        {
+            if (GEngine && GEngine->GetWorld())
+            {
+                GEngine->GetWorld()->GetWorldSettings().BallisticWindAcceleration = WindAcceleration;
+            }
+        }
+    );
+    Engine.set_function(
         "Exit",
         []()
         {
@@ -1875,7 +1913,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
     );
     CameraManager.set_function(
         "SetScopeLens",
-        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY)
+        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             if (!GEngine || !GEngine->GetWorld()) return;
             APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
@@ -1892,13 +1930,15 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                     LookSensitivityScale.value_or(0.275f),
                     BlendTime.value_or(0.08f),
                     CenterX.value_or(0.5f),
-                    CenterY.value_or(0.5f));
+                    CenterY.value_or(0.5f),
+                    CenterOffsetX.value_or(0.0f),
+                    CenterOffsetY.value_or(0.0f));
             }
         }
     );
     CameraManager.set_function(
         "SetScopeLensProfile",
-        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY)
+        [](float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY, sol::optional<float> CenterOffsetX, sol::optional<float> CenterOffsetY)
         {
             if (!GEngine || !GEngine->GetWorld()) return;
             APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
@@ -1915,7 +1955,9 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                     LookSensitivityScale.value_or(0.275f),
                     BlendTime.value_or(0.08f),
                     CenterX.value_or(0.5f),
-                    CenterY.value_or(0.5f));
+                    CenterY.value_or(0.5f),
+                    CenterOffsetX.value_or(0.0f),
+                    CenterOffsetY.value_or(0.0f));
             }
         }
     );

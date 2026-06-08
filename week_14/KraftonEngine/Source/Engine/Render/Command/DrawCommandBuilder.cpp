@@ -1267,6 +1267,8 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			ScopeData.AspectRatio = AspectRatio;
 			ScopeData.CenterX = std::clamp(Frame.CameraScopeLens.CenterX, 0.0f, 1.0f);
 			ScopeData.CenterY = std::clamp(Frame.CameraScopeLens.CenterY, 0.0f, 1.0f);
+			ScopeData.CenterOffset[0] = Frame.CameraScopeLens.CenterOffsetX;
+			ScopeData.CenterOffset[1] = Frame.CameraScopeLens.CenterOffsetY;
 			ScopeLensCB.Update(Ctx, &ScopeData, sizeof(FScopeLensConstants));
 
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();

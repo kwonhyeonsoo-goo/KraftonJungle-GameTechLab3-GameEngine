@@ -5,6 +5,7 @@
 
 class UCombatCoverAgentComponent;
 class ULuaScriptComponent;
+class USniperDamageReceiverComponent;
 
 #include "Source/Engine/GameFramework/Pawn/CombatCharacter.generated.h"
 
@@ -16,6 +17,7 @@ public:
 
 	ACombatCharacter();
 	~ACombatCharacter() override = default;
+	void BeginPlay() override;
 
 	void InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile);
 
@@ -28,8 +30,10 @@ public:
 
 	ULuaScriptComponent* GetLuaScriptComponent() const;
 	UCombatCoverAgentComponent* GetCombatCoverAgentComponent() const;
+	USniperDamageReceiverComponent* GetSniperDamageReceiverComponent() const;
 
 protected:
 	mutable TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
 	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
+	mutable TWeakObjectPtr<USniperDamageReceiverComponent> SniperDamageReceiverComponent = nullptr;
 };

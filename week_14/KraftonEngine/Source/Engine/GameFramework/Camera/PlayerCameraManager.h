@@ -197,11 +197,11 @@ public:
 	float GetDoFBokehIntensity() const { return DoFBokehIntensity; }
 
 	UFUNCTION(Callable, Category="Camera|PostProcess")
-	virtual void SetScopeLens(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather = 0.08f, float EdgeBlurRadius = 1.25f, float Intensity = 1.0f, float LookSensitivityScale = 0.275f, float BlendTime = 0.08f, float CenterX = 0.5f, float CenterY = 0.5f);
+	virtual void SetScopeLens(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather = 0.08f, float EdgeBlurRadius = 1.25f, float Intensity = 1.0f, float LookSensitivityScale = 0.275f, float BlendTime = 0.08f, float CenterX = 0.5f, float CenterY = 0.5f, float CenterOffsetX = 0.0f, float CenterOffsetY = 0.0f);
 	UFUNCTION(Callable, Category="Camera|PostProcess")
 	virtual void ClearScopeLens();
 	UFUNCTION(Callable, Category="Camera|PostProcess")
-	virtual void SetScopeLensProfile(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather = 0.08f, float EdgeBlurRadius = 1.25f, float Intensity = 1.0f, float LookSensitivityScale = 0.275f, float BlendTime = 0.08f, float CenterX = 0.5f, float CenterY = 0.5f);
+	virtual void SetScopeLensProfile(float Radius, float OuterBlurRadius, float ZoomFOV, float Feather = 0.08f, float EdgeBlurRadius = 1.25f, float Intensity = 1.0f, float LookSensitivityScale = 0.275f, float BlendTime = 0.08f, float CenterX = 0.5f, float CenterY = 0.5f, float CenterOffsetX = 0.0f, float CenterOffsetY = 0.0f);
 	UFUNCTION(Callable, Category="Camera|PostProcess")
 	virtual void SetScopeZoomEnabled(bool bEnabled);
 

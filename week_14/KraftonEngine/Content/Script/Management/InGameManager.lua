@@ -3,6 +3,11 @@ local GameState = require("Management/GameState")
 local InGameManager = {}
 InGameManager.__index = InGameManager
 
+local ENEMY_KILL_SCORE = 100
+local FRIENDLY_KILL_PENALTY = 150
+local HEADSHOT_BONUS = 50
+local PENETRATION_BONUS = 25
+
 local PAUSE_CAMERA_NAME = "PauseMenu_Camera"
 local PAUSE_RIFLE_NAME = "PauseMenu_Rifle"
 local PAUSE_FADE_TIME = 0.080
@@ -29,6 +34,8 @@ function InGameManager.new(general)
         settings = {},
         last_timer_second = -1,
         result_requested = false,
+        sniper_kills = 0,
+        friendly_fire_kills = 0,
         paused = false,
         pause_transition = nil,
         pause_transition_time = 0.0,
@@ -54,6 +61,56 @@ function InGameManager:Initialize()
             end
             self:Stop(reason)
         end
+    end)
+
+    self.general:Subscribe("sniper.target_damaged", self, function(payload)
+        if not self.running then
+            return
+        end
+
+        self.general:Publish("ingame.sniper_damaged", {
+            timer = self.timer,
+            wave = self.wave,
+            phase = self.phase,
+            payload = payload
+        })
+    end)
+
+    self.general:Subscribe("sniper.target_killed", self, function(payload)
+        if not self.running then
+            return
+        end
+
+        local hit = payload ~= nil and payload.hit or nil
+        local isFriendly = payload ~= nil and payload.friendly == true
+        local scoreDelta = 0
+
+        if isFriendly then
+            self.friendly_fire_kills = self.friendly_fire_kills + 1
+            scoreDelta = -FRIENDLY_KILL_PENALTY
+        else
+            self.sniper_kills = self.sniper_kills + 1
+            scoreDelta = ENEMY_KILL_SCORE
+
+            if hit ~= nil and hit.bIsHeadshot == true then
+                scoreDelta = scoreDelta + HEADSHOT_BONUS
+            end
+            if hit ~= nil and hit.HitOutcome == SniperHitOutcome.Penetrated then
+                scoreDelta = scoreDelta + PENETRATION_BONUS
+            end
+        end
+
+        self.general:AddScore(scoreDelta)
+        self.general:Publish("ingame.sniper_killed", {
+            timer = self.timer,
+            wave = self.wave,
+            phase = self.phase,
+            payload = payload,
+            score_delta = scoreDelta,
+            total_score = self.general:GetScore(),
+            sniper_kills = self.sniper_kills,
+            friendly_fire_kills = self.friendly_fire_kills
+        })
     end)
 
     self.general:Subscribe("ingame.pause_resume_requested", self, function()
@@ -86,6 +143,9 @@ function InGameManager:Start(settings)
     self.settings = settings or self.settings or {}
     self.last_timer_second = -1
     self.result_requested = false
+    self.sniper_kills = 0
+    self.friendly_fire_kills = 0
+    self.general:SetScore(0)
     self.paused = false
     self.pause_transition = nil
     self.pause_transition_time = 0.0
@@ -456,6 +516,9 @@ function InGameManager:GetSnapshot()
         phase = self.phase,
         wave = self.wave,
         settings = self.settings,
+        sniper_kills = self.sniper_kills,
+        friendly_fire_kills = self.friendly_fire_kills,
+        score = self.general:GetScore(),
         paused = self.paused,
         result_requested = self.result_requested
     }

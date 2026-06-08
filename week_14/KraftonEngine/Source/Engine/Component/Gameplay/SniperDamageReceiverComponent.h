@@ -2,10 +2,13 @@
 
 #include "Component/ActorComponent.h"
 #include "Component/Gameplay/SniperTypes.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Gameplay/SniperDamageReceiverComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FSniperDamageReceiverEventSignature, const FSniperHitInfo&);
+
+class UCombatCoverAgentComponent;
 
 UCLASS()
 class USniperDamageReceiverComponent : public UActorComponent
@@ -20,9 +23,9 @@ public:
 	void EndPlay() override;
 
 	UFUNCTION(Pure, Category="Sniper|Damage")
-	float GetMaxHP() const { return MaxHP; }
+	float GetMaxHP() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
-	float GetCurrentHP() const { return CurrentHP; }
+	float GetCurrentHP() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool IsFriendly() const { return bIsFriendly; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
@@ -34,7 +37,7 @@ public:
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool CanRagdoll() const { return bCanRagdoll; }
 	UFUNCTION(Pure, Category="Sniper|Damage")
-	bool IsDead() const { return bIsDead; }
+	bool IsDead() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
 	bool CanReceiveSniperHit() const;
 	UFUNCTION(Pure, Category="Sniper|Damage")
@@ -51,6 +54,9 @@ public:
 
 private:
 	FSniperHitInfo BuildResolvedHitInfo(const FSniperHitInfo& HitInfo) const;
+	UCombatCoverAgentComponent* ResolveCombatCoverAgentComponent() const;
+	bool IsFriendlyTarget() const;
+	float GetDamageMultiplierForHitRegion(ESniperHitRegion HitRegion) const;
 
 private:
 	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Max HP", Min=1.0f, Max=10000.0f, Speed=1.0f)
@@ -74,5 +80,18 @@ private:
 	UPROPERTY(Edit, Save, Category="Sniper|Damage", DisplayName="Can Ragdoll")
 	bool bCanRagdoll = true;
 
+	UPROPERTY(Edit, Save, Category="Sniper|Damage|Region", DisplayName="Head Damage Multiplier", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float SniperHeadDamageMultiplier = 2.0f;
+
+	UPROPERTY(Edit, Save, Category="Sniper|Damage|Region", DisplayName="Torso Damage Multiplier", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float SniperTorsoDamageMultiplier = 1.0f;
+
+	UPROPERTY(Edit, Save, Category="Sniper|Damage|Region", DisplayName="Arm Damage Multiplier", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float SniperArmDamageMultiplier = 0.65f;
+
+	UPROPERTY(Edit, Save, Category="Sniper|Damage|Region", DisplayName="Leg Damage Multiplier", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float SniperLegDamageMultiplier = 0.75f;
+
 	bool bIsDead = false;
+	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
 };
