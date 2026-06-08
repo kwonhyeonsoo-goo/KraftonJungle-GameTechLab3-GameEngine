@@ -1033,6 +1033,7 @@ function UIManager:SetRadioOpeningPresentation(payload)
     local alpha = payload ~= nil and tonumber(payload.blackout_alpha) or 0.0
     local active = payload ~= nil and payload.active == true
     local suppress = payload ~= nil and payload.hud_suppressed == true
+    local block_game_input = active or suppress
     self.radio_blackout_alpha = clamp01(alpha)
     self.radio_hud_suppressed = suppress
 
@@ -1045,6 +1046,9 @@ function UIManager:SetRadioOpeningPresentation(payload)
     self:SetElementVisible(widget, "radioBlackout", blackout_visible)
     self:SetElementStyle(widget, "radioBlackout", "display", blackout_visible and "block" or "none")
     self:SetElementAlpha(widget, "radioBlackout", blackout_visible and self.radio_blackout_alpha or 0.0)
+    call_widget(widget, "SetBlocksGameInput", block_game_input)
+    call_widget(widget, "SetBlocksGameKeyboard", block_game_input)
+    call_widget(widget, "SetBlocksGameMouseLook", block_game_input)
 
     if suppress then
         self:SetInGameHUDSuppressed(widget, true)
