@@ -3,10 +3,12 @@
 #include "sol/sol.hpp"
 
 #include "Component/Gameplay/CombatCoverAgentComponent.h"
+#include "Component/Gameplay/CombatFlowManagerComponent.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Runtime/EngineInitHooks.h"
 #include "GameFramework/AActor.h"
 #include "Lua/LuaScriptManager.h"
+#include "Object/Object.h"
 
 // ============================================================
 // 게임-특화 Lua 바인딩 등록 위치 — 현재는 비어 있음.
@@ -27,14 +29,46 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		sol::bases<UActorComponent, UObject>(),
 		"GetTeamTag",
 		&UCombatCoverAgentComponent::GetTeamTag,
+		"SetTeamTag",
+		&UCombatCoverAgentComponent::SetTeamTag,
+		"GetDisplayName",
+		&UCombatCoverAgentComponent::GetDisplayName,
+		"SetDisplayName",
+		&UCombatCoverAgentComponent::SetDisplayName,
 		"GetStateName",
 		&UCombatCoverAgentComponent::GetStateName,
 		"GetHealth",
 		&UCombatCoverAgentComponent::GetHealth,
+		"SetHealth",
+		&UCombatCoverAgentComponent::SetHealth,
 		"GetMaxHealth",
 		&UCombatCoverAgentComponent::GetMaxHealth,
+		"SetMaxHealth",
+		&UCombatCoverAgentComponent::SetMaxHealth,
+		"GetHealthRatio",
+		&UCombatCoverAgentComponent::GetHealthRatio,
+		"GetCurrentNodeId",
+		&UCombatCoverAgentComponent::GetCurrentNodeId,
+		"GetCurrentSlotId",
+		&UCombatCoverAgentComponent::GetCurrentSlotId,
+		"GetTargetNodeId",
+		&UCombatCoverAgentComponent::GetTargetNodeId,
+		"GetTargetSlotId",
+		&UCombatCoverAgentComponent::GetTargetSlotId,
+		"GetFireRange",
+		&UCombatCoverAgentComponent::GetFireRange,
+		"GetMovingFireRange",
+		&UCombatCoverAgentComponent::GetMovingFireRange,
+		"GetEffectiveFireRange",
+		&UCombatCoverAgentComponent::GetEffectiveFireRange,
+		"GetAttackDamage",
+		&UCombatCoverAgentComponent::GetAttackDamage,
+		"GetCurrentTarget",
+		&UCombatCoverAgentComponent::GetCurrentTarget,
 		"GetIncomingFireCount",
 		&UCombatCoverAgentComponent::GetIncomingFireCount,
+		"GetIncomingAttackDamage",
+		&UCombatCoverAgentComponent::GetIncomingAttackDamage,
 		"GetSuppressionTimeRemaining",
 		&UCombatCoverAgentComponent::GetSuppressionTimeRemaining,
 		"IsAlive",
@@ -49,8 +83,90 @@ void RegisterGameLuaBindings(sol::state& Lua)
 		&UCombatCoverAgentComponent::IsSuppressed,
 		"CanFireWhileMoving",
 		&UCombatCoverAgentComponent::CanFireWhileMoving,
+		"HasLastSniperHit",
+		&UCombatCoverAgentComponent::HasLastSniperHit,
+		"GetLastHitBoneName",
+		&UCombatCoverAgentComponent::GetLastHitBoneName,
+		"GetLastHitBodyName",
+		&UCombatCoverAgentComponent::GetLastHitBodyName,
+		"GetLastHitRegionName",
+		&UCombatCoverAgentComponent::GetLastHitRegionName,
+		"GetLastHitRegionDisplayName",
+		&UCombatCoverAgentComponent::GetLastHitRegionDisplayName,
+		"GetLastHitDamage",
+		&UCombatCoverAgentComponent::GetLastHitDamage,
+		"GetLastHitScoreMultiplier",
+		&UCombatCoverAgentComponent::GetLastHitScoreMultiplier,
+		"GetLastHitScoreValue",
+		&UCombatCoverAgentComponent::GetLastHitScoreValue,
+		"WasLastHitKilled",
+		&UCombatCoverAgentComponent::WasLastHitKilled,
 		"MarkDead",
 		&UCombatCoverAgentComponent::MarkDead
+	);
+
+	Lua.new_usertype<UCombatFlowManagerComponent>(
+		"CombatFlowManagerComponent",
+		sol::base_classes,
+		sol::bases<UActorComponent, UObject>(),
+		"RefreshRegistry",
+		&UCombatFlowManagerComponent::RefreshRegistry,
+		"ResetRuntimeState",
+		&UCombatFlowManagerComponent::ResetRuntimeState,
+		"UpdateCombatSimulation",
+		&UCombatFlowManagerComponent::UpdateCombatSimulation,
+		"GetAgents",
+		[](UCombatFlowManagerComponent& Manager, sol::this_state State)
+		{
+			sol::state_view L(State);
+			sol::table Result = L.create_table();
+			int Index = 1;
+			for (UCombatCoverAgentComponent* Agent : Manager.GetAgents())
+			{
+				if (IsValid(Agent))
+				{
+					Result[Index++] = Agent;
+				}
+			}
+			return Result;
+		}
+	);
+
+	sol::object ExistingCombat = Lua["Combat"];
+	sol::table Combat = (ExistingCombat.valid() && ExistingCombat.get_type() == sol::type::table)
+		? ExistingCombat.as<sol::table>()
+		: Lua.create_named_table("Combat");
+	Combat.set_function(
+		"FindFlowManager",
+		[]() -> UCombatFlowManagerComponent*
+		{
+			return GEngine ? UCombatFlowManagerComponent::FindInWorld(GEngine->GetWorld()) : nullptr;
+		}
+	);
+	Combat.set_function(
+		"GetAgents",
+		[](sol::this_state State)
+		{
+			sol::state_view L(State);
+			sol::table Result = L.create_table();
+			UCombatFlowManagerComponent* Manager = GEngine
+				? UCombatFlowManagerComponent::FindInWorld(GEngine->GetWorld())
+				: nullptr;
+			if (!IsValid(Manager))
+			{
+				return Result;
+			}
+
+			int Index = 1;
+			for (UCombatCoverAgentComponent* Agent : Manager->GetAgents())
+			{
+				if (IsValid(Agent))
+				{
+					Result[Index++] = Agent;
+				}
+			}
+			return Result;
+		}
 	);
 
 	sol::table ActorType = Lua["Actor"];
