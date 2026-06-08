@@ -23,6 +23,7 @@ public:
 	void EndPlay() override;
 	void PostDuplicate() override;
 	void SetupInputComponent() override;
+	void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime) override;
 	void Tick(float DeltaTime) override;
 
 	void InitDefaultComponents();
@@ -85,6 +86,10 @@ public:
 
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float MouseSensitivity = 0.2f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Gamepad Look Sensitivity", Min=0.0f, Max=720.0f, Speed=1.0f)
+	float GamepadLookSensitivity = 90.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Gamepad Trigger Press Threshold", Min=0.01f, Max=1.0f, Speed=0.01f)
+	float GamepadTriggerPressThreshold = 0.35f;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Min Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
 	float MinCameraPitch = -80.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Input", DisplayName="Max Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
@@ -154,15 +159,25 @@ private:
 	void AdjustScopeZoomStep(int32 StepDelta);
 	void HandleTurnInput(float Value);
 	void HandleLookUpInput(float Value);
+	void HandleGamepadTurnInput(float Value);
+	void HandleGamepadLookUpInput(float Value);
 	void HandleScopeZoomAxis(float Value);
+	void HandleGamepadScopeAxis(float Value);
+	void HandleGamepadFireAxis(float Value);
 	void HandleFirePressed();
 	void HandleScopePressed();
 	void HandleScopeReleased();
 	void HandleHoldBreathPressed();
 	void HandleHoldBreathReleased();
+	void HandleGamepadHoldBreathPressed();
+	void HandleGamepadHoldBreathReleased();
 	void HandleSwitchAmmoNormalPressed();
 	void HandleSwitchAmmoAntiMaterialPressed();
+	void HandleScopeZoomInPressed();
+	void HandleScopeZoomOutPressed();
 	void HandleReloadPressed();
+	void RefreshScopeHeldState();
+	void RefreshHoldBreathHeldState();
 	void ApplyFireRecoil();
 	bool FireCurrentRound();
 
@@ -175,4 +190,10 @@ private:
 	FScopeState ScopeState;
 	FAimSwayState AimSwayState;
 	FRecoilState RecoilState;
+	float CachedInputDeltaTime = 1.0f / 60.0f;
+	bool bMouseScopeInputHeld = false;
+	bool bGamepadScopeInputHeld = false;
+	bool bKeyboardHoldBreathInputHeld = false;
+	bool bGamepadHoldBreathInputHeld = false;
+	bool bGamepadFireTriggerHeld = false;
 };

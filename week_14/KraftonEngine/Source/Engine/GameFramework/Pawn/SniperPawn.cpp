@@ -8,6 +8,7 @@
 #include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
+#include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
 
 #include <algorithm>
@@ -110,6 +111,10 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->AddMouseAxisMapping("SniperTurn", EInputAxisSourceType::MouseX, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperScopeZoom", EInputAxisSourceType::MouseWheel, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperGamepadTurn", EInputAxisSourceType::GamepadLeftStickX, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperGamepadLookUp", EInputAxisSourceType::GamepadLeftStickY, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperGamepadScope", EInputAxisSourceType::GamepadLeftTrigger, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperGamepadFire", EInputAxisSourceType::GamepadRightTrigger, 1.0f);
 	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
 	InputComponent->AddActionMapping("SniperScope", "RightMouseButton");
 	InputComponent->AddActionMapping("SniperHoldBreath", "Shift");
@@ -118,6 +123,12 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->AddActionMapping("SniperSwitchAmmoNormal", "1");
 	InputComponent->AddActionMapping("SniperSwitchAmmoAntiMaterial", "2");
 	InputComponent->AddActionMapping("SniperReload", "R");
+	InputComponent->AddGamepadActionMapping("SniperGamepadHoldBreath", EGamepadButton::LeftShoulder);
+	InputComponent->AddGamepadActionMapping("SniperGamepadSwitchAmmoNormal", EGamepadButton::DPadLeft);
+	InputComponent->AddGamepadActionMapping("SniperGamepadSwitchAmmoAntiMaterial", EGamepadButton::DPadRight);
+	InputComponent->AddGamepadActionMapping("SniperGamepadZoomIn", EGamepadButton::DPadUp);
+	InputComponent->AddGamepadActionMapping("SniperGamepadZoomOut", EGamepadButton::DPadDown);
+	InputComponent->AddGamepadActionMapping("SniperReload", EGamepadButton::FaceLeft);
 
 	InputComponent->BindAxis("SniperTurn", [this](float Value)
 	{
@@ -129,9 +140,29 @@ void ASniperPawn::SetupInputComponent()
 		HandleLookUpInput(Value);
 	});
 
+	InputComponent->BindAxis("SniperGamepadTurn", [this](float Value)
+	{
+		HandleGamepadTurnInput(Value);
+	});
+
+	InputComponent->BindAxis("SniperGamepadLookUp", [this](float Value)
+	{
+		HandleGamepadLookUpInput(Value);
+	});
+
 	InputComponent->BindAxis("SniperScopeZoom", [this](float Value)
 	{
 		HandleScopeZoomAxis(Value);
+	});
+
+	InputComponent->BindAxis("SniperGamepadScope", [this](float Value)
+	{
+		HandleGamepadScopeAxis(Value);
+	});
+
+	InputComponent->BindAxis("SniperGamepadFire", [this](float Value)
+	{
+		HandleGamepadFireAxis(Value);
 	});
 
 	InputComponent->BindAction("SniperScope", EInputEvent::Pressed, [this]()
@@ -154,6 +185,16 @@ void ASniperPawn::SetupInputComponent()
 		HandleHoldBreathReleased();
 	});
 
+	InputComponent->BindAction("SniperGamepadHoldBreath", EInputEvent::Pressed, [this]()
+	{
+		HandleGamepadHoldBreathPressed();
+	});
+
+	InputComponent->BindAction("SniperGamepadHoldBreath", EInputEvent::Released, [this]()
+	{
+		HandleGamepadHoldBreathReleased();
+	});
+
 	InputComponent->BindAction("SniperSwitchAmmoNormal", EInputEvent::Pressed, [this]()
 	{
 		HandleSwitchAmmoNormalPressed();
@@ -162,6 +203,26 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->BindAction("SniperSwitchAmmoAntiMaterial", EInputEvent::Pressed, [this]()
 	{
 		HandleSwitchAmmoAntiMaterialPressed();
+	});
+
+	InputComponent->BindAction("SniperGamepadSwitchAmmoNormal", EInputEvent::Pressed, [this]()
+	{
+		HandleSwitchAmmoNormalPressed();
+	});
+
+	InputComponent->BindAction("SniperGamepadSwitchAmmoAntiMaterial", EInputEvent::Pressed, [this]()
+	{
+		HandleSwitchAmmoAntiMaterialPressed();
+	});
+
+	InputComponent->BindAction("SniperGamepadZoomIn", EInputEvent::Pressed, [this]()
+	{
+		HandleScopeZoomInPressed();
+	});
+
+	InputComponent->BindAction("SniperGamepadZoomOut", EInputEvent::Pressed, [this]()
+	{
+		HandleScopeZoomOutPressed();
 	});
 
 	InputComponent->BindAction("SniperReload", EInputEvent::Pressed, [this]()
@@ -173,6 +234,12 @@ void ASniperPawn::SetupInputComponent()
 	{
 		HandleScopeReleased();
 	});
+}
+
+void ASniperPawn::ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
+{
+	CachedInputDeltaTime = DeltaTime > 0.0f ? DeltaTime : (1.0f / 60.0f);
+	APawn::ProcessPlayerInput(Snapshot, DeltaTime);
 }
 
 void ASniperPawn::Tick(float DeltaTime)
@@ -237,6 +304,12 @@ void ASniperPawn::CacheComponentReferences()
 void ASniperPawn::SyncSniperRuntimeState()
 {
 	InputState = FSniperInputState{};
+	CachedInputDeltaTime = 1.0f / 60.0f;
+	bMouseScopeInputHeld = false;
+	bGamepadScopeInputHeld = false;
+	bKeyboardHoldBreathInputHeld = false;
+	bGamepadHoldBreathInputHeld = false;
+	bGamepadFireTriggerHeld = false;
 	bUseControllerRotationPitch = true;
 	bUseControllerRotationYaw = true;
 
@@ -250,6 +323,8 @@ void ASniperPawn::SyncSniperRuntimeState()
 	ScopeState.ZoomStep = (std::max)(ScopeState.ZoomStep, 0.1f);
 	ScopeState.ScopedSensitivity = (std::max)(ScopeState.ScopedSensitivity, 0.01f);
 	ScopeState.MaxZoomScopedSensitivity = (std::max)(ScopeState.MaxZoomScopedSensitivity, 0.01f);
+	GamepadLookSensitivity = (std::max)(GamepadLookSensitivity, 0.0f);
+	GamepadTriggerPressThreshold = FMath::Clamp(GamepadTriggerPressThreshold, 0.01f, 1.0f);
 	ScopeState.DefaultZoomMagnification = ClampScopeZoomMagnification(ScopeState.DefaultZoomMagnification);
 	ScopeState.CurrentZoomMagnification = ScopeState.DefaultZoomMagnification;
 	ScopeState.TargetZoomMagnification = ScopeState.DefaultZoomMagnification;
@@ -483,6 +558,11 @@ float ASniperPawn::GetScopeBlendAlpha() const
 
 void ASniperPawn::ForceScopeReleased()
 {
+	bMouseScopeInputHeld = false;
+	bGamepadScopeInputHeld = false;
+	bKeyboardHoldBreathInputHeld = false;
+	bGamepadHoldBreathInputHeld = false;
+	bGamepadFireTriggerHeld = false;
 	InputState.bScopeHeld = false;
 	InputState.bHoldBreathHeld = false;
 	ScopeState.bIsScoped = false;
@@ -600,6 +680,19 @@ void ASniperPawn::HandleTurnInput(float Value)
 	ApplySniperControlRotation();
 }
 
+void ASniperPawn::HandleGamepadTurnInput(float Value)
+{
+	if (std::abs(Value) <= 0.0001f)
+	{
+		return;
+	}
+
+	FRotator Control = GetControlRotation();
+	Control.Yaw += Value * GamepadLookSensitivity * CachedInputDeltaTime * ScopeState.CurrentSensitivity;
+	SetControlRotation(Control);
+	ApplySniperControlRotation();
+}
+
 void ASniperPawn::HandleLookUpInput(float Value)
 {
 	InputState.MouseDeltaY = Value;
@@ -616,6 +709,21 @@ void ASniperPawn::HandleLookUpInput(float Value)
 	ApplySniperControlRotation();
 }
 
+void ASniperPawn::HandleGamepadLookUpInput(float Value)
+{
+	if (std::abs(Value) <= 0.0001f)
+	{
+		return;
+	}
+
+	const float Direction = bInvertMouseY ? 1.0f : -1.0f;
+	FRotator Control = GetControlRotation();
+	Control.Pitch += Value * GamepadLookSensitivity * CachedInputDeltaTime * ScopeState.CurrentSensitivity * Direction;
+	Control.Pitch = ClampSniperPitch(Control.Pitch, MinCameraPitch, MaxCameraPitch);
+	SetControlRotation(Control);
+	ApplySniperControlRotation();
+}
+
 void ASniperPawn::HandleScopeZoomAxis(float Value)
 {
 	if (!ScopeState.bIsScoped || std::abs(Value) <= 0.0001f)
@@ -626,36 +734,95 @@ void ASniperPawn::HandleScopeZoomAxis(float Value)
 	AdjustScopeZoomStep(Value > 0.0f ? +1 : -1);
 }
 
+void ASniperPawn::HandleGamepadScopeAxis(float Value)
+{
+	const bool bHeld = Value >= GamepadTriggerPressThreshold;
+	if (IsSniperKillCamPlaying(this))
+	{
+		bGamepadScopeInputHeld = false;
+		RefreshScopeHeldState();
+		return;
+	}
+
+	if (bGamepadScopeInputHeld == bHeld)
+	{
+		return;
+	}
+
+	bGamepadScopeInputHeld = bHeld;
+	RefreshScopeHeldState();
+}
+
+void ASniperPawn::HandleGamepadFireAxis(float Value)
+{
+	const bool bPressed = Value >= GamepadTriggerPressThreshold;
+	if (bGamepadFireTriggerHeld == bPressed)
+	{
+		return;
+	}
+
+	bGamepadFireTriggerHeld = bPressed;
+	if (bPressed)
+	{
+		HandleFirePressed();
+	}
+}
+
 void ASniperPawn::HandleScopePressed()
 {
 	if (IsSniperKillCamPlaying(this))
 	{
-		InputState.bScopeHeld = false;
+		bMouseScopeInputHeld = false;
+		RefreshScopeHeldState();
 		return;
 	}
 
-	InputState.bScopeHeld = true;
+	bMouseScopeInputHeld = true;
+	RefreshScopeHeldState();
 }
 
 void ASniperPawn::HandleScopeReleased()
 {
-	InputState.bScopeHeld = false;
+	bMouseScopeInputHeld = false;
+	RefreshScopeHeldState();
 }
 
 void ASniperPawn::HandleHoldBreathPressed()
 {
 	if (IsSniperKillCamPlaying(this))
 	{
-		InputState.bHoldBreathHeld = false;
+		bKeyboardHoldBreathInputHeld = false;
+		RefreshHoldBreathHeldState();
 		return;
 	}
 
-	InputState.bHoldBreathHeld = true;
+	bKeyboardHoldBreathInputHeld = true;
+	RefreshHoldBreathHeldState();
 }
 
 void ASniperPawn::HandleHoldBreathReleased()
 {
-	InputState.bHoldBreathHeld = false;
+	bKeyboardHoldBreathInputHeld = false;
+	RefreshHoldBreathHeldState();
+}
+
+void ASniperPawn::HandleGamepadHoldBreathPressed()
+{
+	if (IsSniperKillCamPlaying(this))
+	{
+		bGamepadHoldBreathInputHeld = false;
+		RefreshHoldBreathHeldState();
+		return;
+	}
+
+	bGamepadHoldBreathInputHeld = true;
+	RefreshHoldBreathHeldState();
+}
+
+void ASniperPawn::HandleGamepadHoldBreathReleased()
+{
+	bGamepadHoldBreathInputHeld = false;
+	RefreshHoldBreathHeldState();
 }
 
 void ASniperPawn::HandleSwitchAmmoNormalPressed()
@@ -698,6 +865,36 @@ void ASniperPawn::HandleReloadPressed()
 		SniperWeapon->RequestReload();
 	}
 	InputState.bReloadPressed = false;
+}
+
+void ASniperPawn::HandleScopeZoomInPressed()
+{
+	if (!ScopeState.bIsScoped)
+	{
+		return;
+	}
+
+	AdjustScopeZoomStep(+1);
+}
+
+void ASniperPawn::HandleScopeZoomOutPressed()
+{
+	if (!ScopeState.bIsScoped)
+	{
+		return;
+	}
+
+	AdjustScopeZoomStep(-1);
+}
+
+void ASniperPawn::RefreshScopeHeldState()
+{
+	InputState.bScopeHeld = bMouseScopeInputHeld || bGamepadScopeInputHeld;
+}
+
+void ASniperPawn::RefreshHoldBreathHeldState()
+{
+	InputState.bHoldBreathHeld = bKeyboardHoldBreathInputHeld || bGamepadHoldBreathInputHeld;
 }
 
 void ASniperPawn::ApplyFireRecoil()
