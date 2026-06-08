@@ -1,26 +1,22 @@
 -- EnemyPrefabSpawner.lua
 -- 이 스크립트를 가진 액터 위치에 지정 프리팹을 순차 스폰한다.
--- 기본값은 Content/Prefab/Enemy_gun.prefab 을 1초 간격으로 SpawnCount개 스폰한다.
+-- InGame 시작 후 정해진 시간마다 Content/Prefab/Enemy_gun.prefab 을 1초 간격으로 웨이브 스폰한다.
 
 local Config = {
     PrefabDirectory = "Content/Prefab",
     PrefabName = "Enemy_gun",
 
-    -- 한 묶음에서 뽑을 수량.
-    SpawnCount = 3,
-
     -- 같은 묶음 안에서 한 마리씩 뽑는 간격.
     SpawnIntervalSeconds = 1.0,
 
-    -- 첫 스폰 시작 전 대기 시간.
-    InitialDelaySeconds = 0.0,
-
-    -- 묶음을 반복할 때 다음 묶음까지 기다릴 시간.
-    -- MaxBatches가 1이면 사용되지 않는다.
-    BatchIntervalSeconds = 10.0,
-
-    -- 1이면 한 번만 SpawnCount개 스폰한다. 0 이하면 무한 반복한다.
-    MaxBatches = 1,
+    -- 게임 시작 후 경과 시간(초) 기준 웨이브. 각 스포너가 이 수량만큼 따로 생성한다.
+    WaveSchedule = {
+        { TimeSeconds = 0.0, Count = 3 },
+        { TimeSeconds = 60.0, Count = 5 },
+        { TimeSeconds = 120.0, Count = 8 },
+        { TimeSeconds = 180.0, Count = 10 },
+        { TimeSeconds = 240.0, Count = 15 }
+    },
 
     -- InGame 상태 / ingame.started 이벤트와 연동해서 시작한다.
     StartOnInGame = true,
@@ -44,9 +40,10 @@ local requestedStart = false
 local running = false
 local batchActive = false
 local batchIndex = 0
+local currentBatchSpawnCount = 0
 local spawnedInBatch = 0
 local timeUntilNextSpawn = 0.0
-local timeUntilNextBatch = 0.0
+local elapsedSinceStart = 0.0
 local spawnedActors = {}
 
 local function log(message)
@@ -148,22 +145,25 @@ local function spawn_actor_from_config()
 end
 
 local function can_start_new_batch()
-    local maxBatches = tonumber(Config.MaxBatches) or 1
-    return maxBatches <= 0 or batchIndex < maxBatches
+    local schedule = Config.WaveSchedule or {}
+    return batchIndex < #schedule
 end
 
 local function start_batch()
-    if not can_start_new_batch() then
+    local schedule = Config.WaveSchedule or {}
+    local wave = schedule[batchIndex + 1]
+    if wave == nil then
         running = false
         batchActive = false
-        log("completed all batches")
+        log("completed all waves")
         return
     end
 
+    currentBatchSpawnCount = math.max(0, math.floor(tonumber(wave.Count) or 0))
     batchActive = true
     spawnedInBatch = 0
     timeUntilNextSpawn = 0.0
-    log("batch start " .. tostring(batchIndex + 1))
+    log("wave start " .. tostring(batchIndex + 1) .. " count=" .. tostring(currentBatchSpawnCount))
 end
 
 local function request_start(reason)
@@ -175,9 +175,10 @@ local function request_start(reason)
     running = true
     batchActive = false
     batchIndex = 0
+    currentBatchSpawnCount = 0
     spawnedInBatch = 0
     timeUntilNextSpawn = 0.0
-    timeUntilNextBatch = math.max(0.0, tonumber(Config.InitialDelaySeconds) or 0.0)
+    elapsedSinceStart = 0.0
     log("start reason=" .. tostring(reason))
 end
 
@@ -230,9 +231,10 @@ function BeginPlay()
     running = false
     batchActive = false
     batchIndex = 0
+    currentBatchSpawnCount = 0
     spawnedInBatch = 0
     timeUntilNextSpawn = 0.0
-    timeUntilNextBatch = 0.0
+    elapsedSinceStart = 0.0
     spawnedActors = {}
 
     subscribe_game_events()
@@ -263,6 +265,8 @@ function Tick(dt)
         return
     end
 
+    elapsedSinceStart = elapsedSinceStart + dt
+
     if not batchActive then
         if not can_start_new_batch() then
             running = false
@@ -270,18 +274,18 @@ function Tick(dt)
             return
         end
 
-        timeUntilNextBatch = timeUntilNextBatch - dt
-        if timeUntilNextBatch <= 0.0 then
+        local schedule = Config.WaveSchedule or {}
+        local wave = schedule[batchIndex + 1]
+        local waveTime = tonumber(wave and wave.TimeSeconds) or 0.0
+        if elapsedSinceStart >= waveTime then
             start_batch()
         end
         return
     end
 
-    local spawnCount = math.max(0, math.floor(tonumber(Config.SpawnCount) or 0))
-    if spawnCount <= 0 then
+    if currentBatchSpawnCount <= 0 then
         batchActive = false
         batchIndex = batchIndex + 1
-        timeUntilNextBatch = math.max(0.0, tonumber(Config.BatchIntervalSeconds) or 0.0)
         return
     end
 
@@ -290,10 +294,9 @@ function Tick(dt)
         spawn_actor_from_config()
         spawnedInBatch = spawnedInBatch + 1
 
-        if spawnedInBatch >= spawnCount then
+        if spawnedInBatch >= currentBatchSpawnCount then
             batchActive = false
             batchIndex = batchIndex + 1
-            timeUntilNextBatch = math.max(0.0, tonumber(Config.BatchIntervalSeconds) or 0.0)
         else
             timeUntilNextSpawn = math.max(0.0, tonumber(Config.SpawnIntervalSeconds) or 0.0)
         end
