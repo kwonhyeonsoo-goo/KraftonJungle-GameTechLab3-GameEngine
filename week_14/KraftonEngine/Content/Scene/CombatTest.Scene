@@ -13288,6 +13288,13 @@
   "Version" : 2,
   "WorldSettings" : {
     "BallisticWindAcceleration" : [0.000000, 3.000000, 0.000000],
+    "BallisticWindBlendSpeed" : 1.500000,
+    "BallisticWindChangeIntervalMax" : 7.000000,
+    "BallisticWindChangeIntervalMin" : 3.000000,
+    "BallisticWindDirectionOffsetDegrees" : 20.000000,
+    "BallisticWindMagnitudeScaleMax" : 1.400000,
+    "BallisticWindMagnitudeScaleMin" : 0.600000,
+    "DynamicBallisticWindEnabled" : true,
     "BallisticWindEnabled" : true,
     "DefaultPawnPrefabPath" : "",
     "GameMode" : "",

@@ -1479,6 +1479,8 @@ function UIManager:GetScopeTelemetrySnapshot()
     local snapshot = {
         distance_text = "-- m",
         wind_text = "000 deg  0.0 m/s",
+        wind_degrees = 0.0,
+        wind_mps = 0.0,
         zoom_text = "4x",
         zoom_multiplier = 4.0,
         zoom_min = 4.0,
@@ -1486,30 +1488,65 @@ function UIManager:GetScopeTelemetrySnapshot()
     }
 
     local pawn = self:GetSniperPawn()
-    if pawn == nil then
-        return snapshot
+    if pawn ~= nil then
+        local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
+        local min_zoom = read_float_method(pawn, { "GetMinScopeZoomMagnification" })
+        local max_zoom = read_float_method(pawn, { "GetMaxScopeZoomMagnification" })
+
+        if type(min_zoom) == "number" and min_zoom > 0.0 then
+            snapshot.zoom_min = min_zoom
+        end
+        if type(max_zoom) == "number" and max_zoom > 0.0 then
+            snapshot.zoom_max = max_zoom
+        end
+        if snapshot.zoom_max < snapshot.zoom_min then
+            local temp = snapshot.zoom_min
+            snapshot.zoom_min = snapshot.zoom_max
+            snapshot.zoom_max = temp
+        end
+
+        if type(current_zoom) == "number" then
+            snapshot.zoom_multiplier = current_zoom
+        else
+            snapshot.zoom_multiplier = snapshot.zoom_min
+        end
     end
 
-    local current_zoom = read_float_method(pawn, { "GetCurrentScopeZoomMagnification" })
-    local min_zoom = read_float_method(pawn, { "GetMinScopeZoomMagnification" })
-    local max_zoom = read_float_method(pawn, { "GetMaxScopeZoomMagnification" })
-
-    if type(min_zoom) == "number" and min_zoom > 0.0 then
-        snapshot.zoom_min = min_zoom
-    end
-    if type(max_zoom) == "number" and max_zoom > 0.0 then
-        snapshot.zoom_max = max_zoom
-    end
-    if snapshot.zoom_max < snapshot.zoom_min then
-        local temp = snapshot.zoom_min
-        snapshot.zoom_min = snapshot.zoom_max
-        snapshot.zoom_max = temp
+    local wind_enabled = true
+    if Engine ~= nil and Engine.GetBallisticWindEnabled ~= nil then
+        local ok, value = pcall(function()
+            return Engine.GetBallisticWindEnabled()
+        end)
+        if ok then
+            wind_enabled = value == true
+        end
     end
 
-    if type(current_zoom) == "number" then
-        snapshot.zoom_multiplier = current_zoom
-    else
-        snapshot.zoom_multiplier = snapshot.zoom_min
+    local current_wind = nil
+    if Engine ~= nil and Engine.GetCurrentBallisticWindAcceleration ~= nil then
+        local ok, value = pcall(function()
+            return Engine.GetCurrentBallisticWindAcceleration()
+        end)
+        if ok then
+            current_wind = value
+        end
+    elseif Engine ~= nil and Engine.GetBallisticWindAcceleration ~= nil then
+        local ok, value = pcall(function()
+            return Engine.GetBallisticWindAcceleration()
+        end)
+        if ok then
+            current_wind = value
+        end
+    end
+
+    if wind_enabled and current_wind ~= nil then
+        local wind_x = tonumber(current_wind.X or current_wind.x or 0.0) or 0.0
+        local wind_y = tonumber(current_wind.Y or current_wind.y or 0.0) or 0.0
+        local planar_wind_speed = math.sqrt(wind_x * wind_x + wind_y * wind_y)
+        if planar_wind_speed > 0.0001 then
+            snapshot.wind_degrees = normalize_degrees(atan2_degrees(wind_y, wind_x))
+            snapshot.wind_mps = planar_wind_speed
+        end
     end
 
     return snapshot
