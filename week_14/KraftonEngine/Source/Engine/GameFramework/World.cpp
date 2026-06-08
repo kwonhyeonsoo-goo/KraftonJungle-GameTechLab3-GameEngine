@@ -20,7 +20,57 @@
 #include "Runtime/Engine.h"
 #include "Object/GarbageCollection.h"
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include <utility>
+
+namespace
+{
+	constexpr float RuntimeBallisticWindEpsilon = 1.0e-4f;
+	constexpr float RuntimeBallisticWindMinBlendSpeed = 0.0f;
+	constexpr float RuntimeBallisticWindMinInterval = 0.1f;
+	constexpr float RuntimeDegreesToRadians = 3.14159265358979323846f / 180.0f;
+
+	float RandomFloat01()
+	{
+		return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+	}
+
+	float RandomFloatInRange(float MinValue, float MaxValue)
+	{
+		if (MaxValue < MinValue)
+		{
+			std::swap(MinValue, MaxValue);
+		}
+
+		return MinValue + (MaxValue - MinValue) * RandomFloat01();
+	}
+
+	float ExponentialInterpAlpha(float DeltaTime, float Speed)
+	{
+		if (DeltaTime <= 0.0f)
+		{
+			return 0.0f;
+		}
+
+		if (Speed <= RuntimeBallisticWindMinBlendSpeed)
+		{
+			return 1.0f;
+		}
+
+		return 1.0f - std::exp(-Speed * DeltaTime);
+	}
+
+	FVector RotateVectorAroundZ(const FVector& Vector, float AngleRadians)
+	{
+		const float CosTheta = std::cos(AngleRadians);
+		const float SinTheta = std::sin(AngleRadians);
+		return FVector(
+			Vector.X * CosTheta - Vector.Y * SinTheta,
+			Vector.X * SinTheta + Vector.Y * CosTheta,
+			Vector.Z);
+	}
+}
 
 UWorld::~UWorld()
 {
@@ -545,6 +595,7 @@ void UWorld::InitWorld()
 	Partition.Reset(FBoundingBox());
 	PersistentLevel = UObjectManager::Get().CreateObject<ULevel>(this);
 	PersistentLevel->SetWorld(this);
+	ResetRuntimeBallisticWindState();
 
 	// E.2/3: CameraManager spawn 은 PC 의 BeginPlay 가 담당. World 는 보유하지 않음.
 
@@ -553,9 +604,98 @@ void UWorld::InitWorld()
 	PhysicsScene->Initialize(this);
 }
 
+void UWorld::ResetRuntimeBallisticWindState()
+{
+	RuntimeBallisticWindAcceleration = WorldSettings.BallisticWindAcceleration;
+	RuntimeBallisticWindTargetAcceleration = WorldSettings.BallisticWindAcceleration;
+	RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
+	bRuntimeBallisticWindInitialized = true;
+}
+
+float UWorld::ComputeRuntimeBallisticWindChangeInterval() const
+{
+	float MinInterval = (std::max)(WorldSettings.BallisticWindChangeIntervalMin, RuntimeBallisticWindMinInterval);
+	float MaxInterval = (std::max)(WorldSettings.BallisticWindChangeIntervalMax, RuntimeBallisticWindMinInterval);
+	if (MaxInterval < MinInterval)
+	{
+		std::swap(MinInterval, MaxInterval);
+	}
+
+	return RandomFloatInRange(MinInterval, MaxInterval);
+}
+
+void UWorld::PickNextRuntimeBallisticWindTarget()
+{
+	const FVector BaseWind = WorldSettings.BallisticWindAcceleration;
+	if (BaseWind.Length() <= RuntimeBallisticWindEpsilon)
+	{
+		RuntimeBallisticWindTargetAcceleration = BaseWind;
+		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
+		return;
+	}
+
+	float MinScale = (std::max)(WorldSettings.BallisticWindMagnitudeScaleMin, 0.0f);
+	float MaxScale = (std::max)(WorldSettings.BallisticWindMagnitudeScaleMax, 0.0f);
+	if (MaxScale < MinScale)
+	{
+		std::swap(MinScale, MaxScale);
+	}
+
+	const float DirectionOffsetDegrees = std::abs(WorldSettings.BallisticWindDirectionOffsetDegrees);
+	const float DirectionOffsetRadians =
+		RandomFloatInRange(-DirectionOffsetDegrees, DirectionOffsetDegrees) * RuntimeDegreesToRadians;
+	const float MagnitudeScale = RandomFloatInRange(MinScale, MaxScale);
+
+	RuntimeBallisticWindTargetAcceleration = RotateVectorAroundZ(BaseWind, DirectionOffsetRadians) * MagnitudeScale;
+	RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
+}
+
+void UWorld::TickRuntimeBallisticWind(float DeltaTime)
+{
+	if (!bRuntimeBallisticWindInitialized)
+	{
+		ResetRuntimeBallisticWindState();
+	}
+
+	if (!WorldSettings.bEnableDynamicBallisticWind)
+	{
+		RuntimeBallisticWindAcceleration = WorldSettings.BallisticWindAcceleration;
+		RuntimeBallisticWindTargetAcceleration = WorldSettings.BallisticWindAcceleration;
+		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
+		return;
+	}
+
+	if (WorldSettings.BallisticWindAcceleration.Length() <= RuntimeBallisticWindEpsilon)
+	{
+		RuntimeBallisticWindAcceleration = FVector::ZeroVector;
+		RuntimeBallisticWindTargetAcceleration = FVector::ZeroVector;
+		RuntimeBallisticWindChangeRemaining = ComputeRuntimeBallisticWindChangeInterval();
+		return;
+	}
+
+	RuntimeBallisticWindChangeRemaining -= DeltaTime;
+	while (RuntimeBallisticWindChangeRemaining <= 0.0f)
+	{
+		PickNextRuntimeBallisticWindTarget();
+	}
+
+	const float BlendAlpha = ExponentialInterpAlpha(DeltaTime, WorldSettings.BallisticWindBlendSpeed);
+	RuntimeBallisticWindAcceleration = FVector::Lerp(
+		RuntimeBallisticWindAcceleration,
+		RuntimeBallisticWindTargetAcceleration,
+		BlendAlpha);
+}
+
+void UWorld::SetBallisticWindAcceleration(const FVector& InWindAcceleration)
+{
+	WorldSettings.BallisticWindAcceleration = InWindAcceleration;
+	ResetRuntimeBallisticWindState();
+}
+
 void UWorld::BeginPlay()
 {
 	bHasBegunPlay = true;
+	ResetRuntimeBallisticWindState();
 
 	// GameMode spawn — Editor 월드에서는 생성하지 않는다.
 	// Level::BeginPlay 이전에 spawn하면 그 루프에서 GameMode/GameState도 BeginPlay된다.
@@ -619,6 +759,7 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	if (bHasBegunPlay)
 	{
 		GameTimeSeconds += DeltaTime;
+		TickRuntimeBallisticWind(DeltaTime);
 	}
 
     TickManager.GatherTickFunctions(this, TickType);
@@ -765,6 +906,7 @@ void UWorld::EndPlay()
 	bHasRoutedPostBeginPlay = false;
 	bHasRoutedPostStartMatch = false;
 	bHasRoutedPlayerCameraReady = false;
+	bRuntimeBallisticWindInitialized = false;
 	TickManager.Reset();
 
 	if (PersistentLevel)
