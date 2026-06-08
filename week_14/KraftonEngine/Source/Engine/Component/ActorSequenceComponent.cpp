@@ -15,6 +15,7 @@ UActorSequenceComponent::UActorSequenceComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	PrimaryComponentTick.bTickEnabled = true;
+	PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused;
 }
 
 void UActorSequenceComponent::BeginPlay()
@@ -59,6 +60,7 @@ void UActorSequenceComponent::OnPreSave(FArchive& Ar)
 void UActorSequenceComponent::OnPostLoad(FArchive& Ar)
 {
 	UActorComponent::OnPostLoad(Ar);
+	PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused;
 	SyncRuntimeFromSequenceData();
 	EnsurePlayers();
 	InitializePlayers();
@@ -67,6 +69,7 @@ void UActorSequenceComponent::OnPostLoad(FArchive& Ar)
 void UActorSequenceComponent::PostDuplicate()
 {
 	UActorComponent::PostDuplicate();
+	PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused;
 	SyncRuntimeFromSequenceData();
 	EnsurePlayers();
 	InitializePlayers();
@@ -81,6 +84,7 @@ void UActorSequenceComponent::PostEditProperty(const char* PropertyName)
 	}
 	PlayRate = std::max(0.0f, PlayRate);
 	StartOffsetSeconds = std::max(0.0f, StartOffsetSeconds);
+	PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused;
 }
 
 void UActorSequenceComponent::Play()
@@ -112,6 +116,12 @@ void UActorSequenceComponent::Stop()
 	{
 		SequencePlayer->Stop(true);
 	}
+}
+
+void UActorSequenceComponent::SetTickWhenPaused(bool bInTickWhenPaused)
+{
+	bTickWhenPaused = bInTickWhenPaused;
+	PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused;
 }
 
 UActorSequence* UActorSequenceComponent::GetSequence()

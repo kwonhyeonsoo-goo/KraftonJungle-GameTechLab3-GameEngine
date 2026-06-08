@@ -27,6 +27,21 @@ namespace
 			return false;
 		}
 	}
+
+	bool ShouldGatherComponentTicks(const AActor* Actor, ELevelTick TickType)
+	{
+		if (!IsValid(Actor))
+		{
+			return false;
+		}
+
+		if (TickType == LEVELTICK_ViewportsOnly)
+		{
+			return Actor->bTickInEditor;
+		}
+
+		return Actor->HasActorBegunPlay();
+	}
 }
 
 void FTickFunction::RegisterTickFunction()
@@ -97,12 +112,15 @@ void FTickManager::GatherTickFunctions(UWorld* World, ELevelTick TickType)
 
 	for (AActor* Actor : World->GetActors())
 	{
-		if (!ShouldDispatchActorTick(Actor, TickType))
+		if (ShouldDispatchActorTick(Actor, TickType))
+		{
+			QueueTickFunction(Actor->PrimaryActorTick);
+		}
+
+		if (!ShouldGatherComponentTicks(Actor, TickType))
 		{
 			continue;
 		}
-
-		QueueTickFunction(Actor->PrimaryActorTick);
 
 		for (UActorComponent* Component : Actor->GetComponents())
 		{

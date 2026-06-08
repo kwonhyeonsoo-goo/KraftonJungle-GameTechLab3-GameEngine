@@ -38,6 +38,12 @@ public:
 	UBallisticBulletManagerComponent* GetBallisticBulletManagerComponent() const { return BulletManagerComponent.Get(); }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsScoped() const { return ScopeState.bIsScoped; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsReloading() const;
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetReloadRemaining() const;
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetReloadProgress() const;
 	UFUNCTION(Callable, Category="Sniper|State")
 	void ForceScopeReleased();
 	UFUNCTION(Pure, Category="Sniper|State")
@@ -73,6 +79,10 @@ public:
 	bool IsHoldBreathRecovering() const { return AimSwayState.bForcedRecovery; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	bool IsHoldBreathReleaseRequired() const { return AimSwayState.bRequireHoldBreathRelease; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	bool IsHoldBreathOnCooldown() const { return AimSwayState.HoldBreathCooldownRemaining > 0.0f; }
+	UFUNCTION(Pure, Category="Sniper|State")
+	float GetHoldBreathCooldownRemaining() const { return AimSwayState.HoldBreathCooldownRemaining; }
 	UFUNCTION(Pure, Category="Sniper|State")
 	float GetHoldBreathDuration() const
 	{
@@ -123,6 +133,8 @@ public:
 	float ExhaustedSwayMultiplier = 10.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Sway Blend Speed", Min=0.0f, Max=60.0f, Speed=0.1f)
 	float HoldBreathSwayBlendSpeed = 4.0f;
+	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Hold Breath Reentry Delay", Min=0.0f, Max=10.0f, Speed=0.1f)
+	float HoldBreathReentryDelay = 2.0f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Pitch Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
 	float SwayPitchFrequency = 1.85f;
 	UPROPERTY(Edit, Save, Category="Sniper|Aim Sway", DisplayName="Sway Yaw Frequency", Min=0.0f, Max=20.0f, Speed=0.01f)
@@ -162,6 +174,7 @@ private:
 	void UpdateRecoilState(float DeltaTime);
 	void ApplySniperControlRotation();
 	FRotator BuildEffectiveAimRotation() const;
+	bool CanEnterScope() const;
 	float ClampScopeZoomMagnification(float Magnification) const;
 	float ComputeScopedFOVForMagnification(float Magnification) const;
 	float ComputeScopedSensitivityForMagnification(float Magnification) const;

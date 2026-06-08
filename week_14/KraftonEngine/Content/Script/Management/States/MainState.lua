@@ -1,6 +1,7 @@
 local MainState = {}
 MainState.__index = MainState
 
+local SCENE_PATH = "Content/Scene/Main.Scene"
 local CAMERA_POINT_TAG = "CameraTag"
 local LOOK_DOWN_PITCH = 90.0
 local MAIN_BGM_KEY = "MainBGM"
@@ -33,6 +34,36 @@ local function clamp01(value)
         return 1.0
     end
     return value
+end
+
+local function is_current_scene(path)
+    if Scene == nil or Scene.GetCurrentPath == nil then
+        return false
+    end
+    local current = string.lower(string.gsub(tostring(Scene.GetCurrentPath()), "\\", "/"))
+    local target = string.lower(string.gsub(tostring(path), "\\", "/"))
+    return current == target or string.sub(current, -string.len(target)) == target
+end
+
+local function transition_to_scene(path)
+    if Scene == nil or path == nil or path == "" then
+        log("transition skipped: Scene API or path unavailable")
+        return false
+    end
+    if Scene.TransitionTo ~= nil then
+        log("Scene.TransitionTo begin path=" .. tostring(path))
+        local ok = Scene.TransitionTo(path)
+        log("Scene.TransitionTo result=" .. tostring(ok) .. " path=" .. tostring(path))
+        return ok
+    end
+    if Scene.Open ~= nil then
+        log("Scene.Open fallback begin path=" .. tostring(path))
+        Scene.Open(path)
+        log("Scene.Open fallback completed path=" .. tostring(path))
+        return true
+    end
+    log("transition skipped: no Scene.TransitionTo/Open function")
+    return false
 end
 
 local function vector_value(value, upper, lower)
@@ -82,6 +113,13 @@ function MainState:GetHUD()
 end
 
 function MainState:Enter(payload)
+    payload = payload or {}
+    local scene_path = payload.target_scene or SCENE_PATH
+    log("Enter reason=" .. tostring(payload.reason) .. " target_scene=" .. tostring(scene_path))
+    if scene_path ~= nil and scene_path ~= "" and not is_current_scene(scene_path) then
+        transition_to_scene(scene_path)
+    end
+
     self.main_bgm_fading = false
     self.camera_actor = self:FindCameraActor()
     self.camera_points = {}

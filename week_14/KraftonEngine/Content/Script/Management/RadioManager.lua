@@ -10,6 +10,8 @@ local VOICE_TO_WALKIE_DELAY = 0.12
 local RADIO_VOLUME = 1.0
 
 local OPENING_FADE_SECONDS = 3.0
+local OPENING_SKIP_UNLOCK_SECONDS = 5.0
+local OPENING_SKIP_PROMPT_FADE_SECONDS = 0.35
 
 local COMMENT_DEFINITIONS = {
     Opening = {
@@ -150,6 +152,50 @@ local function set_time_dilation(value)
     end
 end
 
+local function get_input_mode()
+    if Input ~= nil and Input.GetInputMode ~= nil then
+        return Input.GetInputMode()
+    end
+    return nil
+end
+
+local function set_input_mode(mode)
+    if Input == nil then
+        return
+    end
+    if mode == "UIOnly" and Input.SetInputModeUIOnly ~= nil then
+        Input.SetInputModeUIOnly()
+    elseif mode == "GameAndUI" and Input.SetInputModeGameAndUI ~= nil then
+        Input.SetInputModeGameAndUI()
+    elseif mode == "GameOnly" and Input.SetInputModeGameOnly ~= nil then
+        Input.SetInputModeGameOnly()
+    elseif Input.SetInputMode ~= nil then
+        Input.SetInputMode(mode)
+    end
+end
+
+local function get_mouse_captured()
+    if Input ~= nil and Input.IsMouseCaptured ~= nil then
+        return Input.IsMouseCaptured() == true
+    end
+    return nil
+end
+
+local function set_mouse_captured(captured)
+    if Input == nil then
+        return
+    end
+    if captured == true then
+        if Input.SetMouseCaptured ~= nil then
+            Input.SetMouseCaptured(true)
+        end
+    elseif Input.ReleaseMouseCapture ~= nil then
+        Input.ReleaseMouseCapture()
+    elseif Input.SetMouseCaptured ~= nil then
+        Input.SetMouseCaptured(false)
+    end
+end
+
 local function random_index(count)
     if count <= 1 then
         return 1
@@ -261,7 +307,14 @@ function RadioManager.new(general)
         last_ally_alive_count = nil,
         last_man_queued = false,
         previous_time_dilation = nil,
-        opening_time_restored = false
+        previous_input_mode = nil,
+        previous_mouse_captured = nil,
+        opening_input_override_active = false,
+        opening_time_restored = false,
+        opening_skip_key_down = false,
+        opening_exit_fade_active = false,
+        opening_exit_fade_elapsed = 0.0,
+        active_sfx_handles = {}
     }, RadioManager)
 end
 
@@ -313,8 +366,10 @@ function RadioManager:Initialize()
 end
 
 function RadioManager:Shutdown()
+    self:StopActiveRadioSFX()
     self:ClearPresentation()
     self:RestoreOpeningTime()
+    self:RestoreOpeningInputMode()
     self.queue = {}
     self.current = nil
     self.general:UnsubscribeOwner(self)
@@ -328,10 +383,15 @@ function RadioManager:ResetRunState()
     self.squad_comment_cooldown = 0.0
     self.last_ally_alive_count = nil
     self.last_man_queued = false
+    self.opening_skip_key_down = false
+    self.opening_exit_fade_active = false
+    self.opening_exit_fade_elapsed = 0.0
+    self:StopActiveRadioSFX()
     self.queue = {}
     self.current = nil
     self:ClearPresentation()
     self:RestoreOpeningTime()
+    self:RestoreOpeningInputMode()
 end
 
 function RadioManager:IsBlocked()
@@ -481,6 +541,7 @@ function RadioManager:TryStartNext()
 end
 
 function RadioManager:StartComment(comment)
+    self.active_sfx_handles = {}
     local voice_start = WALKIE_DURATION + WALKIE_TO_VOICE_DELAY
     local voice_end = voice_start + math.max(0.0, tonumber(comment.duration) or 0.0)
     local outro_start = voice_end + VOICE_TO_WALKIE_DELAY
@@ -488,9 +549,16 @@ function RadioManager:StartComment(comment)
     if comment.opening == true then
         total = math.max(total, voice_end + OPENING_FADE_SECONDS)
         self.previous_time_dilation = get_time_dilation()
+        self.previous_input_mode = get_input_mode()
+        self.previous_mouse_captured = get_mouse_captured()
+        self.opening_input_override_active = true
         self.opening_time_restored = false
+        set_input_mode("UIOnly")
+        set_mouse_captured(false)
         set_time_dilation(0.0)
-        self:PublishOpeningPresentation(1.0, true, true)
+        self.opening_exit_fade_active = false
+        self.opening_exit_fade_elapsed = 0.0
+        self:PublishOpeningPresentation(1.0, true, true, 0.0)
     end
 
     self.current = {
@@ -514,12 +582,18 @@ function RadioManager:Tick(dt)
     local step = raw_delta_time(dt or 0.0)
     self:PollSquadState(step)
     if self.current == nil then
+        if self:TickOpeningExitFade(step) then
+            return
+        end
         self:TryStartNext()
         return
     end
 
     local current = self.current
     current.elapsed = current.elapsed + step
+    if self:ConsumeOpeningSkip(current) then
+        return
+    end
     self:TickOpeningPresentation(current)
 
     if current.voice_played ~= true and current.elapsed >= current.voice_start then
@@ -546,6 +620,42 @@ function RadioManager:Tick(dt)
     if current.elapsed >= current.total then
         self:FinishCurrent()
     end
+end
+
+function RadioManager:ConsumeOpeningSkip(current)
+    if current == nil or current.comment == nil or current.comment.opening ~= true then
+        self.opening_skip_key_down = false
+        return false
+    end
+    if current.elapsed < OPENING_SKIP_UNLOCK_SECONDS then
+        self.opening_skip_key_down = false
+        return false
+    end
+    if Input == nil then
+        return false
+    end
+
+    local space_down = false
+    local space_pressed = false
+    if Input.GetRawKey ~= nil then
+        space_down = Input.GetRawKey("Space") == true or Input.GetRawKey("SpaceBar") == true
+    elseif Input.GetKey ~= nil then
+        space_down = Input.GetKey("Space") == true or Input.GetKey("SpaceBar") == true
+    end
+    if Input.GetRawKeyDown ~= nil then
+        space_pressed = Input.GetRawKeyDown("Space") == true or Input.GetRawKeyDown("SpaceBar") == true
+    elseif Input.GetKeyDown ~= nil then
+        space_pressed = Input.GetKeyDown("Space") == true or Input.GetKeyDown("SpaceBar") == true
+    end
+
+    local should_skip = space_pressed or (space_down and self.opening_skip_key_down ~= true)
+    self.opening_skip_key_down = space_down
+    if not should_skip then
+        return false
+    end
+
+    self:FinishCurrent(true)
+    return true
 end
 
 function RadioManager:TickSegmentSubtitle(current)
@@ -579,25 +689,86 @@ function RadioManager:TickOpeningPresentation(current)
     end
 
     local elapsed = tonumber(current.elapsed) or 0.0
+    local skip_alpha = 0.0
+    if elapsed >= OPENING_SKIP_UNLOCK_SECONDS then
+        skip_alpha = math.min(1.0, (elapsed - OPENING_SKIP_UNLOCK_SECONDS) / OPENING_SKIP_PROMPT_FADE_SECONDS)
+    end
+
     local fade_start = math.max(0.0, (tonumber(current.total) or 0.0) - OPENING_FADE_SECONDS)
     if elapsed < fade_start then
-        self:PublishOpeningPresentation(1.0, true, true)
+        self:PublishOpeningPresentation(1.0, true, true, skip_alpha)
         return
     end
 
     local fade_alpha = 1.0 - math.min(1.0, (elapsed - fade_start) / OPENING_FADE_SECONDS)
-    self:PublishOpeningPresentation(fade_alpha, fade_alpha > 0.001, false)
+    self:PublishOpeningPresentation(fade_alpha, fade_alpha > 0.001, false, skip_alpha)
 end
 
-function RadioManager:FinishCurrent()
+function RadioManager:BeginOpeningExitFade()
+    self.opening_exit_fade_active = true
+    self.opening_exit_fade_elapsed = 0.0
+    self:PublishOpeningPresentation(1.0, true, false, 0.0)
+end
+
+function RadioManager:TickOpeningExitFade(dt)
+    if self.opening_exit_fade_active ~= true then
+        return false
+    end
+
+    self.opening_exit_fade_elapsed = (self.opening_exit_fade_elapsed or 0.0) + math.max(0.0, tonumber(dt) or 0.0)
+    local t = math.min(1.0, self.opening_exit_fade_elapsed / OPENING_FADE_SECONDS)
+    local alpha = 1.0 - t
+    self:PublishOpeningPresentation(alpha, alpha > 0.001, false, 0.0)
+    if t >= 1.0 then
+        self.opening_exit_fade_active = false
+        self.opening_exit_fade_elapsed = 0.0
+        self:PublishOpeningPresentation(0.0, false, false, 0.0)
+    end
+    return true
+end
+
+function RadioManager:FinishCurrent(stop_audio)
     local was_opening = self.current ~= nil and self.current.comment ~= nil and self.current.comment.opening == true
     self.current = nil
+    if stop_audio == true then
+        self:StopActiveRadioSFX()
+    else
+        self.active_sfx_handles = {}
+    end
     self:PublishSubtitle("", false)
     if was_opening then
         self:RestoreOpeningTime()
-        self:PublishOpeningPresentation(0.0, false, false)
+        self:RestoreOpeningInputMode()
+        if stop_audio == true then
+            self:BeginOpeningExitFade()
+        else
+            self.opening_exit_fade_active = false
+            self.opening_exit_fade_elapsed = 0.0
+            self:PublishOpeningPresentation(0.0, false, false, 0.0)
+        end
+    end
+    if self.opening_exit_fade_active == true then
+        return
     end
     self:TryStartNext()
+end
+
+function RadioManager:StopActiveRadioSFX()
+    if type(self.active_sfx_handles) ~= "table" then
+        self.active_sfx_handles = {}
+        return
+    end
+
+    for _, handle in ipairs(self.active_sfx_handles) do
+        if handle ~= nil and tonumber(handle) ~= nil and tonumber(handle) ~= 0 then
+            if self.general ~= nil and self.general.FadeOutSound ~= nil then
+                self.general:FadeOutSound(handle, 0.0)
+            elseif self.general ~= nil and self.general.FadeOutSFX ~= nil then
+                self.general:FadeOutSFX(handle, 0.0)
+            end
+        end
+    end
+    self.active_sfx_handles = {}
 end
 
 function RadioManager:RestoreOpeningTime()
@@ -608,9 +779,29 @@ function RadioManager:RestoreOpeningTime()
     self.opening_time_restored = true
 end
 
+function RadioManager:RestoreOpeningInputMode()
+    if self.opening_input_override_active ~= true then
+        return
+    end
+
+    if self.previous_input_mode ~= nil then
+        set_input_mode(self.previous_input_mode)
+        self.previous_input_mode = nil
+    else
+        set_input_mode("GameOnly")
+    end
+    if self.previous_mouse_captured ~= nil then
+        set_mouse_captured(self.previous_mouse_captured)
+        self.previous_mouse_captured = nil
+    end
+    self.opening_input_override_active = false
+end
+
 function RadioManager:ClearPresentation()
+    self.opening_exit_fade_active = false
+    self.opening_exit_fade_elapsed = 0.0
     self:PublishSubtitle("", false)
-    self:PublishOpeningPresentation(0.0, false, false)
+    self:PublishOpeningPresentation(0.0, false, false, 0.0)
 end
 
 function RadioManager:PublishSubtitle(text, visible)
@@ -623,25 +814,35 @@ function RadioManager:PublishSubtitle(text, visible)
     end
 end
 
-function RadioManager:PublishOpeningPresentation(alpha, blackout_visible, hud_suppressed)
+function RadioManager:PublishOpeningPresentation(alpha, blackout_visible, hud_suppressed, skip_prompt_alpha)
     if self.general ~= nil and self.general.Publish ~= nil then
         self.general:Publish("radio.opening_presentation", {
             active = blackout_visible == true or hud_suppressed == true,
             blackout_alpha = alpha or 0.0,
-            hud_suppressed = hud_suppressed == true
+            hud_suppressed = hud_suppressed == true,
+            skip_prompt_alpha = skip_prompt_alpha or 0.0
         })
     end
 end
 
 function RadioManager:PlaySFX(path, volume)
+    local handle = 0
     if self.general ~= nil and self.general.PlaySFX ~= nil then
-        self.general:PlaySFX(path, volume or RADIO_VOLUME)
-        return
-    end
-
-    if AudioManager ~= nil and AudioManager.PlaySFX ~= nil then
+        if self.general.PlaySFXHandle ~= nil then
+            handle = self.general:PlaySFXHandle(path, volume or RADIO_VOLUME) or 0
+        else
+            self.general:PlaySFX(path, volume or RADIO_VOLUME)
+        end
+    elseif AudioManager ~= nil and AudioManager.PlaySFXHandle ~= nil then
+        handle = AudioManager.PlaySFXHandle(path, volume or RADIO_VOLUME) or 0
+    elseif AudioManager ~= nil and AudioManager.PlaySFX ~= nil then
         AudioManager.PlaySFX(path, volume or RADIO_VOLUME)
     end
+
+    if tonumber(handle) ~= nil and tonumber(handle) ~= 0 then
+        self.active_sfx_handles[#self.active_sfx_handles + 1] = handle
+    end
+    return handle
 end
 
 return RadioManager
