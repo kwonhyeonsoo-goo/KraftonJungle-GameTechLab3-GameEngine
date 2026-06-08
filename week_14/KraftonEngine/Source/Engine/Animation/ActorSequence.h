@@ -140,6 +140,7 @@ public:
 	float GetCurrentTime() const;
 	bool IsPlaying() const;
 	bool IsPaused() const;
+	void MarkResolveDirty();
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
@@ -159,4 +160,5 @@ private:
 	bool bPaused = false;
 	bool bLooping = false;
 	bool bPauseAtEnd = false;
+	bool bResolveDirty = true;
 };

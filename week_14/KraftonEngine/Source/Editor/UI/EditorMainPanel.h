@@ -14,6 +14,7 @@
 #include "Editor/UI/Panel/CombatMapEditorWidget.h"
 #include "Editor/UI/ContentBrowser/ContentBrowser.h"
 #include "Editor/UI/Asset/AssetEditorManager.h"
+#include "Editor/UI/Asset/ActorSequence/ActorSequenceEditorWidget.h"
 #include "Editor/UI/EditorDocumentTabManager.h"
 #include "Object/GarbageCollection.h"
 #include "Math/Vector.h"
@@ -24,6 +25,7 @@ class UEditorEngine;
 class FWindowsWindow;
 class IEditorPreviewViewportClient;
 class UUserWidget;
+class UActorSequenceComponent;
 
 class FEditorMainPanel
 {
@@ -46,6 +48,7 @@ public:
 	float GetContentBrowserIconSize() const { return ContentBrowserWidget.GetIconSize(); }
 
 	void OpenAssetEditorForObject(UObject* Object);
+	void OpenLevelActorSequencer(UActorSequenceComponent* SequenceComp);
 	void OpenRuntimeUIPreviewDocument(const FString& DocumentPath);
 	void CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const;
 	bool IsMouseOverAssetEditorPreviewViewport() const;
@@ -87,6 +90,7 @@ private:
 	EditorProjectSettingsWidget ProjectSettingsWidget;
 	EditorWorldSettingsWidget WorldSettingsWidget;
 	FCombatMapEditorWidget CombatMapEditorWidget;
+	FActorSequenceEditorWidget LevelActorSequencerWidget;
 	FAssetEditorManager AssetEditorManager;
 	FEditorDocumentTabManager DocumentTabs;
 

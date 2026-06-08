@@ -15,11 +15,20 @@ function AudioManager.new(general)
 end
 
 function AudioManager:Initialize()
+    local data = self.general and self.general.managers and self.general.managers.Data
+    if data ~= nil and data.GetSettings ~= nil then
+        local settings = data:GetSettings()
+        self.bgm_volume = tonumber(settings.bgm_volume) or self.bgm_volume
+        self.sfx_volume = tonumber(settings.sfx_volume) or self.sfx_volume
+    end
+    self:SetBGMVolume(self.bgm_volume)
+    self:SetSFXVolume(self.sfx_volume)
 end
 
 function AudioManager:Shutdown()
     self:StopAllLoops()
     self:StopBGM()
+    self:StopAllSounds()
 end
 
 function AudioManager:SetMasterVolume(volume)
@@ -33,18 +42,30 @@ end
 
 function AudioManager:SetBGMVolume(volume)
     self.bgm_volume = tonumber(volume) or self.bgm_volume
+    if self.bgm_volume < 0.0 then
+        self.bgm_volume = 0.0
+    elseif self.bgm_volume > 1.0 then
+        self.bgm_volume = 1.0
+    end
     local audio = engine_audio()
     if audio and audio.SetBGMVolume then
         audio.SetBGMVolume(self.bgm_volume)
     end
+    self.general:Publish("audio.bgm_volume_changed", { volume = self.bgm_volume })
 end
 
 function AudioManager:SetSFXVolume(volume)
     self.sfx_volume = tonumber(volume) or self.sfx_volume
+    if self.sfx_volume < 0.0 then
+        self.sfx_volume = 0.0
+    elseif self.sfx_volume > 1.0 then
+        self.sfx_volume = 1.0
+    end
     local audio = engine_audio()
     if audio and audio.SetSFXVolume then
         audio.SetSFXVolume(self.sfx_volume)
     end
+    self.general:Publish("audio.sfx_volume_changed", { volume = self.sfx_volume })
 end
 
 function AudioManager:Load(name, path, loop)
@@ -129,6 +150,13 @@ function AudioManager:StopSound(handle)
     local audio = engine_audio()
     if audio and audio.StopSound then
         audio.StopSound(handle)
+    end
+end
+
+function AudioManager:StopAllSounds()
+    local audio = engine_audio()
+    if audio and audio.StopAllSounds then
+        audio.StopAllSounds()
     end
 end
 

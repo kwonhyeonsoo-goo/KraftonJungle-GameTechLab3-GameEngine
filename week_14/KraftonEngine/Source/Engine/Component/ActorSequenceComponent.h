@@ -42,6 +42,13 @@ public:
 		float StartTime,
 		float Duration,
 		const FString& CurveAssetPath);
+	bool AddFloatTrack(
+		UObject* TargetObject,
+		const FString& PropertyName,
+		const FString& ChannelName,
+		float StartTime,
+		float Duration,
+		const FString& CurveAssetPath);
 
 	void PreviewPlay();
 	void PreviewPause();

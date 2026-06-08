@@ -607,6 +607,12 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	if (bPaused)
 	{
 		TickPlayerCamera();
+		TickManager.GatherTickFunctions(this, LEVELTICK_PauseTick);
+		for (int GroupIndex = 0; GroupIndex < TG_MAX; ++GroupIndex)
+		{
+			TickManager.TickGroup(static_cast<ETickingGroup>(GroupIndex), DeltaTime, LEVELTICK_PauseTick);
+		}
+		TickManager.ClearGatheredTickFunctions();
 		return;
 	}
 

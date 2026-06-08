@@ -4,6 +4,12 @@
 </head>
 <body>
     <div id="loadingRoot" data-ui-type="Canvas" data-ui-name="Loading HUD">
+        <div id="loadingSnapshotSlot" data-ui-type="Panel" data-ui-name="Snapshot Slot">
+            <img id="loadingSnapshotImage" data-ui-type="Image" data-ui-name="Loading Snapshot" src="Image/Map/Map_Base.png" data-ui-fit="fill" />
+        </div>
+        <div id="loadingBottomFade" data-ui-type="Panel" data-ui-name="Bottom Fade">
+            <img id="loadingBottomGradient" data-ui-type="Image" data-ui-name="Bottom Gradient" src="Image/HUD/LoadingBottomGradient.png" data-ui-fit="fill" />
+        </div>
         <div id="loadingTitle" data-ui-type="Text" data-ui-name="Loading Label">Loading</div>
         <div id="loadingTip" data-ui-type="Text" data-ui-name="Tip">Tip: Hold your breath only when the shot really matters.</div>
         <div id="pressPrompt" data-ui-type="Text" data-ui-name="Press Space">Press Space to Play</div>

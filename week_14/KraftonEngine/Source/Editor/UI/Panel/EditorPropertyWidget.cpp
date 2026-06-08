@@ -2096,8 +2096,8 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 		ImGui::EndDisabled();
 	}
 
-	ImGui::SameLine();
-	if (ImGui::Button("Save Prefab..."))
+	ImGui::Spacing();
+	if (ImGui::Button("Save Prefab...", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f)))
 	{
 		SaveActorAsPrefab(Actor);
 	}
@@ -2435,12 +2435,12 @@ void FEditorPropertyWidget::RenderActorSequenceComponentTools(UActorSequenceComp
 	{
 		if (EditorEngine)
 		{
-			EditorEngine->OpenAssetEditorForObject(Sequence);
+			EditorEngine->OpenLevelActorSequencer(SequenceComp);
 		}
 	}
 	if (ImGui::IsItemHovered())
 	{
-		ImGui::SetTooltip("Open this Actor Sequence in a dedicated timeline tab.");
+		ImGui::SetTooltip("Open this Actor Sequence in the Level Editor dock area.");
 	}
 
 	ImGui::SetNextItemWidth(160.0f);
@@ -2648,13 +2648,10 @@ void FEditorPropertyWidget::RenderActorSequenceComponentTools(UActorSequenceComp
 			}
 			if (ImGui::Button("Add Track"))
 			{
-				const FString TargetName = CurrentTarget == Owner
-					? FString("Owner")
-					: CurrentTarget->GetFName().ToString();
 				const FString CurveAssetPath = ActorSequenceCurveAssetPathBuffer;
 				DETAILS_ACTOR_SEQUENCE_UNDO_SCOPE(EditorEngine, SequenceComp, "Add Actor Sequence Track");
 				if (SequenceComp->AddFloatTrack(
-					TargetName,
+					CurrentTarget,
 					CurrentProperty->Name,
 					ChannelPreview,
 					(std::max)(0.0f, ActorSequenceTrackStartTime),
@@ -3533,6 +3530,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
                 || TryAcceptAssetPathDrop("LuaBlueprintContentItem", DroppedPath)
                 || TryAcceptAssetPathDrop("AnimGraphContentItem", DroppedPath)
                 || TryAcceptAssetPathDrop("ParticleSystemContentItem", DroppedPath)
+                || TryAcceptAssetPathDrop("PrefabContentItem", DroppedPath)
                 || TryAcceptAssetPathDrop("FontContentItem", DroppedPath))
             {
                 SetPath(DroppedPath);

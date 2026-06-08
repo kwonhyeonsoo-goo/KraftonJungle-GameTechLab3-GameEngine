@@ -9,6 +9,7 @@
 #include "Core/Types/CollisionTypes.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/World.h"
@@ -109,7 +110,20 @@ bool UBallisticBulletManagerComponent::SpawnBullet(const FBallisticBullet& Bulle
 		return false;
 	}
 
-	ActiveBullets.push_back(Bullet);
+	FBallisticBullet SpawnedBullet = Bullet;
+	if (SpawnedBullet.BulletId == 0)
+	{
+		SpawnedBullet.BulletId = NextBulletId++;
+		if (NextBulletId == 0)
+		{
+			NextBulletId = 1;
+		}
+	}
+
+	ActiveBullets.push_back(SpawnedBullet);
+	const FBulletCinematicSnapshot Snapshot = BuildBulletSnapshot(SpawnedBullet);
+	OnBulletSpawned.Broadcast(Snapshot);
+	ASniperKillCamDirector::NotifyBulletSpawned(this, Snapshot);
 	return true;
 }
 
@@ -117,6 +131,35 @@ void UBallisticBulletManagerComponent::ResetBullets()
 {
 	ActiveBullets.clear();
 	HideAllBulletVisuals();
+}
+
+bool UBallisticBulletManagerComponent::GetBulletSnapshotById(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot) const
+{
+	if (BulletId == 0)
+	{
+		return false;
+	}
+
+	for (const FBallisticBullet& Bullet : ActiveBullets)
+	{
+		if (Bullet.BulletId == BulletId)
+		{
+			OutSnapshot = BuildBulletSnapshot(Bullet);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FBulletCinematicSnapshot UBallisticBulletManagerComponent::GetLatestBulletSnapshot() const
+{
+	if (ActiveBullets.empty())
+	{
+		return FBulletCinematicSnapshot();
+	}
+
+	return BuildBulletSnapshot(ActiveBullets.back());
 }
 
 void UBallisticBulletManagerComponent::TickComponent(
@@ -722,11 +765,14 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 	{
 		SniperWeapon->NotifySniperHit(HitInfo);
 	}
+
+	ASniperKillCamDirector::NotifyBulletHit(HitInfo);
 }
 
 FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBallisticBullet& Bullet, const FHitResult& Hit) const
 {
 	FSniperHitInfo HitInfo;
+	HitInfo.BulletId = Bullet.BulletId;
 	HitInfo.HitActor = Hit.HitActor;
 	HitInfo.HitLocation = Hit.WorldHitLocation;
 	HitInfo.HitNormal = !Hit.ImpactNormal.IsNearlyZero() ? Hit.ImpactNormal : Hit.WorldNormal;
@@ -744,6 +790,22 @@ FSniperHitInfo UBallisticBulletManagerComponent::BuildSniperHitInfo(const FBalli
 	HitInfo.bShouldRagdoll = HitInfo.ImpactSpeed >= SniperRagdollImpactSpeedThreshold;
 	HitInfo.Shooter = Bullet.Owner;
 	return HitInfo;
+}
+
+FBulletCinematicSnapshot UBallisticBulletManagerComponent::BuildBulletSnapshot(const FBallisticBullet& Bullet) const
+{
+	FBulletCinematicSnapshot Snapshot;
+	Snapshot.BulletId = Bullet.BulletId;
+	Snapshot.Position = Bullet.Position;
+	Snapshot.PreviousPosition = Bullet.PreviousPosition;
+	Snapshot.Velocity = Bullet.Velocity;
+	Snapshot.TraveledDistance = Bullet.TraveledDistance;
+	Snapshot.LifeTime = Bullet.LifeTime;
+	Snapshot.AmmoType = Bullet.AmmoType;
+	Snapshot.Owner = IsValid(Bullet.Owner) ? Bullet.Owner : nullptr;
+	Snapshot.bIsAlive = Bullet.bIsAlive;
+	Snapshot.bWasScopedShot = Bullet.bWasScopedShot;
+	return Snapshot;
 }
 
 void UBallisticBulletManagerComponent::CompactDeadBullets()

@@ -243,6 +243,7 @@ void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMi
 		Frame.CameraVignette.Softness = CamManager->GetVignetteSoftness();
 		Frame.CameraVignette.Color = CamManager->GetVignetteColor();
 	}
+	Frame.CameraShockWaves = CamManager ? CamManager->GetWorldShockWaves() : TArray<FCameraShockWaveState>();
 
 	UCameraComponent* ActiveCamera = CamManager ? CamManager->GetActiveCamera() : nullptr;
 	if (ActiveCamera)

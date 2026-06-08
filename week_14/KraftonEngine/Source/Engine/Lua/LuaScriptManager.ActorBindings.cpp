@@ -48,6 +48,7 @@
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Actor/ParticleSystemActor.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/CameraModifier.h"
 #include "GameFramework/Camera/CameraShakeBase.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
@@ -346,6 +347,65 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         },
         "ClearCameraVignette",
         &APlayerCameraManager::ClearCameraVignette,
+        "AddWorldShockWave",
+        [](APlayerCameraManager& M, FVector WorldPosition, sol::optional<float> Duration, sol::optional<float> Radius, sol::optional<float> Strength)
+        {
+            return M.AddWorldShockWave(
+                WorldPosition,
+                FVector::ForwardVector,
+                Duration.value_or(0.35f),
+                Radius.value_or(0.12f),
+                0.035f,
+                Strength.value_or(0.02f),
+                1.5f,
+                0.0f);
+        },
+        "AddDirectedWorldShockWave",
+        [](APlayerCameraManager& M, FVector WorldPosition, FVector WorldDirection, sol::optional<float> Duration, sol::optional<float> Radius, sol::optional<float> Width, sol::optional<float> Strength, sol::optional<float> Falloff, sol::optional<float> DirectionalStretch)
+        {
+            if (WorldDirection.IsNearlyZero())
+            {
+                WorldDirection = FVector::ForwardVector;
+            }
+            else
+            {
+                WorldDirection.Normalize();
+            }
+            return M.AddWorldShockWave(
+                WorldPosition,
+                WorldDirection,
+                Duration.value_or(0.35f),
+                Radius.value_or(0.12f),
+                Width.value_or(0.035f),
+                Strength.value_or(0.02f),
+                Falloff.value_or(1.5f),
+                DirectionalStretch.value_or(0.0f));
+        },
+        "UpdateWorldShockWave",
+        [](APlayerCameraManager& M, int32 Handle, FVector WorldPosition, FVector WorldDirection, float Radius, float Width, float Strength, sol::optional<float> Falloff, sol::optional<float> DirectionalStretch)
+        {
+            if (WorldDirection.IsNearlyZero())
+            {
+                WorldDirection = FVector::ForwardVector;
+            }
+            else
+            {
+                WorldDirection.Normalize();
+            }
+            return M.UpdateWorldShockWave(
+                Handle,
+                WorldPosition,
+                WorldDirection,
+                Radius,
+                Width,
+                Strength,
+                Falloff.value_or(1.5f),
+                DirectionalStretch.value_or(0.0f));
+        },
+        "ClearWorldShockWave",
+        &APlayerCameraManager::ClearWorldShockWave,
+        "ClearAllWorldShockWaves",
+        &APlayerCameraManager::ClearAllWorldShockWaves,
         "IsFadeEnabled",
         &APlayerCameraManager::IsFadeEnabled,
         "GetFadeAmount",
@@ -379,7 +439,7 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetDoFBokehIntensity",
         &APlayerCameraManager::GetDoFBokehIntensity,
         "SetScopeLens",
-        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime)
+        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY)
         {
             M.SetScopeLens(
                 Radius,
@@ -389,10 +449,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 EdgeBlurRadius.value_or(1.25f),
                 Intensity.value_or(1.0f),
                 LookSensitivityScale.value_or(0.275f),
-                BlendTime.value_or(0.08f));
+                BlendTime.value_or(0.08f),
+                CenterX.value_or(0.5f),
+                CenterY.value_or(0.5f));
         },
         "SetScopeLensProfile",
-        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime)
+        [](APlayerCameraManager& M, float Radius, float OuterBlurRadius, float ZoomFOV, sol::optional<float> Feather, sol::optional<float> EdgeBlurRadius, sol::optional<float> Intensity, sol::optional<float> LookSensitivityScale, sol::optional<float> BlendTime, sol::optional<float> CenterX, sol::optional<float> CenterY)
         {
             M.SetScopeLensProfile(
                 Radius,
@@ -402,7 +464,9 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 EdgeBlurRadius.value_or(1.25f),
                 Intensity.value_or(1.0f),
                 LookSensitivityScale.value_or(0.275f),
-                BlendTime.value_or(0.08f));
+                BlendTime.value_or(0.08f),
+                CenterX.value_or(0.5f),
+                CenterY.value_or(0.5f));
         },
         "SetScopeZoomEnabled",
         &APlayerCameraManager::SetScopeZoomEnabled,
@@ -2327,6 +2391,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &ASniperPawn::GetBallisticBulletManagerComponent,
         "IsScoped",
         &ASniperPawn::IsScoped,
+        "ForceScopeReleased",
+        &ASniperPawn::ForceScopeReleased,
         "GetScopeBlendAlpha",
         &ASniperPawn::GetScopeBlendAlpha,
         "GetCurrentScopeFOV",
@@ -2338,7 +2404,17 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetHoldBreathGauge",
         &ASniperPawn::GetHoldBreathGauge,
         "GetMaxHoldBreathGauge",
-        &ASniperPawn::GetMaxHoldBreathGauge
+        &ASniperPawn::GetMaxHoldBreathGauge,
+        "IsHoldBreathInputHeld",
+        &ASniperPawn::IsHoldBreathInputHeld,
+        "IsHoldBreathRecovering",
+        &ASniperPawn::IsHoldBreathRecovering,
+        "IsHoldBreathReleaseRequired",
+        &ASniperPawn::IsHoldBreathReleaseRequired,
+        "GetHoldBreathDuration",
+        &ASniperPawn::GetHoldBreathDuration,
+        "GetHoldBreathGaugeRatio",
+        &ASniperPawn::GetHoldBreathGaugeRatio
     );
 
     Lua.new_usertype<AWheeledVehiclePawn>(
@@ -2736,8 +2812,97 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &UBallisticBulletManagerComponent::GetWindAcceleration,
         "SetWindAcceleration",
         &UBallisticBulletManagerComponent::SetWindAcceleration,
+        "GetBulletSnapshotById",
+        &UBallisticBulletManagerComponent::GetBulletSnapshotById,
+        "GetLatestBulletSnapshot",
+        &UBallisticBulletManagerComponent::GetLatestBulletSnapshot,
         "GetWeaponComponent",
         &UBallisticBulletManagerComponent::GetWeaponComponent
+    );
+
+    Lua.new_usertype<FBulletCinematicSnapshot>(
+        "BulletCinematicSnapshot",
+        "BulletId",
+        &FBulletCinematicSnapshot::BulletId,
+        "Position",
+        &FBulletCinematicSnapshot::Position,
+        "PreviousPosition",
+        &FBulletCinematicSnapshot::PreviousPosition,
+        "Velocity",
+        &FBulletCinematicSnapshot::Velocity,
+        "TraveledDistance",
+        &FBulletCinematicSnapshot::TraveledDistance,
+        "LifeTime",
+        &FBulletCinematicSnapshot::LifeTime,
+        "AmmoType",
+        &FBulletCinematicSnapshot::AmmoType,
+        "Owner",
+        sol::property(
+            [](const FBulletCinematicSnapshot& Snapshot) -> AActor*
+            {
+                return IsValid(Snapshot.Owner) ? Snapshot.Owner : nullptr;
+            }
+        ),
+        "bIsAlive",
+        &FBulletCinematicSnapshot::bIsAlive,
+        "bWasScopedShot",
+        &FBulletCinematicSnapshot::bWasScopedShot
+    );
+
+    Lua.new_usertype<ASniperKillCamDirector>(
+        "SniperKillCamDirector",
+        sol::base_classes,
+        sol::bases<AActor, UObject>(),
+        "StartForBulletId",
+        &ASniperKillCamDirector::StartForBulletId,
+        "StopKillCam",
+        &ASniperKillCamDirector::StopKillCam,
+        "IsPlaying",
+        &ASniperKillCamDirector::IsPlaying,
+        "GetActiveBulletId",
+        &ASniperKillCamDirector::GetActiveBulletId,
+        "SetRailRigScalar",
+        &ASniperKillCamDirector::SetRailRigScalar,
+        "GetRailRigScalar",
+        [](ASniperKillCamDirector& Director, const FString& PropertyName, sol::optional<float> DefaultValue)
+        {
+            return Director.GetRailRigScalar(PropertyName, DefaultValue.value_or(0.0f));
+        },
+        "SetScalar",
+        &ASniperKillCamDirector::SetKillCamScalar,
+        "GetScalar",
+        [](ASniperKillCamDirector& Director, const FString& PropertyName, sol::optional<float> DefaultValue)
+        {
+            return Director.GetKillCamScalar(PropertyName, DefaultValue.value_or(0.0f));
+        },
+        "SetString",
+        &ASniperKillCamDirector::SetKillCamString,
+        "GetString",
+        [](ASniperKillCamDirector& Director, const FString& PropertyName, sol::optional<FString> DefaultValue)
+        {
+            return Director.GetKillCamString(PropertyName, DefaultValue.value_or(""));
+        },
+        "SetVector",
+        &ASniperKillCamDirector::SetKillCamVector,
+        "GetVector",
+        [](ASniperKillCamDirector& Director, const FString& PropertyName, sol::optional<FVector> DefaultValue)
+        {
+            return Director.GetKillCamVector(PropertyName, DefaultValue.value_or(FVector::ZeroVector));
+        },
+        "SetRotator",
+        [](ASniperKillCamDirector& Director, const FString& PropertyName, const FVector& PitchYawRoll)
+        {
+            return Director.SetKillCamRotator(PropertyName, FRotator(PitchYawRoll.X, PitchYawRoll.Y, PitchYawRoll.Z));
+        },
+        "GetRotator",
+        [](ASniperKillCamDirector& Director, const FString& PropertyName, sol::optional<FVector> DefaultValue)
+        {
+            const FVector Fallback = DefaultValue.value_or(FVector::ZeroVector);
+            const FRotator Value = Director.GetKillCamRotator(
+                PropertyName,
+                FRotator(Fallback.X, Fallback.Y, Fallback.Z));
+            return FVector(Value.Pitch, Value.Yaw, Value.Roll);
+        }
     );
 
     Lua.new_usertype<USniperDamageReceiverComponent>(
@@ -2774,6 +2939,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 
     Lua.new_usertype<FSniperHitInfo>(
         "SniperHitInfo",
+        "BulletId",
+        &FSniperHitInfo::BulletId,
         "HitActor",
         sol::property(
             [](const FSniperHitInfo& HitInfo) -> AActor*

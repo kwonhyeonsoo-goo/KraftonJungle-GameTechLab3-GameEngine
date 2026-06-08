@@ -536,6 +536,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Debug\PhysicsAssetRagdollTestComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Gameplay\KillCamRailRigComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.cpp" />
@@ -610,6 +611,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\GameFramework\Actor\ParticleSystemActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Actor\PawnStaticMesh.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Actor\SkeletalMeshActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Actor\SniperKillCamDirector.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Actor\SphereActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Actor\StaticMeshActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Actor\TextActor.cpp" />
@@ -811,6 +813,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Render\RenderPass\TransparentPass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\UIPass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderPass\ViewModeMeshPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\RenderPass\WorldAnchoredShockWavePass.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderState\BlendStateManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderState\DepthStencilStateManager.cpp" />
     <ClCompile Include="Source\Engine\Render\RenderState\RasterizerStateManager.cpp" />
@@ -1019,6 +1022,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Debug\PhysicsAssetRagdollTestComponent.h" />
     <ClInclude Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\BallisticBulletManagerComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Gameplay\KillCamRailRigComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceHitscanComponent.h" />
     <ClInclude Include="Source\Engine\Component\Gameplay\CombatCoverNodeComponent.h" />
@@ -1104,6 +1108,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\GameFramework\Actor\ParticleSystemActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Actor\PawnStaticMesh.h" />
     <ClInclude Include="Source\Engine\GameFramework\Actor\SkeletalMeshActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Actor\SniperKillCamDirector.h" />
     <ClInclude Include="Source\Engine\GameFramework\Actor\SphereActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\Actor\TextActor.h" />
@@ -1347,6 +1352,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Render\RenderPass\TransparentPass.h" />
     <ClInclude Include="Source\Engine\Render\RenderPass\UIPass.h" />
     <ClInclude Include="Source\Engine\Render\RenderPass\ViewModeMeshPass.h" />
+    <ClInclude Include="Source\Engine\Render\RenderPass\WorldAnchoredShockWavePass.h" />
     <ClInclude Include="Source\Engine\Render\RenderState\BlendStateManager.h" />
     <ClInclude Include="Source\Engine\Render\RenderState\DepthStencilStateManager.h" />
     <ClInclude Include="Source\Engine\Render\RenderState\RasterizerStateManager.h" />
@@ -2586,6 +2592,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\CameraVignette.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewDebug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\WorldAnchoredShockWave.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>

@@ -17,12 +17,13 @@ public:
 	void Close() override;
 	void Tick(float DeltaTime) override;
 	void Render(float DeltaTime) override;
+	void RenderDocument(float DeltaTime) override;
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	bool AllowsMultipleInstances() const override { return true; }
 	FString GetDocumentTitle() const override;
 	FString GetDocumentPayloadId() const override;
-	EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::ActorSequencer; }
+	EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::Unsupported; }
 
 private:
 	UActorSequenceComponent* ResolveSequenceComponent() const;
@@ -82,4 +83,5 @@ private:
 	char PendingTrackCurveAssetPath[260] = {};
 	FString PendingSequenceDragUndoLabel;
 	TArray<FEditorSerializedActorState> PendingSequenceDragUndoStates;
+	bool bRenderingDocument = false;
 };

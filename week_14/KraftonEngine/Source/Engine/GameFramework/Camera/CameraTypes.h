@@ -146,6 +146,12 @@ struct FCameraScopeLensState
 	float Radius = 0.42f;
 
 	UPROPERTY(Save)
+	float CenterX = 0.5f;
+
+	UPROPERTY(Save)
+	float CenterY = 0.5f;
+
+	UPROPERTY(Save)
 	float Feather = 0.08f;
 
 	UPROPERTY(Save)
@@ -165,4 +171,19 @@ struct FCameraScopeLensState
 
 	UPROPERTY(Save)
 	float BlendTime = 0.08f;
+};
+
+struct FCameraShockWaveState
+{
+	int32 Handle = 0;
+	bool bEnabled = false;
+	FVector WorldPosition = FVector::ZeroVector;
+	FVector WorldDirection = FVector::ForwardVector;
+	float Age = 0.0f;
+	float Duration = 0.0f;
+	float Radius = 0.12f;
+	float Width = 0.035f;
+	float Strength = 0.02f;
+	float Falloff = 1.5f;
+	float DirectionalStretch = 0.0f;
 };

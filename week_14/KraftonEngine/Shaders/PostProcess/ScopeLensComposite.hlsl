@@ -10,7 +10,8 @@ cbuffer ScopeLensCB : register(b2)
     float EdgeBlurRadius;
     float Intensity;
     float AspectRatio;
-    float2 _Pad;
+    float CenterX;
+    float CenterY;
 };
 
 PS_Input_UV VS(uint vertexID : SV_VertexID)
@@ -67,7 +68,8 @@ float4 BlurScopeColor(float2 uv, float radius)
 float4 PS(PS_Input_UV input) : SV_Target
 {
     float2 uv = input.uv;
-    float2 p = uv * 2.0f - 1.0f;
+    float2 lensCenter = float2(CenterX, CenterY);
+    float2 p = (uv - lensCenter) * 2.0f;
     p.x *= AspectRatio;
 
     float dist = length(p);

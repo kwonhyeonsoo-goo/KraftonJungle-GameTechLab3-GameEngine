@@ -53,6 +53,7 @@
 #include <optional>
 
 #include "GameFramework/Actor/ParticleSystemActor.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 
 namespace
 {
@@ -2000,6 +2001,7 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 		PlaceActorMenuItem("Character",           EViewportPlaceActorType::Character);
 		PlaceActorMenuItem("Lua Character", EViewportPlaceActorType::LuaCharacter);
 		PlaceActorMenuItem("Sniper Pawn", EViewportPlaceActorType::SniperPawn);
+		PlaceActorMenuItem("Sniper KillCam Director", EViewportPlaceActorType::SniperKillCamDirector);
 		PlaceActorMenuItem("Wheeled Vehicle", EViewportPlaceActorType::WheeledVehicle);
 		PlaceActorMenuItem("Particle System",       EViewportPlaceActorType::ParticleSystem);
 
@@ -2355,6 +2357,18 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 		{
 			Actor->InitDefaultComponents();
 			SpawnedActor = Actor;
+		}
+		break;
+	}
+	case EViewportPlaceActorType::SniperKillCamDirector:
+	{
+		ASniperKillCamDirector* Actor = World->SpawnActor<ASniperKillCamDirector>();
+		if (Actor)
+		{
+			Actor->SetFName(FName("SniperKillCamDirector"));
+			Actor->InitDefaultComponents();
+			SpawnedActor = Actor;
+			SpawnLocation.Z += 1.0f;
 		}
 		break;
 	}

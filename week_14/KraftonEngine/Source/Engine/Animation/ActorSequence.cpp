@@ -1,6 +1,7 @@
 #include "ActorSequence.h"
 
 #include "Component/ActorComponent.h"
+#include "Component/SceneComponent.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "FloatCurve/FloatCurveManager.h"
 #include "GameFramework/AActor.h"
@@ -10,6 +11,7 @@
 #include "SimpleJSON/json.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 
@@ -84,6 +86,124 @@ namespace
 		Binding.TargetType = EActorSequenceBindingTarget::Component;
 		Binding.TargetObjectName = Component->GetFName().ToString();
 		Binding.TargetComponentGuid = Component->EnsurePersistentGuid();
+	}
+
+	FString ToLowerAscii(FString Value)
+	{
+		std::transform(Value.begin(), Value.end(), Value.begin(), [](unsigned char Ch)
+		{
+			return static_cast<char>(std::tolower(Ch));
+		});
+		return Value;
+	}
+
+	const FProperty* FindSequencerPropertyByName(UObject* TargetObject, const FString& PropertyName)
+	{
+		if (!IsValid(TargetObject) || !TargetObject->GetClass())
+		{
+			return nullptr;
+		}
+
+		TArray<const FProperty*> Properties;
+		TargetObject->GetClass()->GetPropertyRefs(Properties);
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && Property->IsSequencerScalar() && EqualsPropertyName(*Property, PropertyName))
+			{
+				return Property;
+			}
+		}
+		return nullptr;
+	}
+
+	FString DefaultChannelNameForProperty(const FProperty& Property)
+	{
+		switch (Property.GetType())
+		{
+		case EPropertyType::Vec3:
+		case EPropertyType::Vec4:
+		case EPropertyType::Color4:
+			return "x";
+		case EPropertyType::Rotator:
+			return "pitch";
+		default:
+			return "Value";
+		}
+	}
+
+	bool HasLegacyAxisHint(const FString& Text, char Axis)
+	{
+		const FString Lower = ToLowerAscii(Text);
+		const FString NeedleUnderscore = FString("_") + FString(1, Axis);
+		const FString NeedleDash = FString("-") + FString(1, Axis);
+		const FString NeedleSpace = FString(" ") + FString(1, Axis);
+		return Lower.find(NeedleUnderscore) != FString::npos
+			|| Lower.find(NeedleDash) != FString::npos
+			|| Lower.find(NeedleSpace) != FString::npos;
+	}
+
+	FString InferChannelNameForProperty(
+		const FProperty& Property,
+		const FActorSequenceTrack& Track,
+		const FActorSequenceSection& Section,
+		const FActorSequenceChannel& Channel)
+	{
+		const FString HintText = Section.SectionId + " " + Track.PropertyName + " " + Channel.ChannelName;
+		switch (Property.GetType())
+		{
+		case EPropertyType::Vec3:
+		case EPropertyType::Vec4:
+		case EPropertyType::Color4:
+			if (HasLegacyAxisHint(HintText, 'z')) return "z";
+			if (HasLegacyAxisHint(HintText, 'y')) return "y";
+			if (HasLegacyAxisHint(HintText, 'x')) return "x";
+			break;
+		case EPropertyType::Rotator:
+			if (HasLegacyAxisHint(HintText, 'z')) return "roll";
+			if (HasLegacyAxisHint(HintText, 'y')) return "yaw";
+			if (HasLegacyAxisHint(HintText, 'x')) return "pitch";
+			break;
+		default:
+			break;
+		}
+		return DefaultChannelNameForProperty(Property);
+	}
+
+	bool CanReadSequenceChannel(UObject* TargetObject, const FProperty& Property, const FString& ChannelName)
+	{
+		float TestValue = 0.0f;
+		return Property.ReadScalarChannelValue(TargetObject, ChannelName, TestValue);
+	}
+
+	void RepairSectionForProperty(
+		UObject* TargetObject,
+		const FProperty& Property,
+		FActorSequenceTrack& Track,
+		FActorSequenceSection& Section)
+	{
+		Section.Duration = std::max(0.001f, Section.Duration);
+		Section.PlayRate = std::max(0.001f, Section.PlayRate);
+
+		for (FActorSequenceChannel& Channel : Section.Channels)
+		{
+			if (!CanReadSequenceChannel(TargetObject, Property, Channel.ChannelName))
+			{
+				Channel.ChannelName = InferChannelNameForProperty(Property, Track, Section, Channel);
+			}
+		}
+	}
+
+	UObject* ResolveBindingObjectForRepair(AActor* OwnerActor, const FSequenceObjectBinding& Binding)
+	{
+		if (!IsValid(OwnerActor))
+		{
+			return nullptr;
+		}
+		if (Binding.TargetType == EActorSequenceBindingTarget::OwnerActor)
+		{
+			return OwnerActor;
+		}
+		return FindComponentByBinding(OwnerActor, Binding);
 	}
 
 	json::JSON CurveToJson(const UFloatCurveAsset* CurveAsset)
@@ -465,14 +585,55 @@ void UActorSequence::RefreshBindingTargetCache(AActor* OwnerActor)
 	{
 		if (Binding.Binding.TargetType == EActorSequenceBindingTarget::OwnerActor)
 		{
-			Binding.Binding.TargetObjectName = OwnerActor->GetFName().ToString();
-			Binding.Binding.TargetComponentGuid.clear();
+			USceneComponent* RootComponent = OwnerActor->GetRootComponent();
+			int32 OwnerPropertyMatches = 0;
+			int32 RootPropertyMatches = 0;
+
+			for (const FActorSequenceTrack& Track : Binding.Tracks)
+			{
+				if (FindSequencerPropertyByName(OwnerActor, Track.PropertyName))
+				{
+					++OwnerPropertyMatches;
+				}
+				else if (RootComponent && FindSequencerPropertyByName(RootComponent, Track.PropertyName))
+				{
+					++RootPropertyMatches;
+				}
+			}
+
+			if (RootComponent && RootPropertyMatches > 0 && OwnerPropertyMatches == 0)
+			{
+				RefreshBindingFromComponent(Binding.Binding, RootComponent);
+			}
+			else
+			{
+				Binding.Binding.TargetObjectName = OwnerActor->GetFName().ToString();
+				Binding.Binding.TargetComponentGuid.clear();
+			}
+		}
+		else if (UActorComponent* Component = FindComponentByBinding(OwnerActor, Binding.Binding))
+		{
+			RefreshBindingFromComponent(Binding.Binding, Component);
+		}
+
+		UObject* TargetObject = ResolveBindingObjectForRepair(OwnerActor, Binding.Binding);
+		if (!IsValid(TargetObject))
+		{
 			continue;
 		}
 
-		if (UActorComponent* Component = FindComponentByBinding(OwnerActor, Binding.Binding))
+		for (FActorSequenceTrack& Track : Binding.Tracks)
 		{
-			RefreshBindingFromComponent(Binding.Binding, Component);
+			const FProperty* Property = FindSequencerPropertyByName(TargetObject, Track.PropertyName);
+			if (!Property)
+			{
+				continue;
+			}
+
+			for (FActorSequenceSection& Section : Track.Sections)
+			{
+				RepairSectionForProperty(TargetObject, *Property, Track, Section);
+			}
 		}
 	}
 }
@@ -599,12 +760,14 @@ void UActorSequence::ClampDurationFromSections()
 
 void UActorSequencePlayer::Initialize(UActorSequence* InSequence, AActor* InOwnerActor)
 {
+	RestoreBaseValues();
 	Sequence = InSequence;
 	OwnerActor.Reset(InOwnerActor);
 	ResolvedChannels.clear();
 	CurrentTime = ResolveSequenceStartTime(Sequence);
 	bPlaying = false;
 	bPaused = false;
+	bResolveDirty = true;
 }
 
 void UActorSequencePlayer::SetPlaybackOptions(bool bInLooping, bool bInPauseAtEnd)
@@ -634,7 +797,10 @@ void UActorSequencePlayer::Play(bool bResetTime)
 		}
 	}
 
-	RebuildResolvedChannels();
+	if (bResolveDirty || ResolvedChannels.empty())
+	{
+		RebuildResolvedChannels();
+	}
 	bPlaying = true;
 	bPaused = false;
 	ApplyAtCurrentTime();
@@ -659,6 +825,7 @@ void UActorSequencePlayer::Stop(bool bRestoreBaseValues)
 	bPaused = false;
 	CurrentTime = ResolveSequenceStartTime(Sequence);
 	ResolvedChannels.clear();
+	bResolveDirty = true;
 }
 
 void UActorSequencePlayer::Tick(float DeltaTime)
@@ -710,7 +877,7 @@ void UActorSequencePlayer::SetCurrentTime(float InTime)
 	CurrentTime = SequenceEnd > SequenceStart
 		? std::clamp(InTime, SequenceStart, SequenceEnd)
 		: SequenceStart;
-	if (ResolvedChannels.empty())
+	if (bResolveDirty || ResolvedChannels.empty())
 	{
 		RebuildResolvedChannels();
 	}
@@ -732,6 +899,11 @@ bool UActorSequencePlayer::IsPaused() const
 	return bPaused;
 }
 
+void UActorSequencePlayer::MarkResolveDirty()
+{
+	bResolveDirty = true;
+}
+
 void UActorSequencePlayer::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	UObject::AddReferencedObjects(Collector);
@@ -740,7 +912,9 @@ void UActorSequencePlayer::AddReferencedObjects(FReferenceCollector& Collector)
 
 void UActorSequencePlayer::RebuildResolvedChannels()
 {
+	RestoreBaseValues();
 	ResolvedChannels.clear();
+	bResolveDirty = false;
 	if (!IsValid(Sequence))
 	{
 		return;
