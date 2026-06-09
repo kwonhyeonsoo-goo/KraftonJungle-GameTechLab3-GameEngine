@@ -1,15 +1,20 @@
 ﻿#include "GameFramework/Pawn/SniperPawn.h"
 
 #include "Animation/Sequence/AnimSequenceBase.h"
+#include "Audio/AudioManager.h"
 #include "Component/Input/ActionComponent.h"
 #include "Component/Camera/CameraComponent.h"
 #include "Component/Gameplay/BallisticBulletManagerComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Component/Shape/BoxComponent.h"
+#include "Component/Shape/CapsuleComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
 #include "Core/Types/CollisionTypes.h"
+#include "GameFramework/Actor/BoxActor.h"
 #include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -21,6 +26,7 @@
 #include "Serialization/Archive.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdlib>
 
@@ -78,6 +84,27 @@ namespace
 	{
 		return Actor && ASniperKillCamDirector::IsPlayingInWorld(Actor->GetWorld());
 	}
+
+	constexpr const char* SniperMovementWallActorNames[] =
+	{
+		"Wall_0",
+		"Wall_1",
+		"Wall_2",
+		"Wall_3"
+	};
+
+	bool IsSniperMovementWallName(const FString& ActorName)
+	{
+		for (const char* WallName : SniperMovementWallActorNames)
+		{
+			if (ActorName == WallName)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 }
 
 ASniperPawn::ASniperPawn()
@@ -100,6 +127,8 @@ void ASniperPawn::BeginPlay()
 {
 	EnsureWeaponVisualComponents();
 	SyncSniperRuntimeState();
+	ConfigureSniperMovementCapsule();
+	ConfigureSniperMovementWalls();
 
 	APawn::BeginPlay();
 }
@@ -148,8 +177,14 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->AddMouseAxisMapping("SniperTurn", EInputAxisSourceType::MouseX, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperLookUp", EInputAxisSourceType::MouseY, 1.0f);
 	InputComponent->AddMouseAxisMapping("SniperScopeZoom", EInputAxisSourceType::MouseWheel, 1.0f);
+	InputComponent->AddAxisMapping("SniperMoveForward", 'W', 1.0f);
+	InputComponent->AddAxisMapping("SniperMoveForward", 'S', -1.0f);
+	InputComponent->AddAxisMapping("SniperMoveRight", 'D', 1.0f);
+	InputComponent->AddAxisMapping("SniperMoveRight", 'A', -1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadTurn", EInputAxisSourceType::GamepadLeftStickX, 1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadLookUp", EInputAxisSourceType::GamepadLeftStickY, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperMoveForward", EInputAxisSourceType::GamepadRightStickY, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperMoveRight", EInputAxisSourceType::GamepadRightStickX, 1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadScope", EInputAxisSourceType::GamepadLeftTrigger, 1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadFire", EInputAxisSourceType::GamepadRightTrigger, 1.0f);
 	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");
@@ -185,6 +220,16 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->BindAxis("SniperGamepadLookUp", [this](float Value)
 	{
 		HandleGamepadLookUpInput(Value);
+	});
+
+	InputComponent->BindAxis("SniperMoveForward", [this](float Value)
+	{
+		HandleMoveForwardInput(Value);
+	});
+
+	InputComponent->BindAxis("SniperMoveRight", [this](float Value)
+	{
+		HandleMoveRightInput(Value);
 	});
 
 	InputComponent->BindAxis("SniperScopeZoom", [this](float Value)
@@ -294,6 +339,7 @@ void ASniperPawn::Tick(float DeltaTime)
 	UpdateRecoilState(DeltaTime);
 	UpdateWeaponHandsReloadAnimation();
 	UpdateBulletFlightSlomo(DeltaTime);
+	ApplySniperMovement(DeltaTime);
 	ApplySniperControlRotation();
 
 	InputState.MouseDeltaX = 0.0f;
@@ -437,6 +483,9 @@ void ASniperPawn::SyncSniperRuntimeState()
 	bBulletFlightSlomoActive = false;
 	bWasWeaponReloading = false;
 	bWeaponHandsReloadAnimationActive = false;
+	SniperMoveForwardInput = 0.0f;
+	SniperMoveRightInput = 0.0f;
+	FootstepCooldownRemaining = 0.0f;
 	bUseControllerRotationPitch = true;
 	bUseControllerRotationYaw = true;
 	CacheInputSensitivityBases();
@@ -830,6 +879,53 @@ void ASniperPawn::UpdateRecoilState(float DeltaTime)
 		RecoilState.RecoilRecoverSpeed);
 }
 
+void ASniperPawn::ApplySniperMovement(float DeltaTime)
+{
+	if (!bEnableWASDMovement || DeltaTime <= 0.0f || SniperMoveSpeed <= 0.0f || IsSniperKillCamPlaying(this))
+	{
+		return;
+	}
+
+	FVector MoveInput(SniperMoveForwardInput, SniperMoveRightInput, 0.0f);
+	if (MoveInput.IsNearlyZero())
+	{
+		FootstepCooldownRemaining = 0.0f;
+		return;
+	}
+
+	if (MoveInput.Length() > 1.0f)
+	{
+		MoveInput.Normalize();
+	}
+
+	const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
+	FVector Forward = YawOnly.GetForwardVector();
+	FVector Right = YawOnly.GetRightVector();
+	Forward.Z = 0.0f;
+	Right.Z = 0.0f;
+	Forward.Normalize();
+	Right.Normalize();
+
+	const FVector MoveDirection = (Forward * MoveInput.X + Right * MoveInput.Y).Normalized();
+	if (MoveDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector MoveDelta = MoveDirection * SniperMoveSpeed * DeltaTime;
+	if (!TryMoveSniperWithCollision(MoveDelta))
+	{
+		return;
+	}
+
+	FootstepCooldownRemaining -= DeltaTime;
+	if (FootstepCooldownRemaining <= 0.0f)
+	{
+		PlaySniperFootstep();
+		FootstepCooldownRemaining = (std::max)(FootstepInterval, 0.05f);
+	}
+}
+
 void ASniperPawn::UpdateBulletFlightSlomo(float DeltaTime)
 {
 	UActionComponent* SniperAction = ActionComponent.Get();
@@ -890,6 +986,308 @@ void ASniperPawn::ApplySniperControlRotation()
 	}
 
 	Root->SetRelativeRotation(AppliedRotation);
+}
+
+void ASniperPawn::ConfigureSniperMovementCapsule()
+{
+	UCapsuleComponent* Capsule = GetSniperMovementCapsule();
+	if (!Capsule)
+	{
+		return;
+	}
+
+	Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Capsule->SetCollisionObjectType(ECollisionChannel::Pawn);
+	Capsule->SetCollisionResponseToChannel(ECollisionChannel::WorldStatic, ECollisionResponse::Block);
+	Capsule->SetCollisionResponseToChannel(ECollisionChannel::WorldDynamic, ECollisionResponse::Block);
+	Capsule->SetKinematic(true);
+	Capsule->SetSimulatePhysics(false);
+}
+
+void ASniperPawn::ConfigureSniperMovementWalls()
+{
+	for (const char* WallName : SniperMovementWallActorNames)
+	{
+		UBoxComponent* WallBox = FindSniperMovementWallBox(WallName);
+		if (!WallBox)
+		{
+			continue;
+		}
+
+		WallBox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		WallBox->SetCollisionObjectType(ECollisionChannel::WorldDynamic);
+		WallBox->SetCollisionResponseToAllChannels(ECollisionResponse::Block);
+		WallBox->SetCollisionResponseToChannel(ECollisionChannel::Pawn, ECollisionResponse::Block);
+		WallBox->SetCollisionResponseToChannel(ECollisionChannel::Projectile, ECollisionResponse::Ignore);
+		WallBox->SetKinematic(true);
+		WallBox->SetSimulatePhysics(false);
+	}
+}
+
+bool ASniperPawn::TryMoveSniperWithCollision(const FVector& MoveDelta)
+{
+	if (MoveDelta.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const FVector CurrentLocation = GetActorLocation();
+	FVector MinMovementLocation;
+	FVector MaxMovementLocation;
+	if (TryGetSniperMovementBounds(MinMovementLocation, MaxMovementLocation))
+	{
+		FVector DesiredLocation = CurrentLocation + MoveDelta;
+		DesiredLocation.X = FMath::Clamp(DesiredLocation.X, MinMovementLocation.X, MaxMovementLocation.X);
+		DesiredLocation.Y = FMath::Clamp(DesiredLocation.Y, MinMovementLocation.Y, MaxMovementLocation.Y);
+
+		if (FVector::DistSquared(CurrentLocation, DesiredLocation) <= 1.0e-6f)
+		{
+			return false;
+		}
+
+		SetActorLocation(DesiredLocation);
+		return true;
+	}
+
+	FHitResult FullHit;
+	if (!TrySweepSniperMovement(MoveDelta, FullHit) || !IsSniperMovementWallActor(FullHit.HitActor))
+	{
+		SetActorLocation(CurrentLocation + MoveDelta);
+		return true;
+	}
+
+	bool bMoved = false;
+
+	const FVector XOnlyDelta(MoveDelta.X, 0.0f, 0.0f);
+	if (!XOnlyDelta.IsNearlyZero())
+	{
+		bMoved = TryApplySniperMovementDelta(XOnlyDelta) || bMoved;
+	}
+
+	const FVector YOnlyDelta(0.0f, MoveDelta.Y, 0.0f);
+	if (!YOnlyDelta.IsNearlyZero())
+	{
+		bMoved = TryApplySniperMovementDelta(YOnlyDelta) || bMoved;
+	}
+
+	if (bMoved)
+	{
+		return FVector::DistSquared(CurrentLocation, GetActorLocation()) > 1.0e-6f;
+	}
+
+	const float MoveLength = MoveDelta.Length();
+	if (MoveLength <= FMath::Epsilon)
+	{
+		return false;
+	}
+
+	const float SafeDistance = (std::max)(0.0f, FullHit.Distance - SniperMovementSweepPullbackDistance);
+	if (SafeDistance <= FMath::Epsilon)
+	{
+		return false;
+	}
+
+	SetActorLocation(CurrentLocation + MoveDelta.Normalized() * (std::min)(SafeDistance, MoveLength));
+	return true;
+}
+
+bool ASniperPawn::TryApplySniperMovementDelta(const FVector& MoveDelta)
+{
+	if (MoveDelta.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const FVector CurrentLocation = GetActorLocation();
+	FHitResult Hit;
+	if (!TrySweepSniperMovement(MoveDelta, Hit) || !IsSniperMovementWallActor(Hit.HitActor))
+	{
+		SetActorLocation(CurrentLocation + MoveDelta);
+		return true;
+	}
+
+	const float MoveLength = MoveDelta.Length();
+	if (MoveLength <= FMath::Epsilon)
+	{
+		return false;
+	}
+
+	const float SafeDistance = (std::max)(0.0f, Hit.Distance - SniperMovementSweepPullbackDistance);
+	if (SafeDistance <= FMath::Epsilon)
+	{
+		return false;
+	}
+
+	SetActorLocation(CurrentLocation + MoveDelta.Normalized() * (std::min)(SafeDistance, MoveLength));
+	return true;
+}
+
+bool ASniperPawn::TrySweepSniperMovement(const FVector& MoveDelta, FHitResult& OutHit) const
+{
+	OutHit = FHitResult{};
+	if (MoveDelta.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const UCapsuleComponent* Capsule = GetSniperMovementCapsule();
+	const UWorld* World = GetWorld();
+	if (!Capsule || !World)
+	{
+		return false;
+	}
+
+	const float Radius = Capsule->GetScaledCapsuleRadius();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+	if (Radius <= 0.0f || HalfHeight <= 0.0f)
+	{
+		return false;
+	}
+
+	const FVector Start = Capsule->GetWorldLocation();
+	const FVector End = Start + MoveDelta;
+	const FQuat Rotation = Capsule->GetWorldMatrix().ToQuat();
+	const FCollisionShape Shape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
+	return World->PhysicsSweep(Start, End, Rotation, Shape, OutHit, ECollisionChannel::Pawn, this);
+}
+
+bool ASniperPawn::TryGetSniperMovementBounds(FVector& OutMinLocation, FVector& OutMaxLocation) const
+{
+	if (bUseExplicitSniperMovementBounds)
+	{
+		OutMinLocation = SniperMovementMinLocation;
+		OutMaxLocation = SniperMovementMaxLocation;
+		if (OutMinLocation.X > OutMaxLocation.X)
+		{
+			std::swap(OutMinLocation.X, OutMaxLocation.X);
+		}
+		if (OutMinLocation.Y > OutMaxLocation.Y)
+		{
+			std::swap(OutMinLocation.Y, OutMaxLocation.Y);
+		}
+		return true;
+	}
+
+	const UCapsuleComponent* Capsule = GetSniperMovementCapsule();
+	if (!Capsule)
+	{
+		return false;
+	}
+
+	const FVector ActorLocation = GetActorLocation();
+	const FVector CapsuleCenter = Capsule->GetWorldLocation();
+	const FVector ActorToCapsuleCenter = CapsuleCenter - ActorLocation;
+	const float CapsuleRadius = (std::max)(Capsule->GetScaledCapsuleRadius(), 0.0f);
+
+	float MinX = -FLT_MAX;
+	float MaxX = FLT_MAX;
+	float MinY = -FLT_MAX;
+	float MaxY = FLT_MAX;
+	bool bHasMinX = false;
+	bool bHasMaxX = false;
+	bool bHasMinY = false;
+	bool bHasMaxY = false;
+
+	for (const char* WallName : SniperMovementWallActorNames)
+	{
+		const UBoxComponent* WallBox = FindSniperMovementWallBox(WallName);
+		if (!WallBox)
+		{
+			continue;
+		}
+
+		const FBoundingBox WallBounds = WallBox->GetWorldBoundingBox();
+		if (!WallBounds.IsValid())
+		{
+			continue;
+		}
+
+		const FVector WallExtent = WallBounds.GetExtent();
+		const bool bUseXBoundary = WallExtent.Y >= WallExtent.X;
+		if (bUseXBoundary)
+		{
+			if (CapsuleCenter.X < WallBounds.Min.X)
+			{
+				MaxX = (std::min)(MaxX, WallBounds.Min.X - CapsuleRadius);
+				bHasMaxX = true;
+			}
+			else if (CapsuleCenter.X > WallBounds.Max.X)
+			{
+				MinX = (std::max)(MinX, WallBounds.Max.X + CapsuleRadius);
+				bHasMinX = true;
+			}
+		}
+		else
+		{
+			if (CapsuleCenter.Y < WallBounds.Min.Y)
+			{
+				MaxY = (std::min)(MaxY, WallBounds.Min.Y - CapsuleRadius);
+				bHasMaxY = true;
+			}
+			else if (CapsuleCenter.Y > WallBounds.Max.Y)
+			{
+				MinY = (std::max)(MinY, WallBounds.Max.Y + CapsuleRadius);
+				bHasMinY = true;
+			}
+		}
+	}
+
+	if (!bHasMinX || !bHasMaxX || !bHasMinY || !bHasMaxY || MinX > MaxX || MinY > MaxY)
+	{
+		return false;
+	}
+
+	OutMinLocation = FVector(MinX - ActorToCapsuleCenter.X, MinY - ActorToCapsuleCenter.Y, ActorLocation.Z);
+	OutMaxLocation = FVector(MaxX - ActorToCapsuleCenter.X, MaxY - ActorToCapsuleCenter.Y, ActorLocation.Z);
+	return true;
+}
+
+bool ASniperPawn::IsSniperMovementWallActor(const AActor* Actor) const
+{
+	return Actor && IsSniperMovementWallName(Actor->GetName());
+}
+
+UBoxComponent* ASniperPawn::FindSniperMovementWallBox(const FString& ActorName) const
+{
+	UWorld* World = GetWorld();
+	if (!World || ActorName.empty())
+	{
+		return nullptr;
+	}
+
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!Actor || Actor->GetName() != ActorName)
+		{
+			continue;
+		}
+
+		ABoxActor* BoxActor = Cast<ABoxActor>(Actor);
+		UBoxComponent* BoxComponent = BoxActor ? BoxActor->GetBoxComponent() : Actor->GetComponentByClass<UBoxComponent>();
+		return BoxComponent;
+	}
+
+	return nullptr;
+}
+
+UCapsuleComponent* ASniperPawn::GetSniperMovementCapsule() const
+{
+	if (UCapsuleComponent* RootCapsule = Cast<UCapsuleComponent>(GetRootComponent()))
+	{
+		return RootCapsule;
+	}
+
+	return GetComponentByClass<UCapsuleComponent>();
+}
+
+void ASniperPawn::PlaySniperFootstep()
+{
+	if (FootstepSFXPath.empty() || FootstepVolume <= 0.0f)
+	{
+		return;
+	}
+
+	FAudioManager::Get().PlaySFX(FootstepSFXPath, FMath::Clamp(FootstepVolume, 0.0f, 1.0f));
 }
 
 float ASniperPawn::GetScopeBlendAlpha() const
@@ -1135,6 +1533,16 @@ void ASniperPawn::HandleGamepadLookUpInput(float Value)
 	Control.Pitch = ClampSniperPitch(Control.Pitch, MinCameraPitch, MaxCameraPitch);
 	SetControlRotation(Control);
 	ApplySniperControlRotation();
+}
+
+void ASniperPawn::HandleMoveForwardInput(float Value)
+{
+	SniperMoveForwardInput = Value;
+}
+
+void ASniperPawn::HandleMoveRightInput(float Value)
+{
+	SniperMoveRightInput = Value;
 }
 
 void ASniperPawn::HandleScopeZoomAxis(float Value)

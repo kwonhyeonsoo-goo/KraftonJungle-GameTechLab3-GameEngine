@@ -13,7 +13,7 @@
             <button id="btnScoreBoard" class="menu-button secondary" data-ui-type="Button" data-ui-name="Score Board" data-action="OpenScoreBoard" data-hover-action="MainButtonHover"><span id="btnScoreBoardLabel" class="menu-button-label">Score Board</span></button>
             <button id="btnSettings" class="menu-button secondary" data-ui-type="Button" data-ui-name="Settings" data-action="OpenSettings" data-hover-action="MainButtonHover"><span id="btnSettingsLabel" class="menu-button-label">Settings</span></button>
             <button id="btnCredits" class="menu-button secondary" data-ui-type="Button" data-ui-name="Credits" data-action="OpenCredits" data-hover-action="MainButtonHover"><span id="btnCreditsLabel" class="menu-button-label">Credits</span></button>
-            <button id="btnExit" class="menu-button secondary" data-ui-type="Button" data-ui-name="Exit" data-action="MainButtonClick" data-hover-action="MainButtonHover"><span id="btnExitLabel" class="menu-button-label">Exit</span></button>
+            <button id="btnExit" class="menu-button secondary" data-ui-type="Button" data-ui-name="Exit" data-action="ExitGame" data-hover-action="MainButtonHover"><span id="btnExitLabel" class="menu-button-label">Exit</span></button>
         </div>
 
         <div id="popupLayer" data-ui-type="Panel" data-ui-name="Popup Layer">

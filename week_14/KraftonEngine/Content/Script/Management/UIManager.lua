@@ -737,9 +737,6 @@ function UIManager:Shutdown()
     self.general:UnsubscribeOwner(self)
     self:Clear()
     self:ResetInGameHUDRuntime(true)
-    if UI ~= nil and UI.ClearViewport ~= nil then
-        UI.ClearViewport()
-    end
 end
 
 function UIManager:Tick(dt)
@@ -1047,6 +1044,8 @@ function UIManager:ConfigureMainButtonActions(widget)
             click_action = "OpenSettings"
         elseif element_id == "btnCredits" then
             click_action = "OpenCredits"
+        elseif element_id == "btnExit" then
+            click_action = "ExitGame"
         end
         call_widget(widget, "SetActionEvent", element_id, click_action)
         call_widget(widget, "SetElementAttribute", element_id, "data-hover-action", "MainButtonHover")
@@ -1079,6 +1078,22 @@ function UIManager:PlayUISFX(path, volume)
     if AudioManager ~= nil and AudioManager.PlaySFX ~= nil then
         AudioManager.PlaySFX(path, volume or 1.0)
     end
+end
+
+function UIManager:RequestApplicationExit()
+    log("Exit clicked; requesting application shutdown")
+    if Application ~= nil then
+        if Application.Exit ~= nil then
+            Application.Exit()
+            return
+        end
+        if Application.QuitGame ~= nil then
+            Application.QuitGame()
+            return
+        end
+    end
+
+    log("Exit request failed: Application.Exit unavailable")
 end
 
 function UIManager:PlayBreathSFX(path, volume)
@@ -1186,6 +1201,9 @@ function UIManager:PollMainActions(widget)
             end
         elseif action == "MainButtonClick" then
             self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+        elseif action == "ExitGame" then
+            self:PlayUISFX(MAIN_BUTTON_CLICK_SFX, 1.0)
+            self:RequestApplicationExit()
         elseif action == "OpenSettings" then
             self:OpenPopup("Settings")
         elseif action == "OpenScoreBoard" then
@@ -1437,6 +1455,7 @@ function UIManager:SetRadioOpeningPresentation(payload)
     self:SetElementAlpha(widget, "radioBlackout", blackout_visible and self.radio_blackout_alpha or 0.0)
     self:SetElementVisible(widget, "radioOpeningSkipPrompt", skip_visible)
     self:SetElementStyle(widget, "radioOpeningSkipPrompt", "display", skip_visible and "block" or "none")
+    call_widget(widget, "SetText", "radioOpeningSkipPrompt", get_confirm_prompt_text("Skip", "Press Space to Skip"))
     self:SetElementAlpha(widget, "radioOpeningSkipPrompt", skip_visible and skip_alpha or 0.0)
 
     if suppress then

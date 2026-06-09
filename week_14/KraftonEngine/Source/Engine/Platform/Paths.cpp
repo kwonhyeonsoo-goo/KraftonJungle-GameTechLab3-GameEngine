@@ -2,6 +2,16 @@
 
 #include <filesystem>
 
+namespace
+{
+	bool IsRuntimeRoot(const std::filesystem::path& Candidate)
+	{
+		return std::filesystem::exists(Candidate / L"Shaders")
+			&& std::filesystem::exists(Candidate / L"Content")
+			&& std::filesystem::exists(Candidate / L"Settings");
+	}
+}
+
 std::wstring FPaths::RootDir()
 {
 	static std::wstring Cached;
@@ -13,17 +23,13 @@ std::wstring FPaths::RootDir()
 		
 		std::filesystem::path RootPath;
 		std::filesystem::path ExeDir = std::filesystem::path(Buffer).parent_path();
+		std::filesystem::path ExeParent = ExeDir.parent_path();
+		std::filesystem::path ExeGrandParent = ExeParent.parent_path();
 
-		if (std::filesystem::exists(ExeDir / L"Shaders"))
-		{
-			// 배포: exe와 리소스가 같은 디렉터리
-			RootPath = ExeDir;
-		}
-		else
-		{
-			// 개발: CWD(= $(ProjectDir))에 리소스가 있음
-			RootPath = std::filesystem::current_path();
-		}
+		if (IsRuntimeRoot(ExeDir)) RootPath = ExeDir;
+		else if (IsRuntimeRoot(ExeParent)) RootPath = ExeParent;
+		else if (IsRuntimeRoot(ExeGrandParent)) RootPath = ExeGrandParent;
+		else RootPath = std::filesystem::current_path();
 		Cached = (RootPath / L"").generic_wstring();
 	}
 	return Cached;

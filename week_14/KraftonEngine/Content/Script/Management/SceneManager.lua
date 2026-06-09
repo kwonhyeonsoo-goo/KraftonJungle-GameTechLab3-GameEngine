@@ -13,6 +13,7 @@ local DEFAULT_START_STATE = GameState.Main
 local SCENE_TRANSITION_FADE_OUT_SECONDS = 0.18
 local SCENE_TRANSITION_HOLD_SECONDS = 0.04
 local SCENE_TRANSITION_FADE_IN_SECONDS = 0.22
+local SCENE_LOAD_TIMEOUT_SECONDS = 12.0
 
 local function log(message)
     if Debug and Debug.Log then
@@ -32,6 +33,81 @@ local function camera_fade_in(duration)
     if CameraManager ~= nil and CameraManager.FadeIn ~= nil then
         CameraManager.FadeIn(duration or SCENE_TRANSITION_FADE_IN_SECONDS)
     end
+end
+
+local function camera_clear_transition_fade()
+    if CameraManager == nil then
+        return
+    end
+
+    if CameraManager.StopCameraFade ~= nil then
+        CameraManager.StopCameraFade()
+        return
+    end
+
+    if CameraManager.FadeIn ~= nil then
+        CameraManager.FadeIn(0.0)
+    end
+end
+
+local function scene_exists(path)
+    if path == nil or path == "" or Scene == nil or Scene.Exists == nil then
+        return true
+    end
+
+    local ok, value = pcall(function()
+        return Scene.Exists(path)
+    end)
+    return ok and value == true
+end
+
+local function scene_is_current(path)
+    if path == nil or path == "" then
+        return true
+    end
+
+    if Scene ~= nil and Scene.IsCurrent ~= nil then
+        local ok, value = pcall(function()
+            return Scene.IsCurrent(path)
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
+    if Scene == nil or Scene.GetCurrentPath == nil then
+        return false
+    end
+
+    local current = string.lower(string.gsub(tostring(Scene.GetCurrentPath()), "\\", "/"))
+    local target = string.lower(string.gsub(tostring(path), "\\", "/"))
+    return current == target or string.sub(current, -string.len(target)) == target
+end
+
+local function scene_open_pending()
+    if Scene == nil or Scene.IsOpenPending == nil then
+        return false
+    end
+
+    local ok, value = pcall(function()
+        return Scene.IsOpenPending()
+    end)
+    return ok and value == true
+end
+
+local function request_scene(path)
+    if path == nil or path == "" then
+        return true
+    end
+    if Scene == nil or Scene.TransitionTo == nil then
+        log("scene request failed: Scene.TransitionTo unavailable path=" .. tostring(path))
+        return false
+    end
+
+    log("Scene.TransitionTo begin path=" .. tostring(path))
+    local ok = Scene.TransitionTo(path)
+    log("Scene.TransitionTo result=" .. tostring(ok) .. " path=" .. tostring(path))
+    return ok == true
 end
 
 local function default_huds()
@@ -69,6 +145,9 @@ function SceneManager:Initialize()
     end
     log("initialized state=" .. tostring(self.current) .. " scene=" .. scene_path)
 
+    camera_clear_transition_fade()
+    log("cleared stale transition camera fade on scene initialize")
+
     self:EnterState(nil, self.current, { reason = "initial" })
     self.general:Publish("scene.initialized", { state = self.current })
     self:EmitEntered(nil, self.current, { reason = "initial" })
@@ -77,7 +156,6 @@ end
 function SceneManager:Shutdown()
     self.pending = nil
     self:ExitState(self.current, nil, { reason = "shutdown" })
-    self.general:Publish("scene.hud_requested", { state = nil, hud = nil, reason = "shutdown" })
 end
 
 function SceneManager:SetStartState(state)
@@ -177,6 +255,22 @@ function SceneManager:GetHUDForState(state)
     return nil
 end
 
+function SceneManager:GetScenePathForState(state, payload)
+    local state_object = self:GetStateObject(state)
+    if state_object == nil or state_object.GetScenePath == nil then
+        return nil
+    end
+
+    local ok, path = pcall(function()
+        return state_object:GetScenePath(payload or {})
+    end)
+    if not ok then
+        log("GetScenePath failed for state=" .. tostring(state) .. " error=" .. tostring(path))
+        return nil
+    end
+    return path
+end
+
 function SceneManager:RequestState(next_state, payload)
     if not self:IsRegisteredState(next_state) then
         print("[SceneManager] unavailable state: " .. tostring(next_state))
@@ -263,6 +357,49 @@ function SceneManager:TickTransition(dt)
             return
         end
 
+        transition.target_scene = self:GetScenePathForState(transition.to, transition.payload)
+        if transition.target_scene ~= nil and transition.target_scene ~= "" then
+            if not scene_exists(transition.target_scene) then
+                log("scene transition failed before state apply: missing target_scene=" .. tostring(transition.target_scene))
+                self.general:Publish("scene.transition_failed", {
+                    from = self.current,
+                    to = transition.to,
+                    payload = transition.payload,
+                    target_scene = transition.target_scene,
+                    reason = "missing_scene"
+                })
+                self.transition = nil
+                camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+                return
+            end
+
+            if not scene_is_current(transition.target_scene) then
+                if not request_scene(transition.target_scene) then
+                    log("scene transition failed before state apply: request rejected target_scene=" .. tostring(transition.target_scene))
+                    self.general:Publish("scene.transition_failed", {
+                        from = self.current,
+                        to = transition.to,
+                        payload = transition.payload,
+                        target_scene = transition.target_scene,
+                        reason = "request_rejected"
+                    })
+                    self.transition = nil
+                    camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+                    return
+                end
+
+                transition.phase = "waiting_scene"
+                transition.time = 0.0
+                self.general:Publish("scene.load_requested", {
+                    from = self.current,
+                    to = transition.to,
+                    payload = transition.payload,
+                    target_scene = transition.target_scene
+                })
+                return
+            end
+        end
+
         self:ApplyStateImmediate(transition.to, transition.payload)
         transition.phase = "fade_in"
         transition.time = 0.0
@@ -272,6 +409,37 @@ function SceneManager:TickTransition(dt)
             payload = transition.payload,
             fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
         })
+        return
+    end
+
+    if transition.phase == "waiting_scene" then
+        if scene_is_current(transition.target_scene) and not scene_open_pending() then
+            self:ApplyStateImmediate(transition.to, transition.payload)
+            transition.phase = "fade_in"
+            transition.time = 0.0
+            camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+            self.general:Publish("scene.transition_revealing", {
+                to = transition.to,
+                payload = transition.payload,
+                target_scene = transition.target_scene,
+                fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
+            })
+            return
+        end
+
+        if transition.time >= SCENE_LOAD_TIMEOUT_SECONDS then
+            log("scene transition timed out before state apply target_scene=" .. tostring(transition.target_scene) ..
+                " current=" .. tostring(Scene ~= nil and Scene.GetCurrentPath ~= nil and Scene.GetCurrentPath() or ""))
+            self.general:Publish("scene.transition_failed", {
+                from = self.current,
+                to = transition.to,
+                payload = transition.payload,
+                target_scene = transition.target_scene,
+                reason = "timeout"
+            })
+            self.transition = nil
+            camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+        end
         return
     end
 

@@ -690,20 +690,26 @@ function RadioManager:ConsumeOpeningSkip(current)
         return false
     end
 
+    local should_skip = false
+    if Input.WasConfirmPressed ~= nil then
+        should_skip = Input.WasConfirmPressed() == true
+    end
+    if not should_skip and Input.GetRawKeyDown ~= nil then
+        should_skip = Input.GetRawKeyDown("Space") == true or Input.GetRawKeyDown("SpaceBar") == true
+    end
+    if not should_skip and Input.GetKeyDown ~= nil then
+        should_skip = Input.GetKeyDown("Space") == true or Input.GetKeyDown("SpaceBar") == true
+    end
     local space_down = false
-    local space_pressed = false
     if Input.GetRawKey ~= nil then
         space_down = Input.GetRawKey("Space") == true or Input.GetRawKey("SpaceBar") == true
     elseif Input.GetKey ~= nil then
         space_down = Input.GetKey("Space") == true or Input.GetKey("SpaceBar") == true
     end
-    if Input.GetRawKeyDown ~= nil then
-        space_pressed = Input.GetRawKeyDown("Space") == true or Input.GetRawKeyDown("SpaceBar") == true
-    elseif Input.GetKeyDown ~= nil then
-        space_pressed = Input.GetKeyDown("Space") == true or Input.GetKeyDown("SpaceBar") == true
+    if not should_skip then
+        should_skip = space_down and self.opening_skip_key_down ~= true
     end
 
-    local should_skip = space_pressed or (space_down and self.opening_skip_key_down ~= true)
     self.opening_skip_key_down = space_down
     if not should_skip then
         return false

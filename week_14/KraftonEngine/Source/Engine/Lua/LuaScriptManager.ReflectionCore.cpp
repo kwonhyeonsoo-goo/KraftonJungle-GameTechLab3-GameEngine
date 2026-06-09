@@ -808,8 +808,11 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         []()
         {
             const FInputSystemSnapshot& Snapshot = GetLuaInputSnapshot();
+            const FInputSystemSnapshot RawSnapshot = InputSystem::Get().MakeSnapshot();
             return Snapshot.WasPressed(VK_SPACE) ||
-                Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
+                Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom) ||
+                RawSnapshot.WasPressed(VK_SPACE) ||
+                RawSnapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
         }
     );
     Input.set_function(
@@ -1323,6 +1326,13 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                 return false;
             }
 
+            if (!GEngine->DoesRuntimeSceneExist(PathOrName))
+            {
+                UE_LOG("[Lua.Scene] Open rejected: scene file not found input=%s resolved=%s",
+                    PathOrName.c_str(), GEngine->ResolveRuntimeScenePath(PathOrName).c_str());
+                return false;
+            }
+
             GEngine->RequestTransitionToScene(PathOrName);
             return true;
         }
@@ -1336,6 +1346,13 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
                 return false;
             }
 
+            if (!GEngine->DoesRuntimeSceneExist(PathOrName))
+            {
+                UE_LOG("[Lua.Scene] Load rejected: scene file not found input=%s resolved=%s",
+                    PathOrName.c_str(), GEngine->ResolveRuntimeScenePath(PathOrName).c_str());
+                return false;
+            }
+
             GEngine->RequestTransitionToScene(PathOrName);
             return true;
         }
@@ -1346,6 +1363,13 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         {
             if (!GEngine || PathOrName.empty())
             {
+                return false;
+            }
+
+            if (!GEngine->DoesRuntimeSceneExist(PathOrName))
+            {
+                UE_LOG("[Lua.Scene] TransitionTo rejected: scene file not found input=%s resolved=%s",
+                    PathOrName.c_str(), GEngine->ResolveRuntimeScenePath(PathOrName).c_str());
                 return false;
             }
 
@@ -1391,6 +1415,47 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         []() -> FString
         {
             return GEngine ? GEngine->GetPendingScenePath() : FString {};
+        }
+    );
+    Scene.set_function(
+        "ResolvePath",
+        [](const FString& PathOrName) -> FString
+        {
+            return GEngine ? GEngine->ResolveRuntimeScenePath(PathOrName) : FString {};
+        }
+    );
+    Scene.set_function(
+        "Exists",
+        [](const FString& PathOrName)
+        {
+            return GEngine && GEngine->DoesRuntimeSceneExist(PathOrName);
+        }
+    );
+    Scene.set_function(
+        "IsCurrent",
+        [](const FString& PathOrName)
+        {
+            if (!GEngine || PathOrName.empty())
+            {
+                return false;
+            }
+
+            const FString Current = GEngine->GetCurrentScenePath();
+            const FString Target = GEngine->ResolveRuntimeScenePath(PathOrName);
+            if (Current.empty() || Target.empty())
+            {
+                return false;
+            }
+
+            std::error_code Ec;
+            const std::filesystem::path CurrentPath(FPaths::ToWide(Current));
+            const std::filesystem::path TargetPath(FPaths::ToWide(Target));
+            if (std::filesystem::exists(CurrentPath, Ec) && std::filesystem::exists(TargetPath, Ec))
+            {
+                return std::filesystem::equivalent(CurrentPath, TargetPath, Ec);
+            }
+
+            return CurrentPath.lexically_normal() == TargetPath.lexically_normal();
         }
     );
 
