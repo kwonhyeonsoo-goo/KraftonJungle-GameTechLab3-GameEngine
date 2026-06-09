@@ -13,12 +13,6 @@ local SNIPER_KILLCAM_SLOWDOWN_SFX_DELAY = 0.3
 local SNIPER_KILLCAM_BULLET_CAM_SFX = "SFX/Sniper/BulletCam1.mp3"
 local SNIPER_KILLCAM_BULLET_CAM_SFX_DELAY = 1.0
 local SNIPER_KILLCAM_DAMAGED_SFX = "SFX/Sniper/Damaged1.mp3"
-local SNIPER_KILLCAM_IMPACT_SFX_VOLUME = 1.0
-local SNIPER_KILLCAM_FORCED_BLOOD_DELAY = 4.65
-local SNIPER_KILLCAM_BLOOD_PARTICLE_PATH = "Content/Particle System/BloodHit.uasset"
-local SNIPER_KILLCAM_BLOOD_SCALE = Vec3(3.0, 3.0, 3.0)
-local SNIPER_KILLCAM_BLOOD_LIFETIME = 8.0
-local SNIPER_KILLCAM_BLOOD_BURST_DELAYS = { 0.0, 0.06, 0.12, 0.18, 0.24 }
 local SNIPER_KILLCAM_FLASH_OUT_ALPHA = 0.30
 local SNIPER_KILLCAM_FLASH_IN_ALPHA = 0.306
 local SNIPER_KILLCAM_FLASH_OUT_DURATION = 0.0
@@ -42,31 +36,6 @@ end
 local function smoothstep(alpha)
     alpha = clamp01(alpha)
     return alpha * alpha * (3.0 - 2.0 * alpha)
-end
-
-local function resolve_sniper_killcam_hit_payload(bullet_id)
-    if SniperKillCam == nil or SniperKillCam.GetHitSnapshot == nil then
-        return nil
-    end
-
-    local snapshot = SniperKillCam.GetHitSnapshot(bullet_id)
-    if snapshot == nil or snapshot.Position == nil then
-        return nil
-    end
-
-    local hit_normal = nil
-    local shot_direction = nil
-    if snapshot.Velocity ~= nil and snapshot.Velocity:Length() > 0.000001 then
-        shot_direction = snapshot.Velocity:Normalized()
-        hit_normal = shot_direction * -1.0
-    end
-
-    return {
-        BulletId = bullet_id,
-        HitLocation = snapshot.Position,
-        HitNormal = hit_normal,
-        ShotDirection = shot_direction
-    }
 end
 
 local function merge_tables(base, override)
@@ -142,147 +111,6 @@ local function stop_killcam_sfx_handles(general, handles)
     for _, handle in ipairs(handles) do
         stop_sfx_handle(general, handle)
     end
-end
-
-local function is_valid_object(value)
-    if value == nil then
-        return false
-    end
-    if value.IsValid ~= nil then
-        return value:IsValid()
-    end
-    return true
-end
-
-local function get_killcam_hit_location(hit)
-    if hit == nil then
-        return nil
-    end
-    return hit.HitLocation or hit.WorldHitLocation or hit.Position
-end
-
-local function play_impact_sfx(general, path, volume, location)
-    if path == nil or path == "" then
-        return 0
-    end
-
-    if location ~= nil and AudioManager ~= nil and AudioManager.PlaySFX3D ~= nil then
-        return AudioManager.PlaySFX3D(path, location, volume or 1.0, 80.0, 3000.0) or 0
-    end
-
-    return play_sfx_handle(general, path, volume)
-end
-
-local function spawn_killcam_blood_actor(location)
-    if location == nil or Particle == nil or Particle.SpawnEmitterAtLocation == nil then
-        return nil
-    end
-
-    local actor = Particle.SpawnEmitterAtLocation(
-        SNIPER_KILLCAM_BLOOD_PARTICLE_PATH,
-        location,
-        Vec3(0.0, 0.0, 0.0),
-        SNIPER_KILLCAM_BLOOD_SCALE,
-        true)
-    if actor == nil then
-        return nil
-    end
-
-    actor.Location = location
-    actor.Rotation = Vec3(0.0, 0.0, 0.0)
-    actor.Scale = SNIPER_KILLCAM_BLOOD_SCALE
-
-    local component = nil
-    if actor.GetParticleSystemComponent ~= nil then
-        component = actor:GetParticleSystemComponent()
-    end
-    if component ~= nil then
-        if component.SetTickWhenPaused ~= nil then
-            component:SetTickWhenPaused(true)
-        end
-        if component.Deactivate ~= nil then
-            component:Deactivate()
-        end
-        if component.ResetParticles ~= nil then
-            component:ResetParticles()
-        end
-        if component.Activate ~= nil then
-            component:Activate(true)
-        end
-    end
-
-    return actor
-end
-
-local function queue_killcam_blood_effects(current, hit)
-    local location = get_killcam_hit_location(hit)
-    if current == nil or location == nil then
-        return false
-    end
-
-    current.killcam_blood_effects = current.killcam_blood_effects or {}
-    local queued = false
-    for index, delay in ipairs(SNIPER_KILLCAM_BLOOD_BURST_DELAYS) do
-        local effect = {
-            location = location,
-            delay = tonumber(delay) or 0.0,
-            remaining = SNIPER_KILLCAM_BLOOD_LIFETIME,
-            actor = nil,
-            spawned = false
-        }
-        if effect.delay <= 0.0 then
-            effect.actor = spawn_killcam_blood_actor(location)
-            effect.spawned = effect.actor ~= nil
-        end
-        if effect.delay > 0.0 or effect.spawned == true then
-            current.killcam_blood_effects[#current.killcam_blood_effects + 1] = effect
-            queued = true
-        end
-    end
-
-    return queued
-end
-
-local function tick_killcam_blood_effects(current, dt)
-    if current == nil or type(current.killcam_blood_effects) ~= "table" then
-        return
-    end
-
-    dt = tonumber(dt) or 0.0
-    for index = #current.killcam_blood_effects, 1, -1 do
-        local effect = current.killcam_blood_effects[index]
-        if effect.spawned ~= true then
-            effect.delay = (tonumber(effect.delay) or 0.0) - dt
-            if effect.delay <= 0.0 then
-                effect.actor = spawn_killcam_blood_actor(effect.location)
-                effect.spawned = effect.actor ~= nil
-                if effect.spawned ~= true then
-                    table.remove(current.killcam_blood_effects, index)
-                end
-            end
-        else
-            effect.remaining = (tonumber(effect.remaining) or 0.0) - dt
-            if effect.remaining <= 0.0 then
-                if is_valid_object(effect.actor) and effect.actor.Destroy ~= nil then
-                    effect.actor:Destroy()
-                end
-                table.remove(current.killcam_blood_effects, index)
-            end
-        end
-    end
-end
-
-local function clear_killcam_blood_effects(current)
-    if current == nil or type(current.killcam_blood_effects) ~= "table" then
-        return
-    end
-
-    for _, effect in ipairs(current.killcam_blood_effects) do
-        if is_valid_object(effect.actor) and effect.actor.Destroy ~= nil then
-            effect.actor:Destroy()
-        end
-    end
-    current.killcam_blood_effects = nil
 end
 
 local function camera_fade_out(duration)
@@ -1367,8 +1195,7 @@ function CutSceneManager.new(general)
     return setmetatable({
         general = general,
         registry = {},
-        current = nil,
-        killcam_blood_effects = {}
+        current = nil
     }, CutSceneManager)
 end
 
@@ -1383,7 +1210,6 @@ function CutSceneManager:Initialize()
             local requested_travel_duration = tonumber(payload.travel_duration) or SNIPER_KILLCAM_TRAVEL_DURATION
             local travel_duration = math.max(0.001, math.min(duration, requested_travel_duration))
             local camera_mode = tonumber(payload.camera_mode) or 0
-            clear_killcam_blood_effects(self)
             current.duration = duration
             current.travel_duration = travel_duration
             current.post_impact_seconds = math.max(0.0, duration - travel_duration)
@@ -1391,9 +1217,7 @@ function CutSceneManager:Initialize()
             current.rig_overrides = type(payload.rig) == "table" and payload.rig or nil
             current.slowdown_sfx_played = false
             current.bullet_cam_sfx_played = false
-            current.impact_sfx_played = false
-            current.impact_event_published = false
-            current.forced_blood_played = false
+            current.damaged_sfx_played = false
             current.camera_flash_out_played = false
             current.camera_flash_in_played = false
             current.use_raw_delta_time = true
@@ -1401,12 +1225,6 @@ function CutSceneManager:Initialize()
             current.previous_world_paused = is_world_paused()
             current.shockwave_disabled_after_impact = false
             current.impact_time = math.max(0.0, travel_duration)
-            current.impact_effect_time = tonumber(payload.impact_effect_time) or tonumber(payload.forced_blood_time) or SNIPER_KILLCAM_FORCED_BLOOD_DELAY
-            current.forced_blood_time = current.impact_effect_time
-            current.impact_sfx_time = tonumber(payload.impact_sfx_time) or current.impact_effect_time
-            current.impact_sfx = payload.impact_sfx or SNIPER_KILLCAM_DAMAGED_SFX
-            current.impact_sfx_volume = tonumber(payload.impact_sfx_volume) or SNIPER_KILLCAM_IMPACT_SFX_VOLUME
-            current.killcam_hit = payload.hit
             current.impact_bullet_forward_offset = nil
             current.killcam_sfx_handles = {}
             force_scope_released()
@@ -1437,7 +1255,6 @@ function CutSceneManager:Initialize()
             if current.skipped == true then
                 return
             end
-            tick_killcam_blood_effects(self, dt)
             apply_sniper_killcam_profile(current)
             apply_sniper_killcam_post_impact(current)
             local flash_out_alpha = tonumber(current.killcam_profile.flash_out_alpha)
@@ -1466,46 +1283,20 @@ function CutSceneManager:Initialize()
                 current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
                     play_sfx_handle(self.general, SNIPER_KILLCAM_BULLET_CAM_SFX, 1.0)
             end
-            if current.forced_blood_played ~= true and
-                (tonumber(current.elapsed) or 0.0) >= (tonumber(current.forced_blood_time) or SNIPER_KILLCAM_FORCED_BLOOD_DELAY) then
-                current.forced_blood_played = true
-                local payload = current.payload or {}
-                current.killcam_hit = current.killcam_hit or payload.hit or resolve_sniper_killcam_hit_payload(payload.bullet_id)
-                local direct_blood_spawned = queue_killcam_blood_effects(self, current.killcam_hit or payload.hit)
-                if self.general ~= nil and self.general.Publish ~= nil then
-                    self.general:Publish("sniper.killcam_impact", {
-                        bullet_id = payload.bullet_id,
-                        hit = current.killcam_hit or payload.hit,
-                        elapsed = current.elapsed,
-                        impact_time = current.forced_blood_time,
-                        forced = true,
-                        direct_blood_spawned = direct_blood_spawned,
-                        cutscene = current.id
-                    })
-                end
-            end
-            if current.impact_sfx_played ~= true and
-                (tonumber(current.elapsed) or 0.0) >= (tonumber(current.impact_sfx_time) or tonumber(current.forced_blood_time) or SNIPER_KILLCAM_FORCED_BLOOD_DELAY) then
-                current.impact_sfx_played = true
-                local payload = current.payload or {}
-                current.killcam_hit = current.killcam_hit or payload.hit or resolve_sniper_killcam_hit_payload(payload.bullet_id)
-                local location = get_killcam_hit_location(current.killcam_hit or payload.hit)
-                current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
-                    play_impact_sfx(self.general, current.impact_sfx, current.impact_sfx_volume, location)
-            end
-            if current.impact_event_published ~= true and
+            if current.damaged_sfx_played ~= true and
                 (tonumber(current.elapsed) or 0.0) >= (tonumber(current.impact_time) or 0.0) then
-                current.impact_event_published = true
+                current.damaged_sfx_played = true
                 if self.general ~= nil and self.general.Publish ~= nil then
                     local payload = current.payload or {}
                     self.general:Publish("sniper.killcam_impact", {
                         bullet_id = payload.bullet_id,
-                        hit = current.killcam_hit or payload.hit,
                         elapsed = current.elapsed,
                         impact_time = current.impact_time,
                         cutscene = current.id
                     })
                 end
+                current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
+                    play_sfx_handle(self.general, SNIPER_KILLCAM_DAMAGED_SFX, 1.0)
             end
             if was_confirm_pressed() then
                 current.skipped = true
@@ -1515,9 +1306,6 @@ function CutSceneManager:Initialize()
         on_end = function(current)
             if current.reason == "skipped" then
                 stop_killcam_sfx_handles(self.general, current.killcam_sfx_handles)
-            end
-            if current.reason ~= "finished" then
-                clear_killcam_blood_effects(self)
             end
             current.killcam_sfx_handles = nil
             if SniperKillCam ~= nil and SniperKillCam.Stop ~= nil then
@@ -1552,7 +1340,6 @@ end
 
 function CutSceneManager:Shutdown()
     self:Stop("shutdown")
-    clear_killcam_blood_effects(self)
 end
 
 function CutSceneManager:Register(id, definition)
@@ -1603,7 +1390,6 @@ end
 
 function CutSceneManager:Tick(dt)
     if self.current == nil then
-        tick_killcam_blood_effects(self, get_raw_delta_time(dt or 0.0))
         self:PollSniperKillCam()
         return
     end
@@ -1637,24 +1423,18 @@ function CutSceneManager:PollSniperKillCam()
         return
     end
 
-    local hit = resolve_sniper_killcam_hit_payload(bullet_id)
-    local payload = {
+    self:Play("sniper_killcam", {
         bullet_id = bullet_id,
-        hit = hit,
-        forced_blood_time = SNIPER_KILLCAM_FORCED_BLOOD_DELAY,
-        impact_effect_time = SNIPER_KILLCAM_FORCED_BLOOD_DELAY,
-        impact_sfx_time = SNIPER_KILLCAM_FORCED_BLOOD_DELAY,
-        impact_sfx = SNIPER_KILLCAM_DAMAGED_SFX,
-        impact_sfx_volume = SNIPER_KILLCAM_IMPACT_SFX_VOLUME,
         duration = SNIPER_KILLCAM_DURATION,
         travel_duration = SNIPER_KILLCAM_TRAVEL_DURATION,
         camera_mode = 0,
         profile = take_next_sniper_killcam_profile_id()
-    }
+    })
     if self.general ~= nil and self.general.Publish ~= nil then
-        self.general:Publish("sniper.killcam_triggered", payload)
+        self.general:Publish("sniper.killcam_triggered", {
+            bullet_id = bullet_id
+        })
     end
-    self:Play("sniper_killcam", payload)
 end
 
 return CutSceneManager

@@ -2282,6 +2282,42 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     SniperKillCam.set_function(
+        "GetHitSnapshot",
+        [](int32 BulletId) -> sol::object
+        {
+            sol::state_view LuaState(FLuaScriptManager::GetState());
+            FBulletCinematicSnapshot Snapshot;
+            if (!ASniperKillCamDirector::GetHitSnapshotForBulletId(BulletId, Snapshot))
+            {
+                return sol::make_object(LuaState, sol::nil);
+            }
+            sol::table Result = LuaState.create_table();
+            Result["BulletId"] = Snapshot.BulletId;
+            Result["Position"] = Snapshot.Position;
+            Result["PreviousPosition"] = Snapshot.PreviousPosition;
+            Result["Velocity"] = Snapshot.Velocity;
+            Result["TraveledDistance"] = Snapshot.TraveledDistance;
+            Result["LifeTime"] = Snapshot.LifeTime;
+            Result["AmmoType"] = Snapshot.AmmoType;
+            Result["Owner"] = Snapshot.Owner;
+            Result["bIsAlive"] = Snapshot.bIsAlive;
+            Result["bWasScopedShot"] = Snapshot.bWasScopedShot;
+            return sol::make_object(LuaState, Result);
+        }
+    );
+    SniperKillCam.set_function(
+        "GetHitLocation",
+        [](int32 BulletId) -> sol::object
+        {
+            FBulletCinematicSnapshot Snapshot;
+            if (!ASniperKillCamDirector::GetHitSnapshotForBulletId(BulletId, Snapshot))
+            {
+                return sol::make_object(FLuaScriptManager::GetState(), sol::nil);
+            }
+            return sol::make_object(FLuaScriptManager::GetState(), Snapshot.Position);
+        }
+    );
+    SniperKillCam.set_function(
         "Start",
         [](int32 BulletId, sol::optional<float> Duration, sol::optional<int32> CameraMode)
         {

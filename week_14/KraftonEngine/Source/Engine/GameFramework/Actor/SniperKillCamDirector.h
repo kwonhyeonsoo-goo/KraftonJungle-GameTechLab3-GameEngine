@@ -67,6 +67,7 @@ public:
 
 	static void NotifyBulletSpawned(UBallisticBulletManagerComponent* Manager, const FBulletCinematicSnapshot& Snapshot);
 	static void NotifyBulletHit(const FSniperHitInfo& HitInfo);
+	static bool GetHitSnapshotForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
 	static int32 ConsumePendingBulletId();
 	static void ClearPendingBullets();
 	static ASniperKillCamDirector* EnsureDirectorForWorld(UWorld* World);

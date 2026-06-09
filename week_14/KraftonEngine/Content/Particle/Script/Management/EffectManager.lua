@@ -5,7 +5,6 @@ local BLOOD_HIT_PARTICLE_PATH = "Content/Particle System/BloodHit.uasset"
 local BLOOD_HIT_POOL_SIZE = 5
 local BLOOD_HIT_NORMAL_COUNT = 3
 local BLOOD_HIT_PENETRATION_HEADSHOT_COUNT = 5
-local BLOOD_HIT_KILLCAM_FORCE_DELAY = 2.5
 local BLOOD_HIT_BURST_DELAYS = { 0.0, 0.06, 0.12, 0.18, 0.24 }
 local BLOOD_HIT_ROTATION_MODES = { "normal", "inverse_normal", "default", "normal", "inverse_normal" }
 local BLOOD_HIT_SCALE = Vec3(3.0, 3.0, 3.0)
@@ -66,17 +65,6 @@ local function get_bullet_id(hit)
         return nil
     end
     return bullet_id
-end
-
-local function get_payload_bullet_id(payload)
-    if payload == nil then
-        return nil
-    end
-    local bullet_id = tonumber(payload.bullet_id) or tonumber(payload.BulletId)
-    if bullet_id ~= nil and bullet_id ~= 0 then
-        return bullet_id
-    end
-    return get_bullet_id(get_hit_info(payload))
 end
 
 local function get_effect_delta_time(dt)
@@ -152,11 +140,8 @@ function EffectManager.new(general)
         general = general,
         blood_hit_effects = {},
         pending_killcam_hits = {},
-        forced_killcam_blood_hits = {},
         recent_hit_payloads = {},
-        played_blood_hits = {},
-        played_killcam_blood_hits = {},
-        active_killcam_bullet_id = nil
+        played_blood_hits = {}
     }, EffectManager)
 end
 
@@ -314,28 +299,9 @@ function EffectManager:GetBloodHitEffectCount(hit)
     return BLOOD_HIT_NORMAL_COUNT
 end
 
-function EffectManager:CacheKillCamBloodHit(bullet_id, payload)
-    if bullet_id == nil or bullet_id == 0 or payload == nil then
-        return nil
-    end
-
-    local cached = {
-        payload = payload,
-        count = BLOOD_HIT_PENETRATION_HEADSHOT_COUNT
-    }
-    self.pending_killcam_hits[bullet_id] = cached
-    self.recent_hit_payloads[bullet_id] = payload
-    self.forced_killcam_blood_hits[bullet_id] = {
-        payload = payload,
-        count = cached.count,
-        delay = BLOOD_HIT_KILLCAM_FORCE_DELAY
-    }
-    return cached
-end
-
 function EffectManager:HandleBloodHit(payload)
     local hit = get_hit_info(payload)
-    local bullet_id = get_payload_bullet_id(payload)
+    local bullet_id = get_bullet_id(hit)
 
     if bullet_id ~= nil then
         self.recent_hit_payloads[bullet_id] = payload
@@ -363,19 +329,19 @@ function EffectManager:HandleBloodHit(payload)
 end
 
 function EffectManager:HandleKillCamTriggered(payload)
-    local bullet_id = get_payload_bullet_id(payload)
+    local bullet_id = payload ~= nil and tonumber(payload.bullet_id) or nil
     if bullet_id == nil or bullet_id == 0 then
         self:StopAllBloodHitEffects()
         return nil
     end
 
-    self.active_killcam_bullet_id = bullet_id
     local hit_payload = self.recent_hit_payloads[bullet_id]
-    if hit_payload == nil and get_hit_location(get_hit_info(payload)) ~= nil then
-        hit_payload = payload
-    end
     if hit_payload ~= nil then
-        self:CacheKillCamBloodHit(bullet_id, hit_payload)
+        local hit = get_hit_info(hit_payload)
+        self.pending_killcam_hits[bullet_id] = {
+            payload = hit_payload,
+            count = self:GetBloodHitEffectCount(hit)
+        }
         self.played_blood_hits[bullet_id] = true
     end
 
@@ -384,63 +350,36 @@ function EffectManager:HandleKillCamTriggered(payload)
 end
 
 function EffectManager:HandleKillCamHit(payload)
-    local bullet_id = get_payload_bullet_id(payload) or self.active_killcam_bullet_id
+    local hit = get_hit_info(payload)
+    local bullet_id = payload ~= nil and tonumber(payload.bullet_id) or get_bullet_id(hit)
     if bullet_id == nil or bullet_id == 0 then
         return nil
     end
 
-    self:CacheKillCamBloodHit(bullet_id, payload)
+    self.pending_killcam_hits[bullet_id] = {
+        payload = payload,
+        count = self:GetBloodHitEffectCount(hit)
+    }
+    self.recent_hit_payloads[bullet_id] = payload
     self.played_blood_hits[bullet_id] = true
     self:StopAllBloodHitEffects()
     return nil
 end
 
-function EffectManager:PlayKillCamBloodForBullet(bullet_id, payload)
+function EffectManager:PlayPendingKillCamBlood(payload)
+    local bullet_id = payload ~= nil and tonumber(payload.bullet_id) or nil
     if bullet_id == nil or bullet_id == 0 then
-        return nil
-    end
-    if self.played_killcam_blood_hits[bullet_id] == true then
         return nil
     end
 
     local pending = self.pending_killcam_hits[bullet_id]
-    if pending == nil and get_hit_location(get_hit_info(payload)) ~= nil then
-        pending = {
-            payload = payload,
-            count = BLOOD_HIT_PENETRATION_HEADSHOT_COUNT
-        }
-    end
-    if pending == nil and self.recent_hit_payloads[bullet_id] ~= nil then
-        local hit_payload = self.recent_hit_payloads[bullet_id]
-        pending = {
-            payload = hit_payload,
-            count = BLOOD_HIT_PENETRATION_HEADSHOT_COUNT
-        }
-    end
     if pending == nil then
-        log("killcam impact has no cached hit payload for bullet_id=" .. tostring(bullet_id))
         return nil
     end
 
     self.pending_killcam_hits[bullet_id] = nil
-    self.forced_killcam_blood_hits[bullet_id] = nil
     self.played_blood_hits[bullet_id] = true
-    self.played_killcam_blood_hits[bullet_id] = true
     return self:PlayBloodHit(pending.payload, pending.count)
-end
-
-function EffectManager:PlayPendingKillCamBlood(payload)
-    local bullet_id = get_payload_bullet_id(payload) or self.active_killcam_bullet_id
-    if payload ~= nil and payload.direct_blood_spawned == true then
-        if bullet_id ~= nil and bullet_id ~= 0 then
-            self.pending_killcam_hits[bullet_id] = nil
-            self.forced_killcam_blood_hits[bullet_id] = nil
-            self.played_blood_hits[bullet_id] = true
-            self.played_killcam_blood_hits[bullet_id] = true
-        end
-        return nil
-    end
-    return self:PlayKillCamBloodForBullet(bullet_id, payload)
 end
 
 function EffectManager:PlayBloodHit(payload, effect_count)
@@ -490,13 +429,6 @@ end
 function EffectManager:Tick(dt)
     dt = get_effect_delta_time(dt)
 
-    for bullet_id, forced in pairs(self.forced_killcam_blood_hits) do
-        forced.delay = (tonumber(forced.delay) or 0.0) - dt
-        if forced.delay <= 0.0 then
-            self:PlayKillCamBloodForBullet(bullet_id, forced.payload)
-        end
-    end
-
     for _, effect in ipairs(self.blood_hit_effects) do
         if effect.delay > 0.0 then
             effect.delay = effect.delay - dt
@@ -528,11 +460,8 @@ function EffectManager:Clear()
     end
     self.blood_hit_effects = {}
     self.pending_killcam_hits = {}
-    self.forced_killcam_blood_hits = {}
     self.recent_hit_payloads = {}
     self.played_blood_hits = {}
-    self.played_killcam_blood_hits = {}
-    self.active_killcam_bullet_id = nil
 end
 
 return EffectManager
