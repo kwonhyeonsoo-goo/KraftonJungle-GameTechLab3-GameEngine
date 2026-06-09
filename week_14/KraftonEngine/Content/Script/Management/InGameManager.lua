@@ -591,6 +591,8 @@ function InGameManager:Initialize()
         end
         self.general:AddScore(KILLCAM_TRIGGER_BONUS)
         scorePayload.total_score = self.general:GetScore()
+        scorePayload.bullet_id = bulletId
+        self.general:Publish("ingame.sniper_killcam_hit", scorePayload)
     end)
 
     self.general:Subscribe("ingame.pause_resume_requested", self, function()

@@ -2,9 +2,11 @@ local EffectManager = {}
 EffectManager.__index = EffectManager
 
 local BLOOD_HIT_PARTICLE_PATH = "Content/Particle System/BloodHit.uasset"
-local BLOOD_HIT_POOL_SIZE = 3
-local BLOOD_HIT_BURST_DELAYS = { 0.0, 0.08, 0.16 }
-local BLOOD_HIT_ROTATION_MODES = { "normal", "inverse_normal", "default" }
+local BLOOD_HIT_POOL_SIZE = 5
+local BLOOD_HIT_NORMAL_COUNT = 3
+local BLOOD_HIT_PENETRATION_HEADSHOT_COUNT = 5
+local BLOOD_HIT_BURST_DELAYS = { 0.0, 0.06, 0.12, 0.18, 0.24 }
+local BLOOD_HIT_ROTATION_MODES = { "normal", "inverse_normal", "default", "normal", "inverse_normal" }
 local BLOOD_HIT_SCALE = Vec3(3.0, 3.0, 3.0)
 local BLOOD_HIT_LIFETIME = 8.0
 local HIDDEN_LOCATION = Vec3(0.0, 0.0, -100000.0)
@@ -52,6 +54,38 @@ local function get_hit_normal(hit)
         return nil
     end
     return hit.HitNormal or hit.WorldHitNormal or hit.Normal
+end
+
+local function get_bullet_id(hit)
+    if hit == nil then
+        return nil
+    end
+    local bullet_id = tonumber(hit.BulletId)
+    if bullet_id == nil or bullet_id == 0 then
+        return nil
+    end
+    return bullet_id
+end
+
+local function get_effect_delta_time(dt)
+    dt = tonumber(dt) or 0.0
+    if dt > 0.0 then
+        return dt
+    end
+    if Time ~= nil and Time.RawDeltaTime ~= nil then
+        return tonumber(Time.RawDeltaTime()) or 0.0
+    end
+    return dt
+end
+
+local function is_penetrating_headshot(hit)
+    if hit == nil or hit.bIsHeadshot ~= true then
+        return false
+    end
+    if SniperHitOutcome ~= nil and hit.HitOutcome == SniperHitOutcome.Penetrated then
+        return true
+    end
+    return tonumber(hit.HitOutcome) == 3
 end
 
 local function atan2_degrees(y, x)
@@ -104,7 +138,10 @@ end
 function EffectManager.new(general)
     return setmetatable({
         general = general,
-        blood_hit_effects = {}
+        blood_hit_effects = {},
+        pending_killcam_hits = {},
+        recent_hit_payloads = {},
+        played_blood_hits = {}
     }, EffectManager)
 end
 
@@ -112,7 +149,23 @@ function EffectManager:Initialize()
     self:EnsureBloodHitEffects()
 
     self.general:Subscribe("ingame.sniper_hit_scored", self, function(payload)
-        self:PlayBloodHit(payload)
+        self:HandleBloodHit(payload)
+    end)
+
+    self.general:Subscribe("ingame.sniper_killed", self, function(payload)
+        self:HandleBloodHit(payload)
+    end)
+
+    self.general:Subscribe("sniper.killcam_triggered", self, function(payload)
+        self:HandleKillCamTriggered(payload)
+    end)
+
+    self.general:Subscribe("ingame.sniper_killcam_hit", self, function(payload)
+        self:HandleKillCamHit(payload)
+    end)
+
+    self.general:Subscribe("sniper.killcam_impact", self, function(payload)
+        self:PlayPendingKillCamBlood(payload)
     end)
 
     self.general:Subscribe("scene.exiting", self, function()
@@ -174,6 +227,9 @@ function EffectManager:EnsureBloodHitEffects()
 
         component:Deactivate()
         component:ResetParticles()
+        if component.SetTickWhenPaused ~= nil then
+            component:SetTickWhenPaused(true)
+        end
 
         if actor ~= nil then
             actor.Location = HIDDEN_LOCATION
@@ -212,7 +268,120 @@ function EffectManager:ActivateBloodHitEffect(effect, location, rotation)
     effect.pending_rotation = nil
 end
 
-function EffectManager:PlayBloodHit(payload)
+function EffectManager:StopBloodHitEffect(effect)
+    if effect == nil then
+        return
+    end
+    if effect.component ~= nil then
+        effect.component:Deactivate()
+        effect.component:ResetParticles()
+    end
+    if is_valid_object(effect.actor) then
+        effect.actor.Location = HIDDEN_LOCATION
+    end
+    effect.delay = 0.0
+    effect.remaining = 0.0
+    effect.pending_location = nil
+    effect.pending_rotation = nil
+end
+
+function EffectManager:StopAllBloodHitEffects()
+    for _, effect in ipairs(self.blood_hit_effects) do
+        self:StopBloodHitEffect(effect)
+    end
+end
+
+function EffectManager:GetBloodHitEffectCount(hit)
+    if is_penetrating_headshot(hit) then
+        return BLOOD_HIT_PENETRATION_HEADSHOT_COUNT
+    end
+    return BLOOD_HIT_NORMAL_COUNT
+end
+
+function EffectManager:HandleBloodHit(payload)
+    local hit = get_hit_info(payload)
+    local bullet_id = get_bullet_id(hit)
+
+    if bullet_id ~= nil then
+        self.recent_hit_payloads[bullet_id] = payload
+    end
+
+    if is_penetrating_headshot(hit) then
+        if bullet_id ~= nil then
+            self.pending_killcam_hits[bullet_id] = {
+                payload = payload,
+                count = self:GetBloodHitEffectCount(hit)
+            }
+            self:StopAllBloodHitEffects()
+            return nil
+        end
+    end
+
+    if bullet_id ~= nil then
+        if self.played_blood_hits[bullet_id] == true then
+            return nil
+        end
+        self.played_blood_hits[bullet_id] = true
+    end
+
+    return self:PlayBloodHit(payload, BLOOD_HIT_NORMAL_COUNT)
+end
+
+function EffectManager:HandleKillCamTriggered(payload)
+    local bullet_id = payload ~= nil and tonumber(payload.bullet_id) or nil
+    if bullet_id == nil or bullet_id == 0 then
+        self:StopAllBloodHitEffects()
+        return nil
+    end
+
+    local hit_payload = self.recent_hit_payloads[bullet_id]
+    if hit_payload ~= nil then
+        local hit = get_hit_info(hit_payload)
+        self.pending_killcam_hits[bullet_id] = {
+            payload = hit_payload,
+            count = self:GetBloodHitEffectCount(hit)
+        }
+        self.played_blood_hits[bullet_id] = true
+    end
+
+    self:StopAllBloodHitEffects()
+    return nil
+end
+
+function EffectManager:HandleKillCamHit(payload)
+    local hit = get_hit_info(payload)
+    local bullet_id = payload ~= nil and tonumber(payload.bullet_id) or get_bullet_id(hit)
+    if bullet_id == nil or bullet_id == 0 then
+        return nil
+    end
+
+    self.pending_killcam_hits[bullet_id] = {
+        payload = payload,
+        count = self:GetBloodHitEffectCount(hit)
+    }
+    self.recent_hit_payloads[bullet_id] = payload
+    self.played_blood_hits[bullet_id] = true
+    self:StopAllBloodHitEffects()
+    return nil
+end
+
+function EffectManager:PlayPendingKillCamBlood(payload)
+    local bullet_id = payload ~= nil and tonumber(payload.bullet_id) or nil
+    if bullet_id == nil or bullet_id == 0 then
+        return nil
+    end
+
+    local pending = self.pending_killcam_hits[bullet_id]
+    if pending == nil then
+        return nil
+    end
+
+    self.pending_killcam_hits[bullet_id] = nil
+    self.played_blood_hits[bullet_id] = true
+    return self:PlayBloodHit(pending.payload, pending.count)
+end
+
+function EffectManager:PlayBloodHit(payload, effect_count)
     local hit = get_hit_info(payload)
     local location = get_hit_location(hit)
     if location == nil then
@@ -223,21 +392,33 @@ function EffectManager:PlayBloodHit(payload)
         return nil
     end
 
+    effect_count = math.floor(tonumber(effect_count) or BLOOD_HIT_NORMAL_COUNT)
+    if effect_count < 1 then
+        effect_count = 1
+    end
+    if effect_count > BLOOD_HIT_POOL_SIZE then
+        effect_count = BLOOD_HIT_POOL_SIZE
+    end
+
     local hit_normal = get_hit_normal(hit)
     for index, effect in ipairs(self.blood_hit_effects) do
-        local rotation = get_blood_hit_rotation(index, hit_normal)
+        if index > effect_count then
+            self:StopBloodHitEffect(effect)
+        else
+            local rotation = get_blood_hit_rotation(index, hit_normal)
 
-        effect.component:Deactivate()
-        effect.component:ResetParticles()
-        effect.remaining = 0.0
-        effect.pending_location = location
-        effect.pending_rotation = rotation
-        effect.delay = BLOOD_HIT_BURST_DELAYS[index] or 0.0
+            effect.component:Deactivate()
+            effect.component:ResetParticles()
+            effect.remaining = 0.0
+            effect.pending_location = location
+            effect.pending_rotation = rotation
+            effect.delay = BLOOD_HIT_BURST_DELAYS[index] or 0.0
 
-        if effect.delay <= 0.0 then
-            self:ActivateBloodHitEffect(effect, location, rotation)
-        elseif is_valid_object(effect.actor) then
-            effect.actor.Location = HIDDEN_LOCATION
+            if effect.delay <= 0.0 then
+                self:ActivateBloodHitEffect(effect, location, rotation)
+            elseif is_valid_object(effect.actor) then
+                effect.actor.Location = HIDDEN_LOCATION
+            end
         end
     end
 
@@ -245,7 +426,7 @@ function EffectManager:PlayBloodHit(payload)
 end
 
 function EffectManager:Tick(dt)
-    dt = tonumber(dt) or 0.0
+    dt = get_effect_delta_time(dt)
 
     for _, effect in ipairs(self.blood_hit_effects) do
         if effect.delay > 0.0 then
@@ -277,6 +458,9 @@ function EffectManager:Clear()
         end
     end
     self.blood_hit_effects = {}
+    self.pending_killcam_hits = {}
+    self.recent_hit_payloads = {}
+    self.played_blood_hits = {}
 end
 
 return EffectManager
