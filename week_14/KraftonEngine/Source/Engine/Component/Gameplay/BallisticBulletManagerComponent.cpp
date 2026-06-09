@@ -4,6 +4,7 @@
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
 #include "Core/Logging/Log.h"
@@ -56,6 +57,8 @@ namespace
 	constexpr float SniperBaseDragScale = 0.00008f;
 	constexpr float SniperPhysicsAssetHitMinShapeSize = 0.001f;
 	constexpr float SniperPhysicsAssetHitEpsilon = 1.0e-6f;
+	constexpr int32 SniperBulletIgnoredHitMaxSkips = 8;
+	constexpr float SniperBulletIgnoredHitAdvanceDistance = 0.05f;
 
 	struct FSniperPoseShapeHit
 	{
@@ -231,6 +234,83 @@ namespace
 
 		OutT = ClampUnit(TMin);
 		return true;
+	}
+
+	bool IsSniperMovementLimitWallActor(const AActor* Actor)
+	{
+		if (!Actor)
+		{
+			return false;
+		}
+
+		const FString ActorName = Actor->GetName();
+		return ActorName == "Wall_0" ||
+			ActorName == "Wall_1" ||
+			ActorName == "Wall_2" ||
+			ActorName == "Wall_3";
+	}
+
+	bool UpdateRayAabbInterval(
+		float RayStart,
+		float RayDirection,
+		float BoundsMin,
+		float BoundsMax,
+		float& InOutEnter,
+		float& InOutExit)
+	{
+		if (std::abs(RayDirection) <= SniperPhysicsAssetHitEpsilon)
+		{
+			return RayStart >= BoundsMin && RayStart <= BoundsMax;
+		}
+
+		float T0 = (BoundsMin - RayStart) / RayDirection;
+		float T1 = (BoundsMax - RayStart) / RayDirection;
+		if (T0 > T1)
+		{
+			std::swap(T0, T1);
+		}
+
+		InOutEnter = (std::max)(InOutEnter, T0);
+		InOutExit = (std::min)(InOutExit, T1);
+		return InOutEnter <= InOutExit;
+	}
+
+	float ComputeIgnoredBulletHitAdvanceDistance(
+		const FHitResult& Hit,
+		const FVector& QueryStart,
+		const FVector& QueryDirection,
+		float RemainingSegmentLength)
+	{
+		float AdvanceDistance = (std::max)(
+			Hit.Distance + SniperBulletIgnoredHitAdvanceDistance,
+			SniperBulletIgnoredHitAdvanceDistance);
+
+		if (!Hit.HitComponent)
+		{
+			return AdvanceDistance;
+		}
+
+		const FBoundingBox Bounds = Hit.HitComponent->GetWorldBoundingBox();
+		if (!Bounds.IsValid())
+		{
+			return AdvanceDistance;
+		}
+
+		float EnterDistance = -FLT_MAX;
+		float ExitDistance = FLT_MAX;
+		if (!UpdateRayAabbInterval(QueryStart.X, QueryDirection.X, Bounds.Min.X, Bounds.Max.X, EnterDistance, ExitDistance) ||
+			!UpdateRayAabbInterval(QueryStart.Y, QueryDirection.Y, Bounds.Min.Y, Bounds.Max.Y, EnterDistance, ExitDistance) ||
+			!UpdateRayAabbInterval(QueryStart.Z, QueryDirection.Z, Bounds.Min.Z, Bounds.Max.Z, EnterDistance, ExitDistance))
+		{
+			return AdvanceDistance;
+		}
+
+		if (ExitDistance > 0.0f && ExitDistance < FLT_MAX)
+		{
+			AdvanceDistance = (std::max)(AdvanceDistance, ExitDistance + SniperBulletIgnoredHitAdvanceDistance);
+		}
+
+		return (std::min)(AdvanceDistance, RemainingSegmentLength);
 	}
 
 	bool IntersectSegmentLocalSphere(const FVector& Start, const FVector& End, float Radius, float& OutT)
@@ -1011,96 +1091,140 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 		return false;
 	}
 
+	const FVector SegmentDirection = Segment / SegmentLength;
+	auto FinalizeBulletHit = [this, &Bullet, World, &OutHit](const FHitResult& CandidateHit) -> bool
+	{
+		if (!CandidateHit.bHit)
+		{
+			return false;
+		}
+
+		OutHit = CandidateHit;
+		FHitResult PreciseHit;
+		if (ShouldRunPreciseCharacterHitQuery(OutHit))
+		{
+			if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+			{
+				OutHit = PreciseHit;
+				return true;
+			}
+		}
+
+		if (ShouldRunPosePhysicsAssetHitQuery(OutHit))
+		{
+			if (QueryPosePhysicsAssetCharacterHit(Bullet, OutHit, PreciseHit))
+			{
+				OutHit = PreciseHit;
+				return true;
+			}
+
+			UE_LOG(
+				"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Actor=%s Component=%s Bone=%s",
+				OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
+				OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
+				OutHit.HitBoneName.ToString().c_str());
+			return false;
+		}
+
+		return true;
+	};
+
 	if (Bullet.Radius > SniperBulletMinSweepRadius)
 	{
 		const FCollisionShape SweepShape = FCollisionShape::MakeSphere(Bullet.Radius);
-		if (World->PhysicsSweepByObjectTypes(
-			Bullet.PreviousPosition,
-			Bullet.Position,
-			FQuat::Identity,
-			SweepShape,
-			OutHit,
+		FVector QueryStart = Bullet.PreviousPosition;
+		for (int32 SkipCount = 0; SkipCount <= SniperBulletIgnoredHitMaxSkips; ++SkipCount)
+		{
+			const FVector RemainingSegment = Bullet.Position - QueryStart;
+			const float RemainingLength = RemainingSegment.Length();
+			if (RemainingLength <= SniperBulletMinSweepRadius)
+			{
+				return false;
+			}
+
+			FHitResult CandidateHit;
+			if (!World->PhysicsSweepByObjectTypes(
+				QueryStart,
+				Bullet.Position,
+				FQuat::Identity,
+				SweepShape,
+				CandidateHit,
+				SniperBulletQueryObjectMask,
+				Bullet.Owner))
+			{
+				break;
+			}
+
+			if (!CandidateHit.bHit)
+			{
+				return false;
+			}
+
+			if (!IsSniperMovementLimitWallActor(CandidateHit.HitActor))
+			{
+				return FinalizeBulletHit(CandidateHit);
+			}
+
+			const float AdvanceDistance = ComputeIgnoredBulletHitAdvanceDistance(
+				CandidateHit,
+				QueryStart,
+				SegmentDirection,
+				RemainingLength);
+			if (AdvanceDistance >= RemainingLength)
+			{
+				return false;
+			}
+
+			QueryStart = QueryStart + SegmentDirection * AdvanceDistance;
+		}
+	}
+
+	FVector QueryStart = Bullet.PreviousPosition;
+	for (int32 SkipCount = 0; SkipCount <= SniperBulletIgnoredHitMaxSkips; ++SkipCount)
+	{
+		const FVector RemainingSegment = Bullet.Position - QueryStart;
+		const float RemainingLength = RemainingSegment.Length();
+		if (RemainingLength <= SniperBulletMinSweepRadius)
+		{
+			return false;
+		}
+
+		FHitResult CandidateHit;
+		if (!World->PhysicsRaycastByObjectTypes(
+			QueryStart,
+			SegmentDirection,
+			RemainingLength,
+			CandidateHit,
 			SniperBulletQueryObjectMask,
 			Bullet.Owner))
 		{
-			if (!OutHit.bHit)
-			{
-				return false;
-			}
-
-			FHitResult PreciseHit;
-			if (ShouldRunPreciseCharacterHitQuery(OutHit))
-			{
-				if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
-				{
-					OutHit = PreciseHit;
-					return true;
-				}
-			}
-
-			if (ShouldRunPosePhysicsAssetHitQuery(OutHit))
-			{
-				if (QueryPosePhysicsAssetCharacterHit(Bullet, OutHit, PreciseHit))
-				{
-					OutHit = PreciseHit;
-					return true;
-				}
-
-				UE_LOG(
-					"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Actor=%s Component=%s Bone=%s",
-					OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
-					OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
-					OutHit.HitBoneName.ToString().c_str());
-				return false;
-			}
-
-			return true;
+			return false;
 		}
-	}
 
-	if (!World->PhysicsRaycastByObjectTypes(
-		Bullet.PreviousPosition,
-		Segment / SegmentLength,
-		SegmentLength,
-		OutHit,
-		SniperBulletQueryObjectMask,
-		Bullet.Owner))
-	{
-		return false;
-	}
-
-	if (!OutHit.bHit)
-	{
-		return false;
-	}
-
-	FHitResult PreciseHit;
-	if (ShouldRunPreciseCharacterHitQuery(OutHit))
-	{
-		if (QueryPreciseCharacterHit(Bullet, World, OutHit, PreciseHit))
+		if (!CandidateHit.bHit)
 		{
-			OutHit = PreciseHit;
-			return true;
+			return false;
 		}
-	}
 
-	if (ShouldRunPosePhysicsAssetHitQuery(OutHit))
-	{
-		if (QueryPosePhysicsAssetCharacterHit(Bullet, OutHit, PreciseHit))
+		if (!IsSniperMovementLimitWallActor(CandidateHit.HitActor))
 		{
-			OutHit = PreciseHit;
-			return true;
+			return FinalizeBulletHit(CandidateHit);
 		}
 
-		UE_LOG(
-			"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Actor=%s Component=%s Bone=%s",
-			OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
-			OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
-			OutHit.HitBoneName.ToString().c_str());
-		return false;
+		const float AdvanceDistance = ComputeIgnoredBulletHitAdvanceDistance(
+			CandidateHit,
+			QueryStart,
+			SegmentDirection,
+			RemainingLength);
+		if (AdvanceDistance >= RemainingLength)
+		{
+			return false;
+		}
+
+		QueryStart = QueryStart + SegmentDirection * AdvanceDistance;
 	}
 
-	return true;
+	return false;
 }
 
 bool UBallisticBulletManagerComponent::ShouldRunPreciseCharacterHitQuery(const FHitResult& BroadHit) const

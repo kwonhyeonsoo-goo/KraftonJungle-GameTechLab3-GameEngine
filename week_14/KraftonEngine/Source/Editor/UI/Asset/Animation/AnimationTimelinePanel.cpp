@@ -1,4 +1,4 @@
-#include "AnimationTimelinePanel.h"
+﻿#include "AnimationTimelinePanel.h"
 #include "Editor/UI/Asset/Animation/AnimationTransportBar.h"
 
 #include "Animation/Sequence/AnimSequence.h"

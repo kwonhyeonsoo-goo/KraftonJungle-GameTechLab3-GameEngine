@@ -294,8 +294,8 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 1.0f;
         AttackIntervalMax = 2.0f;
-        AdvanceIntervalMin = 20.0f;
-        AdvanceIntervalMax = 30.0f;
+        AdvanceIntervalMin = 80.0f;
+        AdvanceIntervalMax = 120.0f;
         RepositionChanceWhenInRange = 0.0f;
         CombatDecisionCooldown = 3.0f;
         TakeCoverChanceWhenInRange = 0.0f;
@@ -560,7 +560,7 @@ float UCombatCoverAgentComponent::GetCombatAnimationMoveState() const
 {
     if (IsMovingForCombatRange())
     {
-        return ShouldRunDuringCombatMovement() ? 2.0f : 1.0f;
+        return ShouldRunDuringCombatMovement() ? 2.0f : 1.5f;
     }
 
     if (ShouldUseStandingFire())
@@ -584,9 +584,11 @@ bool UCombatCoverAgentComponent::ShouldRunDuringCombatMovement() const
 float UCombatCoverAgentComponent::GetCurrentCombatMoveSpeed() const
 {
     const float MoveState = GetCombatAnimationMoveState();
-    const float BaseSpeed = MoveState >= 1.5f
+    const float BaseSpeed = MoveState >= 2.0f
         ? (std::max)(0.0f, RunMoveSpeed)
-        : (std::max)(0.0f, CrouchMoveSpeed);
+        : (MoveState >= 1.5f
+            ? (std::max)(0.0f, MoveSpeed)
+            : (std::max)(0.0f, CrouchMoveSpeed));
 
     if (IsSuppressed())
     {

@@ -155,17 +155,24 @@ local function update_health_indicator(agent)
     end
 
     lastHealthIndicatorState = state
-    local indicator = billboards.green or billboards.orange or billboards.red
-    if state == "hidden" then
-        set_component_visible(indicator, false)
-        set_component_visible(billboards.orange, false)
-        set_component_visible(billboards.red, false)
+
+    if billboards.green ~= nil and billboards.orange ~= nil and billboards.red ~= nil then
+        set_component_visible(billboards.green, state == "green")
+        set_component_visible(billboards.orange, state == "orange")
+        set_component_visible(billboards.red, state == "red")
         return
     end
 
-    set_component_visible(indicator, true)
+    set_component_visible(billboards.green, false)
     set_component_visible(billboards.orange, false)
     set_component_visible(billboards.red, false)
+
+    if state == "hidden" then
+        return
+    end
+
+    local indicator = billboards[state] or billboards.green or billboards.orange or billboards.red
+    set_component_visible(indicator, true)
 
     if indicator ~= nil and indicator.SetMaterialPath ~= nil then
         indicator:SetMaterialPath(HEALTH_INDICATOR_MATERIALS[state])
@@ -256,6 +263,45 @@ local function set_graph_trigger(anim, variableName)
     return false
 end
 
+local function agent_is_alive(agent)
+    if agent == nil then
+        return true
+    end
+    if agent.IsAlive ~= nil then
+        return agent:IsAlive()
+    end
+    return true
+end
+
+local function agent_role_name(agent)
+    if agent == nil then
+        return ""
+    end
+    if agent.GetResolvedCombatRoleName ~= nil then
+        local resolved = agent:GetResolvedCombatRoleName()
+        if resolved ~= nil and resolved ~= "" and resolved ~= "AutoFromTeam" then
+            return resolved
+        end
+    end
+    if agent.GetCombatRoleName ~= nil then
+        local role = agent:GetCombatRoleName()
+        if role ~= nil then
+            return role
+        end
+    end
+    return ""
+end
+
+local function should_run_during_combat_movement(agent)
+    if agent == nil then
+        return false
+    end
+    if agent.ShouldRunDuringCombatMovement ~= nil then
+        return agent:ShouldRunDuringCombatMovement()
+    end
+    return agent_role_name(agent) == "EnemyAssault"
+end
+
 local function current_move_state(agent)
     if agent == nil then
         return 0.0
@@ -263,13 +309,18 @@ local function current_move_state(agent)
     if agent.GetCombatAnimationMoveState ~= nil then
         return agent:GetCombatAnimationMoveState()
     end
-    if agent:IsMovingForCombatRange() then
-        return 2.0
+    if agent.IsMovingForCombatRange ~= nil and agent:IsMovingForCombatRange() then
+        return should_run_during_combat_movement(agent) and 2.0 or 1.5
+    end
+    if agent.ShouldUseStandingFire ~= nil and agent:ShouldUseStandingFire() then
+        return 0.0
     end
     if agent.IsInStandingCombatSlot ~= nil and agent:IsInStandingCombatSlot() then
         return 0.0
     end
-    if agent:IsInCover() or agent:IsEngaging() then
+    local inCover = agent.IsInCover ~= nil and agent:IsInCover()
+    local engaging = agent.IsEngaging ~= nil and agent:IsEngaging()
+    if inCover or engaging then
         return 1.0
     end
     return 0.0
@@ -297,8 +348,8 @@ function Tick(dt)
 
     local agent = get_combat_agent()
     update_health_indicator(agent)
-    local isDead = agent ~= nil and not agent:IsAlive()
-    local isEngaging = agent ~= nil and agent:IsEngaging()
+    local isDead = not agent_is_alive(agent)
+    local isEngaging = agent ~= nil and agent.IsEngaging ~= nil and agent:IsEngaging()
     local hitTriggered = false
     if agent ~= nil and not isDead and agent.ConsumeHitReaction ~= nil then
         hitTriggered = agent:ConsumeHitReaction()
@@ -315,7 +366,10 @@ function Tick(dt)
     anim:SetGraphVariableFloat("MoveState", moveState)
     anim:SetGraphVariableBool("Death", isDead)
     if anim.SetGraphVariableBool ~= nil then
-        if hitBoolPulseTime > 0.0 then
+        if isDead then
+            hitBoolPulseTime = 0.0
+            anim:SetGraphVariableBool("Hit", false)
+        elseif hitBoolPulseTime > 0.0 then
             hitBoolPulseTime = hitBoolPulseTime - dt
             anim:SetGraphVariableBool("Hit", true)
         else

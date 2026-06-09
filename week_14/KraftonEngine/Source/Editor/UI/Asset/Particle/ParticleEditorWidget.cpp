@@ -56,6 +56,7 @@
 #include "Particle/Modules/ParticleModuleLifetime.h"
 #include "Particle/Modules/ParticleModuleLocation.h"
 #include "Particle/Modules/ParticleModuleRequired.h"
+#include "Particle/Modules/ParticleModuleRotation.h"
 #include "Particle/Modules/ParticleModuleSize.h"
 #include "Particle/Modules/ParticleModuleSizeByLife.h"
 #include "Particle/Modules/ParticleModuleSpawn.h"
@@ -97,6 +98,7 @@ namespace
 	constexpr int32 CurveSourceBeamNoiseSpeed = 20;
 	constexpr int32 CurveSourceBeamSourceTangent = 21;
 	constexpr int32 CurveSourceBeamTargetTangent = 22;
+	constexpr int32 CurveSourceInitialRotation = 23;
 
 	uint32 GNextParticleEditorInstanceId = 0;
 
@@ -182,6 +184,7 @@ namespace
 		case UParticleModule::EModuleCategory::Acceleration:  Color = IM_COL32(83, 83, 93, 255);    break;
 		case UParticleModule::EModuleCategory::Color:     Color = IM_COL32(56, 105, 56, 255);   break;
 		case UParticleModule::EModuleCategory::Size:      Color = IM_COL32(56, 105, 56, 255);   break;
+		case UParticleModule::EModuleCategory::Rotation:  Color = IM_COL32(83, 83, 93, 255);    break;
 		case UParticleModule::EModuleCategory::Collision: Color = IM_COL32(70, 70, 86, 255);    break;
 		case UParticleModule::EModuleCategory::Event:     Color = IM_COL32(72, 94, 120, 255);   break;
 		case UParticleModule::EModuleCategory::SubUV:     Color = IM_COL32(72, 94, 120, 255);   break;
@@ -258,6 +261,7 @@ namespace
 			Cast<UParticleModuleLifetime>(Module) ||
 			Cast<UParticleModuleLocation>(Module) ||
 			Cast<UParticleModuleVelocity>(Module) ||
+			Cast<UParticleModuleRotation>(Module) ||
 			Cast<UParticleModuleAcceleration>(Module) ||
 			Cast<UParticleModuleSize>(Module) ||
 			Cast<UParticleModuleSizeByLife>(Module) ||
@@ -3204,6 +3208,13 @@ void FParticleEditorWidget::RenderPropertyPanel(ImVec2 Size)
 					bChanged |= DragRotatorField("Rotation Rate", VectorFieldRotation->RotationRate, 0.1f);
 				}
 			}
+			else if (UParticleModuleRotation* Rotation = Cast<UParticleModuleRotation>(Module))
+			{
+				if (ImGui::CollapsingHeader("Initial Rotation", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					bChanged |= DrawFloatDistributionEditor("Start Rotation Degrees", Rotation->StartRotationDistribution, Rotation, 1.0f, -3600.0f, 3600.0f, "SpawnTime");
+				}
+			}
 			else if (UParticleModuleBloodSpray* BloodSpray = Cast<UParticleModuleBloodSpray>(Module))
 			{
 				if (ImGui::CollapsingHeader("Blood Spray", ImGuiTreeNodeFlags_DefaultOpen))
@@ -3517,6 +3528,7 @@ void FParticleEditorWidget::RenderPropertyPanel(ImVec2 Size)
 			(Cast<UParticleModuleLifetime>(SelectedModuleForReset) ||
 			 Cast<UParticleModuleLocation>(SelectedModuleForReset) ||
 			 Cast<UParticleModuleVelocity>(SelectedModuleForReset) ||
+			 Cast<UParticleModuleRotation>(SelectedModuleForReset) ||
 			 Cast<UParticleModuleColor>(SelectedModuleForReset) ||
 			 Cast<UParticleModuleSize>(SelectedModuleForReset));
 		NotifyParticleAssetChanged((bChanged && bResetPreview) || bCurveChangeNeedsReset);
@@ -3783,6 +3795,12 @@ void FParticleEditorWidget::RenderCurveEditor(ImVec2 Size)
 		bChanged |= DrawVectorCurveDistributionPanel("Initial Velocity", Velocity->StartVelocityDistribution, CurveSourceInitialVelocity,
 			SelectedCurveSource, SelectedCurveChannel, SelectedCurveKeyIndex, bDraggingCurveKey);
 	}
+	else if (UParticleModuleRotation* Rotation = Cast<UParticleModuleRotation>(Module))
+	{
+		bHasCurve |= IsFloatCurveDistribution(Rotation->StartRotationDistribution);
+		bChanged |= DrawFloatCurveDistributionPanel("Initial Rotation", Rotation->StartRotationDistribution, CurveSourceInitialRotation,
+			SelectedCurveSource, SelectedCurveChannel, SelectedCurveKeyIndex, bDraggingCurveKey);
+	}
 	else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
 	{
 		bHasCurve |= IsVectorCurveDistribution(Acceleration->AccelerationDistribution);
@@ -3959,6 +3977,7 @@ void FParticleEditorWidget::RenderAddModulePopup()
 		AddRegular("Lifetime", UParticleModule::EModuleCategory::Lifetime, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleLifetime>(LOD, Emitter); });
 		AddRegular("Initial Location", UParticleModule::EModuleCategory::Location, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleLocation>(LOD, Emitter); });
 		AddRegular("Initial Velocity", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVelocity>(LOD, Emitter); });
+		AddRegular("Initial Rotation", UParticleModule::EModuleCategory::Rotation, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleRotation>(LOD, Emitter); });
 		AddRegular("Blood Spray", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleBloodSpray>(LOD, Emitter); });
 		AddRegular("Local Vector Field", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVectorFieldLocal>(LOD, Emitter); });
 		AddRegular("Vector Field Rotation", UParticleModule::EModuleCategory::Rotation, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVectorFieldRotation>(LOD, Emitter); });
@@ -4164,6 +4183,10 @@ bool FParticleEditorWidget::SelectFirstCurveForModule(UParticleModule* Module)
 	if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
 	{
 		return TryVectorCurve(Velocity->StartVelocityDistribution, CurveSourceInitialVelocity);
+	}
+	if (UParticleModuleRotation* Rotation = Cast<UParticleModuleRotation>(Module))
+	{
+		return TryFloatCurve(Rotation->StartRotationDistribution, CurveSourceInitialRotation, 0);
 	}
 	if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
 	{
@@ -4459,6 +4482,12 @@ FFloatCurve* FParticleEditorWidget::GetSelectedCurve(FString* OutCurveName, FStr
 		if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
 		{
 			return SelectVectorChannel(Velocity->StartVelocityDistribution, "Initial Velocity");
+		}
+		break;
+	case CurveSourceInitialRotation:
+		if (UParticleModuleRotation* Rotation = Cast<UParticleModuleRotation>(Module))
+		{
+			return SelectFloatCurve(Rotation->StartRotationDistribution, "Initial Rotation", "Degrees");
 		}
 		break;
 	case CurveSourceAcceleration:
