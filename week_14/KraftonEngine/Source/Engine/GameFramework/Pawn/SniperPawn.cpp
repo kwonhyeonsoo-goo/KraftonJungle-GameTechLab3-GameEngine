@@ -183,6 +183,8 @@ void ASniperPawn::SetupInputComponent()
 	InputComponent->AddAxisMapping("SniperMoveRight", 'A', -1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadTurn", EInputAxisSourceType::GamepadLeftStickX, 1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadLookUp", EInputAxisSourceType::GamepadLeftStickY, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperMoveForward", EInputAxisSourceType::GamepadRightStickY, 1.0f);
+	InputComponent->AddGamepadAxisMapping("SniperMoveRight", EInputAxisSourceType::GamepadRightStickX, 1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadScope", EInputAxisSourceType::GamepadLeftTrigger, 1.0f);
 	InputComponent->AddGamepadAxisMapping("SniperGamepadFire", EInputAxisSourceType::GamepadRightTrigger, 1.0f);
 	InputComponent->AddActionMapping("SniperFire", "LeftMouseButton");

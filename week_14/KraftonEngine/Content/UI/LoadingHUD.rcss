@@ -166,39 +166,44 @@ body {
     top: 92.000000px;
 }
 
-#loadingControlScope {
+#loadingControlMove {
     left: 526.000000px;
     top: 92.000000px;
 }
 
-#loadingControlFire {
+#loadingControlScope {
     left: 44.000000px;
+    top: 146.000000px;
+}
+
+#loadingControlFire {
+    left: 526.000000px;
     top: 146.000000px;
 }
 
 #loadingControlBreath {
-    left: 526.000000px;
-    top: 146.000000px;
+    left: 44.000000px;
+    top: 200.000000px;
 }
 
 #loadingControlZoom {
-    left: 44.000000px;
+    left: 526.000000px;
     top: 200.000000px;
 }
 
 #loadingControlAmmo {
-    left: 526.000000px;
-    top: 200.000000px;
-}
-
-#loadingControlReload {
     left: 44.000000px;
     top: 254.000000px;
 }
 
-#loadingControlPause {
+#loadingControlReload {
     left: 526.000000px;
     top: 254.000000px;
+}
+
+#loadingControlPause {
+    left: 44.000000px;
+    top: 308.000000px;
 }
 
 #loadingTitle {

@@ -808,8 +808,11 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         []()
         {
             const FInputSystemSnapshot& Snapshot = GetLuaInputSnapshot();
+            const FInputSystemSnapshot RawSnapshot = InputSystem::Get().MakeSnapshot();
             return Snapshot.WasPressed(VK_SPACE) ||
-                Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
+                Snapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom) ||
+                RawSnapshot.WasPressed(VK_SPACE) ||
+                RawSnapshot.WasGamepadButtonPressed(EGamepadButton::FaceBottom);
         }
     );
     Input.set_function(

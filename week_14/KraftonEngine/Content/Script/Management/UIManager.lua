@@ -1437,6 +1437,7 @@ function UIManager:SetRadioOpeningPresentation(payload)
     self:SetElementAlpha(widget, "radioBlackout", blackout_visible and self.radio_blackout_alpha or 0.0)
     self:SetElementVisible(widget, "radioOpeningSkipPrompt", skip_visible)
     self:SetElementStyle(widget, "radioOpeningSkipPrompt", "display", skip_visible and "block" or "none")
+    call_widget(widget, "SetText", "radioOpeningSkipPrompt", get_confirm_prompt_text("Skip", "Press Space to Skip"))
     self:SetElementAlpha(widget, "radioOpeningSkipPrompt", skip_visible and skip_alpha or 0.0)
 
     if suppress then

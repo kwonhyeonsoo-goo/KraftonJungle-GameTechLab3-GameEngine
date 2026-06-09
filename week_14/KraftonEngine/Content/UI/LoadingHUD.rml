@@ -16,6 +16,10 @@
                 <div class="control-action" data-ui-type="Text">Aim</div>
                 <div class="control-key" data-ui-type="Text">Mouse Move / Left Stick</div>
             </div>
+            <div id="loadingControlMove" class="loading-control-row" data-ui-type="Panel" data-ui-name="Move Control">
+                <div class="control-action" data-ui-type="Text">Move</div>
+                <div class="control-key" data-ui-type="Text">WASD / Right Stick</div>
+            </div>
             <div id="loadingControlScope" class="loading-control-row" data-ui-type="Panel" data-ui-name="Scope Control">
                 <div class="control-action" data-ui-type="Text">Scope</div>
                 <div class="control-key" data-ui-type="Text">Right Mouse / Left Trigger</div>

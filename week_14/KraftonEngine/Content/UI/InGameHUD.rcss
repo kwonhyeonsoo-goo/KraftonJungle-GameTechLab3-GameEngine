@@ -1285,6 +1285,7 @@ body {
 }
 
 #pauseControlAim,
+#pauseControlMove,
 #pauseControlScope,
 #pauseControlFire,
 #pauseControlBreath,
@@ -1307,10 +1308,11 @@ body {
 }
 
 #pauseControlAim { top: 132.000000px; }
-#pauseControlScope { top: 184.000000px; }
-#pauseControlFire { top: 236.000000px; }
-#pauseControlBreath { top: 288.000000px; }
-#pauseControlZoom { top: 340.000000px; }
-#pauseControlAmmo { top: 392.000000px; }
-#pauseControlReload { top: 444.000000px; }
-#pauseControlPause { top: 496.000000px; }
+#pauseControlMove { top: 178.000000px; }
+#pauseControlScope { top: 224.000000px; }
+#pauseControlFire { top: 270.000000px; }
+#pauseControlBreath { top: 316.000000px; }
+#pauseControlZoom { top: 362.000000px; }
+#pauseControlAmmo { top: 408.000000px; }
+#pauseControlReload { top: 454.000000px; }
+#pauseControlPause { top: 500.000000px; }
