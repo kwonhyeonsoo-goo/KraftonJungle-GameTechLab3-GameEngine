@@ -81,9 +81,9 @@ body {
 #loadingControlsPanel {
     position: absolute;
     left: 440.000000px;
-    top: 300.000000px;
+    top: 286.000000px;
     width: 1040.000000px;
-    height: 360.000000px;
+    height: 390.000000px;
     box-sizing: border-box;
     overflow: hidden;
     opacity: 1;
@@ -154,56 +154,58 @@ body {
     padding: 0px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0px;
-    color: rgba(238, 243, 246, 245);
+    opacity: 1;
+    color: rgba(238, 243, 246, 255);
+    font-weight: 700;
     font-size: 17.000000px;
     line-height: 42.000000px;
     text-align: right;
     overflow: hidden;
 }
 
-#loadingControlAim {
+#loadingControlMove {
     left: 44.000000px;
-    top: 92.000000px;
+    top: 88.000000px;
 }
 
-#loadingControlMove {
+#loadingControlAim {
     left: 526.000000px;
-    top: 92.000000px;
+    top: 88.000000px;
 }
 
 #loadingControlScope {
     left: 44.000000px;
-    top: 146.000000px;
+    top: 140.000000px;
 }
 
 #loadingControlFire {
     left: 526.000000px;
-    top: 146.000000px;
+    top: 140.000000px;
 }
 
 #loadingControlBreath {
     left: 44.000000px;
-    top: 200.000000px;
+    top: 192.000000px;
 }
 
 #loadingControlZoom {
     left: 526.000000px;
-    top: 200.000000px;
+    top: 192.000000px;
 }
 
 #loadingControlAmmo {
     left: 44.000000px;
-    top: 254.000000px;
+    top: 244.000000px;
 }
 
 #loadingControlReload {
     left: 526.000000px;
-    top: 254.000000px;
+    top: 244.000000px;
 }
 
 #loadingControlPause {
-    left: 44.000000px;
-    top: 308.000000px;
+    left: 285.000000px;
+    top: 296.000000px;
 }
 
 #loadingTitle {

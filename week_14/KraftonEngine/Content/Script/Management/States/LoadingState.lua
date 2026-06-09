@@ -22,6 +22,15 @@ local function log(message)
 end
 
 local function is_current_scene(path)
+    if Scene ~= nil and Scene.IsCurrent ~= nil then
+        local ok, value = pcall(function()
+            return Scene.IsCurrent(path)
+        end)
+        if ok then
+            return value == true
+        end
+    end
+
     if Scene == nil or Scene.GetCurrentPath == nil then
         return false
     end
@@ -81,6 +90,10 @@ function LoadingState:GetHUD()
     return HUD
 end
 
+function LoadingState:GetScenePath()
+    return SCENE_PATH
+end
+
 function LoadingState:Enter(payload)
     payload = payload or {}
     log("Enter reason=" .. tostring(payload.reason) .. " target_state=" .. tostring(payload.target_state) ..
@@ -93,10 +106,10 @@ function LoadingState:Enter(payload)
     self.target_scene = payload.target_scene or DEFAULT_TARGET_SCENE
     self.tip = payload.tip
 
-    if not is_current_scene(SCENE_PATH) then
-        transition_to_scene(SCENE_PATH)
-    else
+    if is_current_scene(SCENE_PATH) then
         log("Scene already current; no transition requested")
+    else
+        log("Scene mismatch on enter; SceneManager owns transition target=" .. tostring(SCENE_PATH))
     end
 
     self.general:Publish("loading.started", {

@@ -118,15 +118,27 @@ function Add-DirectoryEntries {
     param(
         [System.Collections.Generic.List[object]]$Entries,
         [string]$SourceDir,
-        [string]$RelativeRoot
+        [string]$RelativeRoot,
+        [string[]]$ExcludeRelativePaths = @()
     )
     if (!(Test-Path -LiteralPath $SourceDir -PathType Container)) {
         throw "Required package directory was not found: $SourceDir"
     }
 
+    $ExcludeSet = @{}
+    foreach ($ExcludePath in $ExcludeRelativePaths) {
+        if (![string]::IsNullOrWhiteSpace($ExcludePath)) {
+            $ExcludeSet[(Normalize-RelativePath $ExcludePath).ToLowerInvariant()] = $true
+        }
+    }
+
     Get-ChildItem -LiteralPath $SourceDir -Recurse -File | ForEach-Object {
         $UnderDir = Get-RelativePathCompat $SourceDir $_.FullName
         $RelativePath = Join-Path $RelativeRoot $UnderDir
+        $NormalizedRelativePath = Normalize-RelativePath $RelativePath
+        if ($ExcludeSet.ContainsKey($NormalizedRelativePath.ToLowerInvariant())) {
+            return
+        }
         Add-FileEntry $Entries $_.FullName $RelativePath
     }
 }
@@ -220,6 +232,44 @@ function Write-PackageSizeReport {
     }
 }
 
+function Get-JsonPropertyValue {
+    param(
+        $Object,
+        [string]$Name
+    )
+    if ($null -eq $Object) {
+        return $null
+    }
+    $Property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $Property) {
+        return $null
+    }
+    return $Property.Value
+}
+
+function Resolve-StartupScenePackagePath {
+    param([string]$StartLevelName)
+
+    $Scene = $StartLevelName.Trim().Replace("\", "/")
+    if ([string]::IsNullOrWhiteSpace($Scene)) {
+        return ""
+    }
+
+    if (!$Scene.EndsWith(".Scene", [System.StringComparison]::OrdinalIgnoreCase)) {
+        $Scene = $Scene + ".Scene"
+    }
+
+    if ($Scene.StartsWith("Content/Scene/", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $Scene
+    }
+
+    if ($Scene.Contains("/")) {
+        return $Scene
+    }
+
+    return "Content/Scene/" + $Scene
+}
+
 function Test-PackageOutput {
     param(
         [string]$PackageDir,
@@ -240,6 +290,32 @@ function Test-PackageOutput {
         $DirPath = Join-Path $PackageDir $RequiredDir
         if (!(Test-Path -LiteralPath $DirPath -PathType Container)) {
             throw "Package smoke failed: required directory was not written: $DirPath"
+        }
+    }
+
+    $ProjectSettingsPath = Join-Path $PackageDir "Settings\ProjectSettings.ini"
+    if (!(Test-Path -LiteralPath $ProjectSettingsPath -PathType Leaf)) {
+        throw "Package smoke failed: ProjectSettings.ini was not written: $ProjectSettingsPath"
+    }
+
+    $ProjectSettings = Get-Content -LiteralPath $ProjectSettingsPath -Raw | ConvertFrom-Json
+    $GameSettings = Get-JsonPropertyValue $ProjectSettings "Game"
+    $StartLevelName = [string](Get-JsonPropertyValue $GameSettings "StartLevelName")
+    if ([string]::IsNullOrWhiteSpace($StartLevelName)) {
+        throw "Package smoke failed: Game.StartLevelName is empty in Settings/ProjectSettings.ini"
+    }
+
+    $StartupScenePath = Resolve-StartupScenePackagePath $StartLevelName
+    $StartupSceneFullPath = Get-DestinationPath $PackageDir $StartupScenePath
+    if (!(Test-Path -LiteralPath $StartupSceneFullPath -PathType Leaf)) {
+        throw "Package smoke failed: startup scene was not written: $StartupScenePath"
+    }
+
+    foreach ($RequiredScene in @("Main", "Loading", "PreInGame", "InGame")) {
+        $RequiredScenePath = Resolve-StartupScenePackagePath $RequiredScene
+        $RequiredSceneFullPath = Get-DestinationPath $PackageDir $RequiredScenePath
+        if (!(Test-Path -LiteralPath $RequiredSceneFullPath -PathType Leaf)) {
+            throw "Package smoke failed: required runtime transition scene was not written: $RequiredScenePath"
         }
     }
 
@@ -368,7 +444,7 @@ if ($IncludePdb) {
 }
 
 Add-DirectoryEntries $Entries (Join-Path $ProjectDir "Shaders") "Shaders"
-Add-DirectoryEntries $Entries (Join-Path $ProjectDir "Content") "Content"
+Add-DirectoryEntries $Entries (Join-Path $ProjectDir "Content") "Content" @("Content/Scene/Default.Scene")
 Add-DirectoryEntries $Entries (Join-Path $ProjectDir "Settings") "Settings"
 
 $PlayBat = @"

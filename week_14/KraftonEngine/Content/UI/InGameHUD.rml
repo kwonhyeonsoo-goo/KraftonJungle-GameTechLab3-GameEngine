@@ -119,8 +119,8 @@
             <div id="pauseControlsPanel" data-ui-type="Panel" data-ui-name="Pause Controls Panel">
                 <div id="pauseControlsTitle" data-ui-type="Text" data-ui-name="Pause Controls Title">Controls</div>
                 <button id="btnPauseControlsBack" data-ui-type="Button" data-ui-name="Pause Controls Back"><span>Back</span></button>
-                <div id="pauseControlAim" data-ui-type="Text" data-ui-name="Aim Control">Aim : Mouse Move / Left Stick</div>
                 <div id="pauseControlMove" data-ui-type="Text" data-ui-name="Move Control">Move : WASD / Right Stick</div>
+                <div id="pauseControlAim" data-ui-type="Text" data-ui-name="Aim Control">Aim : Mouse Move / Left Stick</div>
                 <div id="pauseControlScope" data-ui-type="Text" data-ui-name="Scope Control">Scope : Right Mouse / Left Trigger</div>
                 <div id="pauseControlFire" data-ui-type="Text" data-ui-name="Fire Control">Fire : Left Mouse / Right Trigger</div>
                 <div id="pauseControlBreath" data-ui-type="Text" data-ui-name="Breath Control">Hold Breath : Shift / LB</div>

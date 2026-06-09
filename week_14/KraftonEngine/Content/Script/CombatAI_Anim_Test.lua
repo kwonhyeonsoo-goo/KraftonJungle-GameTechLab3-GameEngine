@@ -155,17 +155,24 @@ local function update_health_indicator(agent)
     end
 
     lastHealthIndicatorState = state
-    local indicator = billboards.green or billboards.orange or billboards.red
-    if state == "hidden" then
-        set_component_visible(indicator, false)
-        set_component_visible(billboards.orange, false)
-        set_component_visible(billboards.red, false)
+
+    if billboards.green ~= nil and billboards.orange ~= nil and billboards.red ~= nil then
+        set_component_visible(billboards.green, state == "green")
+        set_component_visible(billboards.orange, state == "orange")
+        set_component_visible(billboards.red, state == "red")
         return
     end
 
-    set_component_visible(indicator, true)
+    set_component_visible(billboards.green, false)
     set_component_visible(billboards.orange, false)
     set_component_visible(billboards.red, false)
+
+    if state == "hidden" then
+        return
+    end
+
+    local indicator = billboards[state] or billboards.green or billboards.orange or billboards.red
+    set_component_visible(indicator, true)
 
     if indicator ~= nil and indicator.SetMaterialPath ~= nil then
         indicator:SetMaterialPath(HEALTH_INDICATOR_MATERIALS[state])

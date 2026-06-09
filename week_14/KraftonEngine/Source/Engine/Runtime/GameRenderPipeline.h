@@ -13,6 +13,7 @@ public:
 	~FGameRenderPipeline() override;
 
 	void Execute(float DeltaTime, FRenderer& Renderer) override;
+	void OnSceneCleared() override;
 
 private:
 	// EditorRenderPipeline 과 동일 패턴 — POV 통화 시그니처. 컴포넌트 의존은 PrepareViewport

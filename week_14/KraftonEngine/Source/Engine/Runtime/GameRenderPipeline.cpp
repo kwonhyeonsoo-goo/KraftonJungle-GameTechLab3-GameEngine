@@ -11,6 +11,7 @@
 #include "Viewport/GameViewportClient.h"
 #include "Viewport/Viewport.h"
 #include "Math/MathUtils.h"
+#include "Core/Logging/Log.h"
 
 namespace
 {
@@ -41,6 +42,11 @@ FGameRenderPipeline::~FGameRenderPipeline()
 {
 }
 
+void FGameRenderPipeline::OnSceneCleared()
+{
+	Frame.ClearViewportResources();
+}
+
 void FGameRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 {
 	ID3D11DeviceContext* Ctx = Renderer.GetFD3DDevice().GetDeviceContext();
@@ -52,12 +58,23 @@ void FGameRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 
 	UWorld* World = Game->GetWorld();
 	FViewport* VP = Game->GetStandaloneViewport();
-	FMinimalViewInfo POV;
-	if (!World || !VP || !World->GetActivePOV(POV))
+	if (!World || !VP)
 	{
 		Renderer.BeginFrame();
 		Renderer.EndFrame();
 		return;
+	}
+
+	FMinimalViewInfo POV;
+	const bool bHasActivePOV = World->GetActivePOV(POV);
+	if (!bHasActivePOV)
+	{
+		static bool bLoggedMissingPOV = false;
+		if (!bLoggedMissingPOV)
+		{
+			UE_LOG("[GameRenderPipeline] Active POV missing; rendering with fallback POV so screen UI remains visible.");
+			bLoggedMissingPOV = true;
+		}
 	}
 
 	Frame.WorldType = World->GetWorldType();
