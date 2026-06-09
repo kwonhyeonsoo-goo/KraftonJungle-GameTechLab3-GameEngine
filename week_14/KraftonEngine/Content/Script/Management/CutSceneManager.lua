@@ -1286,6 +1286,15 @@ function CutSceneManager:Initialize()
             if current.damaged_sfx_played ~= true and
                 (tonumber(current.elapsed) or 0.0) >= (tonumber(current.impact_time) or 0.0) then
                 current.damaged_sfx_played = true
+                if self.general ~= nil and self.general.Publish ~= nil then
+                    local payload = current.payload or {}
+                    self.general:Publish("sniper.killcam_impact", {
+                        bullet_id = payload.bullet_id,
+                        elapsed = current.elapsed,
+                        impact_time = current.impact_time,
+                        cutscene = current.id
+                    })
+                end
                 current.killcam_sfx_handles[#current.killcam_sfx_handles + 1] =
                     play_sfx_handle(self.general, SNIPER_KILLCAM_DAMAGED_SFX, 1.0)
             end
@@ -1312,9 +1321,7 @@ function CutSceneManager:Initialize()
                 set_time_dilation(current.previous_time_dilation)
                 current.previous_time_dilation = nil
             end
-            if current.previous_world_paused ~= true then
-                set_world_paused(false)
-            end
+            set_world_paused(current.previous_world_paused == true)
             current.previous_world_paused = nil
             disable_sniper_killcam_shockwave()
             force_scope_released()

@@ -3,9 +3,23 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/Object.h"
+#include "Profiling/Time/Timer.h"
+#include "Runtime/Engine.h"
 
 namespace
 {
+	float ResolveTickDeltaTime(float DeltaTime, ELevelTick TickType)
+	{
+		if (TickType != LEVELTICK_PauseTick || DeltaTime > 0.0f)
+		{
+			return DeltaTime;
+		}
+
+		const FTimer* Timer = GEngine ? GEngine->GetTimer() : nullptr;
+		const float RawDeltaTime = Timer ? Timer->GetRawDeltaTime() : 0.0f;
+		return RawDeltaTime > 0.0f ? RawDeltaTime : DeltaTime;
+	}
+
 	bool ShouldDispatchActorTick(const AActor* Actor, ELevelTick TickType)
 	{
 		if (!IsValid(Actor))
@@ -70,6 +84,8 @@ void FTickManager::Tick(UWorld* World, float DeltaTime, ELevelTick TickType)
 
 void FTickManager::TickGroup(ETickingGroup Group, float DeltaTime, ELevelTick TickType)
 {
+	const float TickDeltaTime = ResolveTickDeltaTime(DeltaTime, TickType);
+
     for (FTickFunction* TickFunction : TickFunctions)
     {
         if (!TickFunction || TickFunction->GetTickGroup() != Group)
@@ -82,12 +98,12 @@ void FTickManager::TickGroup(ETickingGroup Group, float DeltaTime, ELevelTick Ti
             continue;
         }
 
-        if (!TickFunction->ConsumeInterval(DeltaTime))
+        if (!TickFunction->ConsumeInterval(TickDeltaTime))
         {
             continue;
         }
 
-        TickFunction->ExecuteTick(DeltaTime, TickType);
+        TickFunction->ExecuteTick(TickDeltaTime, TickType);
     }
 }
 
