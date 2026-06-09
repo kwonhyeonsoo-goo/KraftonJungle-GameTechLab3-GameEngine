@@ -1,6 +1,7 @@
 local DefeatState = {}
 DefeatState.__index = DefeatState
 
+local SCENE_PATH = "Content/Scene/Defeat.Scene"
 local RESULT_HUD = {
     name = "ResultHUD",
     path = "Content/UI/ResultHUD.rml",
@@ -41,6 +42,10 @@ end
 
 function DefeatState:GetHUD()
     return RESULT_HUD
+end
+
+function DefeatState:GetScenePath()
+    return SCENE_PATH
 end
 
 function DefeatState:Enter()

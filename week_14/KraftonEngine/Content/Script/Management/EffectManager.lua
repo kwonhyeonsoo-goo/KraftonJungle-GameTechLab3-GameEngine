@@ -205,7 +205,8 @@ function EffectManager:EnsureBloodHitEffects()
             HIDDEN_LOCATION,
             Vec3(0.0, 0.0, 0.0),
             BLOOD_HIT_SCALE,
-            false)
+            false,
+            true)
         if actor == nil then
             log("failed to pre-spawn blood hit particle: " .. BLOOD_HIT_PARTICLE_PATH)
             self:Clear()

@@ -25,6 +25,7 @@ local PAUSE_FADE_TIME = 0.080
 local PAUSE_BLEND_TIME = 0.120
 local PAUSE_TOGGLE_KEY_CODE = 81
 local DEFAULT_MATCH_DURATION = 300.0
+local ALLY_DEFEAT_CHECK_INTERVAL = 0.25
 local PAUSE_CLOTH_BASE_WIND_X = 3.2
 local PAUSE_CLOTH_GUST_X = 1.15
 local PAUSE_CLOTH_SWAY_Y = 0.28
@@ -251,6 +252,12 @@ local FRIENDLY_TEAM_TAGS = {
     bravo = true
 }
 
+local ALLY_SURVIVAL_TEAM_TAGS = {
+    ally = true,
+    friendly = true,
+    bravo = true
+}
+
 local ENEMY_TEAM_TAGS = {
     enemy = true,
     hostile = true,
@@ -316,6 +323,62 @@ local function object_has_team_tag(object, tag_map)
 
     local team_tag = normalize_team_tag(read_object_team_tag(object))
     return team_tag ~= "" and tag_map[team_tag] == true
+end
+
+local function read_agent_bool(agent, method_name, fallback)
+    if agent == nil or method_name == nil or agent[method_name] == nil then
+        return fallback
+    end
+
+    local ok, value = pcall(function()
+        return agent[method_name](agent)
+    end)
+    if not ok or value == nil then
+        return fallback
+    end
+    return value == true
+end
+
+local function read_agent_number(agent, method_name)
+    if agent == nil or method_name == nil or agent[method_name] == nil then
+        return nil
+    end
+
+    local ok, value = pcall(function()
+        return agent[method_name](agent)
+    end)
+    if not ok then
+        return nil
+    end
+    return tonumber(value)
+end
+
+local function is_ally_survival_agent(agent)
+    return object_has_team_tag(agent, ALLY_SURVIVAL_TEAM_TAGS)
+end
+
+local function is_agent_alive(agent)
+    local alive = read_agent_bool(agent, "IsAlive", nil)
+    if alive ~= nil then
+        return alive
+    end
+
+    local dead = read_agent_bool(agent, "IsDead", nil)
+    if dead ~= nil then
+        return not dead
+    end
+
+    local health = read_agent_number(agent, "GetHealth")
+    if health ~= nil then
+        return health > 0.0
+    end
+
+    local current_hp = read_agent_number(agent, "GetCurrentHP")
+    if current_hp ~= nil then
+        return current_hp > 0.0
+    end
+
+    return true
 end
 
 local function get_payload_hit(payload)
@@ -430,6 +493,9 @@ function InGameManager.new(general)
         result_requested = false,
         sniper_kills = 0,
         friendly_fire_kills = 0,
+        ally_total_count = 0,
+        ally_alive_count = 0,
+        ally_defeat_check_time = 0.0,
         paused = false,
         pause_transition = nil,
         pause_transition_time = 0.0,
@@ -569,6 +635,9 @@ function InGameManager:Initialize()
         end
 
         self.general:Publish("ingame.sniper_killed", scorePayload)
+        if isFriendly then
+            self:CheckAllyDefeatCondition("friendly_killed", true)
+        end
     end)
 
     self.general:Subscribe("sniper.killcam_triggered", self, function(payload)
@@ -627,6 +696,9 @@ function InGameManager:Start(settings)
     self.result_requested = false
     self.sniper_kills = 0
     self.friendly_fire_kills = 0
+    self.ally_total_count = 0
+    self.ally_alive_count = 0
+    self.ally_defeat_check_time = 0.0
     self.general:SetScore(0)
     self.paused = false
     self.pause_transition = nil
@@ -691,6 +763,10 @@ function InGameManager:Tick(dt)
         return
     end
 
+    if self:CheckAllyDefeatCondition("tick", false, dt) then
+        return
+    end
+
     local second = math.ceil(self:GetRemainingTime())
     if second ~= self.last_timer_second then
         self.last_timer_second = second
@@ -723,6 +799,73 @@ function InGameManager:GetRemainingTime()
     return math.max(0.0, (self.match_duration or DEFAULT_MATCH_DURATION) - (self.timer or 0.0))
 end
 
+function InGameManager:GetAllySurvivalSnapshot()
+    local snapshot = {
+        available = false,
+        total = 0,
+        alive = 0
+    }
+
+    if Combat == nil or Combat.GetAgents == nil then
+        return snapshot
+    end
+
+    local ok, agents = pcall(function()
+        return Combat.GetAgents()
+    end)
+    if not ok or agents == nil then
+        return snapshot
+    end
+
+    snapshot.available = true
+    for _, agent in ipairs(agents) do
+        if is_ally_survival_agent(agent) then
+            snapshot.total = snapshot.total + 1
+            if is_agent_alive(agent) then
+                snapshot.alive = snapshot.alive + 1
+            end
+        end
+    end
+
+    return snapshot
+end
+
+function InGameManager:CheckAllyDefeatCondition(reason, force, dt)
+    if self.result_requested == true then
+        return false
+    end
+
+    if force ~= true then
+        self.ally_defeat_check_time = (self.ally_defeat_check_time or 0.0) + math.max(0.0, tonumber(dt) or 0.0)
+        if self.ally_defeat_check_time < ALLY_DEFEAT_CHECK_INTERVAL then
+            return false
+        end
+    end
+    self.ally_defeat_check_time = 0.0
+
+    local snapshot = self:GetAllySurvivalSnapshot()
+    if snapshot.available ~= true or snapshot.total <= 0 then
+        return false
+    end
+
+    self.ally_total_count = snapshot.total
+    self.ally_alive_count = snapshot.alive
+    if snapshot.alive > 0 then
+        return false
+    end
+
+    self.general:Publish("ingame.allies_eliminated", {
+        timer = self.timer,
+        elapsed_time = self.timer,
+        remaining_time = self:GetRemainingTime(),
+        total_allies = snapshot.total,
+        alive_allies = snapshot.alive,
+        reason = reason or "all_allies_eliminated"
+    })
+    self:RequestDefeat("all_allies_eliminated")
+    return true
+end
+
 function InGameManager:SetRemainingTime(seconds, reason)
     if not self.running then
         return false
@@ -752,6 +895,10 @@ end
 
 function InGameManager:RequestVictory(reason)
     return self:CompleteVictory(reason or "victory_requested")
+end
+
+function InGameManager:RequestDefeat(reason, state)
+    return self:CompleteDefeat(reason or "defeat_requested", state or GameState.Defeat1)
 end
 
 function InGameManager:CompleteVictory(reason)
@@ -793,6 +940,55 @@ function InGameManager:CompleteVictory(reason)
     end
 
     log("victory completed without state transition; Victory state is not registered yet")
+    return true
+end
+
+function InGameManager:CompleteDefeat(reason, state)
+    if self.result_requested then
+        return false
+    end
+
+    state = state or GameState.Defeat1
+    if state ~= GameState.Defeat1 and state ~= GameState.Defeat2 then
+        state = GameState.Defeat1
+    end
+
+    self.result_requested = true
+    local snapshot = self:GetSnapshot()
+    snapshot.result = "Defeat"
+    snapshot.reason = reason or "defeat"
+    snapshot.defeat_state = state
+    self.general:Publish("ingame.defeat_requested", snapshot)
+    self.general:Publish("ingame.completed", snapshot)
+
+    if self.general ~= nil and self.general.CommitRun ~= nil then
+        self.general:CommitRun({
+            nickname = "Player",
+            result = "Defeat",
+            state = state,
+            score = self.general.GetScore ~= nil and self.general:GetScore() or 0,
+            elapsed_time = snapshot.elapsed_time,
+            remaining_time = snapshot.remaining_time,
+            reason = snapshot.reason
+        })
+    end
+
+    self:EndPausePresentation(false)
+    self:RestorePauseWorld(true)
+    self.running = false
+    self.phase = "Result"
+    local scene_manager = self.general ~= nil and self.general.managers ~= nil and self.general.managers.Scene or nil
+    if scene_manager ~= nil and scene_manager.IsRegisteredState ~= nil and
+        scene_manager:IsRegisteredState(state) and
+        self.general.RequestState ~= nil then
+        return self.general:RequestState(state, {
+            reason = snapshot.reason,
+            result = "Defeat",
+            elapsed_time = snapshot.elapsed_time
+        })
+    end
+
+    log("defeat completed without state transition; Defeat state is not registered yet")
     return true
 end
 

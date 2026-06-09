@@ -277,6 +277,14 @@ function GeneralManager:RequestVictory(reason)
     return false
 end
 
+function GeneralManager:RequestDefeat(reason)
+    self:_EnsureInitialized()
+    if self.managers.InGame ~= nil and self.managers.InGame.RequestDefeat ~= nil then
+        return self.managers.InGame:RequestDefeat(reason)
+    end
+    return false
+end
+
 function GeneralManager:PlaySFX(path_or_key, volume)
     self:_EnsureInitialized()
     return self.managers.Audio:PlaySFX(path_or_key, volume)
