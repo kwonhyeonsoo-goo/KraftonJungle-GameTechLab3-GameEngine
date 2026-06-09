@@ -11,8 +11,25 @@
 #include "Serialization/Archive.h"
 #include "Core/Logging/Log.h"
 #include "Profiling/Stats/ParticleStats.h"
+#include "Profiling/Time/Timer.h"
+#include "Runtime/Engine.h"
 
 #include <algorithm>
+
+namespace
+{
+	float ResolveParticleDeltaTime(float DeltaTime, ELevelTick TickType)
+	{
+		if (TickType != LEVELTICK_PauseTick || DeltaTime > 0.0f)
+		{
+			return DeltaTime;
+		}
+
+		const FTimer* Timer = GEngine ? GEngine->GetTimer() : nullptr;
+		const float RawDeltaTime = Timer ? Timer->GetRawDeltaTime() : 0.0f;
+		return RawDeltaTime > 0.0f ? RawDeltaTime : DeltaTime;
+	}
+}
 
 UParticleSystemComponent::UParticleSystemComponent()  {}
 UParticleSystemComponent::~UParticleSystemComponent()
@@ -164,6 +181,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
                                              FActorComponentTickFunction& ThisTickFunction)
 {
 	UPrimitiveComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	const float ParticleDeltaTime = ResolveParticleDeltaTime(DeltaTime, TickType);
 
 	if (!GetEventManager())
 	{
@@ -190,7 +208,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	{
 		// Phase 3 keeps automatic mode authoritative during runtime ticking, but
 		// now stabilizes raw distance-based selection with hysteresis and delay.
-		UpdateAutomaticLODSelection(DeltaTime);
+		UpdateAutomaticLODSelection(ParticleDeltaTime);
 	}
 	else
 	{
@@ -226,11 +244,11 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	// 매 프레임 Tick이 아닌, 일정 간격마다 몰아서 Tick
 	// 실제로 시뮬레이션에 넘길 DeltaTime
-	float StepDeltaTime = DeltaTime;
+	float StepDeltaTime = ParticleDeltaTime;
 
 	if (TickInterval > 0.0f)
 	{
-		AccumulatedTime += DeltaTime;
+		AccumulatedTime += ParticleDeltaTime;
 
 		if (AccumulatedTime < TickInterval)
 		{

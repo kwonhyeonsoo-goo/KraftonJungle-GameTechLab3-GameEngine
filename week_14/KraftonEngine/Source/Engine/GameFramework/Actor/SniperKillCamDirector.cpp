@@ -390,6 +390,23 @@ void ASniperKillCamDirector::NotifyBulletHit(const FSniperHitInfo& HitInfo)
 	GPendingKillCamBulletIds.push_back(HitInfo.BulletId);
 }
 
+bool ASniperKillCamDirector::GetHitSnapshotForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot)
+{
+	if (BulletId == 0)
+	{
+		return false;
+	}
+
+	auto HitSnapshotIt = GBulletHitSnapshotsById.find(BulletId);
+	if (HitSnapshotIt == GBulletHitSnapshotsById.end())
+	{
+		return false;
+	}
+
+	OutSnapshot = HitSnapshotIt->second;
+	return true;
+}
+
 int32 ASniperKillCamDirector::ConsumePendingBulletId()
 {
 	if (GPendingKillCamBulletIds.empty())
