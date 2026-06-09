@@ -32,7 +32,7 @@ enum class ESkinningMode : uint32
 
 namespace SkinningModeRuntime
 {
-	inline ESkinningMode Current = ESkinningMode::GPU;
+	inline ESkinningMode Current = ESkinningMode::CPU;
 
 	inline ESkinningMode Get()
 	{
