@@ -204,7 +204,7 @@ body {
 }
 
 #loadingControlPause {
-    left: 285.000000px;
+    left: 44.000000px;
     top: 296.000000px;
 }
 
