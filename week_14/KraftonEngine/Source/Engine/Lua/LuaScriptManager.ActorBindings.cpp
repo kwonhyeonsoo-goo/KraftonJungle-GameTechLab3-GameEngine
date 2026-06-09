@@ -1663,7 +1663,7 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
     );
     Particle.set_function(
         "SpawnEmitterAtLocation",
-        [](const FString& Path, const FVector& Location, sol::optional<FVector> Rotation, sol::optional<FVector> Scale, sol::optional<bool> bActivate) -> AActor*
+        [](const FString& Path, const FVector& Location, sol::optional<FVector> Rotation, sol::optional<FVector> Scale, sol::optional<bool> bActivate, sol::optional<bool> bTickWhenPaused) -> AActor*
         {
             if (!GEngine || !GEngine->GetWorld()) return nullptr;
             UParticleSystemComponent* Component = FGameplayStatics::SpawnEmitterAtLocation(
@@ -1674,6 +1674,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
                 bActivate.value_or(true)
             );
             if (!IsValid(Component)) return nullptr;
+
+            Component->PrimaryComponentTick.bTickEvenWhenPaused = bTickWhenPaused.value_or(false);
 
             AActor* Owner = Component->GetOwner();
             if (IsValid(Owner))

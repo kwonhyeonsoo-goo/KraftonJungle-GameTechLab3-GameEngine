@@ -135,7 +135,8 @@ function PreInGameState.new(general)
         script_started = false,
         subtitle_index = 0,
         opening_handle = 0,
-        script_handle = 0
+        script_handle = 0,
+        handoff_requested = false
     }, PreInGameState)
 end
 
@@ -163,6 +164,7 @@ function PreInGameState:Enter(payload)
     self.subtitle_index = 0
     self.opening_handle = 0
     self.script_handle = 0
+    self.handoff_requested = false
 
     if is_current_scene(SCENE_PATH) then
         log("Scene already current; no transition requested")
@@ -184,12 +186,16 @@ function PreInGameState:Exit()
     self.news_elapsed = 0.0
     self.script_started = false
     self.subtitle_index = 0
+    self.handoff_requested = false
     self:PublishSubtitle("")
     self:StopNewsAudio()
 end
 
 function PreInGameState:Tick(dt)
     dt = dt or 0.0
+    if self.handoff_requested then
+        return
+    end
     if not self.approval_pending and not self.transition_requested then
         self:TickNews(dt)
     end
@@ -213,6 +219,8 @@ function PreInGameState:Tick(dt)
         self.approved_elapsed = self.approved_elapsed + dt
         if self.approved_elapsed >= TRANSITION_DELAY_AFTER_APPROVED and self.general ~= nil and self.general.RequestState ~= nil then
             log("Approved delay completed; requesting Loading")
+            self.transition_requested = false
+            self.handoff_requested = true
             self.general:RequestState(GameState.Loading, {
                 reason = "pre_ingame_skip",
                 target_state = GameState.InGame,

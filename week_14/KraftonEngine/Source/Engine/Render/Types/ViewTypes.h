@@ -32,6 +32,7 @@ enum class ESkinningMode : uint32
 
 namespace SkinningModeRuntime
 {
+	// Game builds default to CPU skinning; editor settings/console can still opt into GPU.
 	inline ESkinningMode Current = ESkinningMode::CPU;
 
 	inline ESkinningMode Get()
