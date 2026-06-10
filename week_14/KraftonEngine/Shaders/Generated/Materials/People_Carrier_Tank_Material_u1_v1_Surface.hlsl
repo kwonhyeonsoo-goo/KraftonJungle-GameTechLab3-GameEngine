@@ -1,81 +1,15 @@
 // Generated from Content/Material/Auto/People_Carrier_Tank_Material_u1_v1.uasset
 // Domain: Surface
+// Shading: Phong, receive lighting true, cast shadow true, opacity 1.0
 
 #include "Common/ConstantBuffers.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/Functions.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/ForwardLighting.hlsli"
+#include "Common/NormalMapping.hlsli"
 
-struct FMaterialPixelInput
-{
-    float2 UV0;
-    float2 UV1;
-    float2 UV2;
-    float4 ParticleColor;
-    float4 VertexColor;
-    float  Time;
-    float  SubImageIndex;
-    float4 DynamicParam;
-};
-
-struct FMaterialResult
-{
-    float3 BaseColor;
-    float3 Normal;
-    float Roughness;
-    float Metallic;
-    float3 Emissive;
-    float Opacity;
-};
-
-float MaterialRoughnessToShininess(float Roughness)
-{
-    float R = saturate(Roughness);
-    return lerp(256.0f, 2.0f, R * R);
-}
-
-float3 ApplyMaterialMetallicDiffuse(float3 BaseColor, float Metallic)
-{
-    return BaseColor * (1.0f - saturate(Metallic));
-}
-
-float3 ApplyMaterialMetallicSpecular(float3 SpecularLight, float3 BaseColor, float Metallic)
-{
-    float M = saturate(Metallic);
-    float3 SpecularColor = lerp(float3(0.04f, 0.04f, 0.04f), BaseColor, M);
-    return SpecularLight * SpecularColor;
-}
-
-Texture2D Tex_Diffuse : register(t0);
-
-cbuffer PerMaterial : register(b2)
-{
-    float4 Param_EmissiveColor;
-    float Param_EmissiveIntensity;
-    float3 _Pad0;
-};
-
-float3 GetCommonMaterialEmissive()
-{
-    return Param_EmissiveColor.rgb * max(Param_EmissiveIntensity, 0.0f);
-}
-
-FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
-{
-    float4 n_17 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
-    float3 n_29 = float3(0.200000f, 0.200000f, 0.200000f);
-    float3 n_31 = ((n_17).rgb * n_29);
-    float n_3 = 1.000000f;
-    FMaterialResult Result;
-    Result.BaseColor = n_31;
-    Result.Normal = float3(0, 0, 1);
-    Result.Roughness = 0.5f;
-    Result.Metallic = 0.0f;
-    Result.Emissive = float3(0, 0, 0);
-    Result.Opacity = n_3;
-    return Result;
-}
-
+Texture2D Tex_DiffuseTexture : register(t0);
 
 struct MaterialSurfaceVSOutput
 {
@@ -98,25 +32,25 @@ MaterialSurfaceVSOutput VS(VS_Input_PNCTT input)
     return output;
 }
 
+float3 EvaluateBaseColor(MaterialSurfaceVSOutput input)
+{
+    float4 sampledBase = Tex_DiffuseTexture.Sample(LinearWrapSampler, input.texcoord);
+    float3 baseColor = sampledBase.rgb * float3(1.000000f, 1.000000f, 1.000000f);
+    if (sampledBase.a < 0.001f)
+    {
+        baseColor = float3(1.000000f, 1.000000f, 1.000000f);
+    }
+    return pow(saturate(baseColor), float3(2.2f, 2.2f, 2.2f));
+}
 
 float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
 {
-
-    FMaterialPixelInput MaterialInput;
-    MaterialInput.UV0           = input.texcoord;
-    MaterialInput.UV1           = float2(0, 0);
-    MaterialInput.UV2           = float2(0, 0);
-    MaterialInput.ParticleColor = float4(1, 1, 1, 1);
-    MaterialInput.VertexColor   = input.color;
-    MaterialInput.Time          = Time;
-    MaterialInput.SubImageIndex = 0.0f;
-    MaterialInput.DynamicParam  = float4(0, 0, 0, 0);
-
-    FMaterialResult Result = EvaluateMaterial(MaterialInput);
+    float3 baseColor = EvaluateBaseColor(input);
     float3 N = normalize(input.normal);
 
-    float3 finalRgb = Result.BaseColor + Result.Emissive + GetCommonMaterialEmissive();
-    float OutOpacity = saturate(Result.Opacity);
-
-    return float4(finalRgb, OutOpacity);
+    float3 V = normalize(CameraWorldPos - input.worldPos);
+    float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
+    float3 specular = AccumulateSpecular(input.worldPos, N, V, 32.0f, input.position);
+    float3 finalRgb = baseColor * diffuse + specular;
+    return float4(finalRgb, 1.0f);
 }

@@ -40,6 +40,8 @@ void FBillboardSceneProxy::UpdateTransform()
 	UBillboardComponent* Comp = GetBillboardComponent();
 	CachedScale = Comp->GetWorldScale();
 	CachedLocation = Comp->GetWorldLocation();
+	CachedComponentWorldMatrix = Comp->GetWorldMatrix();
+	CachedBillboardEnabled = Comp->IsBillboardEnabled();
 }
 
 // ============================================================
@@ -77,6 +79,12 @@ void FBillboardSceneProxy::UpdateMesh()
 void FBillboardSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	if (!bVisible) return;
+	if (!CachedBillboardEnabled)
+	{
+		PerObjectConstants = FPerObjectConstants::FromWorldMatrix(CachedComponentWorldMatrix);
+		MarkPerObjectCBDirty();
+		return;
+	}
 
 	// Frame 카메라 벡터로 per-view 빌보드 행렬 계산
 	FVector BillboardForward = Frame.CameraForward * -1.0f;

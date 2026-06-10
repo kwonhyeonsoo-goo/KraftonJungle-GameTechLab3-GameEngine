@@ -905,7 +905,11 @@ namespace
         return SS.str();
     }
 
-    FString BuildCommonHeader(EMaterialGraphTarget Domain, bool bReceiveLighting = false, EMaterialShadingModel ShadingModel = EMaterialShadingModel::DefaultLit)
+    FString BuildCommonHeader(
+        EMaterialGraphTarget Domain,
+        bool bReceiveLighting = false,
+        EMaterialShadingModel ShadingModel = EMaterialShadingModel::DefaultLit,
+        bool bUseForwardFog = false)
     {
         std::stringstream SS;
         SS << "#include \"Common/ConstantBuffers.hlsli\"\n";
@@ -953,6 +957,10 @@ float4 ApplyFogTransparent(float4 color, float3 worldPos, float3 cameraWorldPos)
         if (bSurfaceLit)
         {
             SS << "#include \"Common/ForwardLighting.hlsli\"\n";
+        }
+        if (bUseForwardFog)
+        {
+            SS << "#include \"Common/ForwardFog.hlsli\"\n";
         }
         SS << "\n";
         SS << "struct FMaterialPixelInput\n";
@@ -1235,6 +1243,7 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
         if (bTransparentSurfacePass)
         {
             SS << R"(
+    finalRgb = ApplyForwardHeightFog(finalRgb, input.worldPos);
     return float4(finalRgb, saturate(Result.Opacity));
 }
 )";
@@ -1394,7 +1403,11 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
     std::stringstream SS;
     SS << "// Generated from " << Options.MaterialPath << "\n";
     SS << "// Domain: " << ToString(Options.Domain) << "\n\n";
-    SS << BuildCommonHeader(Options.Domain, Options.bReceiveLighting, Options.ShadingModel);
+    const bool bUseForwardFog =
+        Options.Domain == EMaterialGraphTarget::Surface &&
+        Options.RenderPass == ERenderPass::Transparent;
+
+    SS << BuildCommonHeader(Options.Domain, Options.bReceiveLighting, Options.ShadingModel, bUseForwardFog);
     SS << Context.BuildTextureDeclarations();
     SS << Context.BuildCBuffer();
     SS << EvaluateMaterial;
