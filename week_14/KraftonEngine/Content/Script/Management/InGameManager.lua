@@ -172,6 +172,33 @@ local function clear_pause_cloth_world_wind()
     end
 end
 
+local function set_time_dilation(value)
+    if Time ~= nil and Time.SetTimeDilation ~= nil then
+        Time.SetTimeDilation(value)
+    end
+end
+
+local function clear_result_transition_effects()
+    if CameraManager ~= nil then
+        if CameraManager.StopCameraFade ~= nil then
+            CameraManager.StopCameraFade()
+        end
+        if CameraManager.ClearShockWaves ~= nil then
+            CameraManager.ClearShockWaves()
+        end
+    end
+    if SniperKillCam ~= nil then
+        if SniperKillCam.EnableShockWave ~= nil then
+            SniperKillCam.EnableShockWave(false)
+        end
+        if SniperKillCam.ClearPendingBullets ~= nil then
+            SniperKillCam.ClearPendingBullets()
+        end
+    end
+    set_time_dilation(1.0)
+    set_world_paused(false)
+end
+
 local function get_hit_region_score(hit)
     if hit == nil then
         return DEFAULT_HIT_SCORE
@@ -491,6 +518,7 @@ function InGameManager.new(general)
         settings = {},
         last_timer_second = -1,
         result_requested = false,
+        pending_result = nil,
         sniper_kills = 0,
         friendly_fire_kills = 0,
         ally_total_count = 0,
@@ -676,6 +704,12 @@ function InGameManager:Initialize()
         self:GoToMain(payload and payload.reason or "pause_menu")
     end)
 
+    self.general:Subscribe("cutscene.stopped", self, function()
+        if self.pending_result ~= nil then
+            self:TryCompletePendingResult("cutscene_stopped")
+        end
+    end)
+
     self.general:Subscribe("general.initialized", self, function()
         self:EnsureRunningForCurrentState("general_initialized")
     end)
@@ -694,6 +728,7 @@ function InGameManager:Start(settings)
     self.settings = settings or self.settings or {}
     self.last_timer_second = -1
     self.result_requested = false
+    self.pending_result = nil
     self.sniper_kills = 0
     self.friendly_fire_kills = 0
     self.ally_total_count = 0
@@ -732,6 +767,7 @@ function InGameManager:Stop(reason)
     self:RestorePauseWorld(true)
     self.running = false
     self.phase = "Idle"
+    self.pending_result = nil
     self.general:Publish("ingame.stopped", snapshot)
 end
 
@@ -750,6 +786,10 @@ function InGameManager:Tick(dt)
     self:PollDebugCheatInput()
     self:PollPauseInput()
     self:TickPauseTransition(dt)
+    if self.pending_result ~= nil then
+        self:TryCompletePendingResult("tick")
+        return
+    end
     if self.paused or self.pause_transition ~= nil then
         self:UpdatePauseClothWind(dt)
         return
@@ -894,18 +934,75 @@ function InGameManager:SetRemainingTime(seconds, reason)
 end
 
 function InGameManager:RequestVictory(reason)
-    return self:CompleteVictory(reason or "victory_requested")
+    return self:RequestResult(GameState.Victory, reason or "victory_requested")
 end
 
 function InGameManager:RequestDefeat(reason, state)
-    return self:CompleteDefeat(reason or "defeat_requested", state or GameState.Defeat1)
+    return self:RequestResult(state or GameState.Defeat1, reason or "defeat_requested")
 end
 
-function InGameManager:CompleteVictory(reason)
+function InGameManager:RequestResult(state, reason)
     if self.result_requested then
         return false
     end
 
+    if state ~= GameState.Victory and state ~= GameState.Defeat1 and state ~= GameState.Defeat2 then
+        state = GameState.Defeat1
+    end
+
+    self.result_requested = true
+    self.pending_result = {
+        state = state,
+        reason = reason or "result_requested"
+    }
+    log("result queued state=" .. tostring(state) .. " reason=" .. tostring(reason))
+    return self:TryCompletePendingResult("request")
+end
+
+function InGameManager:IsResultTransitionBlocked()
+    local cutscene = self.general ~= nil and self.general.managers ~= nil and self.general.managers.CutScene or nil
+    if cutscene ~= nil and cutscene.current ~= nil then
+        return true, "cutscene"
+    end
+
+    if SniperKillCam ~= nil and SniperKillCam.IsPlaying ~= nil then
+        local ok, playing = pcall(function()
+            return SniperKillCam.IsPlaying()
+        end)
+        if ok and playing == true then
+            return true, "sniper_killcam"
+        end
+    end
+
+    return false, nil
+end
+
+function InGameManager:TryCompletePendingResult(source)
+    local pending = self.pending_result
+    if pending == nil then
+        return false
+    end
+
+    local blocked, block_reason = self:IsResultTransitionBlocked()
+    if blocked then
+        if pending.logged_block_reason ~= block_reason then
+            pending.logged_block_reason = block_reason
+            log("result transition waiting for " .. tostring(block_reason) ..
+                " state=" .. tostring(pending.state) ..
+                " source=" .. tostring(source))
+        end
+        return true
+    end
+
+    self.pending_result = nil
+    clear_result_transition_effects()
+    if pending.state == GameState.Victory then
+        return self:CompleteVictory(pending.reason)
+    end
+    return self:CompleteDefeat(pending.reason, pending.state)
+end
+
+function InGameManager:CompleteVictory(reason)
     self.result_requested = true
     local snapshot = self:GetSnapshot()
     snapshot.result = "Victory"
@@ -913,16 +1010,8 @@ function InGameManager:CompleteVictory(reason)
     self.general:Publish("ingame.victory_requested", snapshot)
     self.general:Publish("ingame.completed", snapshot)
 
-    if self.general ~= nil and self.general.CommitRun ~= nil then
-        self.general:CommitRun({
-            nickname = "Player",
-            result = "Victory",
-            state = "Victory",
-            score = self.general.GetScore ~= nil and self.general:GetScore() or 0,
-            elapsed_time = snapshot.elapsed_time,
-            remaining_time = snapshot.remaining_time,
-            reason = snapshot.reason
-        })
+    if self.general ~= nil and self.general.SetTempRun ~= nil then
+        self.general:SetTempRun("Victory", self.general.GetScore ~= nil and self.general:GetScore() or 0)
     end
 
     self:EndPausePresentation(false)
@@ -944,10 +1033,6 @@ function InGameManager:CompleteVictory(reason)
 end
 
 function InGameManager:CompleteDefeat(reason, state)
-    if self.result_requested then
-        return false
-    end
-
     state = state or GameState.Defeat1
     if state ~= GameState.Defeat1 and state ~= GameState.Defeat2 then
         state = GameState.Defeat1
@@ -961,16 +1046,8 @@ function InGameManager:CompleteDefeat(reason, state)
     self.general:Publish("ingame.defeat_requested", snapshot)
     self.general:Publish("ingame.completed", snapshot)
 
-    if self.general ~= nil and self.general.CommitRun ~= nil then
-        self.general:CommitRun({
-            nickname = "Player",
-            result = "Defeat",
-            state = state,
-            score = self.general.GetScore ~= nil and self.general:GetScore() or 0,
-            elapsed_time = snapshot.elapsed_time,
-            remaining_time = snapshot.remaining_time,
-            reason = snapshot.reason
-        })
+    if self.general ~= nil and self.general.SetTempRun ~= nil then
+        self.general:SetTempRun("Defeat", self.general.GetScore ~= nil and self.general:GetScore() or 0)
     end
 
     self:EndPausePresentation(false)

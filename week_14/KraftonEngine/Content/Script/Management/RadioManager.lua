@@ -424,6 +424,19 @@ function RadioManager:ResetRunState()
     self:RestoreOpeningInputMode()
 end
 
+function RadioManager:CancelRunRadioForResult()
+    self:StopActiveRadioSFX()
+    self.queue = {}
+    self.current = nil
+    self.opening_exit_fade_active = false
+    self.opening_exit_fade_elapsed = 0.0
+    self.opening_skip_key_down = false
+    self:PublishSubtitle("", false)
+    self:ClearPresentation()
+    self:RestoreOpeningTime()
+    self:RestoreOpeningInputMode()
+end
+
 function RadioManager:IsBlocked()
     if self.cutscene_active then
         return true
@@ -456,11 +469,13 @@ function RadioManager:QueueEnding(result)
     local result_text = tostring(result or "")
     if result_text == "Victory" then
         self.played_result_comment = true
+        self:CancelRunRadioForResult()
         return self:Queue("Victory")
     end
 
     if result_text == "Defeat" or result_text == "Defeat1" or result_text == "Defeat2" then
         self.played_result_comment = true
+        self:CancelRunRadioForResult()
         local id = result_text
         if result_text == "Defeat" then
             id = random_index(2) == 1 and "Defeat1" or "Defeat2"

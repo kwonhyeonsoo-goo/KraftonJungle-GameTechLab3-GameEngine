@@ -261,6 +261,13 @@ function GeneralManager:CommitRun(result)
     self.managers.Data:CommitRun(result)
 end
 
+function GeneralManager:SetTempRun(result, score)
+    self:_EnsureInitialized()
+    if self.managers.Data ~= nil and self.managers.Data.SetTempRun ~= nil then
+        self.managers.Data:SetTempRun(result, score)
+    end
+end
+
 function GeneralManager:SetInGameMatchDuration(seconds)
     self:_EnsureInitialized()
     if self.managers.InGame ~= nil and self.managers.InGame.SetMatchDuration ~= nil then

@@ -1688,6 +1688,7 @@ end
 function UIManager:ConfigureResultHUD(widget, payload)
     self.result_submitted = false
     self.result_last_input = ""
+    self:SetRadioOpeningPresentation({ active = false, blackout_alpha = 0.0, hud_suppressed = false, skip_prompt_alpha = 0.0 })
 
     local radio_only = payload ~= nil and payload.result_radio_only == true
     self.result_radio_only = radio_only
