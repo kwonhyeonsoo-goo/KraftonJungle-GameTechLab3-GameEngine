@@ -424,6 +424,24 @@ namespace
         }
     }
 
+    static int32 FindMeshBoneIndexByName(const FSkeletalMesh* Asset, const FString& BoneName)
+    {
+        if (!Asset || BoneName.empty())
+        {
+            return -1;
+        }
+
+        for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(Asset->Bones.size()); ++BoneIndex)
+        {
+            if (Asset->Bones[BoneIndex].Name == BoneName)
+            {
+                return BoneIndex;
+            }
+        }
+
+        return -1;
+    }
+
     static void ApplyRootLockInComponentSpace(
         FPoseContext&       Output,
         const FSkeletalMesh* Asset,
@@ -818,6 +836,15 @@ void UAnimSequence::GetBonePose(FPoseContext& Output, const FAnimExtractContext&
         }
 
         Output.Pose[BoneIndex] = Result;
+    }
+
+    // 일반적으로 RootMotionBoneName 본에는 animation track 이 있지만, 일부 클립은
+    // import/collapse 결과로 root motion 본의 track 이 생략될 수 있다. 이 경우에도
+    // Force Root Lock 을 켜면 소켓/부착물 기준 pose 는 같은 skeleton bone 을 기준으로
+    // 잠겨야 하므로 mesh skeleton 에서 한 번 더 resolve 한다.
+    if (RootMotionLockBoneIndex < 0 && !RootMotionBoneName.empty())
+    {
+        RootMotionLockBoneIndex = FindMeshBoneIndexByName(Asset, RootMotionBoneName);
     }
 
     ApplyRootLockInComponentSpace(Output, Asset, RootMotionLockBoneIndex, bForceRootLock, bEnableRootMotion);
