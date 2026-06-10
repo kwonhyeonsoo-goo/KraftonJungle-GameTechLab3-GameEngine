@@ -12,6 +12,20 @@ local function engine_audio()
     return rawget(_G, "AudioManager")
 end
 
+local function is_result_state(state)
+    return state == "Victory" or state == "Defeat1" or state == "Defeat2"
+end
+
+local function current_scene_file_name()
+    if Scene == nil or Scene.GetCurrentPath == nil then
+        return nil
+    end
+
+    local current_path = tostring(Scene.GetCurrentPath())
+    local normalized = string.lower(string.gsub(current_path, "\\", "/"))
+    return string.match(normalized, "([^/]+)$")
+end
+
 function AudioManager.new(general)
     return setmetatable({
         general = general,
@@ -26,7 +40,8 @@ function AudioManager.new(general)
         ingame_active = false,
         pause_active = false,
         opening_active = false,
-        cutscene_active = false
+        cutscene_active = false,
+        result_transition_active = false
     }, AudioManager)
 end
 
@@ -41,7 +56,35 @@ function AudioManager:Initialize()
     self:SetSFXVolume(self.sfx_volume)
 
     if self.general ~= nil and self.general.Subscribe ~= nil then
+        self.general:Subscribe("scene.transition_started", self, function(payload)
+            if payload ~= nil and payload.from == "InGame" and is_result_state(payload.to) then
+                self.result_transition_active = true
+                self.ingame_active = false
+                self.pause_active = false
+                self.desired_bgm = nil
+                self:FadeOutCurrentBGM(BGM_SWITCH_FADE_SECONDS)
+            end
+        end)
+        self.general:Subscribe("scene.transition_failed", self, function(payload)
+            if payload ~= nil and payload.from == "InGame" and is_result_state(payload.to) then
+                self.result_transition_active = false
+            end
+        end)
+        self.general:Subscribe("scene.entered", self, function(payload)
+            if payload ~= nil and payload.to == "InGame" then
+                self.result_transition_active = false
+            elseif payload ~= nil and is_result_state(payload.to) then
+                self.result_transition_active = true
+                self.ingame_active = false
+                self.pause_active = false
+                self.desired_bgm = nil
+                self:FadeOutCurrentBGM(BGM_SWITCH_FADE_SECONDS)
+            end
+        end)
         self.general:Subscribe("ingame.started", self, function()
+            if not self:IsInGameStartAllowed() then
+                return
+            end
             self.ingame_active = true
             self:RequestInGameBGM()
         end)
@@ -66,6 +109,22 @@ function AudioManager:Initialize()
             self:ResumeDesiredBGM()
         end)
     end
+end
+
+function AudioManager:IsInGameStartAllowed()
+    if self.result_transition_active == true then
+        return false
+    end
+
+    if self.general ~= nil and self.general.GetState ~= nil and self.general:GetState() ~= "InGame" then
+        return false
+    end
+
+    local scene_file = current_scene_file_name()
+    if scene_file == nil then
+        return true
+    end
+    return scene_file == "ingame.scene" or scene_file == "combattest.scene"
 end
 
 function AudioManager:Shutdown()

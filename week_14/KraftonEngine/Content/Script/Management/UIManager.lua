@@ -141,6 +141,20 @@ local HIT_NOTIFY_ENEMY_SCORE_COLOR = "rgba(255, 220, 88, 255)"
 local HIT_NOTIFY_FRIENDLY_TITLE_BG = "rgba(196, 38, 38, 245)"
 local HIT_NOTIFY_FRIENDLY_TITLE_COLOR = "rgba(255, 255, 255, 255)"
 local HIT_NOTIFY_FRIENDLY_SCORE_COLOR = "rgba(255, 92, 92, 255)"
+local IN_GAME_RESULT_FADE_IDS = {
+    "compassImage",
+    "CompassArrow",
+    "crosshairImage",
+    "scopeOverlay",
+    "airSupportTimerPanel",
+    "breathPanel",
+    "weaponInfoPanel",
+    "hitNotifyPanel",
+    "combatAgentPanel",
+    "cutsceneLetterboxTop",
+    "cutsceneLetterboxBottom",
+    "cutsceneSkipPrompt"
+}
 
 local function log(message)
     if Debug and Debug.Log then
@@ -630,6 +644,10 @@ function UIManager.new(general)
         cutscene_letterbox_alpha = 0.0,
         cutscene_letterbox_target = 0.0,
         cutscene_letterbox_last_alpha = -1.0,
+        result_transition_fade_active = false,
+        result_transition_fade_elapsed = 0.0,
+        result_transition_fade_duration = 0.0,
+        ingame_timer_locked_zero = false,
         active_popup = nil,
         pause_visible = false,
         pause_panel = "Menu",
@@ -650,6 +668,14 @@ function UIManager:Initialize()
         if payload ~= nil and payload.from == "InGame" then
             self:ResetInGameHUDRuntime(true)
         end
+    end)
+
+    self.general:Subscribe("scene.transition_started", self, function(payload)
+        self:HandleSceneTransitionStarted(payload)
+    end)
+
+    self.general:Subscribe("scene.transition_finished", self, function(payload)
+        self:HandleSceneTransitionFinished(payload)
     end)
 
     self.general:Subscribe("loading.ready", self, function(payload)
@@ -685,11 +711,19 @@ function UIManager:Initialize()
     end)
 
     self.general:Subscribe("ingame.started", self, function(payload)
+        self.ingame_timer_locked_zero = false
         self:SetInGameTimer(payload)
     end)
 
     self.general:Subscribe("ingame.timer", self, function(payload)
         self:SetInGameTimer(payload)
+    end)
+
+    self.general:Subscribe("ingame.completed", self, function(payload)
+        if payload ~= nil and (payload.result == "Victory" or payload.result == "Defeat") then
+            self.ingame_timer_locked_zero = true
+            self:SetInGameTimer({ remaining_time = 0.0 })
+        end
     end)
 
     self.general:Subscribe("ingame.scope_telemetry", self, function(payload)
@@ -751,6 +785,8 @@ function UIManager:Tick(dt)
     elseif self.active_hud_mode == RESULT_HUD_MODE then
         self:TickResultHUD(dt or 0.0)
     end
+
+    self:TickResultTransitionFade(dt or 0.0)
 end
 
 function UIManager:CreateWidget(name, path, z_order)
@@ -829,6 +865,9 @@ function UIManager:Clear()
     self.pause_visible = false
     self.pause_panel = "Menu"
     self.result_radio_only = false
+    self.result_transition_fade_active = false
+    self.result_transition_fade_elapsed = 0.0
+    self.result_transition_fade_duration = 0.0
 end
 
 function UIManager:ApplySceneHUDRequest(payload)
@@ -938,6 +977,103 @@ end
 
 function UIManager:SetElementAlpha(widget, element_id, alpha)
     call_widget(widget, "SetAlpha", element_id, alpha)
+end
+
+function UIManager:SetInGameResultFadeAlpha(widget, alpha)
+    if widget == nil then
+        return
+    end
+
+    alpha = clamp01(alpha)
+    for _, element_id in ipairs(IN_GAME_RESULT_FADE_IDS) do
+        self:SetElementAlpha(widget, element_id, alpha)
+    end
+end
+
+function UIManager:ApplyResultTransitionFade(widget)
+    if widget == nil or self.active_hud_mode ~= IN_GAME_HUD_MODE then
+        return
+    end
+
+    local duration = math.max(0.001, tonumber(self.result_transition_fade_duration) or 0.001)
+    local t = clamp01((tonumber(self.result_transition_fade_elapsed) or 0.0) / duration)
+    local hud_alpha = 1.0 - t
+
+    self:SetInGameResultFadeAlpha(widget, hud_alpha)
+    self:SetElementVisible(widget, "radioOpeningSkipPrompt", false)
+    self:SetElementStyle(widget, "radioOpeningSkipPrompt", "display", "none")
+    self:SetElementAlpha(widget, "radioOpeningSkipPrompt", 0.0)
+    self:SetElementVisible(widget, "radioBlackout", true)
+    self:SetElementStyle(widget, "radioBlackout", "display", "block")
+    self:SetElementAlpha(widget, "radioBlackout", t)
+end
+
+function UIManager:BeginResultTransitionFade(duration)
+    self.result_transition_fade_active = true
+    self.result_transition_fade_elapsed = 0.0
+    self.result_transition_fade_duration = math.max(0.001, tonumber(duration) or 3.0)
+    self.radio_hud_suppressed = false
+    self.radio_blackout_alpha = 0.0
+    self.radio_subtitle_visible = false
+    self.radio_subtitle_text = ""
+
+    local widget = self:GetActiveHUDWidget()
+    if widget ~= nil and self.active_hud_mode == IN_GAME_HUD_MODE then
+        self:SetElementDisplay(widget, PAUSE_LAYER_ID, false)
+        self:ApplyRadioSubtitle(widget)
+        self:ApplyResultTransitionFade(widget)
+    end
+end
+
+function UIManager:TickResultTransitionFade(dt)
+    if self.result_transition_fade_active ~= true then
+        return
+    end
+
+    self.result_transition_fade_elapsed =
+        (tonumber(self.result_transition_fade_elapsed) or 0.0) + math.max(0.0, tonumber(dt) or 0.0)
+
+    local widget = self:GetActiveHUDWidget()
+    if widget ~= nil and self.active_hud_mode == IN_GAME_HUD_MODE then
+        self:ApplyResultTransitionFade(widget)
+    end
+end
+
+function UIManager:EndResultTransitionFade()
+    local widget = self:GetActiveHUDWidget()
+    if widget ~= nil and self.active_hud_mode == IN_GAME_HUD_MODE then
+        self:SetInGameResultFadeAlpha(widget, 1.0)
+        self:SetElementVisible(widget, "radioBlackout", false)
+        self:SetElementStyle(widget, "radioBlackout", "display", "none")
+        self:SetElementAlpha(widget, "radioBlackout", 0.0)
+    end
+
+    self.result_transition_fade_active = false
+    self.result_transition_fade_elapsed = 0.0
+    self.result_transition_fade_duration = 0.0
+end
+
+function UIManager:HandleSceneTransitionStarted(payload)
+    if payload == nil or payload.from ~= "InGame" then
+        return
+    end
+
+    local target = payload.to
+    local transition_payload = payload.payload
+    local should_fade = type(transition_payload) == "table" and transition_payload.transition_hud_fade == true
+    if not should_fade or (target ~= "Victory" and target ~= "Defeat1" and target ~= "Defeat2") then
+        return
+    end
+
+    self.ingame_timer_locked_zero = true
+    self:SetInGameTimer({ remaining_time = 0.0 })
+    self:BeginResultTransitionFade(payload.fade_out or transition_payload.transition_fade_out_seconds or 3.0)
+end
+
+function UIManager:HandleSceneTransitionFinished(payload)
+    if payload ~= nil and type(payload.payload) == "table" and payload.payload.transition_hud_fade == true then
+        self:EndResultTransitionFade()
+    end
 end
 
 function UIManager:SetElementVisible(widget, element_id, visible)
@@ -2133,6 +2269,9 @@ function UIManager:SetInGameTimer(payload)
     end
 
     local remaining = payload.remaining_time
+    if self.ingame_timer_locked_zero == true then
+        remaining = 0.0
+    end
     if remaining == nil and payload.match_duration ~= nil and payload.elapsed_time ~= nil then
         remaining = (tonumber(payload.match_duration) or 0.0) - (tonumber(payload.elapsed_time) or 0.0)
     elseif remaining == nil and payload.match_duration ~= nil and payload.timer ~= nil then
@@ -2148,6 +2287,7 @@ end
 
 function UIManager:ConfigureInGameHUD(widget)
     self:ResetInGameHUDRuntime(true)
+    self.ingame_timer_locked_zero = false
     self.pause_visible = false
     self.pause_panel = "Menu"
 
@@ -2224,6 +2364,10 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementVisible(widget, "radioOpeningSkipPrompt", false)
     self:SetElementStyle(widget, "radioOpeningSkipPrompt", "display", "none")
     self:SetElementAlpha(widget, "radioOpeningSkipPrompt", 0.0)
+    self:SetInGameResultFadeAlpha(widget, 1.0)
+    self:SetElementVisible(widget, "radioBlackout", false)
+    self:SetElementStyle(widget, "radioBlackout", "display", "none")
+    self:SetElementAlpha(widget, "radioBlackout", 0.0)
 
     self:SetElementImage(widget, "compassImage", "Image/Hor-Compass/Window/Compass_Window_000.png")
     self:ConfigurePauseMenuActions(widget)
@@ -3284,6 +3428,10 @@ function UIManager:ResetInGameHUDRuntime(clear_pawn)
     self.cutscene_letterbox_alpha = 0.0
     self.cutscene_letterbox_target = 0.0
     self.cutscene_letterbox_last_alpha = -1.0
+    self.result_transition_fade_active = false
+    self.result_transition_fade_elapsed = 0.0
+    self.result_transition_fade_duration = 0.0
+    self.ingame_timer_locked_zero = false
     self.applied_mouse_sensitivity = nil
     self.applied_gamepad_sensitivity = nil
     if clear_pawn then
@@ -3946,6 +4094,11 @@ end
 
 function UIManager:TickInGameHUD(dt)
     local widget = self:GetActiveHUDWidget()
+    if self.result_transition_fade_active == true then
+        self:ApplyResultTransitionFade(widget)
+        return
+    end
+
     self:PollInGameActions(widget)
     self:ApplySniperInputSettings(false)
     self:TickCutSceneLetterbox(widget, dt)

@@ -50,6 +50,18 @@ local function camera_clear_transition_fade()
     end
 end
 
+local function payload_number(payload, key, fallback)
+    if type(payload) ~= "table" then
+        return fallback
+    end
+
+    local value = tonumber(payload[key])
+    if value == nil or value < 0.0 then
+        return fallback
+    end
+    return value
+end
+
 local function scene_exists(path)
     if path == nil or path == "" or Scene == nil or Scene.Exists == nil then
         return true
@@ -331,16 +343,19 @@ function SceneManager:BeginStateTransition(next_state, payload)
         to = next_state,
         payload = payload or {},
         phase = "fade_out",
-        time = 0.0
+        time = 0.0,
+        fade_out = payload_number(payload, "transition_fade_out_seconds", SCENE_TRANSITION_FADE_OUT_SECONDS),
+        hold = payload_number(payload, "transition_hold_seconds", SCENE_TRANSITION_HOLD_SECONDS),
+        fade_in = payload_number(payload, "transition_fade_in_seconds", SCENE_TRANSITION_FADE_IN_SECONDS)
     }
     self.general:Publish("scene.transition_started", {
         from = self.current,
         to = next_state,
         payload = payload,
-        fade_out = SCENE_TRANSITION_FADE_OUT_SECONDS,
-        fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
+        fade_out = self.transition.fade_out,
+        fade_in = self.transition.fade_in
     })
-    camera_fade_out(SCENE_TRANSITION_FADE_OUT_SECONDS)
+    camera_fade_out(self.transition.fade_out)
     log("begin fade transition " .. tostring(self.current) .. " -> " .. tostring(next_state))
     return true
 end
@@ -353,7 +368,7 @@ function SceneManager:TickTransition(dt)
 
     transition.time = (transition.time or 0.0) + math.max(0.0, dt or 0.0)
     if transition.phase == "fade_out" then
-        if transition.time < SCENE_TRANSITION_FADE_OUT_SECONDS + SCENE_TRANSITION_HOLD_SECONDS then
+        if transition.time < (transition.fade_out or SCENE_TRANSITION_FADE_OUT_SECONDS) + (transition.hold or SCENE_TRANSITION_HOLD_SECONDS) then
             return
         end
 
@@ -369,7 +384,7 @@ function SceneManager:TickTransition(dt)
                     reason = "missing_scene"
                 })
                 self.transition = nil
-                camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+                camera_fade_in(transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS)
                 return
             end
 
@@ -384,7 +399,7 @@ function SceneManager:TickTransition(dt)
                         reason = "request_rejected"
                     })
                     self.transition = nil
-                    camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+                    camera_fade_in(transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS)
                     return
                 end
 
@@ -403,11 +418,11 @@ function SceneManager:TickTransition(dt)
         self:ApplyStateImmediate(transition.to, transition.payload)
         transition.phase = "fade_in"
         transition.time = 0.0
-        camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+        camera_fade_in(transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS)
         self.general:Publish("scene.transition_revealing", {
             to = transition.to,
             payload = transition.payload,
-            fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
+            fade_in = transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS
         })
         return
     end
@@ -417,12 +432,12 @@ function SceneManager:TickTransition(dt)
             self:ApplyStateImmediate(transition.to, transition.payload)
             transition.phase = "fade_in"
             transition.time = 0.0
-            camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+            camera_fade_in(transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS)
             self.general:Publish("scene.transition_revealing", {
                 to = transition.to,
                 payload = transition.payload,
                 target_scene = transition.target_scene,
-                fade_in = SCENE_TRANSITION_FADE_IN_SECONDS
+                fade_in = transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS
             })
             return
         end
@@ -438,12 +453,12 @@ function SceneManager:TickTransition(dt)
                 reason = "timeout"
             })
             self.transition = nil
-            camera_fade_in(SCENE_TRANSITION_FADE_IN_SECONDS)
+            camera_fade_in(transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS)
         end
         return
     end
 
-    if transition.phase == "fade_in" and transition.time >= SCENE_TRANSITION_FADE_IN_SECONDS then
+    if transition.phase == "fade_in" and transition.time >= (transition.fade_in or SCENE_TRANSITION_FADE_IN_SECONDS) then
         self.general:Publish("scene.transition_finished", {
             to = transition.to,
             payload = transition.payload

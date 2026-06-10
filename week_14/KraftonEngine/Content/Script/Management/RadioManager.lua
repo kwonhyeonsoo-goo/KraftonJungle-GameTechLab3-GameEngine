@@ -12,6 +12,21 @@ local RADIO_VOLUME = 1.0
 local OPENING_FADE_SECONDS = 3.0
 local OPENING_SKIP_UNLOCK_SECONDS = 5.0
 local OPENING_SKIP_PROMPT_FADE_SECONDS = 0.35
+local VICTORY_COMMENT_SCENE_DELAY_SECONDS = 1.0
+
+local function is_result_state(state)
+    return state == GameState.Victory or state == GameState.Defeat1 or state == GameState.Defeat2
+end
+
+local function current_scene_file_name()
+    if Scene == nil or Scene.GetCurrentPath == nil then
+        return nil
+    end
+
+    local current_path = tostring(Scene.GetCurrentPath())
+    local normalized = string.lower(string.gsub(current_path, "\\", "/"))
+    return string.match(normalized, "([^/]+)$")
+end
 
 local COMMENT_DEFINITIONS = {
     Opening = {
@@ -338,6 +353,9 @@ function RadioManager.new(general)
         opening_skip_key_down = false,
         opening_exit_fade_active = false,
         opening_exit_fade_elapsed = 0.0,
+        result_transition_active = false,
+        pending_ending_result = nil,
+        pending_ending_delay = 0.0,
         active_sfx_handles = {}
     }, RadioManager)
 end
@@ -352,19 +370,46 @@ function RadioManager:Initialize()
         self:TryStartNext()
     end)
 
+    self.general:Subscribe("scene.transition_started", self, function(payload)
+        if payload ~= nil and payload.from == GameState.InGame and is_result_state(payload.to) then
+            self.result_transition_active = true
+            if self.played_result_comment ~= true then
+                self:CancelRunRadioForResult()
+            end
+        end
+    end)
+
+    self.general:Subscribe("scene.transition_failed", self, function(payload)
+        if payload ~= nil and payload.from == GameState.InGame and is_result_state(payload.to) then
+            self.result_transition_active = false
+        end
+    end)
+
     self.general:Subscribe("scene.entered", self, function(payload)
         if payload ~= nil and payload.to == GameState.InGame then
+            self.result_transition_active = false
+            self.pending_ending_result = nil
+            self.pending_ending_delay = 0.0
             self:ResetRunState()
         elseif payload ~= nil and payload.to == GameState.Victory then
-            self:QueueEnding("Victory")
+            self.result_transition_active = true
+            self:ScheduleEnding("Victory", VICTORY_COMMENT_SCENE_DELAY_SECONDS)
         elseif payload ~= nil and payload.to == GameState.Defeat1 then
+            self.result_transition_active = true
             self:QueueEnding("Defeat")
         elseif payload ~= nil and payload.to == GameState.Defeat2 then
+            self.result_transition_active = true
             self:QueueEnding("Defeat")
         end
     end)
 
     self.general:Subscribe("ingame.started", self, function()
+        if not self:IsOpeningAllowed() then
+            if self.played_result_comment ~= true then
+                self:CancelRunRadioForResult()
+            end
+            return
+        end
         self:ResetRunState()
         self.played_opening_comment = true
         self:QueueOpening()
@@ -384,6 +429,9 @@ function RadioManager:Initialize()
 
     self.general:Subscribe("ingame.completed", self, function(payload)
         if payload ~= nil then
+            if payload.result == "Victory" then
+                return
+            end
             self:QueueEnding(payload.result)
         end
     end)
@@ -402,6 +450,8 @@ function RadioManager:Shutdown()
     self:RestoreOpeningInputMode()
     self.queue = {}
     self.current = nil
+    self.pending_ending_result = nil
+    self.pending_ending_delay = 0.0
     self.general:UnsubscribeOwner(self)
 end
 
@@ -419,6 +469,8 @@ function RadioManager:ResetRunState()
     self:StopActiveRadioSFX()
     self.queue = {}
     self.current = nil
+    self.pending_ending_result = nil
+    self.pending_ending_delay = 0.0
     self:ClearPresentation()
     self:RestoreOpeningTime()
     self:RestoreOpeningInputMode()
@@ -428,6 +480,8 @@ function RadioManager:CancelRunRadioForResult()
     self:StopActiveRadioSFX()
     self.queue = {}
     self.current = nil
+    self.pending_ending_result = nil
+    self.pending_ending_delay = 0.0
     self.opening_exit_fade_active = false
     self.opening_exit_fade_elapsed = 0.0
     self.opening_skip_key_down = false
@@ -446,6 +500,22 @@ function RadioManager:IsBlocked()
     return cutscene ~= nil and cutscene.current ~= nil
 end
 
+function RadioManager:IsOpeningAllowed()
+    if self.result_transition_active == true then
+        return false
+    end
+
+    if self.general ~= nil and self.general.GetState ~= nil and self.general:GetState() ~= GameState.InGame then
+        return false
+    end
+
+    local scene_file = current_scene_file_name()
+    if scene_file == nil then
+        return true
+    end
+    return scene_file == "ingame.scene" or scene_file == "combattest.scene"
+end
+
 function RadioManager:Queue(id, overrides)
     local comment = clone_definition(id, overrides)
     if comment == nil then
@@ -458,6 +528,10 @@ function RadioManager:Queue(id, overrides)
 end
 
 function RadioManager:QueueOpening(overrides)
+    if not self:IsOpeningAllowed() then
+        log("opening ignored outside active InGame scene")
+        return false
+    end
     return self:Queue("Opening", overrides)
 end
 
@@ -465,6 +539,9 @@ function RadioManager:QueueEnding(result)
     if self.played_result_comment then
         return false
     end
+
+    self.pending_ending_result = nil
+    self.pending_ending_delay = 0.0
 
     local result_text = tostring(result or "")
     if result_text == "Victory" then
@@ -484,6 +561,35 @@ function RadioManager:QueueEnding(result)
     end
 
     return false
+end
+
+function RadioManager:ScheduleEnding(result, delay)
+    if self.played_result_comment then
+        return false
+    end
+
+    self:CancelRunRadioForResult()
+    self.pending_ending_result = result
+    self.pending_ending_delay = math.max(0.0, tonumber(delay) or 0.0)
+    return true
+end
+
+function RadioManager:TickPendingEnding(dt)
+    if self.pending_ending_result == nil then
+        return false
+    end
+
+    self.pending_ending_delay = math.max(0.0, (self.pending_ending_delay or 0.0) - math.max(0.0, tonumber(dt) or 0.0))
+    if self.pending_ending_delay > 0.0 then
+        return true
+    end
+
+    local result = self.pending_ending_result
+    self.pending_ending_result = nil
+    self.pending_ending_delay = 0.0
+    self:QueueEnding(result)
+    self:TryStartNext()
+    return true
 end
 
 function RadioManager:HandleSniperKilled(payload)
@@ -651,6 +757,7 @@ end
 function RadioManager:Tick(dt)
     local step = raw_delta_time(dt or 0.0)
     self:PollSquadState(step)
+    self:TickPendingEnding(step)
     if self.current == nil then
         if self:TickOpeningExitFade(step) then
             return

@@ -382,6 +382,12 @@ GeneralManager.State = GameState
 local RuntimeGeneralManager = GeneralManager.Get()
 
 local function get_initial_state()
+    local scene_state = get_initial_state_from_scene()
+    if GameState.IsValid(scene_state) then
+        log("initial state from scene=" .. tostring(scene_state))
+        return scene_state
+    end
+
     if this ~= nil and this.GetInitialGameStateName ~= nil then
         local ok, state = pcall(function()
             return this:GetInitialGameStateName()
@@ -391,12 +397,6 @@ local function get_initial_state()
             return state
         end
         log("component initial state unavailable value=" .. tostring(state))
-    end
-
-    local scene_state = get_initial_state_from_scene()
-    if GameState.IsValid(scene_state) then
-        log("initial state from scene=" .. tostring(scene_state))
-        return scene_state
     end
 
     log("initial state unavailable; SceneManager will use its default")

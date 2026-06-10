@@ -93,6 +93,35 @@ namespace
 		return true;
 	}
 
+	bool IsValidSocketAttachmentName(const FName& SocketName)
+	{
+		return SocketName.IsValid() && SocketName != FName::None;
+	}
+
+	void MarkSocketAttachmentSubtreeDirty(USceneComponent* Component)
+	{
+		if (!Component)
+		{
+			return;
+		}
+
+		// MarkTransformDirty() short-circuits when the component is already dirty.
+		// Socket attachments are driven by the parent's animated bone matrices, so a
+		// dirty direct child can still have clean descendants with stale world caches.
+		// Visit the whole subtree explicitly to keep weapon/muzzle helper components
+		// aligned with the current socket pose after animation/root-lock evaluation.
+		Component->MarkTransformDirty();
+		if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
+		{
+			Primitive->MarkWorldBoundsDirty();
+		}
+
+		for (USceneComponent* Child : Component->GetChildren())
+		{
+			MarkSocketAttachmentSubtreeDirty(Child);
+		}
+	}
+
 	FVector SafeScaleDivide(const FVector& Numerator, const FVector& Denominator)
 	{
 		return FVector(
@@ -1298,13 +1327,9 @@ void USkinnedMeshComponent::MarkSocketAttachedChildrenDirty()
 {
 	for (USceneComponent* Child : GetChildren())
 	{
-		if (Child && Child->GetAttachSocketName().IsValid() && Child->GetAttachSocketName() != FName::None)
+		if (Child && IsValidSocketAttachmentName(Child->GetAttachSocketName()))
 		{
-			Child->MarkTransformDirty();
-			if (UPrimitiveComponent* PrimitiveChild = Cast<UPrimitiveComponent>(Child))
-			{
-				PrimitiveChild->MarkWorldBoundsDirty();
-			}
+			MarkSocketAttachmentSubtreeDirty(Child);
 		}
 	}
 }
