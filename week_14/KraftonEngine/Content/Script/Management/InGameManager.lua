@@ -32,6 +32,9 @@ local PAUSE_CLOTH_SWAY_Y = 0.28
 local PAUSE_CLOTH_SWAY_Z = 0.18
 local DEBUG_TIME_TO_THREE_MIN_DIALOGUE = 181.0
 local DEBUG_TIME_TO_ONE_MIN_DIALOGUE = 61.0
+local RESULT_TRANSITION_FADE_OUT_SECONDS = 3.0
+local RESULT_TRANSITION_HOLD_SECONDS = 0.05
+local RESULT_TRANSITION_FADE_IN_SECONDS = 0.30
 
 local function log(message)
     if Debug and Debug.Log then
@@ -996,6 +999,13 @@ function InGameManager:TryCompletePendingResult(source)
 
     self.pending_result = nil
     clear_result_transition_effects()
+    if self.general ~= nil and self.general.Publish ~= nil then
+        self.general:Publish("ingame.result_transition_started", {
+            state = pending.state,
+            reason = pending.reason,
+            fade_out = RESULT_TRANSITION_FADE_OUT_SECONDS
+        })
+    end
     if pending.state == GameState.Victory then
         return self:CompleteVictory(pending.reason)
     end
@@ -1024,7 +1034,11 @@ function InGameManager:CompleteVictory(reason)
         return self.general:RequestState(GameState.Victory, {
             reason = snapshot.reason,
             result = "Victory",
-            elapsed_time = snapshot.elapsed_time
+            elapsed_time = snapshot.elapsed_time,
+            transition_fade_out_seconds = RESULT_TRANSITION_FADE_OUT_SECONDS,
+            transition_hold_seconds = RESULT_TRANSITION_HOLD_SECONDS,
+            transition_fade_in_seconds = RESULT_TRANSITION_FADE_IN_SECONDS,
+            transition_hud_fade = true
         })
     end
 
@@ -1061,7 +1075,11 @@ function InGameManager:CompleteDefeat(reason, state)
         return self.general:RequestState(state, {
             reason = snapshot.reason,
             result = "Defeat",
-            elapsed_time = snapshot.elapsed_time
+            elapsed_time = snapshot.elapsed_time,
+            transition_fade_out_seconds = RESULT_TRANSITION_FADE_OUT_SECONDS,
+            transition_hold_seconds = RESULT_TRANSITION_HOLD_SECONDS,
+            transition_fade_in_seconds = RESULT_TRANSITION_FADE_IN_SECONDS,
+            transition_hud_fade = true
         })
     end
 
@@ -1071,6 +1089,9 @@ end
 
 function InGameManager:EnsureRunningForCurrentState(reason)
     if self.running or not self:IsCurrentStateInGame() then
+        return
+    end
+    if self.result_requested == true or self.pending_result ~= nil or self.phase == "Result" then
         return
     end
 
