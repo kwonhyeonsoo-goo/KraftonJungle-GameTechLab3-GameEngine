@@ -25,7 +25,7 @@ public:
 	bool LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult) override;
 
 	UFUNCTION(Callable, Category="Billboard")
-	void SetBillboardEnabled(bool bEnable) { bIsBillboard = bEnable; }
+	void SetBillboardEnabled(bool bEnable);
 	UFUNCTION(Pure, Category="Billboard")
 	bool IsBillboardEnabled() const { return bIsBillboard; }
 

@@ -45,11 +45,26 @@ void UBillboardComponent::SetMaterial(UMaterial* InMaterial)
 	MarkProxyDirty(EDirtyFlag::Mesh);
 }
 
+void UBillboardComponent::SetBillboardEnabled(bool bEnable)
+{
+	if (bIsBillboard == bEnable)
+	{
+		return;
+	}
+
+	bIsBillboard = bEnable;
+	MarkTransformDirty();
+}
+
 void UBillboardComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);
 
-	if (strcmp(PropertyName, "MaterialSlot") == 0 || strcmp(PropertyName, "Material") == 0)
+	if (strcmp(PropertyName, "bIsBillboard") == 0 || strcmp(PropertyName, "Billboard") == 0)
+	{
+		MarkTransformDirty();
+	}
+	else if (strcmp(PropertyName, "MaterialSlot") == 0 || strcmp(PropertyName, "Material") == 0)
 	{
 		if (MaterialSlot == "None" || MaterialSlot.empty())
 		{
@@ -69,6 +84,15 @@ void UBillboardComponent::PostEditProperty(const char* PropertyName)
 
 void UBillboardComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
+	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!bIsBillboard)
+	{
+		GetWorldMatrix();
+		UpdateWorldAABB();
+		return;
+	}
+
 	UWorld* World = GetWorld();
 	if (!World) return;
 
@@ -99,6 +123,11 @@ void UBillboardComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 bool UBillboardComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult)
 {
+	if (!bIsBillboard)
+	{
+		return UPrimitiveComponent::LineTraceComponent(Ray, OutHitResult);
+	}
+
 	FMatrix BillboardWorldMatrix = ComputeBillboardMatrix(Ray.Direction);
 	FMatrix InvWorldMatrix = BillboardWorldMatrix.GetInverse();
 

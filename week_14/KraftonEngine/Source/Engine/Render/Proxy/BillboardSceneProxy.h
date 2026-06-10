@@ -27,4 +27,6 @@ protected:
 
 	FVector CachedScale;
 	FVector CachedLocation;
+	FMatrix CachedComponentWorldMatrix = FMatrix::Identity;
+	bool CachedBillboardEnabled = true;
 };

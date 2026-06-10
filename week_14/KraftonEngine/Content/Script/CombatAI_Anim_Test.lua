@@ -7,16 +7,31 @@ local lastEngaging = false
 local hitBoolPulseTime = 0.0
 local healthBillboards = nil
 local lastHealthIndicatorState = ""
+local deathElapsed = 0.0
+local deathDestroyRequested = false
 
 local FIRE_TRIGGER_INTERVAL = 0.45
 local HIT_BOOL_PULSE_DURATION = 0.12
 local HEALTH_INDICATOR_GREEN_RATIO = 0.60
 local HEALTH_INDICATOR_ORANGE_RATIO = 0.30
+local DEATH_SINK_DELAY = 5.0
+local DEATH_DESTROY_DELAY = 10.0
+local DEATH_SINK_SPEED = 20.0
 local HEALTH_INDICATOR_MATERIALS = {
     green = "Content/Material/UI/AllyStatus/AllyHealth_Green.uasset",
     orange = "Content/Material/UI/AllyStatus/AllyHealth_Orange.uasset",
     red = "Content/Material/UI/AllyStatus/AllyHealth_Red.uasset"
 }
+
+local function actor_is_valid(actor)
+    if actor == nil then
+        return false
+    end
+    if actor.IsValid ~= nil then
+        return actor:IsValid()
+    end
+    return true
+end
 
 local function find_anim_instance()
     if obj == nil then
@@ -273,6 +288,36 @@ local function agent_is_alive(agent)
     return true
 end
 
+local function update_death_disposal(isDead, dt)
+    if not isDead then
+        deathElapsed = 0.0
+        deathDestroyRequested = false
+        return false
+    end
+
+    local deltaTime = tonumber(dt) or 0.0
+    deathElapsed = deathElapsed + deltaTime
+
+    if deathElapsed >= DEATH_DESTROY_DELAY then
+        if not deathDestroyRequested and actor_is_valid(obj) and obj.Destroy ~= nil then
+            deathDestroyRequested = true
+            obj:Destroy()
+            return true
+        end
+        return deathDestroyRequested
+    end
+
+    if deathElapsed >= DEATH_SINK_DELAY and actor_is_valid(obj) and obj.Location ~= nil then
+        local location = obj.Location
+        if location ~= nil then
+            location.Z = (tonumber(location.Z) or 0.0) - DEATH_SINK_SPEED * deltaTime
+            obj.Location = location
+        end
+    end
+
+    return false
+end
+
 local function agent_role_name(agent)
     if agent == nil then
         return ""
@@ -336,6 +381,8 @@ function BeginPlay()
     hitBoolPulseTime = 0.0
     healthBillboards = collect_health_billboards()
     lastHealthIndicatorState = ""
+    deathElapsed = 0.0
+    deathDestroyRequested = false
     update_health_indicator(combatAgent)
     set_initial_variables()
 end
@@ -388,6 +435,10 @@ function Tick(dt)
         fireElapsed = FIRE_TRIGGER_INTERVAL
     end
     lastEngaging = isEngaging
+
+    if update_death_disposal(isDead, dt) then
+        return
+    end
 
     if isDead or bHitActive then
         return
