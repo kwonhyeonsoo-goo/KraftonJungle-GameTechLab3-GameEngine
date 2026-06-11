@@ -13,6 +13,39 @@ class USkeletalMeshComponent;
 class USniperWeaponComponent;
 class FPhysicsAssetInstance;
 
+enum class ESniperPreciseHitQueryMode : uint8
+{
+	None = 0,
+	CharacterQueryBody,
+	LiveRagdollBody,
+	PosePhysicsAssetFallback,
+};
+
+enum class ESniperPreciseHitRejectReason : uint8
+{
+	None = 0,
+	NoSkeletalMesh,
+	NoPhysicsScene,
+	QueryBodySyncFailed,
+	PreciseMissAfterBroadHit,
+	BroadPreciseDistanceExceeded,
+	PoseFallbackNoHit,
+};
+
+struct FSniperPreciseHitQueryDiagnostics
+{
+	ESniperPreciseHitQueryMode QueryMode = ESniperPreciseHitQueryMode::None;
+	ESniperPreciseHitRejectReason RejectReason = ESniperPreciseHitRejectReason::None;
+	FName BroadHitBoneName = FName::None;
+	FName PreciseHitBoneName = FName::None;
+	FVector BroadHitLocation = FVector::ZeroVector;
+	FVector PreciseHitLocation = FVector::ZeroVector;
+	float BroadToPreciseDistance = 0.0f;
+	bool bAccepted = false;
+	bool bSyncAttempted = false;
+	bool bSyncSucceeded = false;
+};
+
 UCLASS()
 class UBallisticBulletManagerComponent : public UActorComponent
 {
@@ -69,9 +102,10 @@ private:
 	bool ShouldRunPreciseCharacterHitQuery(const struct FHitResult& BroadHit) const;
 	bool ShouldRunPosePhysicsAssetHitQuery(const struct FHitResult& BroadHit) const;
 	bool EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const;
-	bool QueryCharacterQueryBodyHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
-	bool QueryPreciseCharacterHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
-	bool QueryPosePhysicsAssetCharacterHit(const FBallisticBullet& Bullet, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
+	float ResolveBroadToPreciseDistanceThreshold(ESniperPreciseHitQueryMode QueryMode) const;
+	bool QueryCharacterQueryBodyHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit, FSniperPreciseHitQueryDiagnostics* OutDiagnostics = nullptr) const;
+	bool QueryPreciseCharacterHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit, FSniperPreciseHitQueryDiagnostics* OutDiagnostics = nullptr) const;
+	bool QueryPosePhysicsAssetCharacterHit(const FBallisticBullet& Bullet, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit, FSniperPreciseHitQueryDiagnostics* OutDiagnostics = nullptr) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	USkeletalMeshComponent* ResolveHitSkeletalMeshComponent(const struct FHitResult& Hit) const;
@@ -100,6 +134,18 @@ private:
 	bool bEnablePreciseCharacterHitQuery = true;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
 	float MaxPreciseCharacterHitDistance = 0.25f;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	float MaxQueryBodyBroadToPreciseDistance = 0.12f;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	float MaxRagdollBroadToPreciseDistance = 0.25f;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	float MaxPoseFallbackBroadToPreciseDistance = 0.20f;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	bool bRejectBroadHitWhenQueryBodyPreciseMisses = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	bool bAllowPoseFallbackWhenQueryBodySyncFails = false;
+	UPROPERTY(Edit, Save, Category="Sniper|Hit")
+	bool bLogPreciseCharacterHitDiagnostics = true;
 	UPROPERTY(Edit, Save, Category="Sniper|KillCam")
 	bool bEnableKillCamBodyCenterDistanceFilter = true;
 	UPROPERTY(Edit, Save, Category="Sniper|KillCam", DisplayName="Max KillCam Body Center Distance")
