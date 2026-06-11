@@ -879,9 +879,9 @@ void FSystemResources::UpdateLightBuffer(FD3DDevice& Device, const FScene& Scene
 	}
 	else
 	{
-		// 폴백: 씬에 AmbientLight 없으면 최소 ambient 보장 (검정 방지)
-		GlobalLightingData.Ambient.Intensity = 0.15f;
-		GlobalLightingData.Ambient.Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+		// 폴백: 씬에 AmbientLight 없으면 최소 ambient 보장 (검정 방지) -> 수정: 빛이 없으면 완전 어둡게 처리
+		GlobalLightingData.Ambient.Intensity = 0.0f;
+		GlobalLightingData.Ambient.Color = FVector4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 	if (Env.HasGlobalDirectionalLight())
 	{
