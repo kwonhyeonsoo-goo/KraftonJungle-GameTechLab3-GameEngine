@@ -191,7 +191,7 @@ void UCombatCoverAgentComponent::RequestAdvance()
             CurrentMovePathIndex = 0;
             FinalReservedSlot.Reset();
             LinkedMoveStartDelayRemaining = 0.0f;
-            AdvanceTimer = 0.0f;
+            AdvanceTimer = (std::max)(0.0f, AdvanceInterval - RetryInterval);
             RetryTimer = 0.0f;
             State = ECombatCoverAgentState::InCover;
             return;
@@ -491,6 +491,7 @@ void UCombatCoverAgentComponent::ClampRuntimeEditableValues()
     MoveSpeed = (std::max)(0.0f, MoveSpeed);
     CrouchMoveSpeed = (std::max)(0.0f, CrouchMoveSpeed);
     RunMoveSpeed = (std::max)(0.0f, RunMoveSpeed);
+    AssaultWalkBelowHealthRatio = (std::min)((std::max)(0.0f, AssaultWalkBelowHealthRatio), 1.0f);
     AcceptanceRadius = (std::max)(1.0f, AcceptanceRadius);
     AdvanceIntervalMin = (std::max)(0.0f, AdvanceIntervalMin);
     AdvanceIntervalMax = (std::max)(AdvanceIntervalMin, AdvanceIntervalMax);
@@ -578,7 +579,12 @@ float UCombatCoverAgentComponent::GetCombatAnimationMoveState() const
 
 bool UCombatCoverAgentComponent::ShouldRunDuringCombatMovement() const
 {
-    return GetResolvedCombatRole() == ECombatAgentRole::EnemyAssault;
+    if (GetResolvedCombatRole() != ECombatAgentRole::EnemyAssault)
+    {
+        return false;
+    }
+
+    return GetHealthRatio() > AssaultWalkBelowHealthRatio;
 }
 
 float UCombatCoverAgentComponent::GetCurrentCombatMoveSpeed() const

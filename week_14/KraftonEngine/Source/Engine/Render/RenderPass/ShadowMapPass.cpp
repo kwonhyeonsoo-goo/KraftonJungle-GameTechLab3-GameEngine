@@ -671,18 +671,12 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 {
 	FShader* StaticShadowShader = FShaderManager::Get().GetOrCreateShadowDepthPermutation(
 		EShadowDepthDefines::EVertexFactory::StaticMesh);
-	FShader* SkeletalShadowShader = bUseGpuSkinning
-		? FShaderManager::Get().GetOrCreateShadowDepthPermutation(EShadowDepthDefines::EVertexFactory::SkeletalMesh)
-		: StaticShadowShader;
-
 	if (!StaticShadowShader || !StaticShadowShader->IsValid()) return;
-	const bool bCanDrawGpuSkinnedCasters = SkeletalShadowShader && SkeletalShadowShader->IsValid();
 
 	ID3D11Device* Device = nullptr;
 	DC->GetDevice(&Device);
 
 	FShader* BoundShader = nullptr;
-	ID3D11ShaderResourceView* BoundSkinMatrixSRV = nullptr;
 
 	TArray<FPrimitiveSceneProxy*> BroadPhaseProxies;
 	const TArray<FPrimitiveSceneProxy*>* ProxyList = nullptr;
@@ -719,16 +713,10 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 			SkeletalProxy->GetEffectiveSkinningMode() == ESkinningMode::GPU;
 
 		FDrawCommandBuffer ProxyBuffer;
-		ID3D11ShaderResourceView* SkinMatrixSRV = nullptr;
 
 		if (bGpuSkinned)
 		{
-			if (!bCanDrawGpuSkinnedCasters) continue;
-
 			if (!SkeletalProxy->PrepareGpuSkinningDrawBuffer(Device, DC, ProxyBuffer)) continue;
-
-			SkinMatrixSRV = SkeletalProxy->GetSkinMatrixSRV(Device, DC);
-			if (!SkinMatrixSRV) continue;
 		}
 		else
 		{
@@ -736,7 +724,7 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 		}
 		if (!ProxyBuffer.VB || !ProxyBuffer.IB) continue;
 
-		FShader* DesiredShader = bGpuSkinned ? SkeletalShadowShader : StaticShadowShader;
+		FShader* DesiredShader = StaticShadowShader;
 		if (DesiredShader != BoundShader)
 		{
 			DesiredShader->Bind(DC);
@@ -746,12 +734,6 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 			{
 				DC->PSSetShader(nullptr, nullptr, 0);
 			}
-		}
-
-		if (SkinMatrixSRV != BoundSkinMatrixSRV)
-		{
-			DC->VSSetShaderResources(EVertexFactoryTexSlot::SkinMatrices, 1, &SkinMatrixSRV);
-			BoundSkinMatrixSRV = SkinMatrixSRV;
 		}
 
 			bool bAnySectionCastsShadow = false;

@@ -870,6 +870,7 @@
     <FxCompile Include="Shaders\PostProcess\BloomBlur.hlsl" />
     <FxCompile Include="Shaders\PostProcess\BloomComposite.hlsl" />
     <FxCompile Include="Shaders\PostProcess\BloomExtract.hlsl" />
+    <FxCompile Include="Shaders\Compute\SkeletalSkinningCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\EditorEngine.cpp">

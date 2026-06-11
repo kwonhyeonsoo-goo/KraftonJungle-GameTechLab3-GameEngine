@@ -217,6 +217,8 @@ FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewM
 // ============================================================
 FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactoryType VFType, ERenderPass SecPass, EViewMode ViewMode, bool bGPUSkinning)
 {
+	(void)bGPUSkinning;
+
 	const bool bDerivableSurfaceTransparent =
 		Mat &&
 		Mat->GetSourceKind() != EMaterialSourceKind::Graph &&
@@ -248,9 +250,7 @@ FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactor
 
     // 4. Surface 메시 → pass별 scene shader. 셰이더 정점 팩토리는 bGPUSkinning 으로 결정
 	//    (CPU 스키닝은 static-layout VS).
-	const EUberLitDefines::EVertexFactory UVF = bGPUSkinning
-		? EUberLitDefines::EVertexFactory::SkeletalMesh
-		: EUberLitDefines::EVertexFactory::StaticMesh;
+	const EUberLitDefines::EVertexFactory UVF = EUberLitDefines::EVertexFactory::StaticMesh;
 
 	if (SecPass == ERenderPass::Transparent)
 		return GetUberTransparentShader(ViewMode, UVF);
@@ -263,9 +263,7 @@ FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactor
 	case EViewMode::Lit_Phong:
 	case EViewMode::LightCulling: return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Phong,   UVF, EShaderErrorMode::Notification);
 	default:
-		return bGPUSkinning
-			? FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Default, UVF, EShaderErrorMode::Notification)
-			: FShaderManager::Get().GetOrCreate(EShaderPath::UberLit);  // base UberLit (기존 ProxyShader 통과와 동일)
+		return FShaderManager::Get().GetOrCreate(EShaderPath::UberLit);
 	}
 }
 
@@ -474,7 +472,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			FShader* EffectiveShader;
 			if (bUsesViewModeMeshShader)
 			{
-				EffectiveShader = GetViewModeMeshShader(bGPUSkinning);
+				EffectiveShader = GetViewModeMeshShader(false);
 			}
 			else if (SectionMaterial)
 			{
@@ -486,7 +484,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			else
 			{
 				// 머티리얼 없는 섹션(예외) — 기존 Proxy 셰이더 경로 보존.
-				EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, bGPUSkinning);
+				EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, false);
 			}
 
 		const bool bClothOverlayOnTransparentSection =
@@ -507,9 +505,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		Cmd.bIsGpuSkinned = bGPUSkinning;
 		Cmd.Buffer.FirstIndex = Section.FirstIndex;
 		Cmd.Buffer.IndexCount = Section.IndexCount;
-		Cmd.Bindings.SkinMatrixSRV = bGPUSkinning && SkeletalProxy
-			? SkeletalProxy->GetSkinMatrixSRV(CachedDevice, Ctx)
-			: nullptr;
+		Cmd.Bindings.SkinMatrixSRV = nullptr;
 		Cmd.Bindings.MeshScalarOverlayCB = bUsesViewModeMeshShader ? &MeshScalarOverlayCB : nullptr;
 
 		if (bViewModeMeshOverlay)

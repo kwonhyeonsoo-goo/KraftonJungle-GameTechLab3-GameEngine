@@ -171,7 +171,8 @@ private:
     FCombatCoverSlotHandle FindNearestFreeSlot(const FVector& WorldLocation, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent) const;
     FCombatCoverSlotHandle FindFreeSlotInNode(UCombatCoverNodeComponent* Node, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent, ECombatSlotQueryPurpose Purpose = ECombatSlotQueryPurpose::Advance, const FCombatCoverSlotHandle* SkipSlotHandle = nullptr) const;
     bool TryMoveToSlotTypeInCurrentNode(UCombatCoverAgentComponent* Agent, ECombatCoverSlotType DesiredSlotType);
-    bool ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle);
+    bool ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle, int32 NodeOccupancyOverflow = 0);
+    bool IsNodeAtOrOverCapacity(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* RequestingAgent, int32 NodeOccupancyOverflow = 0) const;
     int32 ReserveLinkLane(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode);
     void ReleaseLinkLane(UCombatCoverAgentComponent* Agent);
     void ReleaseAgentExcept(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& KeepSlotHandle);
@@ -208,6 +209,18 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatFlow", DisplayName="Use Node Occupancy Limit")
     bool bUseNodeOccupancyLimit = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Initial Placement", DisplayName="Limit Initial Slot Search To Spawn Cluster")
+    bool bLimitInitialSlotSearchToSpawnCluster = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Initial Placement", DisplayName="Initial Slot Search Distance Slack", Min=0.0f, Max=10000.0f, Speed=0.1f)
+    float InitialSlotSearchDistanceSlack = 25.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Initial Placement", DisplayName="Initial Slot Node Occupancy Overflow", Min=0, Max=32, Speed=1)
+    int32 InitialSlotNodeOccupancyOverflow = 0;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Advance Node Occupancy Overflow", Min=0, Max=32, Speed=1)
+    int32 AdvanceNodeOccupancyOverflow = 2;
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Slot Aware Link Offset Blend", Min=0.0f, Max=1.0f, Speed=0.05f)
     float SlotAwareLinkOffsetBlend = 1.0f;

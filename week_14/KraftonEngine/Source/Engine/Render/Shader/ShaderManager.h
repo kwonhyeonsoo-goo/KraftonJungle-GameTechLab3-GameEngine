@@ -160,6 +160,8 @@ namespace EShaderPath
 	inline constexpr const char* ParticleMesh   = "Shaders/Particle/Mesh.hlsl";
 	inline constexpr const char* ParticleBeamTrail = "Shaders/Particle/BeamTrail.hlsl";
 
+	inline constexpr const char* SkeletalSkinningCS = "Shaders/Compute/SkeletalSkinningCS.hlsl";
+
 	inline constexpr const char* BloomExtract = "Shaders/PostProcess/BloomExtract.hlsl";
 	inline constexpr const char* BloomBlur = "Shaders/PostProcess/BloomBlur.hlsl";
 	inline constexpr const char* BloomComposite = "Shaders/PostProcess/BloomComposite.hlsl";

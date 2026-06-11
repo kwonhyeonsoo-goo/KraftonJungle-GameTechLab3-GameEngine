@@ -53,6 +53,7 @@
           "MoveSpeed" : 6.500000,
           "CrouchMoveSpeed" : 5.000000,
           "RunMoveSpeed" : 8.000000,
+          "AssaultWalkBelowHealthRatio" : 0.500000,
           "MovingFireRange" : 30.000000,
           "PendingTagsString" : "",
           "PersistentGuid" : "Component_333",

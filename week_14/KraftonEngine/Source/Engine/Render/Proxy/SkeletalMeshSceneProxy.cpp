@@ -2,6 +2,9 @@
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Render/Command/DrawCommand.h"
+#include "Render/Shader/Shader.h"
+#include "Render/Shader/ShaderManager.h"
+#include "Render/Types/RenderConstants.h"
 #include "Runtime/Engine.h"
 #include "Profiling/Time/Timer.h"
 #include "Profiling/Stats/Stats.h"
@@ -18,6 +21,7 @@ FSkeletalMeshSceneProxy::FSkeletalMeshSceneProxy(USkeletalMeshComponent* InCompo
 FSkeletalMeshSceneProxy::~FSkeletalMeshSceneProxy()
 {
 	ReleaseSkinMatrixBuffer();
+	ReleaseGpuSkinningComputeResources();
 }   
 
 USkeletalMeshComponent* FSkeletalMeshSceneProxy::GetSkeletalMeshComponent() const
@@ -44,6 +48,7 @@ void FSkeletalMeshSceneProxy::UpdateMesh()
 	bBoneHeatMapBufferNeedsCreate = true;
 	bClothMaxDistanceBufferNeedsCreate = true;
 	ReleaseSkinMatrixBuffer();
+	ReleaseGpuSkinningComputeResources();
 
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
 	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
@@ -98,12 +103,13 @@ bool FSkeletalMeshSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device,
 	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
 	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
 	if (!Asset || !Asset->RenderBuffer || !Asset->RenderBuffer->IsValid()) return false;
+	if (Asset->Vertices.empty()) return false;
 
-	if (!UpdateSkinMatrixBuffer(Device, Context)) return false;
+	if (!DispatchGpuSkinning(Device, Context)) return false;
 
 	OutBuffer = {};
-	OutBuffer.VB = Asset->RenderBuffer->GetVertexBuffer().GetBuffer();
-	OutBuffer.VBStride = Asset->RenderBuffer->GetVertexBuffer().GetStride();
+	OutBuffer.VB = GpuSkinnedVertexBuffer;
+	OutBuffer.VBStride = sizeof(FVertexPNCTT);
 	OutBuffer.IB = Asset->RenderBuffer->GetIndexBuffer().GetBuffer();
 	return OutBuffer.VB != nullptr && OutBuffer.IB != nullptr;
 }
@@ -266,6 +272,43 @@ void FSkeletalMeshSceneProxy::ReleaseSkinMatrixBuffer() const
 	SkinMatrixCapacity = 0;
 }
 
+void FSkeletalMeshSceneProxy::ReleaseGpuSkinningComputeResources() const
+{
+	if (GpuSkinningSourceVertexSRV)
+	{
+		GpuSkinningSourceVertexSRV->Release();
+		GpuSkinningSourceVertexSRV = nullptr;
+	}
+
+	if (GpuSkinningSourceVertexBuffer)
+	{
+		GpuSkinningSourceVertexBuffer->Release();
+		GpuSkinningSourceVertexBuffer = nullptr;
+	}
+
+	if (GpuSkinnedVertexUAV)
+	{
+		GpuSkinnedVertexUAV->Release();
+		GpuSkinnedVertexUAV = nullptr;
+	}
+
+	if (GpuSkinningOutputBuffer)
+	{
+		GpuSkinningOutputBuffer->Release();
+		GpuSkinningOutputBuffer = nullptr;
+	}
+
+	if (GpuSkinnedVertexBuffer)
+	{
+		GpuSkinnedVertexBuffer->Release();
+		GpuSkinnedVertexBuffer = nullptr;
+	}
+
+	GpuSkinningParamsCB.Release();
+	GpuSkinningVertexCapacity = 0;
+	DispatchedGpuSkinningRevision = 0;
+}
+
 bool FSkeletalMeshSceneProxy::UpdateSkinMatrixBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context) const
 {
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
@@ -336,6 +379,175 @@ bool FSkeletalMeshSceneProxy::UpdateSkinMatrixBuffer(ID3D11Device* Device, ID3D1
 	}
 
 	UploadedSkinMatrixRevision = CurrentRevision;
+	return true;
+}
+
+bool FSkeletalMeshSceneProxy::EnsureGpuSkinningComputeResources(ID3D11Device* Device, uint32 VertexCount) const
+{
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Device || !Asset || Asset->Vertices.empty() || VertexCount == 0) return false;
+
+	if (!GpuSkinningSourceVertexBuffer || !GpuSkinningSourceVertexSRV || GpuSkinningVertexCapacity < VertexCount)
+	{
+		ReleaseGpuSkinningComputeResources();
+
+		D3D11_BUFFER_DESC SourceDesc = {};
+		SourceDesc.ByteWidth = sizeof(FVertexPNCTBW) * VertexCount;
+		SourceDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		SourceDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		SourceDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+		SourceDesc.StructureByteStride = sizeof(FVertexPNCTBW);
+
+		D3D11_SUBRESOURCE_DATA SourceData = {};
+		SourceData.pSysMem = Asset->Vertices.data();
+
+		if (FAILED(Device->CreateBuffer(&SourceDesc, &SourceData, &GpuSkinningSourceVertexBuffer)))
+		{
+			ReleaseGpuSkinningComputeResources();
+			return false;
+		}
+		GpuSkinningSourceVertexBuffer->SetPrivateData(
+			WKPDID_D3DDebugObjectName,
+			static_cast<UINT>(std::strlen("GpuSkinningSourceVertexBuffer")),
+			"GpuSkinningSourceVertexBuffer");
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC SourceSRVDesc = {};
+		SourceSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+		SourceSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+		SourceSRVDesc.Buffer.FirstElement = 0;
+		SourceSRVDesc.Buffer.NumElements = VertexCount;
+
+		if (FAILED(Device->CreateShaderResourceView(GpuSkinningSourceVertexBuffer, &SourceSRVDesc, &GpuSkinningSourceVertexSRV)))
+		{
+			ReleaseGpuSkinningComputeResources();
+			return false;
+		}
+		GpuSkinningSourceVertexSRV->SetPrivateData(
+			WKPDID_D3DDebugObjectName,
+			static_cast<UINT>(std::strlen("GpuSkinningSourceVertexSRV")),
+			"GpuSkinningSourceVertexSRV");
+
+		const uint32 OutputByteWidth = sizeof(FVertexPNCTT) * VertexCount;
+		D3D11_BUFFER_DESC OutputDesc = {};
+		OutputDesc.ByteWidth = OutputByteWidth;
+		OutputDesc.Usage = D3D11_USAGE_DEFAULT;
+		OutputDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+		OutputDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+		if (FAILED(Device->CreateBuffer(&OutputDesc, nullptr, &GpuSkinningOutputBuffer)))
+		{
+			ReleaseGpuSkinningComputeResources();
+			return false;
+		}
+		GpuSkinningOutputBuffer->SetPrivateData(
+			WKPDID_D3DDebugObjectName,
+			static_cast<UINT>(std::strlen("GpuSkinningOutputBuffer")),
+			"GpuSkinningOutputBuffer");
+
+		D3D11_BUFFER_DESC VertexDesc = {};
+		VertexDesc.ByteWidth = OutputByteWidth;
+		VertexDesc.Usage = D3D11_USAGE_DEFAULT;
+		VertexDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+		if (FAILED(Device->CreateBuffer(&VertexDesc, nullptr, &GpuSkinnedVertexBuffer)))
+		{
+			ReleaseGpuSkinningComputeResources();
+			return false;
+		}
+		GpuSkinnedVertexBuffer->SetPrivateData(
+			WKPDID_D3DDebugObjectName,
+			static_cast<UINT>(std::strlen("GpuSkinnedVertexBuffer")),
+			"GpuSkinnedVertexBuffer");
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC OutputUAVDesc = {};
+		OutputUAVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+		OutputUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+		OutputUAVDesc.Buffer.FirstElement = 0;
+		OutputUAVDesc.Buffer.NumElements = OutputByteWidth / sizeof(uint32);
+		OutputUAVDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
+
+		if (FAILED(Device->CreateUnorderedAccessView(GpuSkinningOutputBuffer, &OutputUAVDesc, &GpuSkinnedVertexUAV)))
+		{
+			ReleaseGpuSkinningComputeResources();
+			return false;
+		}
+		GpuSkinnedVertexUAV->SetPrivateData(
+			WKPDID_D3DDebugObjectName,
+			static_cast<UINT>(std::strlen("GpuSkinnedVertexUAV")),
+			"GpuSkinnedVertexUAV");
+
+		GpuSkinningParamsCB.Create(Device, sizeof(uint32) * 4, "GpuSkinningParamsCB");
+		GpuSkinningVertexCapacity = VertexCount;
+		DispatchedGpuSkinningRevision = 0;
+	}
+
+	return GpuSkinningSourceVertexSRV && GpuSkinnedVertexBuffer && GpuSkinnedVertexUAV && GpuSkinningParamsCB.GetBuffer();
+}
+
+bool FSkeletalMeshSceneProxy::DispatchGpuSkinning(ID3D11Device* Device, ID3D11DeviceContext* Context) const
+{
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Device || !Context || !SMC || !Asset || Asset->Vertices.empty()) return false;
+
+	const uint32 VertexCount = static_cast<uint32>(Asset->Vertices.size());
+	if (!EnsureGpuSkinningComputeResources(Device, VertexCount)) return false;
+	if (!UpdateSkinMatrixBuffer(Device, Context)) return false;
+
+	const uint64 CurrentRevision = SMC->GetSkinnedRevision();
+	if (DispatchedGpuSkinningRevision == CurrentRevision)
+	{
+		return true;
+	}
+
+	FComputeShader* SkinningCS = FShaderManager::Get().GetOrCreateCS(EShaderPath::SkeletalSkinningCS, "CSMain");
+	if (!SkinningCS || !SkinningCS->IsValid()) return false;
+
+	struct FParams
+	{
+		uint32 VertexCount = 0;
+		uint32 Padding0 = 0;
+		uint32 Padding1 = 0;
+		uint32 Padding2 = 0;
+	};
+
+	const FParams Params{ VertexCount, 0, 0, 0 };
+	GpuSkinningParamsCB.Update(Context, &Params, sizeof(Params));
+
+	{
+		SCOPE_STAT_CAT("GPUSkinning_ComputeDispatch", "Skinning");
+
+		SkinningCS->Bind(Context);
+
+		ID3D11Buffer* ParamsCB = GpuSkinningParamsCB.GetBuffer();
+		Context->CSSetConstantBuffers(0, 1, &ParamsCB);
+
+		ID3D11ShaderResourceView* SourceSRV = GpuSkinningSourceVertexSRV;
+		Context->CSSetShaderResources(0, 1, &SourceSRV);
+		Context->CSSetShaderResources(EVertexFactoryTexSlot::SkinMatrices, 1, &SkinMatrixSRV);
+
+		ID3D11UnorderedAccessView* OutputUAV = GpuSkinnedVertexUAV;
+		Context->CSSetUnorderedAccessViews(0, 1, &OutputUAV, nullptr);
+
+		const uint32 ThreadGroupSize = 128;
+		Context->Dispatch((VertexCount + ThreadGroupSize - 1) / ThreadGroupSize, 1, 1);
+
+		ID3D11UnorderedAccessView* NullUAV = nullptr;
+		ID3D11ShaderResourceView* NullSRV = nullptr;
+		ID3D11Buffer* NullCB = nullptr;
+		Context->CSSetUnorderedAccessViews(0, 1, &NullUAV, nullptr);
+		Context->CSSetShaderResources(0, 1, &NullSRV);
+		Context->CSSetShaderResources(EVertexFactoryTexSlot::SkinMatrices, 1, &NullSRV);
+		Context->CSSetConstantBuffers(0, 1, &NullCB);
+		Context->CSSetShader(nullptr, nullptr, 0);
+
+		Context->CopyResource(GpuSkinnedVertexBuffer, GpuSkinningOutputBuffer);
+	}
+
+	DispatchedGpuSkinningRevision = CurrentRevision;
 	return true;
 }
 

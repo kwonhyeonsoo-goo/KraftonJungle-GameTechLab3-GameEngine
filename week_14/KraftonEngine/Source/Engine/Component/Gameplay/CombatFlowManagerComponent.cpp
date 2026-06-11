@@ -353,7 +353,7 @@ bool UCombatFlowManagerComponent::AssignInitialSlot(UCombatCoverAgentComponent* 
         return false;
     }
 
-    if (!ReserveSlot(Agent, Candidate))
+    if (!ReserveSlot(Agent, Candidate, InitialSlotNodeOccupancyOverflow))
     {
         return false;
     }
@@ -398,7 +398,7 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
             continue;
         }
 
-        if (IsNodeOccupiedOrReserved(NextNode, Agent))
+        if (IsNodeAtOrOverCapacity(NextNode, Agent, AdvanceNodeOccupancyOverflow))
         {
             continue;
         }
@@ -409,7 +409,7 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
             continue;
         }
 
-        if (!ReserveSlot(Agent, Candidate))
+        if (!ReserveSlot(Agent, Candidate, AdvanceNodeOccupancyOverflow))
         {
             continue;
         }
@@ -795,6 +795,14 @@ bool UCombatFlowManagerComponent::IsSlotFree(const FCombatCoverSlotHandle& SlotH
 
 bool UCombatFlowManagerComponent::IsNodeOccupiedOrReserved(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* RequestingAgent) const
 {
+    return IsNodeAtOrOverCapacity(Node, RequestingAgent, 0);
+}
+
+bool UCombatFlowManagerComponent::IsNodeAtOrOverCapacity(
+    const UCombatCoverNodeComponent* Node,
+    const UCombatCoverAgentComponent* RequestingAgent,
+    int32 NodeOccupancyOverflow) const
+{
     if (!Node || Node->GetNodeId().empty())
     {
         return true;
@@ -805,7 +813,8 @@ bool UCombatFlowManagerComponent::IsNodeOccupiedOrReserved(const UCombatCoverNod
         return false;
     }
 
-    return CountNodeClaims(Node, RequestingAgent) >= (std::max)(1, Node->GetMaxOccupants());
+    const int32 EffectiveMaxOccupants = (std::max)(1, Node->GetMaxOccupants() + (std::max)(0, NodeOccupancyOverflow));
+    return CountNodeClaims(Node, RequestingAgent) >= EffectiveMaxOccupants;
 }
 
 const FCombatCoverSlot* UCombatFlowManagerComponent::FindCurrentSlot(const UCombatCoverAgentComponent* Agent) const
@@ -933,14 +942,12 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindNearestFreeSlot(
     float BestDistance = 0.0f;
     bool bHasBest = false;
 
+    float NearestCompatibleDistance = 0.0f;
+    bool bHasNearestCompatible = false;
+
     for (UCombatCoverNodeComponent* Node : CachedNodes)
     {
         if (!Node || Node->GetNodeId().empty())
-        {
-            continue;
-        }
-
-        if (IsNodeOccupiedOrReserved(Node, RequestingAgent))
         {
             continue;
         }
@@ -953,6 +960,44 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindNearestFreeSlot(
                 continue;
             }
 
+            const float Distance = Dist2D(WorldLocation, Node->GetSlotWorldPosition(SlotIndex));
+            if (!bHasNearestCompatible || Distance < NearestCompatibleDistance)
+            {
+                NearestCompatibleDistance = Distance;
+                bHasNearestCompatible = true;
+            }
+        }
+    }
+
+    const bool bUseInitialClusterLimit = bLimitInitialSlotSearchToSpawnCluster && bHasNearestCompatible;
+    const float InitialClusterMaxDistance = NearestCompatibleDistance + (std::max)(0.0f, InitialSlotSearchDistanceSlack);
+
+    for (UCombatCoverNodeComponent* Node : CachedNodes)
+    {
+        if (!Node || Node->GetNodeId().empty())
+        {
+            continue;
+        }
+
+        if (IsNodeAtOrOverCapacity(Node, RequestingAgent, InitialSlotNodeOccupancyOverflow))
+        {
+            continue;
+        }
+
+        for (int32 SlotIndex = 0; SlotIndex < static_cast<int32>(Node->GetSlots().size()); ++SlotIndex)
+        {
+            const FCombatCoverSlot& Slot = Node->GetSlots()[SlotIndex];
+            if (!SlotTagsMatchTeam(Slot, TeamTag))
+            {
+                continue;
+            }
+
+            const float Distance = Dist2D(WorldLocation, Node->GetSlotWorldPosition(SlotIndex));
+            if (bUseInitialClusterLimit && Distance > InitialClusterMaxDistance)
+            {
+                continue;
+            }
+
             FCombatCoverSlotHandle Handle;
             Handle.NodeId = Node->GetNodeId();
             Handle.SlotId = Slot.SlotId;
@@ -961,7 +1006,6 @@ FCombatCoverSlotHandle UCombatFlowManagerComponent::FindNearestFreeSlot(
                 continue;
             }
 
-            const float Distance = Dist2D(WorldLocation, Node->GetSlotWorldPosition(SlotIndex));
             const float SlotScore = (std::max)(1.0f, ScoreCombatSlotForAgent(Slot, RequestingAgent, ECombatSlotQueryPurpose::Advance));
             const float WeightedDistance = Distance / SlotScore;
             if (!bHasBest || WeightedDistance < BestDistance)
@@ -1110,7 +1154,7 @@ bool UCombatFlowManagerComponent::TryMoveToSlotTypeInCurrentNode(UCombatCoverAge
     return true;
 }
 
-bool UCombatFlowManagerComponent::ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle)
+bool UCombatFlowManagerComponent::ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle, int32 NodeOccupancyOverflow)
 {
     if (!IsValid(Agent) || !SlotHandle.IsValid())
     {
@@ -1123,7 +1167,7 @@ bool UCombatFlowManagerComponent::ReserveSlot(UCombatCoverAgentComponent* Agent,
         return false;
     }
 
-    if (IsNodeOccupiedOrReserved(Node, Agent) || !IsSlotFree(SlotHandle, Agent))
+    if (IsNodeAtOrOverCapacity(Node, Agent, NodeOccupancyOverflow) || !IsSlotFree(SlotHandle, Agent))
     {
         return false;
     }

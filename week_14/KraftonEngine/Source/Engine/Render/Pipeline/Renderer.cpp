@@ -74,11 +74,6 @@ namespace
 		{
 			VSEntry = "VS_EditorIcon";
 		}
-		else if (Cmd.bIsSkeletal && Cmd.bIsGpuSkinned)
-		{
-			VSEntry = "VS_SkeletalMesh";
-		}
-
 		return FShaderManager::Get().GetOrCreate(
 			FShaderKey(EShaderPath::EditorIdPick, nullptr, VSEntry, "PS"));
 	}
