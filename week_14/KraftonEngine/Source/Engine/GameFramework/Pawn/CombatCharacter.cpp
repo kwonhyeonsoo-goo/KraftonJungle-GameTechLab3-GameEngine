@@ -7,6 +7,16 @@
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/SoundComponent.h"
 #include "Core/Types/CollisionTypes.h"
+#include "Engine/Runtime/Engine.h"
+#include "GameFramework/Actor/DecalActor.h"
+#include "GameFramework/World.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialManager.h"
+#include "Texture/Texture2D.h"
+
+#include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -14,6 +24,43 @@ namespace
 	constexpr float CombatGunfireVolume = 0.5f;
 	constexpr float CombatGunfireMinDistance = 1.0f;
 	constexpr float CombatGunfireMaxDistance = 80.0f;
+	constexpr const char* DefaultDeathBloodDecalMaterialPath = "Content/Material/Editor/DefaultDecal.uasset";
+
+	FQuat MakeRotationWithForwardX(const FVector& ForwardX, const FVector& UpHint)
+	{
+		FVector Forward = ForwardX.Normalized();
+		if (Forward.IsNearlyZero())
+		{
+			Forward = FVector::ForwardVector;
+		}
+
+		FVector Up = UpHint.Normalized();
+		if (Up.IsNearlyZero() || std::abs(Forward.Dot(Up)) > 0.98f)
+		{
+			Up = std::abs(Forward.Z) < 0.98f ? FVector::UpVector : FVector::RightVector;
+		}
+
+		FVector Right = Up.Cross(Forward).Normalized();
+		if (Right.IsNearlyZero())
+		{
+			Up = std::abs(Forward.Z) < 0.98f ? FVector::UpVector : FVector::RightVector;
+			Right = Up.Cross(Forward).Normalized();
+		}
+
+		Up = Forward.Cross(Right).Normalized();
+
+		FMatrix RotationMatrix = FMatrix::Identity;
+		RotationMatrix.M[0][0] = Forward.X;
+		RotationMatrix.M[0][1] = Forward.Y;
+		RotationMatrix.M[0][2] = Forward.Z;
+		RotationMatrix.M[1][0] = Right.X;
+		RotationMatrix.M[1][1] = Right.Y;
+		RotationMatrix.M[1][2] = Right.Z;
+		RotationMatrix.M[2][0] = Up.X;
+		RotationMatrix.M[2][1] = Up.Y;
+		RotationMatrix.M[2][2] = Up.Z;
+		return RotationMatrix.ToQuat().GetNormalized();
+	}
 }
 
 ACombatCharacter::ACombatCharacter()
@@ -25,6 +72,8 @@ ACombatCharacter::ACombatCharacter()
 
 void ACombatCharacter::BeginPlay()
 {
+	bDeathBloodDecalSpawned = false;
+
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
 		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -60,6 +109,30 @@ void ACombatCharacter::BeginPlay()
 			Mesh->EnablePhysicsAssetQueryBodies();
 		}
 	}
+
+	if (USniperDamageReceiverComponent* DamageReceiver = GetSniperDamageReceiverComponent())
+	{
+		if (SniperKilledHandle.IsValid())
+		{
+			DamageReceiver->OnSniperKilled.Remove(SniperKilledHandle);
+			SniperKilledHandle.Reset();
+		}
+		SniperKilledHandle = DamageReceiver->OnSniperKilled.AddUObject(this, &ACombatCharacter::HandleSniperKilled);
+	}
+}
+
+void ACombatCharacter::EndPlay()
+{
+	if (USniperDamageReceiverComponent* DamageReceiver = GetSniperDamageReceiverComponent())
+	{
+		if (SniperKilledHandle.IsValid())
+		{
+			DamageReceiver->OnSniperKilled.Remove(SniperKilledHandle);
+			SniperKilledHandle.Reset();
+		}
+	}
+
+	Super::EndPlay();
 }
 
 void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile)
@@ -145,4 +218,117 @@ void ACombatCharacter::ConfigureCombatGunfireSound(USoundComponent* Sound) const
 	Sound->SetRelativeLocation(FVector::ZeroVector);
 	Sound->SetRelativeRotation(FRotator::ZeroRotator);
 	Sound->SetRelativeScale(FVector::OneVector);
+}
+
+void ACombatCharacter::HandleSniperKilled(const FSniperHitInfo& HitInfo)
+{
+	if (bDeathBloodDecalSpawned)
+	{
+		return;
+	}
+
+	bDeathBloodDecalSpawned = true;
+	SpawnDeathBloodDecal(HitInfo);
+}
+
+void ACombatCharacter::SpawnDeathBloodDecal(const FSniperHitInfo& HitInfo) const
+{
+	if (!bSpawnDeathBloodDecal)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || !GEngine)
+	{
+		return;
+	}
+
+	UMaterial* BaseMaterial = nullptr;
+	if (!DeathBloodDecalMaterialPath.empty() && DeathBloodDecalMaterialPath != "None")
+	{
+		BaseMaterial = FMaterialManager::Get().GetOrCreateMaterial(DeathBloodDecalMaterialPath);
+	}
+	if (!BaseMaterial)
+	{
+		BaseMaterial = FMaterialManager::Get().GetOrCreateMaterial(DefaultDeathBloodDecalMaterialPath);
+	}
+	if (!BaseMaterial)
+	{
+		return;
+	}
+
+	UMaterial* DecalMaterial = BaseMaterial;
+	UMaterialInstanceDynamic* DynamicMaterial =
+		UMaterialInstanceDynamic::Create(BaseMaterial, const_cast<ACombatCharacter*>(this), "CombatCharacter_BloodDecalMID");
+	if (DynamicMaterial)
+	{
+		if (!DeathBloodDecalTexturePath.empty() && DeathBloodDecalTexturePath != "None")
+		{
+			if (UTexture2D* BloodTexture = UTexture2D::LoadFromFile(
+				DeathBloodDecalTexturePath,
+				GEngine->GetRenderer().GetFD3DDevice().GetDevice(),
+				ETextureColorSpace::SRGB))
+			{
+				DynamicMaterial->SetTextureParameterValue("DiffuseTexture", BloodTexture);
+			}
+		}
+		DecalMaterial = DynamicMaterial;
+	}
+
+	const FVector TraceAnchor =
+		!HitInfo.HitLocation.IsNearlyZero()
+		? HitInfo.HitLocation
+		: GetActorLocation();
+	const float TraceDistance = (std::max)(0.1f, DeathBloodDecalGroundTraceUp + DeathBloodDecalGroundTraceDown);
+
+	FHitResult GroundHit{};
+	FVector DecalNormal = FVector::UpVector;
+	FVector DecalLocation = GetActorLocation();
+	auto TryProjectToGround = [&](const FVector& Anchor) -> bool
+	{
+		const FVector TraceStart = Anchor + FVector::UpVector * (std::max)(0.0f, DeathBloodDecalGroundTraceUp);
+		if (!World->PhysicsRaycastByObjectTypes(
+			TraceStart,
+			FVector::DownVector,
+			TraceDistance,
+			GroundHit,
+			ObjectTypeBit(ECollisionChannel::WorldStatic),
+			this))
+		{
+			return false;
+		}
+
+		DecalLocation = GroundHit.WorldHitLocation;
+		if (!GroundHit.WorldNormal.IsNearlyZero())
+		{
+			DecalNormal = GroundHit.WorldNormal.Normalized();
+		}
+		return true;
+	};
+
+	if (!TryProjectToGround(TraceAnchor))
+	{
+		TryProjectToGround(GetActorLocation());
+	}
+
+	const float DecalDepth = (std::max)(0.01f, DeathBloodDecalDepth);
+	const float DecalSize = (std::max)(0.1f, DeathBloodDecalSize);
+	const FVector DecalCenter =
+		DecalLocation +
+		DecalNormal * (DeathBloodDecalSurfaceOffset - DecalDepth * 0.5f);
+	const FVector UpHint = GetActorForward().IsNearlyZero() ? FVector::ForwardVector : GetActorForward();
+
+	ADecalActor* DecalActor = World->SpawnActor<ADecalActor>();
+	if (!DecalActor)
+	{
+		return;
+	}
+
+	DecalActor->SetFName(FName("DeathBlood_Decal"));
+	DecalActor->InitRuntimeDecal(DecalMaterial);
+	DecalActor->SetActorLocation(DecalCenter);
+	DecalActor->SetActorRotation(MakeRotationWithForwardX(DecalNormal * -1.0f, UpHint).ToRotator());
+	DecalActor->SetActorScale(FVector(DecalDepth, DecalSize, DecalSize));
+	DecalActor->SetLifetimeSeconds((std::max)(0.1f, DeathBloodDecalLifetime));
 }
