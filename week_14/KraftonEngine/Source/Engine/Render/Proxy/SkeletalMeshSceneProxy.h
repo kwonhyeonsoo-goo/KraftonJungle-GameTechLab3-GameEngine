@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Render/Proxy/PrimitiveSceneProxy.h"
+#include "Render/Resource/Buffer.h"
 #include "Render/Types/VertexTypes.h"
 #include "Render/Types/ViewTypes.h"
 
@@ -34,7 +35,10 @@ private:
 	void RebuildSectionDraws();
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 	void ReleaseSkinMatrixBuffer() const;
+	void ReleaseGpuSkinningComputeResources() const;
 	bool UpdateSkinMatrixBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context) const;
+	bool EnsureGpuSkinningComputeResources(ID3D11Device* Device, uint32 VertexCount) const;
+	bool DispatchGpuSkinning(ID3D11Device* Device, ID3D11DeviceContext* Context) const;
 
 private:
 	mutable FDynamicVertexBuffer DynamicVertexBuffer;
@@ -54,4 +58,13 @@ private:
 	mutable ID3D11ShaderResourceView* SkinMatrixSRV = nullptr;
 	mutable uint32 SkinMatrixCapacity = 0;
 	mutable uint64 UploadedSkinMatrixRevision = 0;
+
+	mutable ID3D11Buffer* GpuSkinningSourceVertexBuffer = nullptr;
+	mutable ID3D11ShaderResourceView* GpuSkinningSourceVertexSRV = nullptr;
+	mutable ID3D11Buffer* GpuSkinningOutputBuffer = nullptr;
+	mutable ID3D11Buffer* GpuSkinnedVertexBuffer = nullptr;
+	mutable ID3D11UnorderedAccessView* GpuSkinnedVertexUAV = nullptr;
+	mutable FConstantBuffer GpuSkinningParamsCB;
+	mutable uint32 GpuSkinningVertexCapacity = 0;
+	mutable uint64 DispatchedGpuSkinningRevision = 0;
 };
