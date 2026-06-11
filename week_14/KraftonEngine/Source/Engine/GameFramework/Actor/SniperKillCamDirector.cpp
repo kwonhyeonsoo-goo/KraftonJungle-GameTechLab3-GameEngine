@@ -655,6 +655,17 @@ bool ASniperKillCamDirector::ConsumeFloorHitForBulletId(int32 BulletId, FBulletC
 	return true;
 }
 
+bool ASniperKillCamDirector::IsBulletPendingOrActive(int32 BulletId)
+{
+	if (BulletId == 0)
+	{
+		return false;
+	}
+
+	return std::find(GPendingKillCamBulletIds.begin(), GPendingKillCamBulletIds.end(), BulletId) != GPendingKillCamBulletIds.end()
+		|| std::find(GActiveKillCamBulletIds.begin(), GActiveKillCamBulletIds.end(), BulletId) != GActiveKillCamBulletIds.end();
+}
+
 bool ASniperKillCamDirector::CheckFloorHitInWorld(UWorld* World, int32 BulletId, FBulletCinematicSnapshot& OutSnapshot)
 {
 	ASniperKillCamDirector* Director = FindDirectorForWorld(World);
