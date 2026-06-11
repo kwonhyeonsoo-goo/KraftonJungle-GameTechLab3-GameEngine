@@ -685,6 +685,16 @@ void FViewportToolbar::RenderShowFlags(const FToolbarRenderState& State)
 	{
 		ImGui::Text("Show Flags");
 
+		int32 SkinningMode = static_cast<int32>(SkinningModeRuntime::Get());
+		bool bSkinningModeChanged = false;
+		bSkinningModeChanged |= ImGui::RadioButton("CPU Skinning", &SkinningMode, static_cast<int32>(ESkinningMode::CPU));
+		bSkinningModeChanged |= ImGui::RadioButton("GPU Skinning", &SkinningMode, static_cast<int32>(ESkinningMode::GPU));
+		if (bSkinningModeChanged)
+		{
+			SkinningModeRuntime::Set(static_cast<ESkinningMode>(SkinningMode));
+		}
+		ImGui::Separator();
+
 		ImGui::Checkbox("StaticMesh", &RenderOptions.ShowFlags.bStaticMesh);
 		ImGui::Checkbox("SkeletalMesh", &RenderOptions.ShowFlags.bSkeletalMesh);
 		ImGui::Checkbox("Particles", &RenderOptions.ShowFlags.bParticles);

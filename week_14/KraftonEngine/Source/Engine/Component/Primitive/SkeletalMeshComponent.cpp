@@ -608,6 +608,11 @@ bool USkeletalMeshComponent::HasEnabledClothSections() const
 ESkinningMode USkeletalMeshComponent::GetEffectiveSkinningMode() const
 {
     const ESkinningMode GlobalMode = Super::GetEffectiveSkinningMode();
+    if (GlobalMode == ESkinningMode::GPU && HasActiveMorphTargets())
+    {
+        return ESkinningMode::CPU;
+    }
+
     if (GlobalMode == ESkinningMode::GPU && HasEnabledClothSections())
     {
         return ESkinningMode::CPU;

@@ -2221,7 +2221,23 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 	}
 
 	USkeletalMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent();
-	const bool bGlobalCpuSkinning = SkinningModeRuntime::Get() == ESkinningMode::CPU;
+	ESkinningMode GlobalSkinningMode = SkinningModeRuntime::Get();
+	int32 SkinningMode = static_cast<int32>(GlobalSkinningMode);
+	bool bSkinningModeChanged = false;
+	bSkinningModeChanged |= ImGui::RadioButton("CPU Skinning", &SkinningMode, static_cast<int32>(ESkinningMode::CPU));
+	bSkinningModeChanged |= ImGui::RadioButton("GPU Skinning", &SkinningMode, static_cast<int32>(ESkinningMode::GPU));
+	if (bSkinningModeChanged)
+	{
+		GlobalSkinningMode = static_cast<ESkinningMode>(SkinningMode);
+		SkinningModeRuntime::Set(GlobalSkinningMode);
+		if (GlobalSkinningMode == ESkinningMode::CPU && PreviewComp)
+		{
+			ApplyClothPreviewForcesToComponent();
+			PreviewComp->TickClothSimulationForEditorPreview(0.0f);
+		}
+	}
+
+	const bool bGlobalCpuSkinning = GlobalSkinningMode == ESkinningMode::CPU;
 	const bool bCpuSkinning = PreviewComp
 		? PreviewComp->GetEffectiveSkinningMode() == ESkinningMode::CPU
 		: bGlobalCpuSkinning;
@@ -2232,16 +2248,7 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 	}
 	else if (!bCpuSkinning)
 	{
-		ImGui::TextDisabled("Cloth preview runs in CPU skinning mode.");
-		if (ImGui::Button("Use CPU Skinning", ImVec2(-1.0f, 0.0f)))
-		{
-			SkinningModeRuntime::Set(ESkinningMode::CPU);
-			if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
-			{
-				ApplyClothPreviewForcesToComponent();
-				Comp->TickClothSimulationForEditorPreview(0.0f);
-			}
-		}
+		ImGui::TextDisabled("GPU skinning is active; select CPU Skinning for cloth preview.");
 	}
 
 	ImGui::Separator();
