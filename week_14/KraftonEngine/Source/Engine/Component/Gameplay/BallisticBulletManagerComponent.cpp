@@ -218,6 +218,56 @@ namespace
 		}
 	}
 
+	float ComputePreciseHitTravelDelta(const FHitResult& BroadHit, const FHitResult& PreciseHit)
+	{
+		if (BroadHit.Distance >= FLT_MAX || PreciseHit.Distance >= FLT_MAX)
+		{
+			return 0.0f;
+		}
+
+		return std::abs(BroadHit.Distance - PreciseHit.Distance);
+	}
+
+	bool ShouldComparePreciseHitByTravelDelta(const FHitResult& BroadHit)
+	{
+		return Cast<UCapsuleComponent>(BroadHit.HitComponent) != nullptr ||
+			BroadHit.HitBoneName == FName::None;
+	}
+
+	bool ShouldSkipBroadPreciseThreshold(const FHitResult& BroadHit, const FHitResult& PreciseHit)
+	{
+		return BroadHit.HitActor != nullptr &&
+			BroadHit.HitActor == PreciseHit.HitActor &&
+			Cast<UCapsuleComponent>(BroadHit.HitComponent) != nullptr;
+	}
+
+	bool IsPreciseHitWithinThreshold(
+		const FHitResult& BroadHit,
+		const FHitResult& PreciseHit,
+		float MaxDistance,
+		float& OutWorldDelta,
+		float& OutTravelDelta)
+	{
+		OutWorldDelta = (BroadHit.WorldHitLocation - PreciseHit.WorldHitLocation).Length();
+		OutTravelDelta = ComputePreciseHitTravelDelta(BroadHit, PreciseHit);
+		if (ShouldSkipBroadPreciseThreshold(BroadHit, PreciseHit))
+		{
+			return true;
+		}
+
+		if (MaxDistance <= 0.0f)
+		{
+			return true;
+		}
+
+		if (ShouldComparePreciseHitByTravelDelta(BroadHit))
+		{
+			return OutTravelDelta <= MaxDistance;
+		}
+
+		return FVector::DistSquared(BroadHit.WorldHitLocation, PreciseHit.WorldHitLocation) <= MaxDistance * MaxDistance;
+	}
+
 	FVector ComputeBoxNormalLocal(const FVector& LocalPoint, const FVector& HalfExtent)
 	{
 		const float DistToX = std::abs(HalfExtent.X - std::abs(LocalPoint.X));
@@ -1155,12 +1205,13 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 				if (bLogPreciseCharacterHitDiagnostics)
 				{
 					UE_LOG(
-						"[SniperDebug] Character precise hit accepted. Mode=%s Actor=%s BroadBone=%s PreciseBone=%s Delta=%.3f SyncAttempted=%d SyncSucceeded=%d",
+						"[SniperDebug] Character precise hit accepted. Mode=%s Actor=%s BroadBone=%s PreciseBone=%s Delta=%.3f TravelDelta=%.3f SyncAttempted=%d SyncSucceeded=%d",
 						GetSniperPreciseHitQueryModeName(PreciseDiagnostics.QueryMode),
 						OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
 						PreciseDiagnostics.BroadHitBoneName.ToString().c_str(),
 						PreciseDiagnostics.PreciseHitBoneName.ToString().c_str(),
 						PreciseDiagnostics.BroadToPreciseDistance,
+						PreciseDiagnostics.BroadToPreciseTravelDelta,
 						PreciseDiagnostics.bSyncAttempted ? 1 : 0,
 						PreciseDiagnostics.bSyncSucceeded ? 1 : 0);
 				}
@@ -1177,11 +1228,12 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 					if (bLogPreciseCharacterHitDiagnostics)
 					{
 						UE_LOG(
-							"[SniperDebug] Character pose fallback accepted after query-body sync failure. Actor=%s BroadBone=%s PreciseBone=%s Delta=%.3f",
+							"[SniperDebug] Character pose fallback accepted after query-body sync failure. Actor=%s BroadBone=%s PreciseBone=%s Delta=%.3f TravelDelta=%.3f",
 							OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
 							PreciseDiagnostics.BroadHitBoneName.ToString().c_str(),
 							PreciseDiagnostics.PreciseHitBoneName.ToString().c_str(),
-							PreciseDiagnostics.BroadToPreciseDistance);
+							PreciseDiagnostics.BroadToPreciseDistance,
+							PreciseDiagnostics.BroadToPreciseTravelDelta);
 					}
 					return true;
 				}
@@ -1192,7 +1244,7 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 				if (bLogPreciseCharacterHitDiagnostics)
 				{
 					UE_LOG(
-						"[SniperDebug] Character broad hit rejected by live precision query. Mode=%s Reason=%s Actor=%s Component=%s BroadBone=%s PreciseBone=%s Delta=%.3f QueryBodies=%d LiveBodies=%d SyncAttempted=%d SyncSucceeded=%d",
+						"[SniperDebug] Character broad hit rejected by live precision query. Mode=%s Reason=%s Actor=%s Component=%s BroadBone=%s PreciseBone=%s Delta=%.3f TravelDelta=%.3f QueryBodies=%d LiveBodies=%d SyncAttempted=%d SyncSucceeded=%d",
 						GetSniperPreciseHitQueryModeName(PreciseDiagnostics.QueryMode),
 						GetSniperPreciseHitRejectReasonName(PreciseDiagnostics.RejectReason),
 						OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
@@ -1200,6 +1252,7 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 						PreciseDiagnostics.BroadHitBoneName.ToString().c_str(),
 						PreciseDiagnostics.PreciseHitBoneName.ToString().c_str(),
 						PreciseDiagnostics.BroadToPreciseDistance,
+						PreciseDiagnostics.BroadToPreciseTravelDelta,
 						bHasQueryBodies ? 1 : 0,
 						bHasLivePhysicsBodies ? 1 : 0,
 						PreciseDiagnostics.bSyncAttempted ? 1 : 0,
@@ -1217,11 +1270,12 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 				if (bLogPreciseCharacterHitDiagnostics)
 				{
 					UE_LOG(
-						"[SniperDebug] Character pose precision accepted. Actor=%s BroadBone=%s PreciseBone=%s Delta=%.3f",
+						"[SniperDebug] Character pose precision accepted. Actor=%s BroadBone=%s PreciseBone=%s Delta=%.3f TravelDelta=%.3f",
 						OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
 						PreciseDiagnostics.BroadHitBoneName.ToString().c_str(),
 						PreciseDiagnostics.PreciseHitBoneName.ToString().c_str(),
-						PreciseDiagnostics.BroadToPreciseDistance);
+						PreciseDiagnostics.BroadToPreciseDistance,
+						PreciseDiagnostics.BroadToPreciseTravelDelta);
 				}
 				return true;
 			}
@@ -1229,14 +1283,15 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 			if (bLogPreciseCharacterHitDiagnostics)
 			{
 				UE_LOG(
-					"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Mode=%s Reason=%s Actor=%s Component=%s BroadBone=%s PreciseBone=%s Delta=%.3f",
+					"[SniperDebug] Character broad hit rejected by PhysicsAsset precision. Mode=%s Reason=%s Actor=%s Component=%s BroadBone=%s PreciseBone=%s Delta=%.3f TravelDelta=%.3f",
 					GetSniperPreciseHitQueryModeName(PreciseDiagnostics.QueryMode),
 					GetSniperPreciseHitRejectReasonName(PreciseDiagnostics.RejectReason),
 					OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
 					OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
 					PreciseDiagnostics.BroadHitBoneName.ToString().c_str(),
 					PreciseDiagnostics.PreciseHitBoneName.ToString().c_str(),
-					PreciseDiagnostics.BroadToPreciseDistance);
+					PreciseDiagnostics.BroadToPreciseDistance,
+					PreciseDiagnostics.BroadToPreciseTravelDelta);
 			}
 			return false;
 		}
@@ -1577,12 +1632,23 @@ bool UBallisticBulletManagerComponent::QueryCharacterQueryBodyHit(
 	{
 		OutDiagnostics->PreciseHitBoneName = OutPreciseHit.HitBoneName;
 		OutDiagnostics->PreciseHitLocation = OutPreciseHit.WorldHitLocation;
-		OutDiagnostics->BroadToPreciseDistance = FVector::Dist(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation);
 	}
 
 	const float MaxDistance = ResolveBroadToPreciseDistanceThreshold(ESniperPreciseHitQueryMode::CharacterQueryBody);
-	if (MaxDistance > 0.0f &&
-		FVector::DistSquared(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation) > MaxDistance * MaxDistance)
+	float WorldDelta = 0.0f;
+	float TravelDelta = 0.0f;
+	const bool bWithinThreshold = IsPreciseHitWithinThreshold(
+		BroadHit,
+		OutPreciseHit,
+		MaxDistance,
+		WorldDelta,
+		TravelDelta);
+	if (OutDiagnostics)
+	{
+		OutDiagnostics->BroadToPreciseDistance = WorldDelta;
+		OutDiagnostics->BroadToPreciseTravelDelta = TravelDelta;
+	}
+	if (!bWithinThreshold)
 	{
 		if (OutDiagnostics)
 		{
@@ -1718,22 +1784,30 @@ bool UBallisticBulletManagerComponent::QueryPreciseCharacterHit(
 	{
 		OutDiagnostics->PreciseHitBoneName = OutPreciseHit.HitBoneName;
 		OutDiagnostics->PreciseHitLocation = OutPreciseHit.WorldHitLocation;
-		OutDiagnostics->BroadToPreciseDistance = FVector::Dist(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation);
 	}
 
 	const float MaxDistance = ResolveBroadToPreciseDistanceThreshold(ESniperPreciseHitQueryMode::LiveRagdollBody);
-	if (bPreciseHit && MaxDistance > 0.0f)
+	float WorldDelta = 0.0f;
+	float TravelDelta = 0.0f;
+	const bool bWithinThreshold = IsPreciseHitWithinThreshold(
+		BroadHit,
+		OutPreciseHit,
+		MaxDistance,
+		WorldDelta,
+		TravelDelta);
+	if (OutDiagnostics)
 	{
-		const float MaxDistanceSquared = MaxDistance * MaxDistance;
-		if (FVector::DistSquared(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation) > MaxDistanceSquared)
+		OutDiagnostics->BroadToPreciseDistance = WorldDelta;
+		OutDiagnostics->BroadToPreciseTravelDelta = TravelDelta;
+	}
+	if (bPreciseHit && !bWithinThreshold)
+	{
+		bPreciseHit = false;
+		if (OutDiagnostics)
 		{
-			bPreciseHit = false;
-			if (OutDiagnostics)
-			{
-				OutDiagnostics->RejectReason = ESniperPreciseHitRejectReason::BroadPreciseDistanceExceeded;
-			}
-			OutPreciseHit = FHitResult();
+			OutDiagnostics->RejectReason = ESniperPreciseHitRejectReason::BroadPreciseDistanceExceeded;
 		}
+		OutPreciseHit = FHitResult();
 	}
 
 	if (bPreciseHit && OutDiagnostics)
@@ -1926,12 +2000,23 @@ bool UBallisticBulletManagerComponent::QueryPosePhysicsAssetCharacterHit(
 	{
 		OutDiagnostics->PreciseHitBoneName = OutPreciseHit.HitBoneName;
 		OutDiagnostics->PreciseHitLocation = OutPreciseHit.WorldHitLocation;
-		OutDiagnostics->BroadToPreciseDistance = FVector::Dist(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation);
 	}
 
 	const float MaxDistance = ResolveBroadToPreciseDistanceThreshold(ESniperPreciseHitQueryMode::PosePhysicsAssetFallback);
-	if (MaxDistance > 0.0f &&
-		FVector::DistSquared(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation) > MaxDistance * MaxDistance)
+	float WorldDelta = 0.0f;
+	float TravelDelta = 0.0f;
+	const bool bWithinThreshold = IsPreciseHitWithinThreshold(
+		BroadHit,
+		OutPreciseHit,
+		MaxDistance,
+		WorldDelta,
+		TravelDelta);
+	if (OutDiagnostics)
+	{
+		OutDiagnostics->BroadToPreciseDistance = WorldDelta;
+		OutDiagnostics->BroadToPreciseTravelDelta = TravelDelta;
+	}
+	if (!bWithinThreshold)
 	{
 		if (OutDiagnostics)
 		{
@@ -1949,13 +2034,14 @@ bool UBallisticBulletManagerComponent::QueryPosePhysicsAssetCharacterHit(
 	if (bLogPreciseCharacterHitDiagnostics)
 	{
 		UE_LOG(
-			"[SniperDebug] PhysicsAsset precise hit accepted: Actor=%s Bone=%s Body=%d Shape=%d Distance=%.2f Delta=%.3f",
+			"[SniperDebug] PhysicsAsset precise hit accepted: Actor=%s Bone=%s Body=%d Shape=%d Distance=%.2f Delta=%.3f TravelDelta=%.3f",
 			BroadHit.HitActor ? BroadHit.HitActor->GetName().c_str() : "None",
 			BestHit.BoneName.ToString().c_str(),
 			BestHit.BodyIndex,
 			BestHit.ShapeIndex,
 			OutPreciseHit.Distance,
-			OutDiagnostics ? OutDiagnostics->BroadToPreciseDistance : FVector::Dist(BroadHit.WorldHitLocation, OutPreciseHit.WorldHitLocation));
+			OutDiagnostics ? OutDiagnostics->BroadToPreciseDistance : (BroadHit.WorldHitLocation - OutPreciseHit.WorldHitLocation).Length(),
+			OutDiagnostics ? OutDiagnostics->BroadToPreciseTravelDelta : ComputePreciseHitTravelDelta(BroadHit, OutPreciseHit));
 	}
 
 	return true;

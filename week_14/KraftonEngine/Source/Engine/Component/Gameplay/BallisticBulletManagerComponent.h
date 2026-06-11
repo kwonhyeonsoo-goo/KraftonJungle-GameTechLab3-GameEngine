@@ -41,6 +41,7 @@ struct FSniperPreciseHitQueryDiagnostics
 	FVector BroadHitLocation = FVector::ZeroVector;
 	FVector PreciseHitLocation = FVector::ZeroVector;
 	float BroadToPreciseDistance = 0.0f;
+	float BroadToPreciseTravelDelta = 0.0f;
 	bool bAccepted = false;
 	bool bSyncAttempted = false;
 	bool bSyncSucceeded = false;
