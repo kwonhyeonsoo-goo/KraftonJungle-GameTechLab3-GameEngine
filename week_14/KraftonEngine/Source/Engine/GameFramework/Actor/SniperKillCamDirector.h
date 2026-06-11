@@ -67,7 +67,10 @@ public:
 
 	static void NotifyBulletSpawned(UBallisticBulletManagerComponent* Manager, const FBulletCinematicSnapshot& Snapshot);
 	static void NotifyBulletHit(const FSniperHitInfo& HitInfo);
+	static void NotifyBulletFloorHit(const FBulletCinematicSnapshot& Snapshot);
 	static bool GetHitSnapshotForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
+	static bool ConsumeFloorHitForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
+	static bool CheckFloorHitInWorld(UWorld* World, int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
 	static int32 ConsumePendingBulletId();
 	static void ClearPendingBullets();
 	static ASniperKillCamDirector* EnsureDirectorForWorld(UWorld* World);
@@ -100,12 +103,16 @@ private:
 		float RailAlpha,
 		const FBulletCinematicSnapshot& FallbackSnapshot,
 		const UKillCamRailRigComponent* Rig) const;
+	FBulletCinematicSnapshot BuildBulletVisualCollisionSnapshot(
+		const FBulletCinematicSnapshot& FallbackSnapshot,
+		float RailAlpha);
 	void UpdateCameraFromSnapshot(const FBulletCinematicSnapshot& Snapshot, float DeltaTime, float RailAlpha);
 	void UpdateBulletVisualFromSnapshot(const FBulletCinematicSnapshot& Snapshot, float RailAlpha);
 	void UpdateShockWaveFromSnapshot(const FBulletCinematicSnapshot& Snapshot, float RailAlpha);
 	void ClearShockWave();
 	void SetBulletVisualVisible(bool bVisible);
 	void RestorePreviousCamera();
+	bool CheckFloorHitNow(FBulletCinematicSnapshot& OutSnapshot);
 
 	FVector ComputeCameraOffset(const FVector& Direction, float Alpha) const;
 	FVector ComputeOrbitOffset(const FVector& Direction, float YawDegrees, float PitchDegrees, float Radius) const;
@@ -174,6 +181,8 @@ private:
 	FBulletCinematicSnapshot StartSnapshot;
 	FBulletCinematicSnapshot HitSnapshot;
 	FBulletCinematicSnapshot LastSnapshot;
+	FBulletCinematicSnapshot LastVisualCollisionSnapshot;
 	bool bHasHitSnapshot = false;
+	bool bHasLastVisualCollisionSnapshot = false;
 	bool bPlaying = false;
 };

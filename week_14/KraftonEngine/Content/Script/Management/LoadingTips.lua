@@ -1,7 +1,8 @@
 return {
-    "Tip: Hold your breath only when the shot really matters.",
-    "Tip: Watch the wind, then wait for the clean window.",
-    "Tip: A missed shot can be louder than a confirmed hit.",
-    "Tip: Use the scope only when you are ready to commit.",
-    "Tip: Keep enough distance before you reveal your position."
+    "[Tip] Kill cam은 누구에게나 공평합니다.",
+    "[Tip] 헤드샷을 맞히기에는 아군이 나을 수 있습니다.",
+    "[Tip] 분대원은 총 6명입니다. 김이권양백임. 누가 저격수일까요?",
+    "[Tip] 지피티야 일 안하고 돈 버는 법 좀 알려줄래?",
+    "[Tip] 아 돈 많이 벌고 싶다.",
+    "[Tip] 토큰은 많을수록 행복합니다."
 }

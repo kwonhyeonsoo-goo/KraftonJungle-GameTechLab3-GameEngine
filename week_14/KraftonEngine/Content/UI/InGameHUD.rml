@@ -38,7 +38,7 @@
         <img id="crosshairImage" data-ui-type="Image" data-ui-name="Crosshair Image" src="Image/CrossHair/crosshair022.png" data-ui-fit="fill" />
         <div id="airSupportTimerPanel" data-ui-type="Panel" data-ui-name="Air Support Timer Panel">
             <div id="airSupportTimerLabel" data-ui-type="Text" data-ui-name="Air Support Timer Label">&#54637;&#44277; &#51648;&#50896; &#46020;&#52265; &#50696;&#51221;</div>
-            <div id="airSupportTimerValue" data-ui-type="Text" data-ui-name="Air Support Timer Value">05:00</div>
+            <div id="airSupportTimerValue" data-ui-type="Text" data-ui-name="Air Support Timer Value">07:00</div>
         </div>
         <div id="combatAgentPanel" data-ui-type="Panel" data-ui-name="Combat Agent Panel">
             <div id="combatAgentTitle" data-ui-type="Text" data-ui-name="Combat Agent Title">ALLY STATUS</div>

@@ -24,7 +24,7 @@ local PAUSE_CLOTH_TAG = "PauseCloth"
 local PAUSE_FADE_TIME = 0.080
 local PAUSE_BLEND_TIME = 0.120
 local PAUSE_TOGGLE_KEY_CODE = 81
-local DEFAULT_MATCH_DURATION = 300.0
+local DEFAULT_MATCH_DURATION = 420.0
 local ALLY_DEFEAT_CHECK_INTERVAL = 0.25
 local PAUSE_CLOTH_BASE_WIND_X = 3.2
 local PAUSE_CLOTH_GUST_X = 1.15
@@ -1025,6 +1025,7 @@ function InGameManager:CompleteVictory(reason)
     end
 
     self:EndPausePresentation(false)
+    self:RestorePauseWorld(true)
     self.running = false
     self.phase = "Result"
     local scene_manager = self.general ~= nil and self.general.managers ~= nil and self.general.managers.Scene or nil

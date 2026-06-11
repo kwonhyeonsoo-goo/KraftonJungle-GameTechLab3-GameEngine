@@ -4,6 +4,7 @@
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
 #include "Component/Gameplay/SniperWeaponComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
+#include "Component/Primitive/DecalComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
@@ -14,10 +15,12 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/GameMode/GameplayStatics.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/World.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
+#include "Math/Matrix.h"
 #include "Math/Quat.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Physics/IPhysicsScene.h"
@@ -49,6 +52,7 @@ namespace
 	constexpr float SniperDebugHitMarkerRadius = 0.2f;
 	constexpr float SniperRagdollImpactSpeedThreshold = 300.0f;
 	constexpr const char* SniperDefaultBulletVisualMaterialPath = "Content/Material/Particle/ParticleSprite.uasset";
+	constexpr const char* SniperDefaultBulletImpactDecalMaterialPath = "Content/Material/Editor/DefaultDecal.uasset";
 	constexpr float SniperBulletVisualMinScale = 0.04f;
 	constexpr float SniperBulletTracerMinWidth = 0.01f;
 	constexpr float SniperBulletTracerDefaultThickness = 1.0f;
@@ -58,7 +62,10 @@ namespace
 	constexpr float SniperPhysicsAssetHitMinShapeSize = 0.001f;
 	constexpr float SniperPhysicsAssetHitEpsilon = 1.0e-6f;
 	constexpr int32 SniperBulletIgnoredHitMaxSkips = 8;
+	const FName SniperFloorActorTag("Floor");
 	constexpr float SniperBulletIgnoredHitAdvanceDistance = 0.05f;
+	constexpr float SniperFloorBoundsPadding = 0.25f;
+	constexpr float SniperFloorMinHalfThickness = 0.25f;
 
 	struct FSniperPoseShapeHit
 	{
@@ -69,6 +76,47 @@ namespace
 		int32 BodyIndex = -1;
 		int32 ShapeIndex = -1;
 	};
+
+	uint32 HashBulletImpactDecalSeed(int32 BulletId, const FVector& Location)
+	{
+		uint32 Hash = static_cast<uint32>(BulletId) * 747796405u + 2891336453u;
+		Hash ^= static_cast<uint32>(std::abs(Location.X) * 1000.0f) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+		Hash ^= static_cast<uint32>(std::abs(Location.Y) * 1000.0f) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+		Hash ^= static_cast<uint32>(std::abs(Location.Z) * 1000.0f) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+		Hash ^= Hash >> 16;
+		Hash *= 2246822519u;
+		Hash ^= Hash >> 13;
+		return Hash;
+	}
+
+	FQuat MakeRotationWithForwardX(const FVector& ForwardX, const FVector& UpHint)
+	{
+		FVector Forward = ForwardX.IsNearlyZero() ? FVector::ForwardVector : ForwardX.Normalized();
+		FVector Up = UpHint.IsNearlyZero() ? FVector::UpVector : UpHint.Normalized();
+		if (std::abs(Forward.Dot(Up)) > 0.98f)
+		{
+			Up = std::abs(Forward.Dot(FVector::UpVector)) > 0.98f ? FVector::RightVector : FVector::UpVector;
+		}
+
+		FVector Right = Up.Cross(Forward).Normalized();
+		if (Right.IsNearlyZero())
+		{
+			Right = FVector::RightVector;
+		}
+		Up = Forward.Cross(Right).Normalized();
+
+		FMatrix RotationMatrix = FMatrix::Identity;
+		RotationMatrix.M[0][0] = Forward.X;
+		RotationMatrix.M[0][1] = Forward.Y;
+		RotationMatrix.M[0][2] = Forward.Z;
+		RotationMatrix.M[1][0] = Right.X;
+		RotationMatrix.M[1][1] = Right.Y;
+		RotationMatrix.M[1][2] = Right.Z;
+		RotationMatrix.M[2][0] = Up.X;
+		RotationMatrix.M[2][1] = Up.Y;
+		RotationMatrix.M[2][2] = Up.Z;
+		return RotationMatrix.ToQuat().GetNormalized();
+	}
 
 	bool StartsWithToken(const FString& Value, const char* Prefix)
 	{
@@ -361,6 +409,30 @@ namespace
 		InOutEnter = (std::max)(InOutEnter, T0);
 		InOutExit = (std::min)(InOutExit, T1);
 		return InOutEnter <= InOutExit;
+	}
+
+	FBoundingBox ExpandSniperFloorBounds(FBoundingBox Bounds)
+	{
+		if (!Bounds.IsValid())
+		{
+			return Bounds;
+		}
+
+		Bounds.Min.X -= SniperFloorBoundsPadding;
+		Bounds.Min.Y -= SniperFloorBoundsPadding;
+		Bounds.Min.Z -= SniperFloorBoundsPadding;
+		Bounds.Max.X += SniperFloorBoundsPadding;
+		Bounds.Max.Y += SniperFloorBoundsPadding;
+		Bounds.Max.Z += SniperFloorBoundsPadding;
+
+		const float CenterZ = (Bounds.Min.Z + Bounds.Max.Z) * 0.5f;
+		const float HalfThickness = (Bounds.Max.Z - Bounds.Min.Z) * 0.5f;
+		if (HalfThickness < SniperFloorMinHalfThickness)
+		{
+			Bounds.Min.Z = CenterZ - SniperFloorMinHalfThickness;
+			Bounds.Max.Z = CenterZ + SniperFloorMinHalfThickness;
+		}
+		return Bounds;
 	}
 
 	float ComputeIgnoredBulletHitAdvanceDistance(
@@ -1126,6 +1198,23 @@ UMaterial* UBallisticBulletManagerComponent::ResolveImpactVisualMaterial()
 	return LoadedMaterial;
 }
 
+UMaterial* UBallisticBulletManagerComponent::ResolveBulletImpactDecalMaterial()
+{
+	if (UMaterial* Existing = BulletImpactDecalMaterial.Get())
+	{
+		return Existing;
+	}
+
+	const FString MaterialPath =
+		(!BulletImpactDecalMaterialPath.empty() && BulletImpactDecalMaterialPath != "None")
+		? static_cast<FString>(BulletImpactDecalMaterialPath)
+		: FString(SniperDefaultBulletImpactDecalMaterialPath);
+
+	UMaterial* LoadedMaterial = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+	BulletImpactDecalMaterial = LoadedMaterial;
+	return LoadedMaterial;
+}
+
 void UBallisticBulletManagerComponent::SpawnImpactVisual(const FVector& ImpactLocation)
 {
 	if (!bEnableImpactVisuals)
@@ -1165,6 +1254,194 @@ void UBallisticBulletManagerComponent::SpawnImpactVisual(const FVector& ImpactLo
 	Visual->SetVisibility(true);
 }
 
+bool UBallisticBulletManagerComponent::ShouldSpawnBulletImpactDecal(const FHitResult& Hit) const
+{
+	if (!bEnableBulletImpactDecals || !Hit.bHit)
+	{
+		return false;
+	}
+
+	if (Hit.HitActor && Cast<ACombatCharacter>(Hit.HitActor))
+	{
+		return false;
+	}
+
+	if (Hit.HitComponent && Cast<USkeletalMeshComponent>(Hit.HitComponent))
+	{
+		return false;
+	}
+
+	return Hit.HitComponent != nullptr || Hit.HitActor != nullptr;
+}
+
+FVector4 UBallisticBulletManagerComponent::PickBulletImpactDecalAtlasRect(const FBallisticBullet& Bullet, const FHitResult& Hit) const
+{
+	const int32 Columns = (std::max)(1, BulletImpactDecalAtlasColumns);
+	const int32 Rows = (std::max)(1, BulletImpactDecalAtlasRows);
+	const int32 TileCount = (std::max)(1, Columns * Rows);
+	const uint32 TileIndex = HashBulletImpactDecalSeed(Bullet.BulletId, Hit.WorldHitLocation) % static_cast<uint32>(TileCount);
+	const int32 TileX = static_cast<int32>(TileIndex % static_cast<uint32>(Columns));
+	const int32 TileY = static_cast<int32>(TileIndex / static_cast<uint32>(Columns));
+	const float TileW = 1.0f / static_cast<float>(Columns);
+	const float TileH = 1.0f / static_cast<float>(Rows);
+	return FVector4(TileX * TileW, TileY * TileH, TileW, TileH);
+}
+
+void UBallisticBulletManagerComponent::SpawnBulletImpactDecal(const FBallisticBullet& Bullet, const FHitResult& Hit, UWorld* World)
+{
+	if (!World || !ShouldSpawnBulletImpactDecal(Hit))
+	{
+		return;
+	}
+
+	UMaterial* DecalMaterial = ResolveBulletImpactDecalMaterial();
+	if (!DecalMaterial)
+	{
+		return;
+	}
+
+	FVector SurfaceNormal = !Hit.ImpactNormal.IsNearlyZero() ? Hit.ImpactNormal : Hit.WorldNormal;
+	if (SurfaceNormal.IsNearlyZero())
+	{
+		SurfaceNormal = FVector::UpVector;
+	}
+	SurfaceNormal.Normalize();
+
+	FVector BulletDirection = !Bullet.Velocity.IsNearlyZero()
+		? Bullet.Velocity.Normalized()
+		: (Hit.WorldHitLocation - Bullet.PreviousPosition).Normalized();
+	if (BulletDirection.IsNearlyZero())
+	{
+		BulletDirection = SurfaceNormal * -1.0f;
+	}
+
+	// +X is decal front/projection direction. Use the bullet travel direction when it
+	// meaningfully enters the surface, otherwise fall back to the contact normal.
+	const float DirectionNormalDot = BulletDirection.Dot(SurfaceNormal);
+	if (DirectionNormalDot > 0.0f)
+	{
+		BulletDirection *= -1.0f;
+	}
+	else if (std::abs(DirectionNormalDot) < 0.15f)
+	{
+		BulletDirection = SurfaceNormal * -1.0f;
+	}
+
+	const float DecalDepth = (std::max)(0.001f, BulletImpactDecalDepth);
+	const float DecalSize = (std::max)(0.001f, BulletImpactDecalSize);
+	const FVector DecalLocation =
+		Hit.WorldHitLocation +
+		SurfaceNormal * BulletImpactDecalSurfaceOffset +
+		BulletDirection * (DecalDepth * 0.5f);
+
+	AActor* DecalActor = World->SpawnActor<AActor>();
+	if (!DecalActor)
+	{
+		return;
+	}
+	DecalActor->SetFName(FName("BulletImpact_Decal"));
+
+	UDecalComponent* DecalComponent = DecalActor->AddComponent<UDecalComponent>();
+	if (!DecalComponent)
+	{
+		World->DestroyActor(DecalActor);
+		return;
+	}
+
+	DecalActor->SetRootComponent(DecalComponent);
+	DecalComponent->SetHiddenInComponentTree(true);
+	DecalComponent->SetMaterial(DecalMaterial);
+	DecalComponent->SetAtlasRect(PickBulletImpactDecalAtlasRect(Bullet, Hit));
+	DecalComponent->SetWorldLocation(DecalLocation);
+	DecalComponent->SetWorldRotation(MakeRotationWithForwardX(BulletDirection, SurfaceNormal));
+	DecalComponent->SetRelativeScale(FVector(DecalDepth, DecalSize, DecalSize));
+}
+
+bool UBallisticBulletManagerComponent::QueryTaggedFloorBoundsHit(
+	const FBallisticBullet& Bullet,
+	UWorld* World,
+	FHitResult& OutHit) const
+{
+	if (!World)
+	{
+		return false;
+	}
+
+	const FVector Segment = Bullet.Position - Bullet.PreviousPosition;
+	const float SegmentLength = Segment.Length();
+	const bool bHasSegment = SegmentLength > SniperBulletMinSweepRadius;
+	const FVector SegmentDirection = bHasSegment ? Segment / SegmentLength : FVector::ZeroVector;
+	float BestDistance = FLT_MAX;
+	FVector BestLocation = Bullet.Position;
+	AActor* BestActor = nullptr;
+	UPrimitiveComponent* BestComponent = nullptr;
+	for (AActor* FloorActor : FGameplayStatics::FindActorsByTag(World, SniperFloorActorTag))
+	{
+		if (!FloorActor)
+		{
+			continue;
+		}
+
+		for (UPrimitiveComponent* Primitive : FloorActor->GetPrimitiveComponents())
+		{
+			if (!Primitive)
+			{
+				continue;
+			}
+
+			const FBoundingBox Bounds = ExpandSniperFloorBounds(Primitive->GetWorldBoundingBox());
+			if (!Bounds.IsValid())
+			{
+				continue;
+			}
+
+			if (!bHasSegment)
+			{
+				if (Bounds.IsContains(Bullet.Position) && 0.0f < BestDistance)
+				{
+					BestDistance = 0.0f;
+					BestLocation = Bullet.Position;
+					BestActor = FloorActor;
+					BestComponent = Primitive;
+				}
+				continue;
+			}
+
+			float EnterDistance = 0.0f;
+			float ExitDistance = SegmentLength;
+			if (!UpdateRayAabbInterval(Bullet.PreviousPosition.X, SegmentDirection.X, Bounds.Min.X, Bounds.Max.X, EnterDistance, ExitDistance) ||
+				!UpdateRayAabbInterval(Bullet.PreviousPosition.Y, SegmentDirection.Y, Bounds.Min.Y, Bounds.Max.Y, EnterDistance, ExitDistance) ||
+				!UpdateRayAabbInterval(Bullet.PreviousPosition.Z, SegmentDirection.Z, Bounds.Min.Z, Bounds.Max.Z, EnterDistance, ExitDistance))
+			{
+				continue;
+			}
+
+			if (EnterDistance >= 0.0f && EnterDistance <= SegmentLength && EnterDistance < BestDistance)
+			{
+				BestDistance = EnterDistance;
+				BestLocation = Bullet.PreviousPosition + SegmentDirection * BestDistance;
+				BestActor = FloorActor;
+				BestComponent = Primitive;
+			}
+		}
+	}
+
+	if (!BestActor || !BestComponent || BestDistance == FLT_MAX)
+	{
+		return false;
+	}
+
+	OutHit = FHitResult();
+	OutHit.bHit = true;
+	OutHit.HitActor = BestActor;
+	OutHit.HitComponent = BestComponent;
+	OutHit.WorldHitLocation = BestLocation;
+	OutHit.Distance = BestDistance;
+	OutHit.WorldNormal = FVector::UpVector;
+	OutHit.ImpactNormal = FVector::UpVector;
+	return true;
+}
+
 bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bullet, UWorld* World, FHitResult& OutHit) const
 {
 	if (!World)
@@ -1176,10 +1453,14 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 	const float SegmentLength = Segment.Length();
 	if (SegmentLength <= SniperBulletMinSweepRadius)
 	{
-		return false;
+		return QueryTaggedFloorBoundsHit(Bullet, World, OutHit);
 	}
 
 	const FVector SegmentDirection = Segment / SegmentLength;
+	auto QueryFloorFallback = [this, &Bullet, World, &OutHit]() -> bool
+	{
+		return QueryTaggedFloorBoundsHit(Bullet, World, OutHit);
+	};
 	auto FinalizeBulletHit = [this, &Bullet, World, &OutHit](const FHitResult& CandidateHit) -> bool
 	{
 		if (!CandidateHit.bHit)
@@ -1309,7 +1590,7 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 			const float RemainingLength = RemainingSegment.Length();
 			if (RemainingLength <= SniperBulletMinSweepRadius)
 			{
-				return false;
+				return QueryFloorFallback();
 			}
 
 			FHitResult CandidateHit;
@@ -1327,7 +1608,7 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 
 			if (!CandidateHit.bHit)
 			{
-				return false;
+				return QueryFloorFallback();
 			}
 
 			if (!IsSniperMovementLimitWallActor(CandidateHit.HitActor))
@@ -1342,7 +1623,7 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 				RemainingLength);
 			if (AdvanceDistance >= RemainingLength)
 			{
-				return false;
+				return QueryFloorFallback();
 			}
 
 			QueryStart = QueryStart + SegmentDirection * AdvanceDistance;
@@ -1356,7 +1637,7 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 		const float RemainingLength = RemainingSegment.Length();
 		if (RemainingLength <= SniperBulletMinSweepRadius)
 		{
-			return false;
+			return QueryFloorFallback();
 		}
 
 		FHitResult CandidateHit;
@@ -1368,12 +1649,12 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 			SniperBulletQueryObjectMask,
 			Bullet.Owner))
 		{
-			return false;
+			return QueryFloorFallback();
 		}
 
 		if (!CandidateHit.bHit)
 		{
-			return false;
+			return QueryFloorFallback();
 		}
 
 		if (!IsSniperMovementLimitWallActor(CandidateHit.HitActor))
@@ -1388,13 +1669,13 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 			RemainingLength);
 		if (AdvanceDistance >= RemainingLength)
 		{
-			return false;
+			return QueryFloorFallback();
 		}
 
 		QueryStart = QueryStart + SegmentDirection * AdvanceDistance;
 	}
 
-	return false;
+	return QueryFloorFallback();
 }
 
 bool UBallisticBulletManagerComponent::ShouldRunPreciseCharacterHitQuery(const FHitResult& BroadHit) const
@@ -2047,12 +2328,26 @@ bool UBallisticBulletManagerComponent::QueryPosePhysicsAssetCharacterHit(
 	return true;
 }
 
+bool UBallisticBulletManagerComponent::IsFloorHit(const FHitResult& Hit) const
+{
+	if (AActor* HitActor = Hit.HitActor)
+	{
+		if (HitActor->HasTag(SniperFloorActorTag))
+		{
+			return true;
+		}
+	}
+
+	return Hit.HitComponent != nullptr && Hit.HitComponent->HasTag(SniperFloorActorTag);
+}
+
 void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet, const FHitResult& Hit, UWorld* World)
 {
 	Bullet.Position = Hit.WorldHitLocation;
 	Bullet.bIsAlive = false;
 
 	SpawnImpactVisual(Hit.WorldHitLocation);
+	SpawnBulletImpactDecal(Bullet, Hit, World);
 
 	if (World && bDrawDebugImpactMarker)
 	{
@@ -2063,6 +2358,22 @@ void UBallisticBulletManagerComponent::HandleBulletHit(FBallisticBullet& Bullet,
 			SniperDebugMarkerSegments,
 			FColor(255, 255, 0),
 			SniperDebugTrailDuration);
+	}
+
+	if (IsFloorHit(Hit))
+	{
+		FBulletCinematicSnapshot Snapshot = BuildBulletSnapshot(Bullet);
+		Snapshot.Position = Hit.WorldHitLocation;
+		Snapshot.PreviousPosition = Hit.WorldHitLocation -
+			(Bullet.Velocity.IsNearlyZero() ? FVector::ForwardVector : Bullet.Velocity.Normalized()) * 0.1f;
+		Snapshot.bIsAlive = false;
+		ASniperKillCamDirector::NotifyBulletFloorHit(Snapshot);
+		UE_LOG(
+			"[SniperDebug] Bullet floor hit: Actor=%s Component=%s BulletId=%d",
+			Hit.HitActor ? Hit.HitActor->GetName().c_str() : "None",
+			Hit.HitComponent ? Hit.HitComponent->GetName().c_str() : "None",
+			Bullet.BulletId);
+		return;
 	}
 
 	FSniperHitInfo HitInfo = BuildSniperHitInfo(Bullet, Hit);

@@ -12,6 +12,7 @@ cbuffer DecalBuffer : register(b2)
 {
     float4x4 DecalWorldToLocal;
     float4 DecalColor;
+    float4 DecalAtlasRect;
 }
 
 PS_Input_Decal VS(VS_Input_PNCT input)
@@ -37,8 +38,9 @@ float4 PS(PS_Input_Decal input) : SV_TARGET
     float2 uv;
     uv.x = decalLocalPos.y + 0.5f;
     uv.y = 0.5f - decalLocalPos.z;
+    uv = DecalAtlasRect.xy + uv * DecalAtlasRect.zw;
 
-    float4 texColor = DiffuseTexture.Sample(LinearWrapSampler, uv);
+    float4 texColor = DiffuseTexture.Sample(LinearClampSampler, uv);
     if (texColor.a < 0.001f)
     {
         discard;

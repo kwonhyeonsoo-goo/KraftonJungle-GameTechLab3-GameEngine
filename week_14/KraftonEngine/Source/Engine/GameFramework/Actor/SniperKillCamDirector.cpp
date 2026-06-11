@@ -9,6 +9,7 @@
 #include "Component/Primitive/StaticMeshComponent.h"
 #include "Core/Types/CollisionTypes.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
+#include "GameFramework/GameMode/GameplayStatics.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/World.h"
 #include "Materials/MaterialManager.h"
@@ -19,6 +20,7 @@
 #include "Serialization/PrefabManager.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <unordered_map>
 
@@ -27,9 +29,14 @@
 namespace
 {
 	TArray<int32> GPendingKillCamBulletIds;
+	TArray<int32> GActiveKillCamBulletIds;
 	std::unordered_map<int32, TWeakObjectPtr<UBallisticBulletManagerComponent>> GBulletManagersById;
 	std::unordered_map<int32, FBulletCinematicSnapshot> GBulletSpawnSnapshotsById;
 	std::unordered_map<int32, FBulletCinematicSnapshot> GBulletHitSnapshotsById;
+	std::unordered_map<int32, FBulletCinematicSnapshot> GBulletFloorHitSnapshotsById;
+	const FName SniperKillCamFloorActorTag("Floor");
+	constexpr float SniperKillCamFloorBoundsPadding = 0.25f;
+	constexpr float SniperKillCamFloorMinHalfThickness = 0.25f;
 
 	float SmoothStep(float Value)
 	{
@@ -152,6 +159,160 @@ namespace
 	{
 		return DirectionToRotator(Direction).ToQuaternion().GetNormalized();
 	}
+
+	bool UpdateSegmentAabbInterval(
+		float RayStart,
+		float RayDirection,
+		float BoundsMin,
+		float BoundsMax,
+		float& InOutEnter,
+		float& InOutExit)
+	{
+		if (std::abs(RayDirection) <= 1.0e-6f)
+		{
+			return RayStart >= BoundsMin && RayStart <= BoundsMax;
+		}
+
+		float T0 = (BoundsMin - RayStart) / RayDirection;
+		float T1 = (BoundsMax - RayStart) / RayDirection;
+		if (T0 > T1)
+		{
+			std::swap(T0, T1);
+		}
+
+		InOutEnter = (std::max)(InOutEnter, T0);
+		InOutExit = (std::min)(InOutExit, T1);
+		return InOutEnter <= InOutExit;
+	}
+
+	bool IntersectSegmentAabb(const FVector& Start, const FVector& End, const FBoundingBox& Bounds, float& OutT)
+	{
+		if (!Bounds.IsValid())
+		{
+			return false;
+		}
+
+		const FVector Delta = End - Start;
+		if (Delta.IsNearlyZero())
+		{
+			return false;
+		}
+
+		float Enter = 0.0f;
+		float Exit = 1.0f;
+		if (!UpdateSegmentAabbInterval(Start.X, Delta.X, Bounds.Min.X, Bounds.Max.X, Enter, Exit) ||
+			!UpdateSegmentAabbInterval(Start.Y, Delta.Y, Bounds.Min.Y, Bounds.Max.Y, Enter, Exit) ||
+			!UpdateSegmentAabbInterval(Start.Z, Delta.Z, Bounds.Min.Z, Bounds.Max.Z, Enter, Exit))
+		{
+			return false;
+		}
+
+		OutT = FMath::Clamp(Enter, 0.0f, 1.0f);
+		return true;
+	}
+
+	bool ResolveSegmentAabbHitT(const FVector& Start, const FVector& End, const FBoundingBox& Bounds, float& OutT)
+	{
+		if (!Bounds.IsValid())
+		{
+			return false;
+		}
+
+		if (Bounds.IsContains(Start))
+		{
+			OutT = 0.0f;
+			return true;
+		}
+
+		if (Bounds.IsContains(End))
+		{
+			OutT = 1.0f;
+			return true;
+		}
+
+		if ((End - Start).IsNearlyZero())
+		{
+			return false;
+		}
+
+		return IntersectSegmentAabb(Start, End, Bounds, OutT);
+	}
+
+	FBoundingBox ExpandFloorBounds(FBoundingBox Bounds)
+	{
+		if (!Bounds.IsValid())
+		{
+			return Bounds;
+		}
+
+		Bounds.Min.X -= SniperKillCamFloorBoundsPadding;
+		Bounds.Min.Y -= SniperKillCamFloorBoundsPadding;
+		Bounds.Min.Z -= SniperKillCamFloorBoundsPadding;
+		Bounds.Max.X += SniperKillCamFloorBoundsPadding;
+		Bounds.Max.Y += SniperKillCamFloorBoundsPadding;
+		Bounds.Max.Z += SniperKillCamFloorBoundsPadding;
+
+		const float CenterZ = (Bounds.Min.Z + Bounds.Max.Z) * 0.5f;
+		const float HalfThickness = (Bounds.Max.Z - Bounds.Min.Z) * 0.5f;
+		if (HalfThickness < SniperKillCamFloorMinHalfThickness)
+		{
+			Bounds.Min.Z = CenterZ - SniperKillCamFloorMinHalfThickness;
+			Bounds.Max.Z = CenterZ + SniperKillCamFloorMinHalfThickness;
+		}
+		return Bounds;
+	}
+
+	bool TryBuildFloorHitSnapshot(
+		UWorld* World,
+		const FBulletCinematicSnapshot& PreviousSnapshot,
+		const FBulletCinematicSnapshot& CurrentSnapshot,
+		FBulletCinematicSnapshot& OutSnapshot)
+	{
+		if (!World || CurrentSnapshot.BulletId == 0)
+		{
+			return false;
+		}
+
+		const FVector Start = PreviousSnapshot.Position;
+		const FVector End = CurrentSnapshot.Position;
+
+		float BestT = FLT_MAX;
+		bool bFoundFloor = false;
+		for (AActor* FloorActor : FGameplayStatics::FindActorsByTag(World, SniperKillCamFloorActorTag))
+		{
+			if (!FloorActor)
+			{
+				continue;
+			}
+
+			for (UPrimitiveComponent* Primitive : FloorActor->GetPrimitiveComponents())
+			{
+				if (!Primitive)
+				{
+					continue;
+				}
+
+				float HitT = 0.0f;
+				const FBoundingBox Bounds = ExpandFloorBounds(Primitive->GetWorldBoundingBox());
+				if (ResolveSegmentAabbHitT(Start, End, Bounds, HitT) && HitT < BestT)
+				{
+					BestT = HitT;
+					bFoundFloor = true;
+				}
+			}
+		}
+
+		if (!bFoundFloor || BestT == FLT_MAX)
+		{
+			return false;
+		}
+
+		OutSnapshot = CurrentSnapshot;
+		OutSnapshot.Position = Start + (End - Start) * BestT;
+		OutSnapshot.PreviousPosition = Start;
+		OutSnapshot.bIsAlive = false;
+		return true;
+	}
 }
 
 ASniperKillCamDirector::ASniperKillCamDirector()
@@ -194,13 +355,20 @@ void ASniperKillCamDirector::Tick(float DeltaTime)
 	{
 		return;
 	}
+	if (GBulletFloorHitSnapshotsById.find(ActiveBulletId) != GBulletFloorHitSnapshotsById.end())
+	{
+		SetBulletVisualVisible(false);
+		return;
+	}
 
 	const FTimer* Timer = GEngine ? GEngine->GetTimer() : nullptr;
 	const float KillCamDeltaTime = (DeltaTime > 0.0f)
 		? DeltaTime
 		: (Timer ? Timer->GetRawDeltaTime() : 0.0f);
 	Elapsed += KillCamDeltaTime;
+	const FBulletCinematicSnapshot PreviousSnapshot = LastSnapshot;
 	FBulletCinematicSnapshot Snapshot;
+	const float PreviousRailAlpha = Duration > 0.0f ? FMath::Clamp((Elapsed - KillCamDeltaTime) / Duration, 0.0f, 1.0f) : 0.0f;
 	float RailAlpha = Duration > 0.0f ? FMath::Clamp(Elapsed / Duration, 0.0f, 1.0f) : 1.0f;
 	if (bHasHitSnapshot)
 	{
@@ -219,6 +387,26 @@ void ASniperKillCamDirector::Tick(float DeltaTime)
 		Snapshot.bIsAlive = false;
 		LastSnapshot = Snapshot;
 	}
+
+	const FBulletCinematicSnapshot CurrentVisualSnapshot = BuildBulletVisualCollisionSnapshot(Snapshot, RailAlpha);
+	const FBulletCinematicSnapshot PreviousVisualSnapshot = bHasLastVisualCollisionSnapshot
+		? LastVisualCollisionSnapshot
+		: BuildBulletVisualCollisionSnapshot(PreviousSnapshot, PreviousRailAlpha);
+	FBulletCinematicSnapshot FloorSnapshot;
+	if (TryBuildFloorHitSnapshot(GetWorld(), PreviousVisualSnapshot, CurrentVisualSnapshot, FloorSnapshot))
+	{
+		NotifyBulletFloorHit(FloorSnapshot);
+		UE_LOG(
+			"[SniperKillCam] Visual bullet floor hit: BulletId=%d Position=(%.3f, %.3f, %.3f)",
+			FloorSnapshot.BulletId,
+			FloorSnapshot.Position.X,
+			FloorSnapshot.Position.Y,
+			FloorSnapshot.Position.Z);
+		SetBulletVisualVisible(false);
+		return;
+	}
+	LastVisualCollisionSnapshot = CurrentVisualSnapshot;
+	bHasLastVisualCollisionSnapshot = true;
 
 	ScrubRailSequence(RailAlpha);
 	UpdateCameraFromSnapshot(Snapshot, KillCamDeltaTime, RailAlpha);
@@ -300,10 +488,16 @@ bool ASniperKillCamDirector::StartForBulletId(int32 BulletId, float InDuration, 
 	Camera->SetLetterboxAmount(0.0f);
 	Camera->SetLetterboxThickness(0.0f);
 
+	GActiveKillCamBulletIds.erase(
+		std::remove(GActiveKillCamBulletIds.begin(), GActiveKillCamBulletIds.end(), ActiveBulletId),
+		GActiveKillCamBulletIds.end());
+	GActiveKillCamBulletIds.push_back(ActiveBulletId);
 	bPlaying = true;
 	UpdateCameraFromSnapshot(LastSnapshot, 0.0f, 0.0f);
 	UpdateBulletVisualFromSnapshot(LastSnapshot, 0.0f);
 	UpdateShockWaveFromSnapshot(LastSnapshot, 0.0f);
+	LastVisualCollisionSnapshot = BuildBulletVisualCollisionSnapshot(LastSnapshot, 0.0f);
+	bHasLastVisualCollisionSnapshot = true;
 	SetBulletVisualVisible(true);
 	return true;
 }
@@ -325,10 +519,16 @@ void ASniperKillCamDirector::StopKillCam()
 	GBulletManagersById.erase(StoppedBulletId);
 	GBulletSpawnSnapshotsById.erase(StoppedBulletId);
 	GBulletHitSnapshotsById.erase(StoppedBulletId);
+	GBulletFloorHitSnapshotsById.erase(StoppedBulletId);
+	GActiveKillCamBulletIds.erase(
+		std::remove(GActiveKillCamBulletIds.begin(), GActiveKillCamBulletIds.end(), StoppedBulletId),
+		GActiveKillCamBulletIds.end());
 	StartSnapshot = FBulletCinematicSnapshot();
 	HitSnapshot = FBulletCinematicSnapshot();
 	LastSnapshot = FBulletCinematicSnapshot();
+	LastVisualCollisionSnapshot = FBulletCinematicSnapshot();
 	bHasHitSnapshot = false;
+	bHasLastVisualCollisionSnapshot = false;
 	SetBulletVisualVisible(false);
 	DestroyBulletVisualActor();
 	RestorePreviousCamera();
@@ -390,6 +590,30 @@ void ASniperKillCamDirector::NotifyBulletHit(const FSniperHitInfo& HitInfo)
 	GPendingKillCamBulletIds.push_back(HitInfo.BulletId);
 }
 
+void ASniperKillCamDirector::NotifyBulletFloorHit(const FBulletCinematicSnapshot& Snapshot)
+{
+	if (Snapshot.BulletId == 0)
+	{
+		return;
+	}
+
+	FBulletCinematicSnapshot FloorSnapshot = Snapshot;
+	FloorSnapshot.bIsAlive = false;
+	const bool bIsActiveKillCamBullet =
+		std::find(GActiveKillCamBulletIds.begin(), GActiveKillCamBulletIds.end(), Snapshot.BulletId) !=
+		GActiveKillCamBulletIds.end();
+	if (bIsActiveKillCamBullet)
+	{
+		GBulletFloorHitSnapshotsById[Snapshot.BulletId] = FloorSnapshot;
+	}
+	GBulletManagersById.erase(Snapshot.BulletId);
+	GBulletSpawnSnapshotsById.erase(Snapshot.BulletId);
+	GBulletHitSnapshotsById.erase(Snapshot.BulletId);
+	GPendingKillCamBulletIds.erase(
+		std::remove(GPendingKillCamBulletIds.begin(), GPendingKillCamBulletIds.end(), Snapshot.BulletId),
+		GPendingKillCamBulletIds.end());
+}
+
 bool ASniperKillCamDirector::GetHitSnapshotForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot)
 {
 	if (BulletId == 0)
@@ -405,6 +629,41 @@ bool ASniperKillCamDirector::GetHitSnapshotForBulletId(int32 BulletId, FBulletCi
 
 	OutSnapshot = HitSnapshotIt->second;
 	return true;
+}
+
+bool ASniperKillCamDirector::ConsumeFloorHitForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot)
+{
+	if (BulletId == 0)
+	{
+		return false;
+	}
+
+	auto FloorHitIt = GBulletFloorHitSnapshotsById.find(BulletId);
+	if (FloorHitIt == GBulletFloorHitSnapshotsById.end())
+	{
+		return false;
+	}
+
+	OutSnapshot = FloorHitIt->second;
+	GBulletFloorHitSnapshotsById.erase(FloorHitIt);
+	GBulletManagersById.erase(BulletId);
+	GBulletSpawnSnapshotsById.erase(BulletId);
+	GBulletHitSnapshotsById.erase(BulletId);
+	GPendingKillCamBulletIds.erase(
+		std::remove(GPendingKillCamBulletIds.begin(), GPendingKillCamBulletIds.end(), BulletId),
+		GPendingKillCamBulletIds.end());
+	return true;
+}
+
+bool ASniperKillCamDirector::CheckFloorHitInWorld(UWorld* World, int32 BulletId, FBulletCinematicSnapshot& OutSnapshot)
+{
+	ASniperKillCamDirector* Director = FindDirectorForWorld(World);
+	if (!Director || BulletId == 0 || Director->ActiveBulletId != BulletId)
+	{
+		return false;
+	}
+
+	return Director->CheckFloorHitNow(OutSnapshot);
 }
 
 int32 ASniperKillCamDirector::ConsumePendingBulletId()
@@ -428,6 +687,8 @@ void ASniperKillCamDirector::ClearPendingBullets()
 		GBulletHitSnapshotsById.erase(BulletId);
 	}
 	GPendingKillCamBulletIds.clear();
+	GActiveKillCamBulletIds.clear();
+	GBulletFloorHitSnapshotsById.clear();
 }
 
 ASniperKillCamDirector* ASniperKillCamDirector::EnsureDirectorForWorld(UWorld* World)
@@ -1196,6 +1457,75 @@ FBulletCinematicSnapshot ASniperKillCamDirector::ResolveSnapshotAtRailAlpha(
 	}
 
 	return BuildPlaybackSnapshot(RailAlpha, !(Rig && Rig->bAllowRailExtrapolation));
+}
+
+FBulletCinematicSnapshot ASniperKillCamDirector::BuildBulletVisualCollisionSnapshot(
+	const FBulletCinematicSnapshot& FallbackSnapshot,
+	float RailAlpha)
+{
+	const UKillCamRailRigComponent* Rig = bUseRailRigComponent ? ResolveRailRigComponent() : nullptr;
+	const float BulletRailAlpha = Rig
+		? ResolveDrivenRailAlpha(
+			RailAlpha,
+			Rig->BulletRailAlphaOverride,
+			Rig->BulletRailAlphaScale,
+			Rig->BulletRailAlphaOffset,
+			Rig->BulletRailAlphaEase,
+			Rig->BulletRailAlphaPower,
+			Rig)
+		: RailAlpha;
+	FBulletCinematicSnapshot VisualSnapshot = ResolveSnapshotAtRailAlpha(BulletRailAlpha, FallbackSnapshot, Rig);
+	const FVector Direction = bHasHitSnapshot
+		? SafeNormal(HitSnapshot.Position - StartSnapshot.Position, SafeNormal(StartSnapshot.Velocity, FVector::ForwardVector))
+		: SafeNormal(VisualSnapshot.Velocity, FVector::ForwardVector);
+	const FVector Side = ComputeSideVector(Direction);
+	if (Rig)
+	{
+		VisualSnapshot.Position = VisualSnapshot.Position
+			+ Direction * Rig->BulletForwardOffset
+			+ Side * Rig->BulletSideOffset
+			+ FVector::UpVector * Rig->BulletUpOffset;
+	}
+	VisualSnapshot.BulletId = ActiveBulletId;
+	return VisualSnapshot;
+}
+
+bool ASniperKillCamDirector::CheckFloorHitNow(FBulletCinematicSnapshot& OutSnapshot)
+{
+	if (!bPlaying || ActiveBulletId == 0)
+	{
+		return false;
+	}
+
+	if (GBulletFloorHitSnapshotsById.find(ActiveBulletId) != GBulletFloorHitSnapshotsById.end())
+	{
+		OutSnapshot = GBulletFloorHitSnapshotsById[ActiveBulletId];
+		SetBulletVisualVisible(false);
+		return true;
+	}
+
+	const float RailAlpha = Duration > 0.0f ? FMath::Clamp(Elapsed / Duration, 0.0f, 1.0f) : 1.0f;
+	const FBulletCinematicSnapshot CurrentVisualSnapshot = BuildBulletVisualCollisionSnapshot(LastSnapshot, RailAlpha);
+	const FBulletCinematicSnapshot PreviousVisualSnapshot = bHasLastVisualCollisionSnapshot
+		? LastVisualCollisionSnapshot
+		: CurrentVisualSnapshot;
+
+	if (!TryBuildFloorHitSnapshot(GetWorld(), PreviousVisualSnapshot, CurrentVisualSnapshot, OutSnapshot))
+	{
+		LastVisualCollisionSnapshot = CurrentVisualSnapshot;
+		bHasLastVisualCollisionSnapshot = true;
+		return false;
+	}
+
+	NotifyBulletFloorHit(OutSnapshot);
+	UE_LOG(
+		"[SniperKillCam] Lua-driven visual bullet floor hit: BulletId=%d Position=(%.3f, %.3f, %.3f)",
+		OutSnapshot.BulletId,
+		OutSnapshot.Position.X,
+		OutSnapshot.Position.Y,
+		OutSnapshot.Position.Z);
+	SetBulletVisualVisible(false);
+	return true;
 }
 
 void ASniperKillCamDirector::UpdateCameraFromSnapshot(

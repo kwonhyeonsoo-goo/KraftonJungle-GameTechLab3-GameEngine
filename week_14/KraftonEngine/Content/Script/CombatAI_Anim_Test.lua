@@ -9,8 +9,13 @@ local healthBillboards = nil
 local lastHealthIndicatorState = ""
 local deathElapsed = 0.0
 local deathDestroyRequested = false
+local gunfireSound = nil
 
 local FIRE_TRIGGER_INTERVAL = 0.45
+local NPC_GUNFIRE_SOUND_PATH = "SFX/CombatAI/npc_gun_fire.mp3"
+local NPC_GUNFIRE_VOLUME = 0.5
+local NPC_GUNFIRE_MIN_DISTANCE = 1.0
+local NPC_GUNFIRE_MAX_DISTANCE = 80.0
 local HIT_BOOL_PULSE_DURATION = 0.12
 local HEALTH_INDICATOR_GREEN_RATIO = 0.60
 local HEALTH_INDICATOR_ORANGE_RATIO = 0.30
@@ -90,6 +95,78 @@ local function get_combat_agent()
         combatAgent = find_combat_agent()
     end
     return combatAgent
+end
+
+local function find_gunfire_sound()
+    if obj == nil then
+        return nil
+    end
+
+    if obj.GetCombatGunfireSoundComponent ~= nil then
+        local sound = obj:GetCombatGunfireSoundComponent()
+        if sound ~= nil then
+            return sound
+        end
+    end
+    if obj.GetSoundComponent ~= nil then
+        local sound = obj:GetSoundComponent()
+        if sound ~= nil then
+            return sound
+        end
+    end
+    if obj.GetComponents == nil then
+        return nil
+    end
+
+    local components = obj:GetComponents()
+    for _, component in pairs(components) do
+        if component ~= nil and component.IsA ~= nil and component:IsA("USoundComponent") then
+            return component
+        end
+    end
+    return nil
+end
+
+local function configure_gunfire_sound(sound)
+    if sound == nil then
+        return
+    end
+    if sound.SetSoundPath ~= nil then
+        sound:SetSoundPath(NPC_GUNFIRE_SOUND_PATH)
+    end
+    if sound.SetVolume ~= nil then
+        sound:SetVolume(NPC_GUNFIRE_VOLUME)
+    end
+    if sound.SetPitch ~= nil then
+        sound:SetPitch(1.0)
+    end
+    if sound.SetLooping ~= nil then
+        sound:SetLooping(false)
+    end
+    if sound.SetPlayOnBeginPlay ~= nil then
+        sound:SetPlayOnBeginPlay(false)
+    end
+    if sound.SetSpatialized ~= nil then
+        sound:SetSpatialized(true)
+    end
+    if sound.Set3DMinMaxDistance ~= nil then
+        sound:Set3DMinMaxDistance(NPC_GUNFIRE_MIN_DISTANCE, NPC_GUNFIRE_MAX_DISTANCE)
+    end
+end
+
+local function get_gunfire_sound()
+    if gunfireSound == nil then
+        gunfireSound = find_gunfire_sound()
+        configure_gunfire_sound(gunfireSound)
+    end
+    return gunfireSound
+end
+
+local function play_gunfire_sound()
+    local sound = get_gunfire_sound()
+    if sound ~= nil and sound.Play ~= nil then
+        sound:Play()
+    end
 end
 
 local function find_component_by_tag(tag)
@@ -383,6 +460,8 @@ function BeginPlay()
     lastHealthIndicatorState = ""
     deathElapsed = 0.0
     deathDestroyRequested = false
+    gunfireSound = find_gunfire_sound()
+    configure_gunfire_sound(gunfireSound)
     update_health_indicator(combatAgent)
     set_initial_variables()
 end
@@ -449,6 +528,7 @@ function Tick(dt)
         while fireElapsed >= FIRE_TRIGGER_INTERVAL do
             fireElapsed = fireElapsed - FIRE_TRIGGER_INTERVAL
             set_graph_trigger(anim, "Fire")
+            play_gunfire_sound()
         end
     else
         fireElapsed = 0.0

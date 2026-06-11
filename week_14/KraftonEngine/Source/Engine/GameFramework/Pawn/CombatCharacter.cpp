@@ -5,7 +5,16 @@
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Script/LuaScriptComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
+#include "Component/SoundComponent.h"
 #include "Core/Types/CollisionTypes.h"
+
+namespace
+{
+	const FString CombatGunfireSoundPath = "SFX/CombatAI/npc_gun_fire.mp3";
+	constexpr float CombatGunfireVolume = 0.5f;
+	constexpr float CombatGunfireMinDistance = 1.0f;
+	constexpr float CombatGunfireMaxDistance = 80.0f;
+}
 
 ACombatCharacter::ACombatCharacter()
 {
@@ -32,6 +41,16 @@ void ACombatCharacter::BeginPlay()
 		SniperDamageReceiverComponent = AddComponent<USniperDamageReceiverComponent>();
 	}
 
+	if (!CombatGunfireSoundComponent)
+	{
+		CombatGunfireSoundComponent = GetComponentByClass<USoundComponent>();
+	}
+	if (!CombatGunfireSoundComponent)
+	{
+		CombatGunfireSoundComponent = AddComponent<USoundComponent>();
+	}
+	ConfigureCombatGunfireSound(CombatGunfireSoundComponent.Get());
+
 	Super::BeginPlay();
 
 	if (bEnablePersistentQueryBodies)
@@ -54,6 +73,8 @@ void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName
 	}
 
 	CombatCoverAgentComponent = AddComponent<UCombatCoverAgentComponent>();
+	CombatGunfireSoundComponent = AddComponent<USoundComponent>();
+	ConfigureCombatGunfireSound(CombatGunfireSoundComponent.Get());
 	SniperDamageReceiverComponent = AddComponent<USniperDamageReceiverComponent>();
 }
 
@@ -62,6 +83,7 @@ void ACombatCharacter::PostDuplicate()
 	Super::PostDuplicate();
 	LuaScriptComponent = GetComponentByClass<ULuaScriptComponent>();
 	CombatCoverAgentComponent = GetComponentByClass<UCombatCoverAgentComponent>();
+	CombatGunfireSoundComponent = GetComponentByClass<USoundComponent>();
 	SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();
 }
 
@@ -83,6 +105,16 @@ UCombatCoverAgentComponent* ACombatCharacter::GetCombatCoverAgentComponent() con
 	return CombatCoverAgentComponent;
 }
 
+USoundComponent* ACombatCharacter::GetCombatGunfireSoundComponent() const
+{
+	if (!CombatGunfireSoundComponent)
+	{
+		CombatGunfireSoundComponent = GetComponentByClass<USoundComponent>();
+	}
+	ConfigureCombatGunfireSound(CombatGunfireSoundComponent.Get());
+	return CombatGunfireSoundComponent.Get();
+}
+
 USniperDamageReceiverComponent* ACombatCharacter::GetSniperDamageReceiverComponent() const
 {
 	if (!SniperDamageReceiverComponent)
@@ -90,4 +122,27 @@ USniperDamageReceiverComponent* ACombatCharacter::GetSniperDamageReceiverCompone
 		SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();
 	}
 	return SniperDamageReceiverComponent;
+}
+
+void ACombatCharacter::ConfigureCombatGunfireSound(USoundComponent* Sound) const
+{
+	if (!Sound)
+	{
+		return;
+	}
+
+	Sound->SetSoundPath(CombatGunfireSoundPath);
+	Sound->SetVolume(CombatGunfireVolume);
+	Sound->SetPitch(1.0f);
+	Sound->SetLooping(false);
+	Sound->SetPlayOnBeginPlay(false);
+	Sound->SetSpatialized(true);
+	Sound->Set3DMinMaxDistance(CombatGunfireMinDistance, CombatGunfireMaxDistance);
+	if (USceneComponent* Root = GetRootComponent())
+	{
+		Sound->SetParent(Root);
+	}
+	Sound->SetRelativeLocation(FVector::ZeroVector);
+	Sound->SetRelativeRotation(FRotator::ZeroRotator);
+	Sound->SetRelativeScale(FVector::OneVector);
 }

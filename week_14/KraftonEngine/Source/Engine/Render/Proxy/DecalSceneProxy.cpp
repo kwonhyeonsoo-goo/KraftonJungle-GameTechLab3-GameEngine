@@ -18,6 +18,7 @@ namespace
 	{
 		FMatrix WorldToDecal;
 		FVector4 Color;
+		FVector4 AtlasRect;
 	};
 }
 
@@ -128,6 +129,7 @@ void FDecalSceneProxy::UpdateMaterial()
 	auto& CB = DecalProxyMaterial->BindPerShaderCB<FDecalConstants>(DecalCB, ECBSlot::PerShader0);
 	CB.WorldToDecal = DecalComp->GetWorldMatrix().GetInverse();
 	CB.Color = DecalComp->GetColor();
+	CB.AtlasRect = DecalComp->GetAtlasRect();
 
 	// SectionDraws — 래퍼 Material 사용
 	SectionDraws.clear();

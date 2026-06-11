@@ -2277,7 +2277,7 @@ function UIManager:SetInGameTimer(payload)
     elseif remaining == nil and payload.match_duration ~= nil and payload.timer ~= nil then
         remaining = (tonumber(payload.match_duration) or 0.0) - (tonumber(payload.timer) or 0.0)
     elseif remaining == nil then
-        remaining = 300.0
+        remaining = 420.0
     end
 
     self:SetElementVisible(widget, "airSupportTimerPanel", true)
@@ -2305,7 +2305,7 @@ function UIManager:ConfigureInGameHUD(widget)
     self:SetElementStyle(widget, "airSupportTimerValue", "font-family", "\"Nexon\"")
     self:SetElementStyle(widget, "airSupportTimerValue", "font-weight", "bold")
     call_widget(widget, "SetText", "airSupportTimerLabel", "&#54637;&#44277; &#51648;&#50896; &#46020;&#52265; &#50696;&#51221;")
-    self:SetInGameTimer({ widget = widget, remaining_time = 300.0, match_duration = 300.0, elapsed_time = 0.0 })
+    self:SetInGameTimer({ widget = widget, remaining_time = 420.0, match_duration = 420.0, elapsed_time = 0.0 })
 
     self:SetBreathGroupAlpha(widget, 0.0)
     self:SetElementVisible(widget, "breathPanel", false)
@@ -2995,7 +2995,7 @@ function UIManager:FormatHitNotifyDistance(hit)
         return utf8_text(234, 177, 176, 235, 166, 172) .. " --m"
     end
 
-    local distance = tonumber(hit.TravelDistance)
+    local distance = tonumber(hit.TravelDistance) or tonumber(hit.TraveledDistance)
     if distance == nil then
         return utf8_text(234, 177, 176, 235, 166, 172) .. " --m"
     end

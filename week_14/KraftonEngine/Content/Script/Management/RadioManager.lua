@@ -13,6 +13,7 @@ local OPENING_FADE_SECONDS = 3.0
 local OPENING_SKIP_UNLOCK_SECONDS = 5.0
 local OPENING_SKIP_PROMPT_FADE_SECONDS = 0.35
 local VICTORY_COMMENT_SCENE_DELAY_SECONDS = 1.0
+local DEFEAT_COMMENT_SCENE_DELAY_SECONDS = 1.0
 
 local function is_result_state(state)
     return state == GameState.Victory or state == GameState.Defeat1 or state == GameState.Defeat2
@@ -40,7 +41,7 @@ local COMMENT_DEFINITIONS = {
             },
             {
                 until_time = 13.0,
-                text = "현재 가용 가능한 공중지원의 도착 예정 시간은 5분이다. 반복한다, 지원까지 앞으로 5분."
+                text = "현재 가용 가능한 공중지원의 도착 예정 시간은 7분이다. 반복한다, 지원까지 앞으로 7분."
             },
             {
                 until_time = 19.0,
@@ -396,10 +397,10 @@ function RadioManager:Initialize()
             self:ScheduleEnding("Victory", VICTORY_COMMENT_SCENE_DELAY_SECONDS)
         elseif payload ~= nil and payload.to == GameState.Defeat1 then
             self.result_transition_active = true
-            self:QueueEnding("Defeat")
+            self:ScheduleEnding("Defeat", DEFEAT_COMMENT_SCENE_DELAY_SECONDS)
         elseif payload ~= nil and payload.to == GameState.Defeat2 then
             self.result_transition_active = true
-            self:QueueEnding("Defeat")
+            self:ScheduleEnding("Defeat", DEFEAT_COMMENT_SCENE_DELAY_SECONDS)
         end
     end)
 
@@ -429,7 +430,7 @@ function RadioManager:Initialize()
 
     self.general:Subscribe("ingame.completed", self, function(payload)
         if payload ~= nil then
-            if payload.result == "Victory" then
+            if payload.result == "Victory" or payload.result == "Defeat" then
                 return
             end
             self:QueueEnding(payload.result)
@@ -884,7 +885,7 @@ function RadioManager:TickOpeningPresentation(current)
     end
 
     local fade_alpha = 1.0 - math.min(1.0, (elapsed - fade_start) / OPENING_FADE_SECONDS)
-    self:PublishOpeningPresentation(fade_alpha, fade_alpha > 0.001, false, skip_alpha)
+    self:PublishOpeningPresentation(fade_alpha, fade_alpha > 0.001, false, math.min(skip_alpha, fade_alpha))
 end
 
 function RadioManager:BeginOpeningExitFade()

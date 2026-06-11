@@ -5,6 +5,7 @@
 
 class UCombatCoverAgentComponent;
 class ULuaScriptComponent;
+class USoundComponent;
 class USniperDamageReceiverComponent;
 
 #include "Source/Engine/GameFramework/Pawn/CombatCharacter.generated.h"
@@ -30,13 +31,17 @@ public:
 
 	ULuaScriptComponent* GetLuaScriptComponent() const;
 	UCombatCoverAgentComponent* GetCombatCoverAgentComponent() const;
+	USoundComponent* GetCombatGunfireSoundComponent() const;
 	USniperDamageReceiverComponent* GetSniperDamageReceiverComponent() const;
 
 protected:
 	UPROPERTY(Edit, Save, Category="Sniper|Hit Query", DisplayName="Enable Persistent Query Bodies")
 	bool bEnablePersistentQueryBodies = true;
 
+	void ConfigureCombatGunfireSound(USoundComponent* Sound) const;
+
 	mutable TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
 	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
+	mutable TWeakObjectPtr<USoundComponent> CombatGunfireSoundComponent = nullptr;
 	mutable TWeakObjectPtr<USniperDamageReceiverComponent> SniperDamageReceiverComponent = nullptr;
 };

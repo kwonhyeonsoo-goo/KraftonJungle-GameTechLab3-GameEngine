@@ -16,7 +16,7 @@ class UDecalComponent : public UPrimitiveComponent
 {
 public:
 	GENERATED_BODY()
-	UDecalComponent() = default;
+	UDecalComponent();
 	~UDecalComponent() override = default;
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
@@ -27,6 +27,7 @@ public:
 	void PostEditProperty(const char* PropertyName) override;
 	
 	void PostDuplicate() override;
+	void ContributeSelectedVisuals(FScene& Scene) const override;
 
 	// Color (with Color)
 	UFUNCTION(Callable, Category="Decal|Rendering")
@@ -37,6 +38,10 @@ public:
 	}
 	UFUNCTION(Pure, Category="Decal|Rendering")
 	FVector4 GetColor() const;
+	UFUNCTION(Callable, Category="Decal|Rendering")
+	void SetAtlasRect(FVector4 InAtlasRect);
+	UFUNCTION(Pure, Category="Decal|Rendering")
+	FVector4 GetAtlasRect() const { return AtlasRect; }
 
 	// --- Material ---
 	UFUNCTION(Callable, Category="Materials")
@@ -69,6 +74,8 @@ private:
 	UMaterial* Material = nullptr;
 	UPROPERTY(Edit, Save, Category="Rendering", DisplayName="Color", Type=Vec4)
 	FVector4 Color = {1,1,1,1};
+	UPROPERTY(Edit, Save, Category="Rendering", DisplayName="Atlas Rect", Type=Vec4)
+	FVector4 AtlasRect = {0,0,1,1};
 	UPROPERTY(Edit, Save, Category="Rendering", DisplayName="FadeInDelay")
 	float FadeInDelay = 0;
 	UPROPERTY(Edit, Save, Category="Rendering", DisplayName="FadeInDuration")
