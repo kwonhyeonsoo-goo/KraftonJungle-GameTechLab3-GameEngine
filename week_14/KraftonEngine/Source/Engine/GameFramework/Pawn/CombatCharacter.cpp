@@ -26,6 +26,7 @@ namespace
 	constexpr float CombatGunfireMinDistance = 1.0f;
 	constexpr float CombatGunfireMaxDistance = 80.0f;
 	constexpr const char* DefaultDeathBloodDecalMaterialPath = "Content/Material/Editor/DefaultDecal.uasset";
+	constexpr float DeathBloodDecalKillCamDecisionGrace = 0.1f;
 
 	FQuat MakeRotationWithForwardX(const FVector& ForwardX, const FVector& UpHint)
 	{
@@ -147,18 +148,29 @@ void ACombatCharacter::Tick(float DeltaTime)
 		return;
 	}
 
-	if (PendingDeathBloodDecal.bWaitForKillCamImpact)
+	const bool bHasKillCamRecord =
+		PendingDeathBloodDecal.BulletId != 0 &&
+		ASniperKillCamDirector::HasBulletRecord(PendingDeathBloodDecal.BulletId);
+
+	if (bHasKillCamRecord)
 	{
-		if (!ASniperKillCamDirector::IsBulletPendingOrActive(PendingDeathBloodDecal.BulletId))
-		{
-			SpawnDeathBloodDecal(PendingDeathBloodDecal.HitInfo);
-			PendingDeathBloodDecal = FPendingDeathBloodDecal();
-			return;
-		}
+		PendingDeathBloodDecal.bWaitForKillCamEnd = true;
 	}
 
-	PendingDeathBloodDecal.RemainingDelay -= DeltaTime;
-	if (PendingDeathBloodDecal.RemainingDelay > 0.0f)
+	if (PendingDeathBloodDecal.bWaitForKillCamEnd)
+	{
+		if (bHasKillCamRecord)
+		{
+			return;
+		}
+
+		SpawnDeathBloodDecal(PendingDeathBloodDecal.HitInfo);
+		PendingDeathBloodDecal = FPendingDeathBloodDecal();
+		return;
+	}
+
+	PendingDeathBloodDecal.DecisionGraceRemaining -= DeltaTime;
+	if (PendingDeathBloodDecal.DecisionGraceRemaining > 0.0f)
 	{
 		return;
 	}
@@ -260,20 +272,15 @@ void ACombatCharacter::HandleSniperKilled(const FSniperHitInfo& HitInfo)
 	}
 
 	bDeathBloodDecalSpawned = true;
-
-	const bool bDelayForKillCam =
-		HitInfo.BulletId != 0 &&
-		DeathBloodDecalKillCamDelay > 0.0f &&
-		ASniperKillCamDirector::IsBulletPendingOrActive(HitInfo.BulletId);
-	if (!bDelayForKillCam)
+	if (HitInfo.BulletId == 0)
 	{
 		SpawnDeathBloodDecal(HitInfo);
 		return;
 	}
 
 	PendingDeathBloodDecal.bActive = true;
-	PendingDeathBloodDecal.bWaitForKillCamImpact = true;
-	PendingDeathBloodDecal.RemainingDelay = DeathBloodDecalKillCamDelay;
+	PendingDeathBloodDecal.bWaitForKillCamEnd = ASniperKillCamDirector::HasBulletRecord(HitInfo.BulletId);
+	PendingDeathBloodDecal.DecisionGraceRemaining = DeathBloodDecalKillCamDecisionGrace;
 	PendingDeathBloodDecal.BulletId = HitInfo.BulletId;
 	PendingDeathBloodDecal.HitInfo = HitInfo;
 }

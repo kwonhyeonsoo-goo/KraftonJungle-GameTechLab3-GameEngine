@@ -655,6 +655,21 @@ bool ASniperKillCamDirector::ConsumeFloorHitForBulletId(int32 BulletId, FBulletC
 	return true;
 }
 
+bool ASniperKillCamDirector::HasBulletRecord(int32 BulletId)
+{
+	if (BulletId == 0)
+	{
+		return false;
+	}
+
+	return std::find(GPendingKillCamBulletIds.begin(), GPendingKillCamBulletIds.end(), BulletId) != GPendingKillCamBulletIds.end()
+		|| std::find(GActiveKillCamBulletIds.begin(), GActiveKillCamBulletIds.end(), BulletId) != GActiveKillCamBulletIds.end()
+		|| GBulletManagersById.find(BulletId) != GBulletManagersById.end()
+		|| GBulletSpawnSnapshotsById.find(BulletId) != GBulletSpawnSnapshotsById.end()
+		|| GBulletHitSnapshotsById.find(BulletId) != GBulletHitSnapshotsById.end()
+		|| GBulletFloorHitSnapshotsById.find(BulletId) != GBulletFloorHitSnapshotsById.end();
+}
+
 bool ASniperKillCamDirector::IsBulletPendingOrActive(int32 BulletId)
 {
 	if (BulletId == 0)

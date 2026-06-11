@@ -70,9 +70,6 @@ protected:
 	UPROPERTY(Edit, Save, Category="Sniper|Death Decal", DisplayName="Blood Decal Ground Trace Down", Min=0.1f, Max=50.0f, Speed=0.1f)
 	float DeathBloodDecalGroundTraceDown = 8.0f;
 
-	UPROPERTY(Edit, Save, Category="Sniper|Death Decal", DisplayName="KillCam Blood Decal Delay", Min=0.0f, Max=10.0f, Speed=0.05f)
-	float DeathBloodDecalKillCamDelay = 4.65f;
-
 	void ConfigureCombatGunfireSound(USoundComponent* Sound) const;
 	void HandleSniperKilled(const FSniperHitInfo& HitInfo);
 	void SpawnDeathBloodDecal(const FSniperHitInfo& HitInfo) const;
@@ -80,8 +77,8 @@ protected:
 	struct FPendingDeathBloodDecal
 	{
 		bool bActive = false;
-		bool bWaitForKillCamImpact = false;
-		float RemainingDelay = 0.0f;
+		bool bWaitForKillCamEnd = false;
+		float DecisionGraceRemaining = 0.0f;
 		int32 BulletId = 0;
 		FSniperHitInfo HitInfo;
 	};

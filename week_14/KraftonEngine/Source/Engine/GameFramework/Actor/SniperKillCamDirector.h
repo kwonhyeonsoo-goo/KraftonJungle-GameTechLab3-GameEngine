@@ -71,6 +71,7 @@ public:
 	static bool GetHitSnapshotForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
 	static bool ConsumeFloorHitForBulletId(int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
 	static bool CheckFloorHitInWorld(UWorld* World, int32 BulletId, FBulletCinematicSnapshot& OutSnapshot);
+	static bool HasBulletRecord(int32 BulletId);
 	static bool IsBulletPendingOrActive(int32 BulletId);
 	static int32 ConsumePendingBulletId();
 	static void ClearPendingBullets();
