@@ -39,6 +39,47 @@ namespace
         return sqrtf(DX * DX + DY * DY);
     }
 
+    float DistSquared2D(const FVector& A, const FVector& B)
+    {
+        const float DX = A.X - B.X;
+        const float DY = A.Y - B.Y;
+        return DX * DX + DY * DY;
+    }
+
+    FVector GetNodeWorldLocation(const UCombatCoverNodeComponent* Node)
+    {
+        const AActor* Owner = Node ? Node->GetOwner() : nullptr;
+        return Owner ? Owner->GetActorLocation() : FVector::ZeroVector;
+    }
+
+    FVector MakeFlatOffset(const FVector& Point, const FVector& Origin, float MaxLength)
+    {
+        FVector Offset(Point.X - Origin.X, Point.Y - Origin.Y, 0.0f);
+        const float Length = sqrtf(Offset.X * Offset.X + Offset.Y * Offset.Y);
+        if (MaxLength > 0.0f && Length > MaxLength)
+        {
+            const float Scale = MaxLength / Length;
+            Offset.X *= Scale;
+            Offset.Y *= Scale;
+        }
+        return Offset;
+    }
+
+    FVector LerpVector(const FVector& A, const FVector& B, float Alpha)
+    {
+        return A + (B - A) * Alpha;
+    }
+
+    void AppendPathPointIfUseful(TArray<FVector>& Points, const FVector& Point)
+    {
+        constexpr float DuplicateToleranceSq = 4.0f;
+        if (!Points.empty() && DistSquared2D(Points.back(), Point) <= DuplicateToleranceSq)
+        {
+            return;
+        }
+        Points.push_back(Point);
+    }
+
     FString FormatSlotHandle(const FCombatCoverSlotHandle& Handle)
     {
         char Buffer[128] = {};
@@ -1286,12 +1327,32 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
     UCombatCoverAgentComponent* Agent,
     FCombatMovePath& OutPath) const
 {
-    if (!BuildMovePathToSlot(FinalSlot, OutPath))
+    OutPath.Reset();
+    if (!FromNode || !ToNode || !StartSlot.IsValid() || !FinalSlot.IsValid())
     {
         return false;
     }
 
+    if (StartSlot.NodeId != FromNode->GetNodeId() || FinalSlot.NodeId != ToNode->GetNodeId())
+    {
+        return false;
+    }
+
+    const int32 FinalSlotIndex = ToNode->FindSlotIndexById(FinalSlot.SlotId);
+    if (FinalSlotIndex < 0)
+    {
+        return false;
+    }
+
+    OutPath.FinalSlot = FinalSlot;
+
+    TArray<FVector> EntryPoints;
+    AppendSlotApproachPoint(FinalSlot, false, EntryPoints);
+    EntryPoints.push_back(ToNode->GetSlotWorldPosition(FinalSlotIndex));
+
     TArray<FVector> Points;
+    FCombatCoverSlotHandle LinkStartSlot = StartSlot;
+
     const FCombatCoverSlotHandle ExitSlot = FindExitSlotForFullCoverTraversal(
         FromNode,
         StartSlot,
@@ -1305,41 +1366,55 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
             return false;
         }
         Points = ExitPath.Points;
+        LinkStartSlot = ExitSlot;
+        AppendSlotApproachPoint(LinkStartSlot, true, Points);
     }
     else
     {
         AppendSlotApproachPoint(StartSlot, true, Points);
     }
 
-    bool bReverse = false;
-    const FCombatCoverLink* Link = FindTraversalLink(FromNode, ToNode, bReverse);
-    if (Link)
+    FVector LinkStartAnchor = FVector::ZeroVector;
+    FVector LinkEndAnchor = FVector::ZeroVector;
+    if (!GetSlotPathAnchor(LinkStartSlot, true, LinkStartAnchor) || !GetSlotPathAnchor(FinalSlot, false, LinkEndAnchor))
     {
-        if (bReverse)
-        {
-            for (int32 Index = static_cast<int32>(Link->PathPoints.size()) - 1; Index >= 0; --Index)
-            {
-                Points.push_back(Link->PathPoints[Index]);
-            }
-        }
-        else
-        {
-            for (const FVector& Point : Link->PathPoints)
-            {
-                Points.push_back(Point);
-            }
-        }
+        return false;
     }
 
-    for (const FVector& Point : OutPath.Points)
+    bool bReverse = false;
+    const FCombatCoverLink* Link = FindTraversalLink(FromNode, ToNode, bReverse);
+    AppendSlotAwareLinkPoints(FromNode, ToNode, Link, bReverse, LinkStartAnchor, LinkEndAnchor, Points);
+
+    for (const FVector& Point : EntryPoints)
     {
-        Points.push_back(Point);
+        AppendPathPointIfUseful(Points, Point);
     }
+
     OutPath.Points = Points;
-    return true;
+    return !OutPath.Points.empty();
 }
 
 bool UCombatFlowManagerComponent::AppendSlotApproachPoint(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, TArray<FVector>& OutPoints) const
+{
+    FVector ApproachPoint;
+    if (!GetSlotPathAnchor(SlotHandle, bForExit, ApproachPoint))
+    {
+        return false;
+    }
+
+    UCombatCoverNodeComponent* Node = FindNode(SlotHandle.NodeId);
+    const FCombatCoverSlot* Slot = Node ? Node->FindSlotById(SlotHandle.SlotId) : nullptr;
+    const bool bUseApproach = Slot && (bForExit ? Slot->bUseApproachOnExit : Slot->bUseApproachOnEntry);
+    if (!bUseApproach || Slot->LocalApproachOffset.IsNearlyZero())
+    {
+        return false;
+    }
+
+    AppendPathPointIfUseful(OutPoints, ApproachPoint);
+    return true;
+}
+
+bool UCombatFlowManagerComponent::GetSlotPathAnchor(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, FVector& OutAnchor) const
 {
     if (!SlotHandle.IsValid())
     {
@@ -1365,13 +1440,90 @@ bool UCombatFlowManagerComponent::AppendSlotApproachPoint(const FCombatCoverSlot
     }
 
     const bool bUseApproach = bForExit ? Slot->bUseApproachOnExit : Slot->bUseApproachOnEntry;
-    if (!bUseApproach || Slot->LocalApproachOffset.IsNearlyZero())
+    OutAnchor = (bUseApproach && !Slot->LocalApproachOffset.IsNearlyZero())
+        ? Node->GetSlotWorldApproachPosition(SlotIndex)
+        : Node->GetSlotWorldPosition(SlotIndex);
+    return true;
+}
+
+void UCombatFlowManagerComponent::AppendSlotAwareLinkPoints(
+    UCombatCoverNodeComponent* FromNode,
+    UCombatCoverNodeComponent* ToNode,
+    const FCombatCoverLink* Link,
+    bool bReverse,
+    const FVector& StartAnchor,
+    const FVector& EndAnchor,
+    TArray<FVector>& OutPoints) const
+{
+    if (!FromNode || !ToNode)
     {
-        return false;
+        return;
     }
 
-    OutPoints.push_back(Node->GetSlotWorldApproachPosition(SlotIndex));
-    return true;
+    if (!Link || Link->PathPoints.empty())
+    {
+        return;
+    }
+
+    const float OffsetBlend = (std::min)((std::max)(0.0f, SlotAwareLinkOffsetBlend), 1.0f);
+    const FVector StartCenter = GetNodeWorldLocation(FromNode);
+    const FVector EndCenter = GetNodeWorldLocation(ToNode);
+    const FVector StartOffset = MakeFlatOffset(StartAnchor, StartCenter, MaxSlotAwareLinkOffset) * OffsetBlend;
+    const FVector EndOffset = MakeFlatOffset(EndAnchor, EndCenter, MaxSlotAwareLinkOffset) * OffsetBlend;
+
+    TArray<FVector> CenterPoints;
+    if (bReverse)
+    {
+        for (int32 Index = static_cast<int32>(Link->PathPoints.size()) - 1; Index >= 0; --Index)
+        {
+            CenterPoints.push_back(Link->PathPoints[Index]);
+        }
+    }
+    else
+    {
+        for (const FVector& Point : Link->PathPoints)
+        {
+            CenterPoints.push_back(Point);
+        }
+    }
+
+    if (OffsetBlend <= 0.0f)
+    {
+        for (const FVector& CenterPoint : CenterPoints)
+        {
+            AppendPathPointIfUseful(OutPoints, CenterPoint);
+        }
+        return;
+    }
+
+    float TotalLength = 0.0f;
+    FVector Previous = StartCenter;
+    for (const FVector& CenterPoint : CenterPoints)
+    {
+        TotalLength += Dist2D(Previous, CenterPoint);
+        Previous = CenterPoint;
+    }
+    TotalLength += Dist2D(Previous, EndCenter);
+
+    if (TotalLength <= 1e-3f)
+    {
+        for (const FVector& CenterPoint : CenterPoints)
+        {
+            AppendPathPointIfUseful(OutPoints, CenterPoint);
+        }
+        return;
+    }
+
+    float AccumulatedLength = 0.0f;
+    Previous = StartCenter;
+    for (const FVector& CenterPoint : CenterPoints)
+    {
+        AccumulatedLength += Dist2D(Previous, CenterPoint);
+        const float Alpha = (std::min)((std::max)(AccumulatedLength / TotalLength, 0.0f), 1.0f);
+        const FVector Offset = LerpVector(StartOffset, EndOffset, Alpha);
+        AppendPathPointIfUseful(OutPoints, CenterPoint + Offset);
+        Previous = CenterPoint;
+    }
 }
 
 const FCombatCoverLink* UCombatFlowManagerComponent::FindTraversalLink(

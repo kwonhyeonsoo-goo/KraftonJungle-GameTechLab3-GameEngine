@@ -176,6 +176,8 @@ private:
     bool BuildMovePathWithinNode(UCombatCoverNodeComponent* Node, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, FCombatMovePath& OutPath) const;
     bool BuildMovePathBetweenNodes(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, UCombatCoverAgentComponent* Agent, FCombatMovePath& OutPath) const;
     bool AppendSlotApproachPoint(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, TArray<FVector>& OutPoints) const;
+    bool GetSlotPathAnchor(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, FVector& OutAnchor) const;
+    void AppendSlotAwareLinkPoints(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverLink* Link, bool bReverse, const FVector& StartAnchor, const FVector& EndAnchor, TArray<FVector>& OutPoints) const;
     const FCombatCoverLink* FindTraversalLink(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, bool& bOutReverse) const;
     UCombatCoverAgentComponent* FindBestTargetFor(UCombatCoverAgentComponent* Agent) const;
     bool CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const;
@@ -195,6 +197,12 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatFlow", DisplayName="Use Node Occupancy Limit")
     bool bUseNodeOccupancyLimit = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Slot Aware Link Offset Blend", Min=0.0f, Max=1.0f, Speed=0.05f)
+    float SlotAwareLinkOffsetBlend = 1.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Max Slot Aware Link Offset", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float MaxSlotAwareLinkOffset = 350.0f;
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Enable Suppression")
     bool bEnableSuppression = true;
