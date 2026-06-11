@@ -69,6 +69,7 @@ private:
 	bool ShouldRunPreciseCharacterHitQuery(const struct FHitResult& BroadHit) const;
 	bool ShouldRunPosePhysicsAssetHitQuery(const struct FHitResult& BroadHit) const;
 	bool EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const;
+	bool QueryCharacterQueryBodyHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
 	bool QueryPreciseCharacterHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
 	bool QueryPosePhysicsAssetCharacterHit(const FBallisticBullet& Bullet, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);

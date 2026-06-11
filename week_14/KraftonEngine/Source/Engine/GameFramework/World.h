@@ -215,6 +215,7 @@ private:
 
 public:
 	IPhysicsScene* GetPhysicsScene() const { return PhysicsScene.get(); }
+	uint64 GetPhysicsFrameIndex() const { return PhysicsFrameIndex; }
 
 	// Physics raycast convenience — delegates to IPhysicsScene::Raycast
 	bool PhysicsRaycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
