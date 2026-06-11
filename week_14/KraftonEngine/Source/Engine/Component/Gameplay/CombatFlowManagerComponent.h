@@ -33,6 +33,11 @@ struct FCombatSuppressionRuntimeState
     float TimeRemaining = 0.0f;
 };
 
+struct FCombatLinkLaneRuntimeState
+{
+    TMap<int32, TWeakObjectPtr<UCombatCoverAgentComponent>> ReservedByLane;
+};
+
 struct FCombatCoverGraphValidationResult
 {
     int32 NodeCount = 0;
@@ -167,6 +172,8 @@ private:
     FCombatCoverSlotHandle FindFreeSlotInNode(UCombatCoverNodeComponent* Node, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent, ECombatSlotQueryPurpose Purpose = ECombatSlotQueryPurpose::Advance, const FCombatCoverSlotHandle* SkipSlotHandle = nullptr) const;
     bool TryMoveToSlotTypeInCurrentNode(UCombatCoverAgentComponent* Agent, ECombatCoverSlotType DesiredSlotType);
     bool ReserveSlot(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& SlotHandle);
+    int32 ReserveLinkLane(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode);
+    void ReleaseLinkLane(UCombatCoverAgentComponent* Agent);
     void ReleaseAgentExcept(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& KeepSlotHandle);
     int32 CountNodeClaims(const UCombatCoverNodeComponent* Node, const UCombatCoverAgentComponent* IgnoreAgent) const;
     bool SlotTagsMatchTeam(const FCombatCoverSlot& Slot, const FString& TeamTag) const;
@@ -174,10 +181,13 @@ private:
     FCombatCoverSlotHandle FindExitSlotForFullCoverTraversal(UCombatCoverNodeComponent* CurrentNode, const FCombatCoverSlotHandle& StartSlot, const FString& TeamTag, const UCombatCoverAgentComponent* RequestingAgent) const;
     bool BuildMovePathToSlot(const FCombatCoverSlotHandle& SlotHandle, FCombatMovePath& OutPath) const;
     bool BuildMovePathWithinNode(UCombatCoverNodeComponent* Node, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, FCombatMovePath& OutPath) const;
-    bool BuildMovePathBetweenNodes(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, UCombatCoverAgentComponent* Agent, FCombatMovePath& OutPath) const;
+    bool BuildMovePathBetweenNodes(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverSlotHandle& StartSlot, const FCombatCoverSlotHandle& FinalSlot, UCombatCoverAgentComponent* Agent, int32 ReservedLinkLaneIndex, FCombatMovePath& OutPath) const;
     bool AppendSlotApproachPoint(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, TArray<FVector>& OutPoints) const;
     bool GetSlotPathAnchor(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, FVector& OutAnchor) const;
-    void AppendSlotAwareLinkPoints(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverLink* Link, bool bReverse, const FVector& StartAnchor, const FVector& EndAnchor, TArray<FVector>& OutPoints) const;
+    bool GetSlotPathTangent(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, FVector& OutTangent) const;
+    void AppendSlotExitTangentPoint(const FCombatCoverSlotHandle& SlotHandle, const FVector& StartAnchor, TArray<FVector>& OutPoints) const;
+    void AppendSlotEntryTangentPoint(const FCombatCoverSlotHandle& SlotHandle, const FVector& EndAnchor, TArray<FVector>& OutPoints) const;
+    void AppendSlotAwareLinkPoints(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, const FCombatCoverLink* Link, bool bReverse, const FVector& StartAnchor, const FVector& EndAnchor, int32 ReservedLinkLaneIndex, TArray<FVector>& OutPoints) const;
     const FCombatCoverLink* FindTraversalLink(UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode, bool& bOutReverse) const;
     UCombatCoverAgentComponent* FindBestTargetFor(UCombatCoverAgentComponent* Agent) const;
     bool CanEngage(const UCombatCoverAgentComponent* Shooter, const UCombatCoverAgentComponent* Target) const;
@@ -189,6 +199,7 @@ private:
     void EnsureRuntimeSlotsForNode(UCombatCoverNodeComponent* Node);
     void RemoveStaleRuntimeState();
     void RemoveInvalidOrDeadRuntimeClaims();
+    void RemoveInvalidOrDeadLinkLaneClaims();
     void AddValidationMessage(FCombatCoverGraphValidationResult& Result, bool bError, const FString& Message) const;
 
 private:
@@ -203,6 +214,24 @@ private:
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Max Slot Aware Link Offset", Min=0.0f, Max=10000.0f, Speed=1.0f)
     float MaxSlotAwareLinkOffset = 350.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Use Approach Offset As Implicit Tangent")
+    bool bUseApproachOffsetAsImplicitTangent = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Slot Tangent Guide Distance", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float SlotTangentGuideDistance = 1.0f;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Enable Link Lane Reservation")
+    bool bEnableLinkLaneReservation = true;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Link Reserved Lane Count", Min=1, Max=9, Speed=1)
+    int32 LinkReservedLaneCount = 3;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Link Reserved Lane Spacing", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float LinkReservedLaneSpacing = 0.3f;
+
+    UPROPERTY(Edit, Save, Category="CombatFlow|Movement", DisplayName="Link Reserved Lane Offset Blend", Min=0.0f, Max=1.0f, Speed=0.05f)
+    float LinkReservedLaneOffsetBlend = 1.0f;
 
     UPROPERTY(Edit, Save, Category="CombatFlow|Combat", DisplayName="Enable Suppression")
     bool bEnableSuppression = true;
@@ -235,6 +264,7 @@ private:
     TArray<UCombatCoverAgentComponent*> CachedAgents;
     TMap<FString, UCombatCoverNodeComponent*> NodeById;
     TMap<FString, FCombatNodeRuntimeState> RuntimeStateByNodeId;
+    TMap<FString, FCombatLinkLaneRuntimeState> RuntimeStateByLinkKey;
     TMap<UCombatCoverAgentComponent*, FCombatAttackRuntimeState> AttackStateByAgent;
     TMap<UCombatCoverAgentComponent*, FCombatSuppressionRuntimeState> SuppressionStateByAgent;
     float DebugDrawTimer = 0.0f;

@@ -65,6 +65,52 @@ namespace
         return Offset;
     }
 
+    FVector MakeFlatDirection(const FVector& Direction, const FVector& Fallback = FVector::ForwardVector)
+    {
+        FVector Flat(Direction.X, Direction.Y, 0.0f);
+        if (Flat.IsNearlyZero())
+        {
+            Flat = FVector(Fallback.X, Fallback.Y, 0.0f);
+        }
+        if (Flat.IsNearlyZero())
+        {
+            return FVector::ForwardVector;
+        }
+        return Flat.Normalized();
+    }
+
+    float ClampFloat(float Value, float MinValue, float MaxValue)
+    {
+        return (std::min)((std::max)(Value, MinValue), MaxValue);
+    }
+
+    FString MakeLinkRuntimeKey(const FString& A, const FString& B)
+    {
+        const bool bAB = A <= B;
+        const FString& First = bAB ? A : B;
+        const FString& Second = bAB ? B : A;
+
+        char Buffer[256] = {};
+        std::snprintf(Buffer, sizeof(Buffer), "%s|%s", First.c_str(), Second.c_str());
+        return FString(Buffer);
+    }
+
+    int32 GetTraversalLaneSign(const FString& FromNodeId, const FString& ToNodeId)
+    {
+        return FromNodeId <= ToNodeId ? 1 : -1;
+    }
+
+    int32 MakeLaneIndexByOrder(int32 Order)
+    {
+        if (Order <= 0)
+        {
+            return 0;
+        }
+
+        const int32 Magnitude = (Order + 1) / 2;
+        return (Order % 2) == 1 ? -Magnitude : Magnitude;
+    }
+
     FVector LerpVector(const FVector& A, const FVector& B, float Alpha)
     {
         return A + (B - A) * Alpha;
@@ -278,11 +324,13 @@ void UCombatFlowManagerComponent::RefreshRegistry()
         EnsureRuntimeSlotsForNode(Node);
     }
     RemoveInvalidOrDeadRuntimeClaims();
+    RemoveInvalidOrDeadLinkLaneClaims();
 }
 
 void UCombatFlowManagerComponent::ResetRuntimeState()
 {
     RuntimeStateByNodeId.clear();
+    RuntimeStateByLinkKey.clear();
     AttackStateByAgent.clear();
     SuppressionStateByAgent.clear();
     for (UCombatCoverNodeComponent* Node : CachedNodes)
@@ -370,8 +418,10 @@ bool UCombatFlowManagerComponent::TryAdvance(UCombatCoverAgentComponent* Agent)
         StartSlot.NodeId = Agent->GetCurrentNodeId();
         StartSlot.SlotId = Agent->GetCurrentSlotId();
 
+        const int32 ReservedLinkLaneIndex = ReserveLinkLane(Agent, CurrentNode, NextNode);
+
         FCombatMovePath MovePath;
-        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, StartSlot, Candidate, Agent, MovePath))
+        if (!BuildMovePathBetweenNodes(CurrentNode, NextNode, StartSlot, Candidate, Agent, ReservedLinkLaneIndex, MovePath))
         {
             ReleaseAgent(Agent);
             continue;
@@ -437,6 +487,8 @@ void UCombatFlowManagerComponent::ConfirmArrived(UCombatCoverAgentComponent* Age
         SlotState.ReservedBy.Reset();
         SlotState.OccupiedBy.Reset(Agent);
     }
+
+    ReleaseLinkLane(Agent);
 }
 
 void UCombatFlowManagerComponent::ReleaseAgent(UCombatCoverAgentComponent* Agent)
@@ -447,6 +499,7 @@ void UCombatFlowManagerComponent::ReleaseAgent(UCombatCoverAgentComponent* Agent
     }
 
     AttackStateByAgent.erase(Agent);
+    ReleaseLinkLane(Agent);
     for (auto& NodePair : RuntimeStateByNodeId)
     {
         for (auto& SlotPair : NodePair.second.Slots)
@@ -1081,6 +1134,94 @@ bool UCombatFlowManagerComponent::ReserveSlot(UCombatCoverAgentComponent* Agent,
     return true;
 }
 
+int32 UCombatFlowManagerComponent::ReserveLinkLane(UCombatCoverAgentComponent* Agent, UCombatCoverNodeComponent* FromNode, UCombatCoverNodeComponent* ToNode)
+{
+    if (!bEnableLinkLaneReservation || !IsValid(Agent) || !FromNode || !ToNode)
+    {
+        return 0;
+    }
+
+    const FString& FromNodeId = FromNode->GetNodeId();
+    const FString& ToNodeId = ToNode->GetNodeId();
+    if (FromNodeId.empty() || ToNodeId.empty())
+    {
+        return 0;
+    }
+
+    RemoveInvalidOrDeadLinkLaneClaims();
+
+    const FString LinkKey = MakeLinkRuntimeKey(FromNodeId, ToNodeId);
+    FCombatLinkLaneRuntimeState& LinkState = RuntimeStateByLinkKey[LinkKey];
+
+    for (auto It = LinkState.ReservedByLane.begin(); It != LinkState.ReservedByLane.end(); )
+    {
+        UCombatCoverAgentComponent* ReservedAgent = It->second.Get();
+        if (!IsValid(ReservedAgent) || !ReservedAgent->IsAlive() || ReservedAgent == Agent)
+        {
+            It = LinkState.ReservedByLane.erase(It);
+            continue;
+        }
+        ++It;
+    }
+
+    const int32 LaneCount = (std::max)(1, LinkReservedLaneCount);
+    int32 BestCanonicalLane = 0;
+    bool bFoundFreeLane = false;
+    for (int32 Order = 0; Order < LaneCount; ++Order)
+    {
+        const int32 CandidateLane = MakeLaneIndexByOrder(Order);
+        if (LinkState.ReservedByLane.find(CandidateLane) == LinkState.ReservedByLane.end())
+        {
+            BestCanonicalLane = CandidateLane;
+            bFoundFreeLane = true;
+            break;
+        }
+    }
+
+    for (int32 Order = LaneCount; !bFoundFreeLane; ++Order)
+    {
+        const int32 CandidateLane = MakeLaneIndexByOrder(Order);
+        if (LinkState.ReservedByLane.find(CandidateLane) == LinkState.ReservedByLane.end())
+        {
+            BestCanonicalLane = CandidateLane;
+            bFoundFreeLane = true;
+            break;
+        }
+    }
+
+    LinkState.ReservedByLane[BestCanonicalLane].Reset(Agent);
+    return BestCanonicalLane * GetTraversalLaneSign(FromNodeId, ToNodeId);
+}
+
+void UCombatFlowManagerComponent::ReleaseLinkLane(UCombatCoverAgentComponent* Agent)
+{
+    if (!Agent)
+    {
+        return;
+    }
+
+    for (auto LinkIt = RuntimeStateByLinkKey.begin(); LinkIt != RuntimeStateByLinkKey.end(); )
+    {
+        FCombatLinkLaneRuntimeState& LinkState = LinkIt->second;
+        for (auto LaneIt = LinkState.ReservedByLane.begin(); LaneIt != LinkState.ReservedByLane.end(); )
+        {
+            if (LaneIt->second.Get() == Agent)
+            {
+                LaneIt = LinkState.ReservedByLane.erase(LaneIt);
+                continue;
+            }
+            ++LaneIt;
+        }
+
+        if (LinkState.ReservedByLane.empty())
+        {
+            LinkIt = RuntimeStateByLinkKey.erase(LinkIt);
+            continue;
+        }
+        ++LinkIt;
+    }
+}
+
 void UCombatFlowManagerComponent::ReleaseAgentExcept(UCombatCoverAgentComponent* Agent, const FCombatCoverSlotHandle& KeepSlotHandle)
 {
     if (!Agent)
@@ -1325,6 +1466,7 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
     const FCombatCoverSlotHandle& StartSlot,
     const FCombatCoverSlotHandle& FinalSlot,
     UCombatCoverAgentComponent* Agent,
+    int32 ReservedLinkLaneIndex,
     FCombatMovePath& OutPath) const
 {
     OutPath.Reset();
@@ -1381,9 +1523,12 @@ bool UCombatFlowManagerComponent::BuildMovePathBetweenNodes(
         return false;
     }
 
+    AppendSlotExitTangentPoint(LinkStartSlot, LinkStartAnchor, Points);
+
     bool bReverse = false;
     const FCombatCoverLink* Link = FindTraversalLink(FromNode, ToNode, bReverse);
-    AppendSlotAwareLinkPoints(FromNode, ToNode, Link, bReverse, LinkStartAnchor, LinkEndAnchor, Points);
+    AppendSlotAwareLinkPoints(FromNode, ToNode, Link, bReverse, LinkStartAnchor, LinkEndAnchor, ReservedLinkLaneIndex, Points);
+    AppendSlotEntryTangentPoint(FinalSlot, LinkEndAnchor, Points);
 
     for (const FVector& Point : EntryPoints)
     {
@@ -1446,6 +1591,83 @@ bool UCombatFlowManagerComponent::GetSlotPathAnchor(const FCombatCoverSlotHandle
     return true;
 }
 
+bool UCombatFlowManagerComponent::GetSlotPathTangent(const FCombatCoverSlotHandle& SlotHandle, bool bForExit, FVector& OutTangent) const
+{
+    if (!SlotHandle.IsValid())
+    {
+        return false;
+    }
+
+    UCombatCoverNodeComponent* Node = FindNode(SlotHandle.NodeId);
+    if (!Node)
+    {
+        return false;
+    }
+
+    const int32 SlotIndex = Node->FindSlotIndexById(SlotHandle.SlotId);
+    const FCombatCoverSlot* Slot = Node->FindSlotById(SlotHandle.SlotId);
+    if (SlotIndex < 0 || !Slot)
+    {
+        return false;
+    }
+
+    const bool bUseExplicitTangent = bForExit ? Slot->bUseExitTangent : Slot->bUseEntryTangent;
+    const FVector& LocalExplicitTangent = bForExit ? Slot->LocalExitTangent : Slot->LocalEntryTangent;
+    if (bUseExplicitTangent && !LocalExplicitTangent.IsNearlyZero())
+    {
+        OutTangent = bForExit ? Node->GetSlotWorldExitTangent(SlotIndex) : Node->GetSlotWorldEntryTangent(SlotIndex);
+        OutTangent = MakeFlatDirection(OutTangent);
+        return true;
+    }
+
+    const bool bUseApproach = bForExit ? Slot->bUseApproachOnExit : Slot->bUseApproachOnEntry;
+    if (bUseApproachOffsetAsImplicitTangent && bUseApproach && !Slot->LocalApproachOffset.IsNearlyZero())
+    {
+        const FVector SlotWorld = Node->GetSlotWorldPosition(SlotIndex);
+        const FVector ApproachWorld = Node->GetSlotWorldApproachPosition(SlotIndex);
+        OutTangent = bForExit
+            ? MakeFlatDirection(ApproachWorld - SlotWorld)
+            : MakeFlatDirection(SlotWorld - ApproachWorld);
+        return true;
+    }
+
+    return false;
+}
+
+void UCombatFlowManagerComponent::AppendSlotExitTangentPoint(const FCombatCoverSlotHandle& SlotHandle, const FVector& StartAnchor, TArray<FVector>& OutPoints) const
+{
+    const float GuideDistance = (std::max)(0.0f, SlotTangentGuideDistance);
+    if (GuideDistance <= 0.0f)
+    {
+        return;
+    }
+
+    FVector Tangent = FVector::ZeroVector;
+    if (!GetSlotPathTangent(SlotHandle, true, Tangent))
+    {
+        return;
+    }
+
+    AppendPathPointIfUseful(OutPoints, StartAnchor + Tangent * GuideDistance);
+}
+
+void UCombatFlowManagerComponent::AppendSlotEntryTangentPoint(const FCombatCoverSlotHandle& SlotHandle, const FVector& EndAnchor, TArray<FVector>& OutPoints) const
+{
+    const float GuideDistance = (std::max)(0.0f, SlotTangentGuideDistance);
+    if (GuideDistance <= 0.0f)
+    {
+        return;
+    }
+
+    FVector Tangent = FVector::ZeroVector;
+    if (!GetSlotPathTangent(SlotHandle, false, Tangent))
+    {
+        return;
+    }
+
+    AppendPathPointIfUseful(OutPoints, EndAnchor - Tangent * GuideDistance);
+}
+
 void UCombatFlowManagerComponent::AppendSlotAwareLinkPoints(
     UCombatCoverNodeComponent* FromNode,
     UCombatCoverNodeComponent* ToNode,
@@ -1453,6 +1675,7 @@ void UCombatFlowManagerComponent::AppendSlotAwareLinkPoints(
     bool bReverse,
     const FVector& StartAnchor,
     const FVector& EndAnchor,
+    int32 ReservedLinkLaneIndex,
     TArray<FVector>& OutPoints) const
 {
     if (!FromNode || !ToNode)
@@ -1465,11 +1688,10 @@ void UCombatFlowManagerComponent::AppendSlotAwareLinkPoints(
         return;
     }
 
-    const float OffsetBlend = (std::min)((std::max)(0.0f, SlotAwareLinkOffsetBlend), 1.0f);
+    const float OffsetBlend = ClampFloat(SlotAwareLinkOffsetBlend, 0.0f, 1.0f);
+    const float ReservedLaneBlend = ClampFloat(LinkReservedLaneOffsetBlend, 0.0f, 1.0f);
     const FVector StartCenter = GetNodeWorldLocation(FromNode);
     const FVector EndCenter = GetNodeWorldLocation(ToNode);
-    const FVector StartOffset = MakeFlatOffset(StartAnchor, StartCenter, MaxSlotAwareLinkOffset) * OffsetBlend;
-    const FVector EndOffset = MakeFlatOffset(EndAnchor, EndCenter, MaxSlotAwareLinkOffset) * OffsetBlend;
 
     TArray<FVector> CenterPoints;
     if (bReverse)
@@ -1487,7 +1709,26 @@ void UCombatFlowManagerComponent::AppendSlotAwareLinkPoints(
         }
     }
 
-    if (OffsetBlend <= 0.0f)
+    FVector LinkDirection = EndCenter - StartCenter;
+    if (CenterPoints.size() >= 2)
+    {
+        LinkDirection = CenterPoints.back() - CenterPoints.front();
+    }
+    else if (CenterPoints.size() == 1)
+    {
+        LinkDirection = CenterPoints.front() - StartCenter;
+    }
+
+    const FVector LinkForward = MakeFlatDirection(LinkDirection, EndCenter - StartCenter);
+    FVector LinkRight = FVector::Cross(FVector::UpVector, LinkForward);
+    LinkRight = MakeFlatDirection(LinkRight, FVector::RightVector);
+
+    const float MaxSlotOffset = (std::max)(0.0f, MaxSlotAwareLinkOffset);
+    const float StartSide = ClampFloat(MakeFlatOffset(StartAnchor, StartCenter, MaxSlotOffset).Dot(LinkRight), -MaxSlotOffset, MaxSlotOffset);
+    const float EndSide = ClampFloat(MakeFlatOffset(EndAnchor, EndCenter, MaxSlotOffset).Dot(LinkRight), -MaxSlotOffset, MaxSlotOffset);
+    const float ReservedLaneOffset = static_cast<float>(ReservedLinkLaneIndex) * (std::max)(0.0f, LinkReservedLaneSpacing) * ReservedLaneBlend;
+
+    if (OffsetBlend <= 0.0f && std::fabs(ReservedLaneOffset) <= 1e-3f)
     {
         for (const FVector& CenterPoint : CenterPoints)
         {
@@ -1520,7 +1761,8 @@ void UCombatFlowManagerComponent::AppendSlotAwareLinkPoints(
     {
         AccumulatedLength += Dist2D(Previous, CenterPoint);
         const float Alpha = (std::min)((std::max)(AccumulatedLength / TotalLength, 0.0f), 1.0f);
-        const FVector Offset = LerpVector(StartOffset, EndOffset, Alpha);
+        const float SlotSide = (StartSide + (EndSide - StartSide) * Alpha) * OffsetBlend;
+        const FVector Offset = LinkRight * (SlotSide + ReservedLaneOffset);
         AppendPathPointIfUseful(OutPoints, CenterPoint + Offset);
         Previous = CenterPoint;
     }
@@ -2018,6 +2260,31 @@ void UCombatFlowManagerComponent::RemoveInvalidOrDeadRuntimeClaims()
                 SlotState.OccupiedBy.Reset();
             }
         }
+    }
+}
+
+void UCombatFlowManagerComponent::RemoveInvalidOrDeadLinkLaneClaims()
+{
+    for (auto LinkIt = RuntimeStateByLinkKey.begin(); LinkIt != RuntimeStateByLinkKey.end(); )
+    {
+        FCombatLinkLaneRuntimeState& LinkState = LinkIt->second;
+        for (auto LaneIt = LinkState.ReservedByLane.begin(); LaneIt != LinkState.ReservedByLane.end(); )
+        {
+            UCombatCoverAgentComponent* Agent = LaneIt->second.Get();
+            if (!IsValid(Agent) || !Agent->IsAlive())
+            {
+                LaneIt = LinkState.ReservedByLane.erase(LaneIt);
+                continue;
+            }
+            ++LaneIt;
+        }
+
+        if (LinkState.ReservedByLane.empty())
+        {
+            LinkIt = RuntimeStateByLinkKey.erase(LinkIt);
+            continue;
+        }
+        ++LinkIt;
     }
 }
 

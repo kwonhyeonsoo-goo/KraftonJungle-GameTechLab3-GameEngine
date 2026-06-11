@@ -44,6 +44,18 @@ struct FCombatCoverSlot
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Local Approach Offset", Type=Vec3, Speed=1.0f)
     FVector LocalApproachOffset = FVector::ZeroVector;
 
+    UPROPERTY(Edit, Save, Category="CombatCover|Movement", DisplayName="Use Exit Tangent")
+    bool bUseExitTangent = false;
+
+    UPROPERTY(Edit, Save, Category="CombatCover|Movement", DisplayName="Local Exit Tangent", Type=Vec3, Speed=0.05f)
+    FVector LocalExitTangent = FVector::ZeroVector;
+
+    UPROPERTY(Edit, Save, Category="CombatCover|Movement", DisplayName="Use Entry Tangent")
+    bool bUseEntryTangent = false;
+
+    UPROPERTY(Edit, Save, Category="CombatCover|Movement", DisplayName="Local Entry Tangent", Type=Vec3, Speed=0.05f)
+    FVector LocalEntryTangent = FVector::ZeroVector;
+
     UPROPERTY(Edit, Save, Category="CombatCover", DisplayName="Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
     float Radius = 1.0f;
 
@@ -146,6 +158,12 @@ public:
 
     UFUNCTION(Pure, Category="CombatCover")
     FVector GetSlotWorldApproachPosition(int32 SlotIndex) const;
+
+    UFUNCTION(Pure, Category="CombatCover")
+    FVector GetSlotWorldExitTangent(int32 SlotIndex) const;
+
+    UFUNCTION(Pure, Category="CombatCover")
+    FVector GetSlotWorldEntryTangent(int32 SlotIndex) const;
 
     UFUNCTION(Callable, Category="CombatCover")
     int32 AddSlotAtLocalPosition(const FVector& LocalPosition);

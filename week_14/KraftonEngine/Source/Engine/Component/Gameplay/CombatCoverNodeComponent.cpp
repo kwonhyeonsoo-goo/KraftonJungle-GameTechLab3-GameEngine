@@ -219,6 +219,28 @@ FVector UCombatCoverNodeComponent::GetSlotWorldApproachPosition(int32 SlotIndex)
     return TransformLocalPosition(GetOwner(), Slot.LocalPosition + Slot.LocalApproachOffset);
 }
 
+FVector UCombatCoverNodeComponent::GetSlotWorldExitTangent(int32 SlotIndex) const
+{
+    if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(Slots.size()))
+    {
+        return GetOwner() ? GetOwner()->GetActorForward() : FVector::ForwardVector;
+    }
+
+    const FCombatCoverSlot& Slot = Slots[SlotIndex];
+    return TransformLocalVector(GetOwner(), Slot.LocalExitTangent);
+}
+
+FVector UCombatCoverNodeComponent::GetSlotWorldEntryTangent(int32 SlotIndex) const
+{
+    if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(Slots.size()))
+    {
+        return GetOwner() ? GetOwner()->GetActorForward() : FVector::ForwardVector;
+    }
+
+    const FCombatCoverSlot& Slot = Slots[SlotIndex];
+    return TransformLocalVector(GetOwner(), Slot.LocalEntryTangent);
+}
+
 int32 UCombatCoverNodeComponent::AddSlotAtLocalPosition(const FVector& LocalPosition)
 {
     FCombatCoverSlot Slot;
@@ -321,6 +343,8 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
 
     const FVector NodeLocation = Owner->GetActorLocation();
     const FColor ApproachColor = bSelected ? FColor(255, 130, 30) : FColor(255, 95, 20);
+    const FColor ExitTangentColor = bSelected ? FColor(255, 80, 30) : FColor(220, 60, 25);
+    const FColor EntryTangentColor = bSelected ? FColor(60, 220, 255) : FColor(40, 160, 220);
     const FColor LinkColor = bSelected ? FColor(255, 180, 0) : FColor(120, 180, 255);
 
     for (int32 Index = 0; Index < static_cast<int32>(Slots.size()); ++Index)
@@ -341,6 +365,18 @@ void UCombatCoverNodeComponent::DrawDebugVisuals(FScene& Scene, bool bSelected) 
             AddDebugCross(Scene, ApproachWorld, ApproachRadius, ApproachColor);
             AddDebugCircleXY(Scene, ApproachWorld, ApproachRadius, ApproachColor);
             Scene.AddDebugLine(SlotWorld, ApproachWorld, ApproachColor);
+        }
+
+        if (Slots[Index].bUseExitTangent && !Slots[Index].LocalExitTangent.IsNearlyZero())
+        {
+            const FVector ExitAnchor = Slots[Index].bUseApproachOnExit ? GetSlotWorldApproachPosition(Index) : SlotWorld;
+            AddDebugArrow(Scene, ExitAnchor, GetSlotWorldExitTangent(Index), Radius * 2.0f, ExitTangentColor);
+        }
+
+        if (Slots[Index].bUseEntryTangent && !Slots[Index].LocalEntryTangent.IsNearlyZero())
+        {
+            const FVector EntryAnchor = Slots[Index].bUseApproachOnEntry ? GetSlotWorldApproachPosition(Index) : SlotWorld;
+            AddDebugArrow(Scene, EntryAnchor, GetSlotWorldEntryTangent(Index), Radius * 2.0f, EntryTangentColor);
         }
     }
 
