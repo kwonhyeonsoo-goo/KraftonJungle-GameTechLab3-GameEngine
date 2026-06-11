@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Delegate.h"
+#include "Component/Gameplay/SniperTypes.h"
 #include "GameFramework/Pawn/Character.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
@@ -9,7 +10,6 @@ class UCombatCoverAgentComponent;
 class ULuaScriptComponent;
 class USoundComponent;
 class USniperDamageReceiverComponent;
-struct FSniperHitInfo;
 
 #include "Source/Engine/GameFramework/Pawn/CombatCharacter.generated.h"
 
@@ -23,6 +23,7 @@ public:
 	~ACombatCharacter() override = default;
 	void BeginPlay() override;
 	void EndPlay() override;
+	void Tick(float DeltaTime) override;
 
 	void InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile);
 
@@ -69,9 +70,21 @@ protected:
 	UPROPERTY(Edit, Save, Category="Sniper|Death Decal", DisplayName="Blood Decal Ground Trace Down", Min=0.1f, Max=50.0f, Speed=0.1f)
 	float DeathBloodDecalGroundTraceDown = 8.0f;
 
+	UPROPERTY(Edit, Save, Category="Sniper|Death Decal", DisplayName="KillCam Blood Decal Delay", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float DeathBloodDecalKillCamDelay = 4.65f;
+
 	void ConfigureCombatGunfireSound(USoundComponent* Sound) const;
 	void HandleSniperKilled(const FSniperHitInfo& HitInfo);
 	void SpawnDeathBloodDecal(const FSniperHitInfo& HitInfo) const;
+
+	struct FPendingDeathBloodDecal
+	{
+		bool bActive = false;
+		bool bWaitForKillCamImpact = false;
+		float RemainingDelay = 0.0f;
+		int32 BulletId = 0;
+		FSniperHitInfo HitInfo;
+	};
 
 	mutable TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
 	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
@@ -79,4 +92,5 @@ protected:
 	mutable TWeakObjectPtr<USniperDamageReceiverComponent> SniperDamageReceiverComponent = nullptr;
 	FDelegateHandle SniperKilledHandle;
 	bool bDeathBloodDecalSpawned = false;
+	FPendingDeathBloodDecal PendingDeathBloodDecal;
 };

@@ -9,6 +9,7 @@
 #include "Core/Types/CollisionTypes.h"
 #include "Engine/Runtime/Engine.h"
 #include "GameFramework/Actor/DecalActor.h"
+#include "GameFramework/Actor/SniperKillCamDirector.h"
 #include "GameFramework/World.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -68,11 +69,13 @@ ACombatCharacter::ACombatCharacter()
 	bAutoInputWASD = false;
 	bAutoInputMouseLook = false;
 	bAutoPossessPlayer = false;
+	PrimaryActorTick.bTickEvenWhenPaused = true;
 }
 
 void ACombatCharacter::BeginPlay()
 {
 	bDeathBloodDecalSpawned = false;
+	PendingDeathBloodDecal = FPendingDeathBloodDecal();
 
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
@@ -133,6 +136,35 @@ void ACombatCharacter::EndPlay()
 	}
 
 	Super::EndPlay();
+}
+
+void ACombatCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!PendingDeathBloodDecal.bActive)
+	{
+		return;
+	}
+
+	if (PendingDeathBloodDecal.bWaitForKillCamImpact)
+	{
+		if (!ASniperKillCamDirector::IsBulletPendingOrActive(PendingDeathBloodDecal.BulletId))
+		{
+			SpawnDeathBloodDecal(PendingDeathBloodDecal.HitInfo);
+			PendingDeathBloodDecal = FPendingDeathBloodDecal();
+			return;
+		}
+	}
+
+	PendingDeathBloodDecal.RemainingDelay -= DeltaTime;
+	if (PendingDeathBloodDecal.RemainingDelay > 0.0f)
+	{
+		return;
+	}
+
+	SpawnDeathBloodDecal(PendingDeathBloodDecal.HitInfo);
+	PendingDeathBloodDecal = FPendingDeathBloodDecal();
 }
 
 void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile)
@@ -228,7 +260,22 @@ void ACombatCharacter::HandleSniperKilled(const FSniperHitInfo& HitInfo)
 	}
 
 	bDeathBloodDecalSpawned = true;
-	SpawnDeathBloodDecal(HitInfo);
+
+	const bool bDelayForKillCam =
+		HitInfo.BulletId != 0 &&
+		DeathBloodDecalKillCamDelay > 0.0f &&
+		ASniperKillCamDirector::IsBulletPendingOrActive(HitInfo.BulletId);
+	if (!bDelayForKillCam)
+	{
+		SpawnDeathBloodDecal(HitInfo);
+		return;
+	}
+
+	PendingDeathBloodDecal.bActive = true;
+	PendingDeathBloodDecal.bWaitForKillCamImpact = true;
+	PendingDeathBloodDecal.RemainingDelay = DeathBloodDecalKillCamDelay;
+	PendingDeathBloodDecal.BulletId = HitInfo.BulletId;
+	PendingDeathBloodDecal.HitInfo = HitInfo;
 }
 
 void ACombatCharacter::SpawnDeathBloodDecal(const FSniperHitInfo& HitInfo) const
