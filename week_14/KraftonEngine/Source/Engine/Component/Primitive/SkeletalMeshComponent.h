@@ -193,6 +193,9 @@ public:
     bool EnablePhysicsAssetQueryBodies();
     void DisablePhysicsAssetQueryBodies();
     bool HasPhysicsAssetQueryBodies() const;
+    bool SyncPhysicsAssetQueryBodiesFromCurrentPose();
+    bool EnsurePhysicsAssetQueryBodiesSyncedForFrame(uint64 FrameNumber);
+    uint64 GetLastPhysicsAssetQueryBodySyncFrame() const { return LastPhysicsAssetQueryBodySyncFrame; }
     // Higher-level ragdoll controls hide instance/body lifecycle details from gameplay
     // code and keep this component as the policy owner.
     UFUNCTION(Callable, Category="Physics")
@@ -448,6 +451,7 @@ protected:
     FVector ClothPreviewWorldWindVelocity = FVector::ZeroVector;
     bool bClothPreviewWindOverride = false;
     bool bUsePhysicsAssetPose = false;
+    bool bHasPhysicsAssetQueryBodySyncFrame = false;
     bool bAllowInternalRagdollAnimationControl = false;
     ERagdollMode ActiveRagdollMode = ERagdollMode::None;
     FPartialRagdollSelection ActivePartialRagdollSelection;
@@ -472,6 +476,7 @@ protected:
     float LastPartialHitReactionImpulseMagnitude = 0.0f;
     FVector LastPartialHitReactionDirection = FVector::ZeroVector;
     bool bLastPartialHitReactionEscalationCandidate = false;
+    uint64 LastPhysicsAssetQueryBodySyncFrame = 0;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
     TArray<FTransform> RagdollBaselineComponentSpacePose;

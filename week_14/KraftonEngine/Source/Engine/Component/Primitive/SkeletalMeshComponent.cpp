@@ -829,6 +829,8 @@ void USkeletalMeshComponent::ResetRagdollRuntimeState()
     ResetRagdollRecoveryState();
     ActiveRagdollMode = ERagdollMode::None;
     ClearPartialRagdollState();
+    bHasPhysicsAssetQueryBodySyncFrame = false;
+    LastPhysicsAssetQueryBodySyncFrame = 0;
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->ResetRuntimeState();
@@ -934,6 +936,8 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 
 void USkeletalMeshComponent::DestroyQueryPhysicsAssetInstance()
 {
+    bHasPhysicsAssetQueryBodySyncFrame = false;
+    LastPhysicsAssetQueryBodySyncFrame = 0;
     if (!QueryPhysicsAssetInstance)
     {
         return;
@@ -966,6 +970,8 @@ bool USkeletalMeshComponent::EnablePhysicsAssetQueryBodies()
     SimulationOptions.bDisableSelfCollision = true;
 
     const bool bCreated = Instance->CreateBodiesAndConstraints(SimulationOptions);
+    bHasPhysicsAssetQueryBodySyncFrame = false;
+    LastPhysicsAssetQueryBodySyncFrame = 0;
     if (bCreated)
     {
         const AActor* Owner = GetOwner();
@@ -981,6 +987,8 @@ bool USkeletalMeshComponent::EnablePhysicsAssetQueryBodies()
 
 void USkeletalMeshComponent::DisablePhysicsAssetQueryBodies()
 {
+    bHasPhysicsAssetQueryBodySyncFrame = false;
+    LastPhysicsAssetQueryBodySyncFrame = 0;
     if (!QueryPhysicsAssetInstance)
     {
         return;
@@ -1001,6 +1009,57 @@ void USkeletalMeshComponent::DisablePhysicsAssetQueryBodies()
 bool USkeletalMeshComponent::HasPhysicsAssetQueryBodies() const
 {
     return QueryPhysicsAssetInstance && QueryPhysicsAssetInstance->HasLivePhysicsObjects();
+}
+
+bool USkeletalMeshComponent::SyncPhysicsAssetQueryBodiesFromCurrentPose()
+{
+    if (ActiveRagdollMode != ERagdollMode::None)
+    {
+        return false;
+    }
+
+    FPhysicsAssetInstance* QueryInstance = GetQueryPhysicsAssetInstance();
+    if (!QueryInstance || !QueryInstance->HasLivePhysicsObjects())
+    {
+        return false;
+    }
+
+    int32 SyncedBodyCount = 0;
+    const bool bSynced = QueryInstance->SyncBodiesToCurrentPose(&SyncedBodyCount);
+    if (!bSynced)
+    {
+        const AActor* Owner = GetOwner();
+        UE_LOG(
+            "[SniperDebug] PhysicsAsset query body pose sync failed. Actor=%s Mesh=%s",
+            Owner ? Owner->GetName().c_str() : "None",
+            GetName().c_str());
+        return false;
+    }
+
+    if (SyncedBodyCount <= 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool USkeletalMeshComponent::EnsurePhysicsAssetQueryBodiesSyncedForFrame(uint64 FrameNumber)
+{
+    if (bHasPhysicsAssetQueryBodySyncFrame &&
+        LastPhysicsAssetQueryBodySyncFrame == FrameNumber)
+    {
+        return true;
+    }
+
+    if (!SyncPhysicsAssetQueryBodiesFromCurrentPose())
+    {
+        return false;
+    }
+
+    bHasPhysicsAssetQueryBodySyncFrame = true;
+    LastPhysicsAssetQueryBodySyncFrame = FrameNumber;
+    return true;
 }
 
 bool USkeletalMeshComponent::CaptureRagdollPoseBaseline()

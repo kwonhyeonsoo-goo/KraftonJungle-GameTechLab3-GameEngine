@@ -933,6 +933,78 @@ bool FPhysicsAssetInstance::PullPhysicsPose(
     return true;
 }
 
+bool FPhysicsAssetInstance::SyncBodiesToCurrentPose(int32* OutSyncedBodyCount)
+{
+    if (OutSyncedBodyCount)
+    {
+        *OutSyncedBodyCount = 0;
+    }
+
+    USkeletalMeshComponent* Owner = GetOwnerComponent();
+    UPhysicsAsset* Asset = GetAsset();
+    IPhysicsRuntime* Runtime = GetPhysicsRuntime(Owner);
+    if (!Owner || !Asset || !Runtime || GetLiveBodyCount() <= 0)
+    {
+        return false;
+    }
+
+    const USkeletalMesh* Mesh = Owner->GetSkeletalMesh();
+    const FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || MeshAsset->Bones.empty())
+    {
+        return false;
+    }
+
+    TArray<FTransform> BoneComponentSpaceTransforms;
+    Owner->GetCurrentBoneGlobalTransforms(BoneComponentSpaceTransforms);
+    if (BoneComponentSpaceTransforms.size() < MeshAsset->Bones.size())
+    {
+        return false;
+    }
+
+    const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    int32 SyncedBodyCount = 0;
+
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        if (BodyIndex >= static_cast<int32>(BodiesByBone.size()) || !BodiesByBone[BodyIndex].IsValid())
+        {
+            continue;
+        }
+
+        const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
+        if (!BodySetup.BoneName.IsValid() || BodySetup.BoneName == FName::None)
+        {
+            continue;
+        }
+
+        const int32 BoneIndex = FindBoneIndexForBody(BodySetup.BoneName);
+        if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneComponentSpaceTransforms.size()))
+        {
+            continue;
+        }
+
+        const FTransform BoneWorldTransform =
+            ComposePhysicsTransforms(ComponentWorldTransform, BoneComponentSpaceTransforms[BoneIndex]);
+        const FTransform BodyWorldTransform =
+            ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
+        if (!SetBodyWorldTransformByIndex(BodyIndex, BodyWorldTransform))
+        {
+            continue;
+        }
+
+        ++SyncedBodyCount;
+    }
+
+    if (OutSyncedBodyCount)
+    {
+        *OutSyncedBodyCount = SyncedBodyCount;
+    }
+
+    return SyncedBodyCount > 0;
+}
+
 UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const
 {
     return SourceAsset.Get();
@@ -968,6 +1040,29 @@ FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& B
             ? Snapshot->FindRagdollBone(Owner->GetUUID(), BoneName)
             : nullptr;
     return BodySnapshot ? BodySnapshot->CurrentTransform : FTransform();
+}
+
+bool FPhysicsAssetInstance::SetBodyWorldTransformByIndex(int32 BodyIndex, const FTransform& WorldTransform)
+{
+    if (BodyIndex < 0 || BodyIndex >= static_cast<int32>(BodiesByBone.size()))
+    {
+        return false;
+    }
+
+    const FPhysicsBodyHandle BodyHandle = BodiesByBone[BodyIndex];
+    if (!BodyHandle.IsValid())
+    {
+        return false;
+    }
+
+    IPhysicsRuntime* Runtime = GetPhysicsRuntime(GetOwnerComponent());
+    if (!Runtime)
+    {
+        return false;
+    }
+
+    Runtime->SetBodyTransform(BodyHandle, WorldTransform, EPhysicsTeleportMode::TeleportPhysics);
+    return true;
 }
 
 bool FPhysicsAssetInstance::FindNearestBodyToWorldLocation(

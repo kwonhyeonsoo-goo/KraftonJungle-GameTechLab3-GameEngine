@@ -52,6 +52,7 @@ public:
         TArray<FTransform>& OutBoneWorldTransforms,
         const TArray<FTransform>* ReferenceBoneComponentSpaceTransforms = nullptr,
         const TArray<FTransform>* ReferenceBoneLocalTransforms = nullptr) const;
+    bool SyncBodiesToCurrentPose(int32* OutSyncedBodyCount = nullptr);
 
     UPhysicsAsset* GetAsset() const;
     USkeletalMeshComponent* GetOwnerComponent() const;
@@ -60,6 +61,7 @@ public:
     const TArray<FPhysicsConstraintHandle>& GetConstraints() const { return Constraints; }
     FPhysicsBodyHandle GetBodyHandleByBoneName(const FName& BoneName) const;
     FTransform GetBodyWorldTransformByBoneName(const FName& BoneName) const;
+    bool SetBodyWorldTransformByIndex(int32 BodyIndex, const FTransform& WorldTransform);
     bool FindNearestBodyToWorldLocation(
         const FVector& WorldLocation,
         FName& OutBoneName,
