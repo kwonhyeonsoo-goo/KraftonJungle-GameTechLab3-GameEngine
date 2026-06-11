@@ -572,6 +572,7 @@ namespace
 
 USkeletalMeshComponent::~USkeletalMeshComponent()
 {
+    DestroyQueryPhysicsAssetInstance();
     DestroyPhysicsAssetInstance();
     ClearAnimInstance();
 }
@@ -838,12 +839,18 @@ void USkeletalMeshComponent::OnPhysicsAssetChanged()
 {
     // Asset changes invalidate the current runtime shell entirely; rebuilding is cheaper than
     // trying to salvage stale body/constraint state across different bindings.
+    DestroyQueryPhysicsAssetInstance();
     DestroyPhysicsAssetInstance();
 }
 
 FPhysicsAssetInstance* USkeletalMeshComponent::GetPhysicsAssetInstance() const
 {
     return PhysicsAssetInstance.get();
+}
+
+FPhysicsAssetInstance* USkeletalMeshComponent::GetQueryPhysicsAssetInstance() const
+{
+    return QueryPhysicsAssetInstance.get();
 }
 
 bool USkeletalMeshComponent::IsPartialRagdollSelfSuppressionActive() const
@@ -881,6 +888,34 @@ FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
     return PhysicsAssetInstance.get();
 }
 
+FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreateQueryPhysicsAssetInstance()
+{
+    UPhysicsAsset* EffectivePhysicsAsset = GetEffectivePhysicsAsset();
+    if (!EffectivePhysicsAsset)
+    {
+        DestroyQueryPhysicsAssetInstance();
+        return nullptr;
+    }
+
+    if (QueryPhysicsAssetInstance &&
+        QueryPhysicsAssetInstance->GetAsset() == EffectivePhysicsAsset &&
+        QueryPhysicsAssetInstance->IsInitialized())
+    {
+        return QueryPhysicsAssetInstance.get();
+    }
+
+    DestroyQueryPhysicsAssetInstance();
+
+    auto NewInstance = std::make_unique<FPhysicsAssetInstance>();
+    if (!NewInstance->Initialize(this, EffectivePhysicsAsset))
+    {
+        return nullptr;
+    }
+
+    QueryPhysicsAssetInstance = std::move(NewInstance);
+    return QueryPhysicsAssetInstance.get();
+}
+
 void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 {
     bUsePhysicsAssetPose = false;
@@ -895,6 +930,77 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 
     PhysicsAssetInstance->Shutdown();
     PhysicsAssetInstance.reset();
+}
+
+void USkeletalMeshComponent::DestroyQueryPhysicsAssetInstance()
+{
+    if (!QueryPhysicsAssetInstance)
+    {
+        return;
+    }
+
+    QueryPhysicsAssetInstance->Shutdown();
+    QueryPhysicsAssetInstance.reset();
+}
+
+bool USkeletalMeshComponent::EnablePhysicsAssetQueryBodies()
+{
+    if (ActiveRagdollMode != ERagdollMode::None)
+    {
+        return false;
+    }
+
+    FPhysicsAssetInstance* Instance = GetOrCreateQueryPhysicsAssetInstance();
+    if (!Instance)
+    {
+        return false;
+    }
+
+    if (Instance->HasLivePhysicsObjects())
+    {
+        return true;
+    }
+
+    FPhysicsAssetSimulationOptions SimulationOptions;
+    SimulationOptions.bCreateKinematicQueryOnlyBodies = true;
+    SimulationOptions.bDisableSelfCollision = true;
+
+    const bool bCreated = Instance->CreateBodiesAndConstraints(SimulationOptions);
+    if (bCreated)
+    {
+        const AActor* Owner = GetOwner();
+        UE_LOG(
+            "[SniperDebug] PhysicsAsset query bodies enabled. Actor=%s Mesh=%s Bodies=%d Constraints=%d",
+            Owner ? Owner->GetName().c_str() : "None",
+            GetName().c_str(),
+            Instance->GetLiveBodyCount(),
+            Instance->GetLiveConstraintCount());
+    }
+    return bCreated;
+}
+
+void USkeletalMeshComponent::DisablePhysicsAssetQueryBodies()
+{
+    if (!QueryPhysicsAssetInstance)
+    {
+        return;
+    }
+
+    const bool bHadLiveObjects = QueryPhysicsAssetInstance->HasLivePhysicsObjects();
+    QueryPhysicsAssetInstance->DestroyBodiesAndConstraints();
+    if (bHadLiveObjects)
+    {
+        const AActor* Owner = GetOwner();
+        UE_LOG(
+            "[SniperDebug] PhysicsAsset query bodies disabled. Actor=%s Mesh=%s",
+            Owner ? Owner->GetName().c_str() : "None",
+            GetName().c_str());
+    }
+}
+
+bool USkeletalMeshComponent::HasPhysicsAssetQueryBodies() const
+{
+    return QueryPhysicsAssetInstance && QueryPhysicsAssetInstance->HasLivePhysicsObjects();
 }
 
 bool USkeletalMeshComponent::CaptureRagdollPoseBaseline()
@@ -1166,6 +1272,11 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
         ClearPartialRagdollState();
     }
 
+    // Query-only PhysicsAsset bodies share owner-component/bone identity with ragdoll
+    // bodies, so they must be torn down before live ragdoll simulation publishes its
+    // own runtime snapshot.
+    DisablePhysicsAssetQueryBodies();
+
     // The component stays responsible for high-level ragdoll policy while the instance
     // owns the low-level runtime handles and pose source data.
     FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
@@ -1244,6 +1355,8 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
     {
         return false;
     }
+
+    DisablePhysicsAssetQueryBodies();
 
     FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
     if (!Instance)
@@ -3219,6 +3332,7 @@ bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
 
 void USkeletalMeshComponent::BeginDestroy()
 {
+    DestroyQueryPhysicsAssetInstance();
     DestroyPhysicsAssetInstance();
     ClearAnimInstance();
     Super::BeginDestroy();

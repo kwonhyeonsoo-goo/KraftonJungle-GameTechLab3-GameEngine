@@ -2,6 +2,7 @@
 
 #include "Component/Gameplay/CombatCoverAgentComponent.h"
 #include "Component/Gameplay/SniperDamageReceiverComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Script/LuaScriptComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
 #include "Core/Types/CollisionTypes.h"
@@ -32,6 +33,14 @@ void ACombatCharacter::BeginPlay()
 	}
 
 	Super::BeginPlay();
+
+	if (bEnablePersistentQueryBodies)
+	{
+		if (USkeletalMeshComponent* Mesh = GetMesh())
+		{
+			Mesh->EnablePhysicsAssetQueryBodies();
+		}
+	}
 }
 
 void ACombatCharacter::InitDefaultComponents(const FString& SkeletalMeshFileName, const FString& ScriptFile)

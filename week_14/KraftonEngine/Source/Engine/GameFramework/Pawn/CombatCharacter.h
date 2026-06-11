@@ -33,6 +33,9 @@ public:
 	USniperDamageReceiverComponent* GetSniperDamageReceiverComponent() const;
 
 protected:
+	UPROPERTY(Edit, Save, Category="Sniper|Hit Query", DisplayName="Enable Persistent Query Bodies")
+	bool bEnablePersistentQueryBodies = true;
+
 	mutable TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
 	mutable TWeakObjectPtr<UCombatCoverAgentComponent> CombatCoverAgentComponent = nullptr;
 	mutable TWeakObjectPtr<USniperDamageReceiverComponent> SniperDamageReceiverComponent = nullptr;

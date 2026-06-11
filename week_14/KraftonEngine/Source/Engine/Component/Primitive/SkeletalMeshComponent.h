@@ -187,6 +187,12 @@ public:
     FPhysicsAssetInstance* GetPhysicsAssetInstance() const;
     FPhysicsAssetInstance* GetOrCreatePhysicsAssetInstance();
     void DestroyPhysicsAssetInstance();
+    FPhysicsAssetInstance* GetQueryPhysicsAssetInstance() const;
+    FPhysicsAssetInstance* GetOrCreateQueryPhysicsAssetInstance();
+    void DestroyQueryPhysicsAssetInstance();
+    bool EnablePhysicsAssetQueryBodies();
+    void DisablePhysicsAssetQueryBodies();
+    bool HasPhysicsAssetQueryBodies() const;
     // Higher-level ragdoll controls hide instance/body lifecycle details from gameplay
     // code and keep this component as the policy owner.
     UFUNCTION(Callable, Category="Physics")
@@ -437,6 +443,7 @@ protected:
     FSoftObjectPtr BackStandUpAnimationPath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
+    std::unique_ptr<FPhysicsAssetInstance> QueryPhysicsAssetInstance;
     std::unique_ptr<FSkeletalClothRuntime> ClothRuntime;
     FVector ClothPreviewWorldWindVelocity = FVector::ZeroVector;
     bool bClothPreviewWindOverride = false;
