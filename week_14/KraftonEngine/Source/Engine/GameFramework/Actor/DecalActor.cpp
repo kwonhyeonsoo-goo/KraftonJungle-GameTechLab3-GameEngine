@@ -2,6 +2,7 @@
 #include "Component/Primitive/DecalComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
 #include "Component/Primitive/TextRenderComponent.h"
+#include "GameFramework/World.h"
 #include "Materials/MaterialManager.h"
 
 ADecalActor::ADecalActor()
@@ -9,6 +10,28 @@ ADecalActor::ADecalActor()
 {
 	bNeedsTick = true;
 	bTickInEditor = true;
+}
+
+void ADecalActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (LifetimeRemainingSeconds < 0.0f)
+	{
+		return;
+	}
+
+	LifetimeRemainingSeconds -= DeltaTime;
+	if (LifetimeRemainingSeconds > 0.0f)
+	{
+		return;
+	}
+
+	LifetimeRemainingSeconds = -1.0f;
+	if (UWorld* World = GetWorld())
+	{
+		World->DestroyActor(this);
+	}
 }
 
 void ADecalActor::InitDefaultComponents()
@@ -26,4 +49,27 @@ void ADecalActor::InitDefaultComponents()
 	TextRenderComponent->SetText("UUID : " + TextRenderComponent->GetOwnerUUIDToString());
 	TextRenderComponent->AttachToComponent(DecalComponent);
 	TextRenderComponent->SetFont(FName("Default"));
+}
+
+void ADecalActor::InitRuntimeDecal(UMaterial* Material)
+{
+	if (!DecalComponent)
+	{
+		DecalComponent = AddComponent<UDecalComponent>();
+	}
+
+	if (UDecalComponent* Decal = DecalComponent.Get())
+	{
+		if (Material)
+		{
+			Decal->SetMaterial(Material);
+		}
+		Decal->SetHiddenInComponentTree(true);
+		SetRootComponent(Decal);
+	}
+}
+
+void ADecalActor::SetLifetimeSeconds(float InLifetimeSeconds)
+{
+	LifetimeRemainingSeconds = InLifetimeSeconds;
 }

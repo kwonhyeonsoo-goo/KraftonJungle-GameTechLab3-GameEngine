@@ -15,7 +15,11 @@ public:
 	GENERATED_BODY()
 	ADecalActor();
 
+	void Tick(float DeltaTime) override;
+
 	void InitDefaultComponents();
+	void InitRuntimeDecal(class UMaterial* Material);
+	void SetLifetimeSeconds(float InLifetimeSeconds);
 
 	UFUNCTION(Pure, Category="Actor|Components")
 	UDecalComponent* GetDecalComponent() const { return DecalComponent; }
@@ -26,4 +30,5 @@ private:
 	TWeakObjectPtr<UTextRenderComponent> TextRenderComponent = nullptr;
 	
 	const FString DefaultDecalMaterialPath = "Content/Material/Editor/DefaultDecal.uasset";
+	float LifetimeRemainingSeconds = -1.0f;
 };
