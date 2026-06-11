@@ -327,6 +327,9 @@ private:
     UPROPERTY(Edit, Save, Category="CombatAgent|Movement", DisplayName="Run Move Speed", Min=0.0f, Max=10000.0f, Speed=1.0f)
     float RunMoveSpeed = 6.0f;
 
+    UPROPERTY(Edit, Save, Category="CombatAgent|Movement", DisplayName="Assault Walk Below Health Ratio", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float AssaultWalkBelowHealthRatio = 0.5f;
+
     UPROPERTY(Edit, Save, Category="CombatAgent", DisplayName="Acceptance Radius", Min=1.0f, Max=10000.0f, Speed=1.0f)
     float AcceptanceRadius = 0.0f;
 

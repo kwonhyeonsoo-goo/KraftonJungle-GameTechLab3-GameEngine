@@ -29,26 +29,26 @@ local Config = {
         {
             TimeSeconds = 120.0,
             Enemies = {
-                -- 후반부부터 총 스폰 수를 줄이고 돌격형 비중을 올린다.
-                { PrefabName = "EnemyShortRange", Count = 2 },
-                { PrefabName = "EnemyLongRangeSlow", Count = 0 },
-                { PrefabName = "EnemyAssault", Count = 3 }
+                -- GPU skinning 적용 후 후반부 물량을 다시 늘리되 돌격형 비중은 높게 유지한다.
+                { PrefabName = "EnemyShortRange", Count = 5 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
+                { PrefabName = "EnemyAssault", Count = 4 }
             }
         },
         {
             TimeSeconds = 180.0,
             Enemies = {
-                { PrefabName = "EnemyShortRange", Count = 2 },
-                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
-                { PrefabName = "EnemyAssault", Count = 3 }
+                { PrefabName = "EnemyShortRange", Count = 6 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 2 },
+                { PrefabName = "EnemyAssault", Count = 5 }
             }
         },
         {
             TimeSeconds = 240.0,
             Enemies = {
-                { PrefabName = "EnemyShortRange", Count = 2 },
-                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
-                { PrefabName = "EnemyAssault", Count = 5 }
+                { PrefabName = "EnemyShortRange", Count = 8 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 3 },
+                { PrefabName = "EnemyAssault", Count = 7 }
             }
         }
     },
