@@ -342,8 +342,8 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackDamage = 5.0f;
         AttackIntervalMin = 0.8f;
         AttackIntervalMax = 1.4f;
-        AdvanceIntervalMin = 8.0f;
-        AdvanceIntervalMax = 12.0f;
+        AdvanceIntervalMin = 6.0f;
+        AdvanceIntervalMax = 10.0f;
         RepositionChanceWhenInRange = 0.02f;
         CombatDecisionCooldown = 5.0f;
         TakeCoverChanceWhenInRange = 0.35f;
@@ -366,7 +366,7 @@ void UCombatCoverAgentComponent::ApplyCombatRoleDefaults()
         AttackIntervalMin = 0.7f;
         AttackIntervalMax = 1.1f;
         AdvanceIntervalMin = 3.5f;
-        AdvanceIntervalMax = 5.5f;
+        AdvanceIntervalMax = 4.5f;
         RepositionChanceWhenInRange = 0.08f;
         CombatDecisionCooldown = 2.5f;
         TakeCoverChanceWhenInRange = 0.10f;
