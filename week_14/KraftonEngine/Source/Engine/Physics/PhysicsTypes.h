@@ -79,6 +79,7 @@ enum class EPhysicsCollisionRole : uint8
     None,
     CharacterLocomotionProxy,
     CharacterQueryProxy,
+    CharacterQueryBody,
     CharacterMeshPrimitive,
     PartialReactionBody,
     FullRagdollBody,
@@ -155,6 +156,7 @@ inline EPhysicsGameplayOverlapOwnership GetDefaultGameplayOverlapOwnershipForRol
     case EPhysicsCollisionRole::CharacterLocomotionProxy:
         return EPhysicsGameplayOverlapOwnership::PrimaryOwner;
     case EPhysicsCollisionRole::CharacterQueryProxy:
+    case EPhysicsCollisionRole::CharacterQueryBody:
         return EPhysicsGameplayOverlapOwnership::QueryProxyOwner;
     case EPhysicsCollisionRole::PartialReactionBody:
         return EPhysicsGameplayOverlapOwnership::NonOwningReactionBody;
@@ -167,7 +169,8 @@ inline bool IsGameplayOverlapOwnerRole(EPhysicsCollisionRole Role)
 {
     return
         Role == EPhysicsCollisionRole::CharacterLocomotionProxy ||
-        Role == EPhysicsCollisionRole::CharacterQueryProxy;
+        Role == EPhysicsCollisionRole::CharacterQueryProxy ||
+        Role == EPhysicsCollisionRole::CharacterQueryBody;
 }
 
 struct FPhysicsFilterData

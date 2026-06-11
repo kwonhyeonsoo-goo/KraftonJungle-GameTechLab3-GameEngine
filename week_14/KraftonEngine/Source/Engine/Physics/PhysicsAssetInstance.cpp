@@ -101,6 +101,7 @@ namespace
         FPhysicsFilterData& OutFilterData,
         const USkeletalMeshComponent* Component,
         bool bForceQueryAndPhysicsCollision,
+        bool bCreateCharacterQueryBodies,
         bool bDisableSelfCollision,
         bool bUseIndependentRagdollCollision,
         ECollisionEnabled IndependentCollisionEnabled,
@@ -115,6 +116,10 @@ namespace
             return;
         }
 
+        const bool bCharacterQueryBody =
+            bCreateCharacterQueryBodies &&
+            !bUseIndependentRagdollCollision &&
+            !bIsPartialRagdollBody;
         OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
@@ -123,26 +128,32 @@ namespace
             : ((bUseIndependentRagdollCollision && Component->GetOwner())
                 ? Component->GetOwner()->GetUUID()
                 : 0);
-        OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
-            ? IndependentCollisionEnabled
-            : (bForceQueryAndPhysicsCollision
-                ? ECollisionEnabled::QueryAndPhysics
-                : Component->GetCollisionEnabled());
+        OutFilterData.CollisionEnabled = bCharacterQueryBody
+            ? ECollisionEnabled::QueryOnly
+            : (bUseIndependentRagdollCollision
+                ? IndependentCollisionEnabled
+                : (bForceQueryAndPhysicsCollision
+                    ? ECollisionEnabled::QueryAndPhysics
+                    : Component->GetCollisionEnabled()));
         OutFilterData.bIsTrigger = false;
         OutFilterData.bGenerateHitEvents = true;
-        OutFilterData.bGenerateOverlapEvents = bUseIndependentRagdollCollision
-            ? bIndependentGenerateOverlapEvents
-            : (bForceQueryAndPhysicsCollision
-                ? false
-                : Component->GetGenerateOverlapEvents());
+        OutFilterData.bGenerateOverlapEvents = bCharacterQueryBody
+            ? false
+            : (bUseIndependentRagdollCollision
+                ? bIndependentGenerateOverlapEvents
+                : (bForceQueryAndPhysicsCollision
+                    ? false
+                    : Component->GetGenerateOverlapEvents()));
         OutFilterData.bIgnoreSameActor = bDisableSelfCollision;
         OutFilterData.bIsIndependentRagdoll = bUseIndependentRagdollCollision;
         OutFilterData.bIsPartialRagdoll = bIsPartialRagdollBody;
         OutFilterData.CollisionRole = bIsPartialRagdollBody
             ? EPhysicsCollisionRole::PartialReactionBody
-            : (bUseIndependentRagdollCollision
-                ? EPhysicsCollisionRole::FullRagdollBody
-                : EPhysicsCollisionRole::None);
+            : (bCharacterQueryBody
+                ? EPhysicsCollisionRole::CharacterQueryBody
+                : (bUseIndependentRagdollCollision
+                    ? EPhysicsCollisionRole::FullRagdollBody
+                    : EPhysicsCollisionRole::None));
         // Full ragdoll also must not fight the owning character primitive. The high-level
         // policy turns capsule/mesh collision down, while this filter flag protects the
         // frame where physics commands may still observe stale primitive shapes.
@@ -188,16 +199,19 @@ namespace
         {
             FPhysicsShapeDesc ShapeDesc;
             ShapeDesc.LocalTransform = ShapeSetup.LocalTransform;
-            ShapeDesc.CollisionEnabled = Options.bUseIndependentRagdollCollision
-                ? Options.IndependentCollisionEnabled
-                : (Options.bForceQueryAndPhysicsCollision
-                    ? ECollisionEnabled::QueryAndPhysics
-                    : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics));
+            ShapeDesc.CollisionEnabled = Options.bCreateCharacterQueryBodies
+                ? ECollisionEnabled::QueryOnly
+                : (Options.bUseIndependentRagdollCollision
+                    ? Options.IndependentCollisionEnabled
+                    : (Options.bForceQueryAndPhysicsCollision
+                        ? ECollisionEnabled::QueryAndPhysics
+                        : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics)));
             ShapeDesc.bIsTrigger = false;
             FillShapeFilterDataFromComponent(
                 ShapeDesc.FilterData,
                 OwnerComponent,
                 Options.bForceQueryAndPhysicsCollision,
+                Options.bCreateCharacterQueryBodies,
                 Options.bDisableSelfCollision,
                 Options.bUseIndependentRagdollCollision,
                 Options.IndependentCollisionEnabled,

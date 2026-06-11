@@ -14,6 +14,7 @@ struct FPhysicsAssetSimulationOptions
 {
     bool bNoGravity = false;
     bool bCreateKinematicQueryOnlyBodies = false;
+    bool bCreateCharacterQueryBodies = false;
     bool bSelectedOnly = false;
     bool bPartialSimulation = false;
     bool bIncludePartialDescendants = true;

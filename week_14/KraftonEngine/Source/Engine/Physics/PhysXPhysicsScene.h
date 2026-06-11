@@ -113,6 +113,16 @@ public:
         const AActor* IgnoreActor = nullptr
     ) override;
 
+    bool RaycastCharacterQueryBodiesByObjectTypes(
+        const FVector& Start,
+        const FVector& Dir,
+        float MaxDist,
+        FHitResult& OutHit,
+        uint32 ObjectTypeMask,
+        const AActor* TargetActor,
+        const AActor* IgnoreActor = nullptr
+    ) override;
+
     bool Sweep(
         const FVector&         Start,
         const FVector&         End,
@@ -134,6 +144,17 @@ public:
     ) override;
 
     bool SweepRagdollBodiesByObjectTypes(
+        const FVector& Start,
+        const FVector& End,
+        const FQuat& Rotation,
+        const FCollisionShape& Shape,
+        FHitResult& OutHit,
+        uint32 ObjectTypeMask,
+        const AActor* TargetActor,
+        const AActor* IgnoreActor = nullptr
+    ) override;
+
+    bool SweepCharacterQueryBodiesByObjectTypes(
         const FVector& Start,
         const FVector& End,
         const FQuat& Rotation,
@@ -173,11 +194,11 @@ private:
     bool                      ResolveRaycastResult_GameThread(const FPhysicsRaycastResult& PhysicsResult, FHitResult& OutHit) const;
     bool                      ResolveSweepResult_GameThread(const FPhysicsSweepResult& PhysicsResult, FHitResult& OutHit) const;
     bool                      ExecuteRaycast_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
-    bool                      ExecuteRaycastByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, bool bRagdollBodiesOnly, FPhysicsRaycastResult& OutResult) const;
+    bool                      ExecuteRaycastByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, uint32 RequiredCollisionRoleMask, FPhysicsRaycastResult& OutResult) const;
     bool                      ExecuteSweep_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, ECollisionChannel TraceChannel, uint32 IgnoreActorId, FPhysicsSweepResult& OutResult) const;
-    bool                      ExecuteSweepByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, bool bRagdollBodiesOnly, FPhysicsSweepResult& OutResult) const;
-    bool                      SubmitRaycastQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, bool bRagdollBodiesOnly, FPhysicsRaycastResult& OutResult);
-    bool                      SubmitSweepQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, bool bRagdollBodiesOnly, FPhysicsSweepResult& OutResult);
+    bool                      ExecuteSweepByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, uint32 RequiredCollisionRoleMask, FPhysicsSweepResult& OutResult) const;
+    bool                      SubmitRaycastQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, uint32 RequiredCollisionRoleMask, FPhysicsRaycastResult& OutResult);
+    bool                      SubmitSweepQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, uint32 TargetActorId, uint32 RequiredCollisionRoleMask, FPhysicsSweepResult& OutResult);
 
     void StartPhysicsThread();
     void StopPhysicsThreadAndJoin();
@@ -228,7 +249,7 @@ private:
     mutable uint32                PendingQueryObjectTypeMask = 0;
     mutable uint32                PendingQueryIgnoreActorId  = 0;
     mutable uint32                PendingQueryTargetActorId  = 0;
-    mutable bool                  bPendingQueryRagdollBodiesOnly = false;
+    mutable uint32                PendingQueryRequiredCollisionRoleMask = 0;
     mutable bool                  bPendingQueryHit           = false;
     mutable FPhysicsRaycastResult PendingQueryResult;
     mutable FPhysicsSweepResult   PendingSweepQueryResult;

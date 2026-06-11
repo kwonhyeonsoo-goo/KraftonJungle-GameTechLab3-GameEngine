@@ -106,6 +106,15 @@ public:
 		const AActor* TargetActor,
 		const AActor* IgnoreActor = nullptr) = 0;
 
+	virtual bool RaycastCharacterQueryBodiesByObjectTypes(
+		const FVector& Start,
+		const FVector& Dir,
+		float MaxDist,
+		FHitResult& OutHit,
+		uint32 ObjectTypeMask,
+		const AActor* TargetActor,
+		const AActor* IgnoreActor = nullptr) = 0;
+
     // Shape sweep — Start 위치의 Shape를 End까지 이동시키며 blocking hit을 찾는다.
     // TraceChannel은 "대상 shape가 이 채널을 Block 하는가"를 의미한다.
     // IgnoreActor는 자기 자신/소유 액터를 제외할 때 사용한다.
@@ -119,6 +128,16 @@ public:
         const AActor* IgnoreActor = nullptr) = 0;
 
     virtual bool SweepRagdollBodiesByObjectTypes(
+        const FVector& Start,
+        const FVector& End,
+        const FQuat& Rotation,
+        const FCollisionShape& Shape,
+        FHitResult& OutHit,
+        uint32 ObjectTypeMask,
+        const AActor* TargetActor,
+        const AActor* IgnoreActor = nullptr) = 0;
+
+    virtual bool SweepCharacterQueryBodiesByObjectTypes(
         const FVector& Start,
         const FVector& End,
         const FQuat& Rotation,

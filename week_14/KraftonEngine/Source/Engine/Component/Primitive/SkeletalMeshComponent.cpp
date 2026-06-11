@@ -967,6 +967,7 @@ bool USkeletalMeshComponent::EnablePhysicsAssetQueryBodies()
 
     FPhysicsAssetSimulationOptions SimulationOptions;
     SimulationOptions.bCreateKinematicQueryOnlyBodies = true;
+    SimulationOptions.bCreateCharacterQueryBodies = true;
     SimulationOptions.bDisableSelfCollision = true;
 
     const bool bCreated = Instance->CreateBodiesAndConstraints(SimulationOptions);
