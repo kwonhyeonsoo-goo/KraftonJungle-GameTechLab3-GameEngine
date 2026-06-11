@@ -1,4 +1,4 @@
-﻿#include "LuaScriptManager.h"
+#include "LuaScriptManager.h"
 
 #include "Asset/AssetRegistry.h"
 #include "Animation/Instance/LuaAnimInstance.h"
@@ -46,6 +46,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
@@ -94,6 +95,91 @@ namespace
             }
         }
         return Dotted.rfind("Management.", 0) == 0;
+    }
+
+    bool IsValidUtf8(const std::string& Text)
+    {
+        const unsigned char* Ptr = reinterpret_cast<const unsigned char*>(Text.data());
+        const unsigned char* End = Ptr + Text.size();
+
+        while (Ptr < End)
+        {
+            const unsigned char Lead = *Ptr++;
+            if (Lead <= 0x7F)
+            {
+                continue;
+            }
+
+            int ContinuationCount = 0;
+            uint32_t Codepoint = 0;
+            if ((Lead & 0xE0) == 0xC0)
+            {
+                ContinuationCount = 1;
+                Codepoint = Lead & 0x1F;
+                if (Codepoint == 0)
+                {
+                    return false;
+                }
+            }
+            else if ((Lead & 0xF0) == 0xE0)
+            {
+                ContinuationCount = 2;
+                Codepoint = Lead & 0x0F;
+            }
+            else if ((Lead & 0xF8) == 0xF0)
+            {
+                ContinuationCount = 3;
+                Codepoint = Lead & 0x07;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (End - Ptr < ContinuationCount)
+            {
+                return false;
+            }
+
+            for (int Index = 0; Index < ContinuationCount; ++Index)
+            {
+                const unsigned char Ch = *Ptr++;
+                if ((Ch & 0xC0) != 0x80)
+                {
+                    return false;
+                }
+                Codepoint = (Codepoint << 6) | (Ch & 0x3F);
+            }
+
+            if ((ContinuationCount == 1 && Codepoint < 0x80)
+                || (ContinuationCount == 2 && Codepoint < 0x800)
+                || (ContinuationCount == 3 && Codepoint < 0x10000)
+                || Codepoint > 0x10FFFF
+                || (Codepoint >= 0xD800 && Codepoint <= 0xDFFF))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    FString ConvertAnsiScriptBytesToUtf8(const std::string& Bytes)
+    {
+        if (Bytes.empty())
+        {
+            return {};
+        }
+
+        const int WideSize = MultiByteToWideChar(CP_ACP, 0, Bytes.data(), static_cast<int>(Bytes.size()), nullptr, 0);
+        if (WideSize <= 0)
+        {
+            return Bytes;
+        }
+
+        std::wstring Wide(WideSize, L'\0');
+        MultiByteToWideChar(CP_ACP, 0, Bytes.data(), static_cast<int>(Bytes.size()), Wide.data(), WideSize);
+        return FPaths::ToUtf8(Wide);
     }
 
     void InvokeModuleWorldResetHook(const FString& ModuleName, const sol::table& ModuleTable)
@@ -168,7 +254,16 @@ bool FLuaScriptManager::ReadScriptFileContent(const FString& ScriptFile, FString
     }
     std::ostringstream SS;
     SS << File.rdbuf();
-    OutContent = SS.str();
+    std::string Content = SS.str();
+    if (Content.size() >= 3
+        && static_cast<unsigned char>(Content[0]) == 0xEF
+        && static_cast<unsigned char>(Content[1]) == 0xBB
+        && static_cast<unsigned char>(Content[2]) == 0xBF)
+    {
+        Content.erase(0, 3);
+    }
+
+    OutContent = IsValidUtf8(Content) ? Content : ConvertAnsiScriptBytesToUtf8(Content);
     return true;
 }
 

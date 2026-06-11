@@ -64,13 +64,19 @@ private:
 	UMaterial* ResolveBulletHeadVisualMaterial();
 	UMaterial* ResolveBulletTracerVisualMaterial();
 	UMaterial* ResolveImpactVisualMaterial();
+	UMaterial* ResolveBulletImpactDecalMaterial();
 	void SpawnImpactVisual(const FVector& ImpactLocation);
+	void SpawnBulletImpactDecal(const FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
+	bool ShouldSpawnBulletImpactDecal(const struct FHitResult& Hit) const;
+	FVector4 PickBulletImpactDecalAtlasRect(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	bool QueryBulletHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
 	bool ShouldRunPreciseCharacterHitQuery(const struct FHitResult& BroadHit) const;
 	bool ShouldRunPosePhysicsAssetHitQuery(const struct FHitResult& BroadHit) const;
 	bool EnsurePreciseHitQueryBodies(USkeletalMeshComponent* SkeletalMeshComponent, bool& bOutCreatedTemporaryBodies) const;
 	bool QueryPreciseCharacterHit(const FBallisticBullet& Bullet, class UWorld* World, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
 	bool QueryPosePhysicsAssetCharacterHit(const FBallisticBullet& Bullet, const struct FHitResult& BroadHit, struct FHitResult& OutPreciseHit) const;
+	bool QueryTaggedFloorBoundsHit(const FBallisticBullet& Bullet, class UWorld* World, struct FHitResult& OutHit) const;
+	bool IsFloorHit(const struct FHitResult& Hit) const;
 	void HandleBulletHit(FBallisticBullet& Bullet, const struct FHitResult& Hit, class UWorld* World);
 	FSniperHitInfo BuildSniperHitInfo(const FBallisticBullet& Bullet, const struct FHitResult& Hit) const;
 	USkeletalMeshComponent* ResolveHitSkeletalMeshComponent(const struct FHitResult& Hit) const;
@@ -124,6 +130,20 @@ private:
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	float ImpactVisualLifetime = 0.08f;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
+	bool bEnableBulletImpactDecals = true;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Impact Decal Material", AssetType="Material")
+	FSoftObjectPtr BulletImpactDecalMaterialPath = "Content/Material/Editor/DefaultDecal.uasset";
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Impact Decal Size")
+	float BulletImpactDecalSize = 0.22f;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Impact Decal Depth")
+	float BulletImpactDecalDepth = 0.08f;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Impact Decal Surface Offset")
+	float BulletImpactDecalSurfaceOffset = 0.01f;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Impact Decal Atlas Columns")
+	int32 BulletImpactDecalAtlasColumns = 8;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual", DisplayName="Bullet Impact Decal Atlas Rows")
+	int32 BulletImpactDecalAtlasRows = 8;
+	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bDrawDebugBallistics = false;
 	UPROPERTY(Edit, Save, Category="Sniper|Visual")
 	bool bDrawDebugImpactMarker = false;
@@ -136,6 +156,7 @@ private:
 	TWeakObjectPtr<UMaterial> BulletHeadVisualMaterial;
 	TWeakObjectPtr<UMaterial> BulletTracerVisualMaterial;
 	TWeakObjectPtr<UMaterial> ImpactVisualMaterial;
+	TWeakObjectPtr<UMaterial> BulletImpactDecalMaterial;
 	TArray<FBallisticBullet> ActiveBullets;
 	int32 NextBulletId = 1;
 };

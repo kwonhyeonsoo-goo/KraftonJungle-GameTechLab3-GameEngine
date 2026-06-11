@@ -87,8 +87,8 @@
                 </div>
                 <div class="credits-content" data-ui-type="Panel" data-ui-name="Credits Content">
                     <div id="creditRowPm" class="credit-row"><span class="credit-role">PM</span><span class="credit-name">&#44608;&#54805;&#46020;</span><span class="credit-work">Player + Sense of Hitting</span></div>
-                    <div id="creditRowAi" class="credit-row"><span class="credit-role">AI</span><span class="credit-name">&#51060;&#49345;&#54984;</span><span class="credit-work">Enemy AI</span></div>
-                    <div id="creditRowLevel" class="credit-row"><span class="credit-role">LD</span><span class="credit-name">&#44428;&#54788;&#49688;</span><span class="credit-work">Level Design</span></div>
+                    <div id="creditRowAi" class="credit-row"><span class="credit-role">LD</span><span class="credit-name">&#51060;&#49345;&#54984;</span><span class="credit-work">Level Design</span></div>
+                    <div id="creditRowLevel" class="credit-row"><span class="credit-role">AI</span><span class="credit-name">&#44428;&#54788;&#49688;</span><span class="credit-work"></span>Enemy AI</div>
                     <div id="creditRowSystem" class="credit-row"><span class="credit-role">SYS</span><span class="credit-name">&#50577;&#54788;&#49437;</span><span class="credit-work">UI, Sequence, Game System</span></div>
                     <div id="creditDivider" class="credit-divider"></div>
                     <div id="creditMetaPeriod" class="credit-meta">Development Period : 20260604-20260609</div>
@@ -97,7 +97,7 @@
             </div>
         </div>
 
-        <div id="versionLabel" data-ui-type="Text" data-ui-name="Version Label">Latest Update v.20260607 by Team 7</div>
+        <div id="versionLabel" data-ui-type="Text" data-ui-name="Version Label">Latest Update v1.0.0 by Team 7</div>
     </div>
 </body>
 </rml>

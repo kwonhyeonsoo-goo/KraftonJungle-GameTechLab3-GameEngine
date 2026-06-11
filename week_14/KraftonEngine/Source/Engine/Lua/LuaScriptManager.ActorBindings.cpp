@@ -1,4 +1,4 @@
-﻿#include "LuaScriptManager.h"
+#include "LuaScriptManager.h"
 
 #include "Animation/AnimInstance.h"
 #include "Animation/Graph/AnimGraphInstance.h"
@@ -57,6 +57,7 @@
 #include "GameFramework/GameMode/GameplayStatics.h"
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Pawn/Character.h"
+#include "GameFramework/Pawn/CombatCharacter.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/Pawn/SniperPawn.h"
 #include "GameFramework/Pawn/WheeledVehiclePawn.h"
@@ -2392,6 +2393,16 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetSoundComponent",
         [](AActor& Actor)
         {
+            return Actor.GetComponentByClass<USoundComponent>();
+        },
+
+        "GetCombatGunfireSoundComponent",
+        [](AActor& Actor) -> USoundComponent*
+        {
+            if (ACombatCharacter* CombatCharacter = Cast<ACombatCharacter>(&Actor))
+            {
+                return CombatCharacter->GetCombatGunfireSoundComponent();
+            }
             return Actor.GetComponentByClass<USoundComponent>();
         },
 

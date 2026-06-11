@@ -80,9 +80,9 @@ body {
     box-sizing: border-box;
     overflow: hidden;
     opacity: 0;
-    background-color: rgba(238, 243, 246, 36);
+    background-color: rgba(0, 0, 0, 168);
     border-width: 1.000000px;
-    border-color: rgba(255, 255, 255, 72);
+    border-color: rgba(255, 255, 255, 52);
     padding: 10.000000px 30.000000px 10.000000px 30.000000px;
     color: rgba(255, 255, 255, 255);
     font-family: "Nexon";

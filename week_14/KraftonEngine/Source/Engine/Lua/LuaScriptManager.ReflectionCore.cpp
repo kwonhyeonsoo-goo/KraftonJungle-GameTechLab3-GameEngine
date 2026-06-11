@@ -2267,6 +2267,23 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
     );
 
     sol::table SniperKillCam = Lua.create_named_table("SniperKillCam");
+    auto MakeSniperKillCamSnapshotObject = [](const FBulletCinematicSnapshot& Snapshot) -> sol::object
+    {
+        sol::state_view LuaState(FLuaScriptManager::GetState());
+        sol::table Result = LuaState.create_table();
+        Result["BulletId"] = Snapshot.BulletId;
+        Result["Position"] = Snapshot.Position;
+        Result["PreviousPosition"] = Snapshot.PreviousPosition;
+        Result["Velocity"] = Snapshot.Velocity;
+        Result["TraveledDistance"] = Snapshot.TraveledDistance;
+        Result["TravelDistance"] = Snapshot.TraveledDistance;
+        Result["LifeTime"] = Snapshot.LifeTime;
+        Result["AmmoType"] = Snapshot.AmmoType;
+        Result["Owner"] = Snapshot.Owner;
+        Result["bIsAlive"] = Snapshot.bIsAlive;
+        Result["bWasScopedShot"] = Snapshot.bWasScopedShot;
+        return sol::make_object(LuaState, Result);
+    };
     SniperKillCam.set_function(
         "ConsumePendingBulletId",
         []()
@@ -2283,7 +2300,7 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
     );
     SniperKillCam.set_function(
         "GetHitSnapshot",
-        [](int32 BulletId) -> sol::object
+        [MakeSniperKillCamSnapshotObject](int32 BulletId) -> sol::object
         {
             sol::state_view LuaState(FLuaScriptManager::GetState());
             FBulletCinematicSnapshot Snapshot;
@@ -2291,18 +2308,31 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             {
                 return sol::make_object(LuaState, sol::nil);
             }
-            sol::table Result = LuaState.create_table();
-            Result["BulletId"] = Snapshot.BulletId;
-            Result["Position"] = Snapshot.Position;
-            Result["PreviousPosition"] = Snapshot.PreviousPosition;
-            Result["Velocity"] = Snapshot.Velocity;
-            Result["TraveledDistance"] = Snapshot.TraveledDistance;
-            Result["LifeTime"] = Snapshot.LifeTime;
-            Result["AmmoType"] = Snapshot.AmmoType;
-            Result["Owner"] = Snapshot.Owner;
-            Result["bIsAlive"] = Snapshot.bIsAlive;
-            Result["bWasScopedShot"] = Snapshot.bWasScopedShot;
-            return sol::make_object(LuaState, Result);
+            return MakeSniperKillCamSnapshotObject(Snapshot);
+        }
+    );
+    SniperKillCam.set_function(
+        "ConsumeFloorHit",
+        [MakeSniperKillCamSnapshotObject](int32 BulletId) -> sol::object
+        {
+            FBulletCinematicSnapshot Snapshot;
+            if (!ASniperKillCamDirector::ConsumeFloorHitForBulletId(BulletId, Snapshot))
+            {
+                return sol::make_object(FLuaScriptManager::GetState(), sol::nil);
+            }
+            return MakeSniperKillCamSnapshotObject(Snapshot);
+        }
+    );
+    SniperKillCam.set_function(
+        "CheckFloorHit",
+        [MakeSniperKillCamSnapshotObject](int32 BulletId) -> sol::object
+        {
+            FBulletCinematicSnapshot Snapshot;
+            if (!GEngine || !ASniperKillCamDirector::CheckFloorHitInWorld(GEngine->GetWorld(), BulletId, Snapshot))
+            {
+                return sol::make_object(FLuaScriptManager::GetState(), sol::nil);
+            }
+            return MakeSniperKillCamSnapshotObject(Snapshot);
         }
     );
     SniperKillCam.set_function(

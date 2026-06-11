@@ -65,7 +65,57 @@ local function resolve_sniper_killcam_hit_payload(bullet_id)
         BulletId = bullet_id,
         HitLocation = snapshot.Position,
         HitNormal = hit_normal,
-        ShotDirection = shot_direction
+        ShotDirection = shot_direction,
+        TravelDistance = tonumber(snapshot.TravelDistance) or tonumber(snapshot.TraveledDistance) or 0.0,
+        TraveledDistance = tonumber(snapshot.TraveledDistance) or tonumber(snapshot.TravelDistance) or 0.0
+    }
+end
+
+local function consume_sniper_killcam_floor_hit_payload(bullet_id)
+    if SniperKillCam == nil or SniperKillCam.ConsumeFloorHit == nil then
+        return nil
+    end
+
+    bullet_id = tonumber(bullet_id) or 0
+    if bullet_id == 0 then
+        return nil
+    end
+
+    local snapshot = SniperKillCam.ConsumeFloorHit(bullet_id)
+    if snapshot == nil or snapshot.Position == nil then
+        return nil
+    end
+
+    return {
+        BulletId = bullet_id,
+        HitLocation = snapshot.Position,
+        Snapshot = snapshot,
+        TravelDistance = tonumber(snapshot.TravelDistance) or tonumber(snapshot.TraveledDistance) or 0.0,
+        TraveledDistance = tonumber(snapshot.TraveledDistance) or tonumber(snapshot.TravelDistance) or 0.0
+    }
+end
+
+local function check_sniper_killcam_floor_hit_payload(bullet_id)
+    if SniperKillCam == nil or SniperKillCam.CheckFloorHit == nil then
+        return consume_sniper_killcam_floor_hit_payload(bullet_id)
+    end
+
+    bullet_id = tonumber(bullet_id) or 0
+    if bullet_id == 0 then
+        return nil
+    end
+
+    local snapshot = SniperKillCam.CheckFloorHit(bullet_id)
+    if snapshot == nil or snapshot.Position == nil then
+        return nil
+    end
+
+    return {
+        BulletId = bullet_id,
+        HitLocation = snapshot.Position,
+        Snapshot = snapshot,
+        TravelDistance = tonumber(snapshot.TravelDistance) or tonumber(snapshot.TraveledDistance) or 0.0,
+        TraveledDistance = tonumber(snapshot.TraveledDistance) or tonumber(snapshot.TravelDistance) or 0.0
     }
 end
 
@@ -1438,8 +1488,20 @@ function CutSceneManager:Initialize()
                 return
             end
             tick_killcam_blood_effects(self, dt)
+            local floor_hit = consume_sniper_killcam_floor_hit_payload((current.payload or {}).bullet_id)
+            if floor_hit ~= nil then
+                current.floor_hit = floor_hit
+                self:Stop("floor_hit")
+                return
+            end
             apply_sniper_killcam_profile(current)
             apply_sniper_killcam_post_impact(current)
+            floor_hit = check_sniper_killcam_floor_hit_payload((current.payload or {}).bullet_id)
+            if floor_hit ~= nil then
+                current.floor_hit = floor_hit
+                self:Stop("floor_hit")
+                return
+            end
             local flash_out_alpha = tonumber(current.killcam_profile.flash_out_alpha)
             local flash_in_alpha = tonumber(current.killcam_profile.flash_in_alpha)
             if flash_out_alpha ~= nil and flash_in_alpha ~= nil then
@@ -1513,7 +1575,7 @@ function CutSceneManager:Initialize()
             end
         end,
         on_end = function(current)
-            if current.reason == "skipped" then
+            if current.reason == "skipped" or current.reason == "floor_hit" then
                 stop_killcam_sfx_handles(self.general, current.killcam_sfx_handles)
             end
             if current.reason ~= "finished" then
@@ -1616,6 +1678,9 @@ function CutSceneManager:Tick(dt)
     current.elapsed = current.elapsed + step
     if current.definition.on_tick ~= nil then
         pcall(current.definition.on_tick, current, step)
+    end
+    if self.current ~= current then
+        return
     end
 
     if current.duration > 0.0 and current.elapsed >= current.duration then

@@ -1273,6 +1273,7 @@ cbuffer DecalBuffer : register(b2)
 {
     float4x4 DecalWorldToLocal;
     float4 DecalColor;
+    float4 DecalAtlasRect;
 }
 
 PS_Input_Decal VS(VS_Input_PNCT input)
@@ -1297,6 +1298,7 @@ float4 PS(PS_Input_Decal input) : SV_TARGET
     float2 decalUV;
     decalUV.x = decalLocalPos.y + 0.5f;
     decalUV.y = 0.5f - decalLocalPos.z;
+    decalUV = DecalAtlasRect.xy + decalUV * DecalAtlasRect.zw;
 
     FMaterialPixelInput MaterialInput;
     MaterialInput.UV0           = decalUV;
