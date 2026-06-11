@@ -29,25 +29,26 @@ local Config = {
         {
             TimeSeconds = 120.0,
             Enemies = {
-                { PrefabName = "EnemyShortRange", Count = 6 },
-                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
-                { PrefabName = "EnemyAssault", Count = 2 }
+                -- 후반부부터 총 스폰 수를 줄이고 돌격형 비중을 올린다.
+                { PrefabName = "EnemyShortRange", Count = 2 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 0 },
+                { PrefabName = "EnemyAssault", Count = 3 }
             }
         },
         {
             TimeSeconds = 180.0,
             Enemies = {
-                { PrefabName = "EnemyShortRange", Count = 6 },
-                { PrefabName = "EnemyLongRangeSlow", Count = 2 },
-                { PrefabName = "EnemyAssault", Count = 2 }
+                { PrefabName = "EnemyShortRange", Count = 2 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
+                { PrefabName = "EnemyAssault", Count = 3 }
             }
         },
         {
             TimeSeconds = 240.0,
             Enemies = {
-                { PrefabName = "EnemyShortRange", Count = 9 },
-                { PrefabName = "EnemyLongRangeSlow", Count = 3 },
-                { PrefabName = "EnemyAssault", Count = 3 }
+                { PrefabName = "EnemyShortRange", Count = 2 },
+                { PrefabName = "EnemyLongRangeSlow", Count = 1 },
+                { PrefabName = "EnemyAssault", Count = 5 }
             }
         }
     },
