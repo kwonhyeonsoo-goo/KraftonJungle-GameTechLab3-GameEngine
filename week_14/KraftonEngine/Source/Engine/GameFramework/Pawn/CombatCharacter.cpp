@@ -85,6 +85,16 @@ void ACombatCharacter::BeginPlay()
 		Capsule->SetKinematic(true);
 	}
 
+	// PhysicsAsset query bodies are created from the skeletal mesh.
+	// Scene/prefab data often stores the mesh itself as WorldStatic/NoCollision
+	// because the capsule owns gameplay collision, but precise sniper hit queries
+	// search Pawn objects. Keep the mesh object type aligned before query bodies
+	// are created so pre-placed allies and spawned enemies behave the same.
+	if (USkeletalMeshComponent* Mesh = GetMesh())
+	{
+		Mesh->SetCollisionObjectType(ECollisionChannel::Pawn);
+	}
+
 	if (!SniperDamageReceiverComponent)
 	{
 		SniperDamageReceiverComponent = GetComponentByClass<USniperDamageReceiverComponent>();
@@ -110,6 +120,9 @@ void ACombatCharacter::BeginPlay()
 	{
 		if (USkeletalMeshComponent* Mesh = GetMesh())
 		{
+			// Recreate the query bodies so stale filter data from serialized mesh
+			// collision settings cannot keep precise hit proxies off the Pawn channel.
+			Mesh->DisablePhysicsAssetQueryBodies();
 			Mesh->EnablePhysicsAssetQueryBodies();
 		}
 	}

@@ -120,7 +120,14 @@ namespace
             bCreateCharacterQueryBodies &&
             !bUseIndependentRagdollCollision &&
             !bIsPartialRagdollBody;
-        OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
+        // Character query bodies are precise gameplay hit proxies, even though
+        // they are generated from a skeletal mesh component that is commonly
+        // serialized as WorldStatic/NoCollision. Bullet precise queries search
+        // Pawn objects, so force these proxy shapes onto the Pawn channel.
+        OutFilterData.ObjectType = static_cast<uint32>(
+            bCharacterQueryBody
+                ? ECollisionChannel::Pawn
+                : Component->GetCollisionObjectType());
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
         OutFilterData.IgnoreGroup = bDisableSelfCollision

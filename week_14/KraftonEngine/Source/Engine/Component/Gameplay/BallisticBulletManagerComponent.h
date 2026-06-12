@@ -148,7 +148,7 @@ private:
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
 	float MaxPoseFallbackBroadToPreciseDistance = 0.20f;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
-	bool bRejectBroadHitWhenQueryBodyPreciseMisses = true;
+	bool bRejectBroadHitWhenQueryBodyPreciseMisses = false;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")
 	bool bAllowPoseFallbackWhenQueryBodySyncFails = false;
 	UPROPERTY(Edit, Save, Category="Sniper|Hit")

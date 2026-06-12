@@ -1520,6 +1520,35 @@ bool UBallisticBulletManagerComponent::QueryBulletHit(const FBallisticBullet& Bu
 				}
 			}
 
+			const bool bCharacterQueryBodyPreciseMiss =
+				PreciseDiagnostics.QueryMode == ESniperPreciseHitQueryMode::CharacterQueryBody &&
+				PreciseDiagnostics.RejectReason == ESniperPreciseHitRejectReason::PreciseMissAfterBroadHit;
+			const bool bAllowBroadHitFallbackAfterQueryBodyMiss =
+				bCharacterQueryBodyPreciseMiss && bHasQueryBodies && !bHasLivePhysicsBodies;
+			if (bAllowBroadHitFallbackAfterQueryBodyMiss)
+			{
+				// Character query bodies are an optional precision pass layered on top of the
+				// capsule broad hit. If their pose/shape setup is too small or slightly out
+				// of sync, rejecting the already-confirmed capsule hit makes living characters
+				// look bullet-proof. Keep strict rejection for live ragdoll bodies, but fall
+				// back to the broad hit for ordinary character query-body misses.
+				if (bLogPreciseCharacterHitDiagnostics)
+				{
+					UE_LOG(
+						"[SniperDebug] Character query-body precise miss; accepting broad hit fallback. Mode=%s Reason=%s Actor=%s Component=%s BroadBone=%s QueryBodies=%d LiveBodies=%d SyncAttempted=%d SyncSucceeded=%d",
+						GetSniperPreciseHitQueryModeName(PreciseDiagnostics.QueryMode),
+						GetSniperPreciseHitRejectReasonName(PreciseDiagnostics.RejectReason),
+						OutHit.HitActor ? OutHit.HitActor->GetName().c_str() : "None",
+						OutHit.HitComponent ? OutHit.HitComponent->GetName().c_str() : "None",
+						PreciseDiagnostics.BroadHitBoneName.ToString().c_str(),
+						bHasQueryBodies ? 1 : 0,
+						bHasLivePhysicsBodies ? 1 : 0,
+						PreciseDiagnostics.bSyncAttempted ? 1 : 0,
+						PreciseDiagnostics.bSyncSucceeded ? 1 : 0);
+				}
+				return true;
+			}
+
 			if ((bHasQueryBodies && bRejectBroadHitWhenQueryBodyPreciseMisses) || bHasLivePhysicsBodies)
 			{
 				if (bLogPreciseCharacterHitDiagnostics)
