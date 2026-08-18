@@ -1,0 +1,39 @@
+{
+  "Scene" : {
+    "Name" : "ene",
+    "Objects" : [{
+        "ClassName" : "UScene",
+        "InternalIndex" : 1,
+        "UUID" : 2
+      }, {
+        "ClassName" : "AActor",
+        "InternalIndex" : 2,
+        "OwningSceneUUID" : 2,
+        "RootComponentUUID" : 4,
+        "UUID" : 3,
+        "bVisible" : true
+      }, {
+        "ClassName" : "UCubeComponent",
+        "InternalIndex" : 3,
+        "Location" : {
+          "X" : -3.000000,
+          "Y" : 0.000000,
+          "Z" : 0.000000
+        },
+        "ParentUUID" : 0,
+        "Rotation" : {
+          "X" : 0.000000,
+          "Y" : 0.000000,
+          "Z" : 0.000000
+        },
+        "Scale" : {
+          "X" : 1.000000,
+          "Y" : 1.000000,
+          "Z" : 1.000000
+        },
+        "UUID" : 4
+      }],
+    "UUID" : 2,
+    "Version" : 1
+  }
+}
