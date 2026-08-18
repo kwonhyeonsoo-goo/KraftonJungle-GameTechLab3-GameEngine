@@ -1,0 +1,19 @@
+#pragma once
+#include "./UObject.h"
+#include "../Foundation/Core/CoreTypes.h"
+#include "./UClass.h"
+
+struct AppContext;
+
+class ObjectFactory
+{
+public:
+    UObject* ConstructObject(AppContext& ctx, UClass* uclass);
+    UObject* ConstructObject(AppContext& ctx, const FString& typeName);
+
+    template<typename T>
+    T* Construct(AppContext& ctx)
+    {
+        return static_cast<T*>(ConstructObject(ctx, T::StaticClass()));
+    }
+};
