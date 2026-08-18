@@ -1,0 +1,259 @@
+{
+  "Camera": {
+    "Position": [
+      -3.0,
+      -3.0,
+      2.5
+    ],
+    "Rotation": [
+      45.0,
+      -30.0
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_SolidWireframe.json",
+    "Assets/Materials/M_StaticMesh.json",
+    "Assets/Materials/M_Hologram.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 12,
+  "PerspectiveCamera": {
+    "FOV": 45.0,
+    "FarClip": 10000.0,
+    "Location": [
+      -5.0,
+      0.0,
+      2.0
+    ],
+    "NearClip": 0.10000000149011612,
+    "Rotation": [
+      9.19999885559082,
+      -26.600000381469727
+    ]
+  },
+  "Primitives": {
+    "0": {
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        5,
+        6,
+        8,
+        9,
+        10,
+        12
+      ],
+      "ComponentsData": [
+        {
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Material": "",
+          "Name": "StaticMeshComponent",
+          "ObjStaticMeshAsset": "Engine/BasicShapes/Cube",
+          "PrimitiveFileName": "",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "SlotMaterials": [
+            "M_StaticMesh"
+          ],
+          "SlotTextures": [
+            ""
+          ],
+          "UVEnabled_0": false,
+          "UVSpeed_0": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bDrawDebugBounds": true,
+          "bTickEnabled": true
+        },
+        {
+          "AttachParentUUID": 5,
+          "Billboard": false,
+          "Class": "UTextRenderComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Material": "M_Font",
+          "Name": "TextComponent",
+          "PrimitiveFileName": "",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "TextScale": 0.30000001192092896,
+          "WorldOffset": [
+            0.0,
+            0.0,
+            0.5
+          ],
+          "bDrawDebugBounds": false,
+          "bTickEnabled": true
+        },
+        {
+          "AttachParentUUID": 5,
+          "Class": "UBillboardComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Material": "",
+          "Name": "BillboardComponent",
+          "PrimitiveFileName": "",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Size": [
+            1.0,
+            1.0
+          ],
+          "TexturePath": "",
+          "bDrawDebugBounds": false,
+          "bTickEnabled": true
+        },
+        {
+          "AttachParentUUID": 5,
+          "Billboard": false,
+          "Class": "UTextRenderComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Material": "M_Font",
+          "Name": "TextComponent_0",
+          "PrimitiveFileName": "",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "TextScale": 1.0,
+          "WorldOffset": [
+            0.0,
+            0.0,
+            0.30000001192092896
+          ],
+          "bDrawDebugBounds": false,
+          "bTickEnabled": true
+        },
+        {
+          "AttachParentUUID": 5,
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Material": "",
+          "Name": "StaticMeshComponent_0",
+          "ObjStaticMeshAsset": "Engine/BasicShapes/Plane",
+          "PrimitiveFileName": "",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "SlotMaterials": [
+            "M_StaticMesh"
+          ],
+          "SlotTextures": [
+            ""
+          ],
+          "UVEnabled_0": false,
+          "UVSpeed_0": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bDrawDebugBounds": true,
+          "bTickEnabled": true
+        },
+        {
+          "AttachParentUUID": 5,
+          "Class": "USubUVComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Material": "",
+          "Name": "SubUVComponent",
+          "PrimitiveFileName": "",
+          "Rotation": [
+            -0.0,
+            0.0,
+            -0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "bDrawDebugBounds": true,
+          "bTickEnabled": true
+        }
+      ],
+      "Name": "Cube",
+      "UUID": 4
+    }
+  }
+}

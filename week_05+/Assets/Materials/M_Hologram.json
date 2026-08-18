@@ -1,0 +1,23 @@
+{
+"Name": "M_Hologram",
+  "VertexShader": "Engine/Shaders/StaticMeshVertexShader.hlsl",
+  "PixelShader": "Engine/Shaders/StaticMeshPixelShader.hlsl",
+  "RenderState": {
+    "FillMode": 3,
+    "CullMode": 1,
+    "DepthTest": true,
+    "DepthWrite": 0,
+    "BlendEnable": true,
+    "SrcBlend": 5,
+    "DestBlend": 6
+  },
+ "ConstantBuffers": [
+    {
+      "Parameters": [
+        { "Name": "ColorTint", "Type": "float4", "Value": [1.0, 1.0, 1.0, 0.8] }, 
+        { "Name": "UVScrollEnabled", "Type": "float", "Value": 1.0 },
+        { "Name": "UVScrollSpeed", "Type": "float2", "Value": [0.0, 0.0] }
+      ]
+    }
+  ]
+}

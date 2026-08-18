@@ -1,0 +1,36 @@
+#include "Core/FEngine.h"
+#include "Core/GameViewportClient.h"
+class FClientEngine : public FEngine
+{
+protected:
+	FViewportClient* CreateViewportClient() override
+	{
+		return new FGameViewportClient();
+	}
+};
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
+{
+	setlocale(LC_ALL, ".UTF-8");
+
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
+	{
+		MessageBox(nullptr, L"CoInitializeEx failed", L"COM Error", MB_OK);
+		return -1;
+	}
+
+	FClientEngine Engine;
+	if (!Engine.Initialize(hInstance, L"Jungle Client", 1280, 720))
+		return -1;
+
+	Engine.Run();
+	Engine.Shutdown();
+
+	if (SUCCEEDED(hr) || hr == S_FALSE)
+	{
+		CoUninitialize();
+	}
+
+	return 0;
+}

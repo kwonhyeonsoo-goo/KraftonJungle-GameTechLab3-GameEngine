@@ -1,0 +1,86 @@
+#pragma once
+
+#include "EngineAPI.h"
+#include "Windows.h"
+#include "Types/String.h"
+#include "ShowFlags.h"
+#include "Renderer/RenderCommand.h"
+#include "World/RenderCollector.h"
+#include "World/WorldType.h"
+#include "Input/InputManager.h"
+#include "Camera/Camera.h"
+#include "Input/InputAction.h"
+#include "Input/EnhancedInputManager.h"
+#include "Math/Rect.h"
+
+
+class FCore;
+class FRenderer;
+class ULevel;
+class FFrustum;
+class UPrimitiveComponent;
+struct FRenderCommandQueue;
+class UWorld;
+struct FInputMappingContext;
+class FViewport;
+class SViewportWindow;
+
+class ENGINE_API FViewportClient
+{
+public:
+	FViewportClient() = default;
+	virtual ~FViewportClient() = default;
+
+	virtual void Attach();
+	virtual void Detach();
+	virtual void HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+	virtual const char* GetViewportLabel() const { return "Viewport"; }
+	virtual FMatrix GetViewMatrix() const;
+	virtual FMatrix GetProjectionMatrix(float AspectRatio) const;
+	virtual FMatrix GetViewProjectionMatrix(float AspectRatio) const;
+	FShowFlags& GetShowFlags() { return ShowFlags; }
+	const FShowFlags& GetShowFlags() const { return ShowFlags; }
+	virtual void BuildRenderCommands(TArray<AActor*>& InActors, FRenderCommandQueue& OutQueue);
+	virtual void PostRender(FCore* Core, FRenderer* Renderer);
+	FCamera* GetCamera() { return &CameraTransform; }
+	virtual void DrawUI();
+	void SetViewportWindow(SViewportWindow* InViewportWindow);
+
+
+	virtual void Initialize(FInputManager* InInput, FEnhancedInputManager* InEnhancedInput);
+	virtual void SetupInputBindings();
+	virtual void ProcessCameraInput(float DeltaTime);
+	virtual void Cleanup();
+	virtual void Tick(float DeltaTime);
+	virtual void SetViewportRect(const FRect& InRect);
+	virtual void SetViewportInputState(int32 InMouseX, int32 InMouseY, const FRect& InRect);
+	int32 GetViewportWidth() const { return ViewportWidth; }
+	int32 GetViewportHeight() const { return ViewportHeight; }
+	FLevelRenderCollector& GetRenderCollector() { return RenderCollector; }
+
+protected:
+	FCamera CameraTransform;
+	FShowFlags ShowFlags;
+	FLevelRenderCollector RenderCollector;
+	FInputManager* InputManager = nullptr;
+	FEnhancedInputManager* EnhancedInput = nullptr;
+	FInputMappingContext* CameraContext = nullptr;
+
+	FInputAction MoveForwardAction{ "MoveForward", EInputActionValueType::Float };
+	FInputAction MoveRightAction{ "MoveRight", EInputActionValueType::Float };
+	FInputAction MoveUpAction{ "MoveUp", EInputActionValueType::Float };
+	FInputAction LookXAction{ "LookX", EInputActionValueType::Float };
+	FInputAction LookYAction{ "LookY", EInputActionValueType::Float };
+
+	float CurrentDeltaTime = 0.0f;
+	int32 ViewportTopLeftX = 0;
+	int32 ViewportTopLeftY = 0;
+	bool bIsViewportHovered = false;
+	int32 ViewportWidth = 0;
+	int32 ViewportHeight = 0;
+	int32 ViewportMouseX = 0;
+	int32 ViewportMouseY = 0;
+	EWorldType WorldType = EWorldType::Game;
+	SViewportWindow* ViewportWindow = nullptr;
+
+};

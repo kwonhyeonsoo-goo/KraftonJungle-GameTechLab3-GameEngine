@@ -1,0 +1,21 @@
+{
+  "Name": "M_SolidWireframe",
+  "VertexShader": "Engine/Shaders/VertexShader.hlsl",
+  "PixelShader": "Engine/Shaders/SolidWireframePixelShader.hlsl",
+  "RenderState": {
+    "FillMode": 3,
+    "CullMode": 3,
+    "DepthTest": true,
+    "DepthWrite": 1,
+    "DepthFunc": "Less"
+  },
+  "ConstantBuffers": [
+    {
+      "Parameters": [
+        { "Name": "FillColor", "Type": "float4", "Value": [0.8, 0.8, 0.8, 1.0] },
+        { "Name": "LineColor", "Type": "float4", "Value": [0.05, 0.05, 0.05, 1.0] },
+        { "Name": "EdgeThickness", "Type": "float", "Value": 1.35 }
+      ]
+    }
+  ]
+}

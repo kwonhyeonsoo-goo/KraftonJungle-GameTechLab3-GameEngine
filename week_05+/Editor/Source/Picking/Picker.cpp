@@ -1,0 +1,129 @@
+#include "Picker.h"
+
+#include "World/Level.h"
+#include "Actor/Actor.h"
+#include "Camera/Camera.h"
+#include "Component/PrimitiveComponent.h"
+#include "Primitive/PrimitiveBase.h"
+#include "Renderer/PrimitiveVertex.h"
+#include "Component/SubUVComponent.h"
+#include "Renderer/Renderer.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/BillboardComponent.h"
+#include "Component/MeshComponent.h"
+#include "Actor/SkySphereActor.h"
+#include "Debug/EngineLog.h"
+#include <limits>
+
+FRay FPicker::ScreenToRay(const FCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
+{
+	if (!Camera || ScreenWidth <= 0 || ScreenHeight <= 0)
+	{
+		return { FVector::ZeroVector, FVector::ForwardVector };
+	}
+
+	const FMatrix ViewMatrix = Camera->GetViewMatrix();
+	const FMatrix ProjMatrix = Camera->GetProjectionMatrix();
+	const FMatrix ViewInverse = ViewMatrix.GetInverse();
+	const float NdcX = (2.0f * (ScreenX + 0.5f) / ScreenWidth) - 1.0f;
+	const float NdcY = 1.0f - (2.0f * (ScreenY + 0.5f) / ScreenHeight);
+
+	if (Camera->IsOrthographic())
+	{
+		const float ViewRight = NdcX * (Camera->GetOrthoWidth() * 0.5f);
+		const float ViewUp = NdcY * (Camera->GetOrthoHeight() * 0.5f);
+
+		FVector RayOrigin;
+		RayOrigin.X = ViewRight * ViewInverse.M[1][0] + ViewUp * ViewInverse.M[2][0] + ViewInverse.M[3][0];
+		RayOrigin.Y = ViewRight * ViewInverse.M[1][1] + ViewUp * ViewInverse.M[2][1] + ViewInverse.M[3][1];
+		RayOrigin.Z = ViewRight * ViewInverse.M[1][2] + ViewUp * ViewInverse.M[2][2] + ViewInverse.M[3][2];
+
+		return { RayOrigin, Camera->GetForward() };
+	}
+
+	const float ViewForward = 1.0f;
+	const float ViewRight = NdcX / ProjMatrix.M[1][0];
+	const float ViewUp = NdcY / ProjMatrix.M[2][1];
+
+	FVector RayDirectionWorld;
+	RayDirectionWorld.X = ViewForward * ViewInverse.M[0][0] + ViewRight * ViewInverse.M[1][0] + ViewUp * ViewInverse.M[2][0];
+	RayDirectionWorld.Y = ViewForward * ViewInverse.M[0][1] + ViewRight * ViewInverse.M[1][1] + ViewUp * ViewInverse.M[2][1];
+	RayDirectionWorld.Z = ViewForward * ViewInverse.M[0][2] + ViewRight * ViewInverse.M[1][2] + ViewUp * ViewInverse.M[2][2];
+	RayDirectionWorld = RayDirectionWorld.GetSafeNormal();
+
+	FVector RayOrigin;
+	RayOrigin.X = ViewInverse.M[3][0];
+	RayOrigin.Y = ViewInverse.M[3][1];
+	RayOrigin.Z = ViewInverse.M[3][2];
+
+	return { RayOrigin, RayDirectionWorld };
+}
+
+bool FPicker::RayTriangleIntersect(const FRay& Ray, const FVector& V0, const FVector& V1, const FVector& V2, float& OutDistance) const
+{
+	constexpr float Epsilon = 1.e-6f;
+
+	const FVector Edge1 = V1 - V0;
+	const FVector Edge2 = V2 - V0;
+
+	const FVector H = FVector::CrossProduct(Ray.Direction, Edge2);
+	const float A = FVector::DotProduct(Edge1, H);
+	if (A <= Epsilon)
+	{
+		return false;
+	}
+
+	const float F = 1.0f / A;
+	const FVector S = Ray.Origin - V0;
+	const float U = F * FVector::DotProduct(S, H);
+	if (U < 0.0f || U > 1.0f)
+	{
+		return false;
+	}
+
+	const FVector Q = FVector::CrossProduct(S, Edge1);
+	const float V = F * FVector::DotProduct(Ray.Direction, Q);
+	if (V < 0.0f || U + V > 1.0f)
+	{
+		return false;
+	}
+
+	const float T = F * FVector::DotProduct(Edge2, Q);
+	if (T > Epsilon)
+	{
+		OutDistance = T;
+		return true;
+	}
+
+	return false;
+}
+
+AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCamera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
+{
+	if (!InCamera)
+	{
+		return nullptr;
+	}
+
+	GRenderer->RenderPickingPass();
+
+	uint32 PickedID = GRenderer->ReadPixelID(ScreenX, ScreenY);
+
+	if (PickedID == 0) return nullptr;
+
+	for (AActor* Actor : InActors)
+	{
+		if (Actor && Actor->GetUUID() == PickedID)
+		{
+			return Actor;
+		}
+	}
+
+	UE_LOG("Pick failed: PixelID=%u, ActorCount=%d", PickedID, static_cast<int>(InActors.size()));
+	for (AActor* Actor : InActors)
+	{
+		if (Actor) UE_LOG("  Actor '%s' UUID=%u", Actor->GetName().c_str(), Actor->GetUUID());
+	}
+
+	return nullptr;
+}
