@@ -1,0 +1,25 @@
+﻿// 렌더 영역에서 공유되는 타입과 인터페이스를 정의합니다.
+#pragma once
+
+#include "Render/Scene/Proxies/Primitive/PrimitiveSceneProxy.h"
+
+class UDecalComponent;
+
+// FDecalSceneProxy는 게임 객체를 렌더러가 사용할 제출 데이터로 변환합니다.
+class FDecalSceneProxy : public FPrimitiveSceneProxy
+{
+public:
+    FDecalSceneProxy(UDecalComponent* InComponent);
+    ~FDecalSceneProxy() override;
+
+    void UpdateTransform() override;
+    void UpdateMaterial() override;
+    void UpdateMesh() override;
+
+private:
+    UDecalComponent* GetDecalComponent() const;
+    void             UpdateDecalConstants();
+
+    FConstantBuffer* DecalCB;
+    class UMaterial* DecalMaterial = nullptr;
+};
