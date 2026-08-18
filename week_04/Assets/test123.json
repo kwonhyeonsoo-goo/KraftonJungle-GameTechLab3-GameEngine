@@ -1,0 +1,27 @@
+{
+  "Camera": {
+    "FOV": 60.0,
+    "FarClip": 1000.0,
+    "NearClip": 0.10000000149011612,
+    "Position": [
+      -5.0,
+      0.0,
+      2.0
+    ],
+    "Rotation": [
+      0.0,
+      0.0
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 38,
+  "Primitives": null
+}

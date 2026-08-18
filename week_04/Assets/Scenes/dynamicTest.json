@@ -1,0 +1,276 @@
+{
+  "Camera": {
+    "FOV": 60.0,
+    "FarClip": 1000.0,
+    "NearClip": 0.10000000149011612,
+    "Position": [
+      -19.382064819335938,
+      -5.6986517906188965,
+      12.951982498168945
+    ],
+    "Rotation": [
+      26.599992752075195,
+      -35.4000244140625
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 38,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        3,
+        5
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 4
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        6,
+        8
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 7
+    },
+    "2": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        9,
+        11
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 10
+    },
+    "3": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        12,
+        14
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    },
+    "4": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        20,
+        21
+      ],
+      "Location": [
+        -5.594376564025879,
+        0.7989869117736816,
+        2.774667501449585
+      ],
+      "MaterialOverrides": [
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/头发.png",
+          "Name": "眼睛"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "眼白"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "脖子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "脸"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/头发.png",
+          "Name": "头发"
+        },
+        {
+          "MapKd": "",
+          "Name": "表情"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "皮肤"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "衣服"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "裙子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "鞋子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "手套"
+        }
+      ],
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\Lumine\\LumineModel.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 19
+    },
+    "5": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        36,
+        37
+      ],
+      "Location": [
+        -9.633460998535156,
+        -6.775829792022705,
+        7.4612274169921875
+      ],
+      "MaterialOverrides": [
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "脖子"
+        }
+      ],
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\12213_Bird_v1_l3.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 35
+    }
+  }
+}

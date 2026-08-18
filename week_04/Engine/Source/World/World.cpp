@@ -1,0 +1,172 @@
+#include "World.h"
+#include "Object/Class.h"  
+#include "World/Level.h"
+#include "Object/ObjectFactory.h"
+#include "Component/CameraComponent.h"
+
+#include "Serializer/SceneSerializer.h"
+#include "Core/Paths.h"
+#include "Actor/Actor.h"
+IMPLEMENT_RTTI(UWorld, UObject)
+
+UWorld::~UWorld()
+{
+	CleanupWorld();
+}
+
+void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
+{
+	PersistentLevel = FObjectFactory::ConstructObject<ULevel>(this, "PersistentLevel");
+	if (!PersistentLevel)
+	{
+		return;
+	}
+
+	PersistentLevel->SetLevelType(WorldType);
+
+
+	if (Device)
+	{
+		FSceneSerializer::Load(PersistentLevel, (FPaths::LevelDir() / "DefaultLevel.json").string(), Device);
+	}
+}
+
+void UWorld::BeginPlay()
+{
+	if (bBegunPlay) return;
+	bBegunPlay = true;
+	if (PersistentLevel)
+	{
+		PersistentLevel->BeginPlay();
+	}
+	for (ULevel* Level : StreamingLevels)
+	{
+		if (Level) Level->BeginPlay();
+	}
+}
+
+void UWorld::Tick(float InDeltaTime)
+{
+	DeltaSeconds = InDeltaTime;
+	WorldTime += InDeltaTime;
+
+	if (PersistentLevel)
+	{
+		PersistentLevel->Tick(InDeltaTime);
+	}
+	for (ULevel* Level : StreamingLevels)
+	{
+		if (Level)
+		{
+			Level->Tick(InDeltaTime);
+		}
+	}
+}
+
+void UWorld::CleanupWorld()
+{
+	for (ULevel* Level : StreamingLevels)
+	{
+		if (Level)
+		{
+			Level->ClearActors();
+			Level->MarkPendingKill();
+		}
+	}
+	if (PersistentLevel)
+	{
+		PersistentLevel->ClearActors();
+		PersistentLevel->MarkPendingKill();
+		PersistentLevel = nullptr;
+	}
+
+	WorldTime = 0.f;
+	DeltaSeconds = 0.f;
+}
+
+void UWorld::DestroyActor(AActor* InActor)
+{
+	if (!InActor || !PersistentLevel) return;
+
+
+	PersistentLevel->DestroyActor(InActor);
+}
+
+ULevel* UWorld::LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device)
+{
+	// 이미 로드됐는지 확인
+	if (ULevel* Existing = FindStreamingLevel(LevelName))
+	{
+		return Existing;
+	}
+	ULevel* NewLevel = FObjectFactory::ConstructObject<ULevel>(this, LevelName);
+	if (!NewLevel) return nullptr;
+	NewLevel->SetLevelType(WorldType);
+
+	if (Device)
+	{
+		FSceneSerializer::Load(NewLevel, (FPaths::LevelDir() / (LevelName + ".json")).string(), Device);
+	}
+	StreamingLevels.push_back(NewLevel);
+
+	// 이미 게임 진행 중이면 BeginPlay 호출
+	if (bBegunPlay)
+	{
+		NewLevel->BeginPlay();
+	}
+	return NewLevel;
+}
+
+void UWorld::UnloadStreamingLevel(const FString& LevelName)
+{
+	auto It = std::find_if(StreamingLevels.begin(), StreamingLevels.end(),
+		[&](ULevel* Level) { return Level->GetName() == LevelName; });
+	if (It != StreamingLevels.end())
+	{
+		(*It)->ClearActors();
+		(*It)->MarkPendingKill();
+		StreamingLevels.erase(It);
+	}
+}
+
+ULevel* UWorld::FindStreamingLevel(const FString& LevelName) const
+{
+	for (ULevel* Level : StreamingLevels)
+	{
+		if (Level && Level->GetName() == LevelName)
+		{
+			return Level;
+		}
+	}
+	return nullptr;
+}
+
+TArray<AActor*> UWorld::GetAllActors() const
+{
+	TArray<AActor*> AllActors;
+	if (PersistentLevel)
+	{
+		const auto& PersistentActors = PersistentLevel->GetActors();
+		AllActors.insert(AllActors.end(), PersistentActors.begin(), PersistentActors.end());
+	}
+	for (ULevel* Level : StreamingLevels)
+	{
+		if (Level)
+		{
+			const auto& LevelActors = Level->GetActors();
+			AllActors.insert(AllActors.end(), LevelActors.begin(), LevelActors.end());
+		}
+	}
+	return AllActors;
+}
+
+const TArray<AActor*>& UWorld::GetActors() const
+{
+	static TArray<AActor*> EmptyArray;
+	if (PersistentLevel)
+	{
+		return PersistentLevel->GetActors();
+	}
+	return EmptyArray;
+}
+

@@ -1,0 +1,122 @@
+{
+  "Camera": {
+    "Position": [
+      -14.281956672668457,
+      0.0,
+      6.178403854370117
+    ],
+    "Rotation": [
+      0.0,
+      -15.399999618530273
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 17,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        7,
+        8
+      ],
+      "Location": [
+        -5.2417473793029785,
+        -0.6536498665809631,
+        3.6101174354553223
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 6
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "ACubeActor",
+      "ComponentUUIDs": [
+        11,
+        12,
+        13
+      ],
+      "Location": [
+        -5.262866497039795,
+        0.0,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 10
+    },
+    "2": {
+      "Billboard": true,
+      "Class": "ACubeActor",
+      "ComponentUUIDs": [
+        15,
+        16,
+        17
+      ],
+      "Location": [
+        0.0,
+        -8.232000350952148,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 14
+    }
+  }
+}

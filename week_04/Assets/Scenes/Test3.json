@@ -1,0 +1,93 @@
+{
+  "Camera": {
+    "Position": [
+      -10.419320106506348,
+      -0.4670557677745819,
+      2.30765962600708
+    ],
+    "Rotation": [
+      1.4000017642974854,
+      -0.8000002503395081
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 48,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        14,
+        15,
+        16
+      ],
+      "Location": [
+        -0.2130904197692871,
+        0.6097652912139893,
+        0.6909235715866089
+      ],
+      "Material": "M_Default",
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        18,
+        19,
+        20
+      ],
+      "Location": [
+        -3.8997464179992676,
+        4.575438499450684,
+        0.7710741758346558
+      ],
+      "Material": "M_Default",
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 17
+    }
+  }
+}
