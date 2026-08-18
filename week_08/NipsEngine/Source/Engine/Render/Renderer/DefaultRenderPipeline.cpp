@@ -1,0 +1,53 @@
+﻿#include "DefaultRenderPipeline.h"
+
+#include "Renderer.h"
+#include "Core/Logging/Stats.h"
+#include "Engine/Runtime/Engine.h"
+#include "Editor/Viewport/ViewportCamera.h"
+#include "GameFramework/World.h"
+
+FDefaultRenderPipeline::FDefaultRenderPipeline(UEngine* InEngine, FRenderer& InRenderer)
+	: Engine(InEngine)
+{
+	Collector.Initialize(InRenderer.GetFD3DDevice().GetDevice());
+}
+
+FDefaultRenderPipeline::~FDefaultRenderPipeline()
+{
+	Collector.Release();
+}
+
+void FDefaultRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
+{
+	Bus.Clear();
+
+
+	UWorld* World = Engine->GetWorld();
+	FViewportCamera* Camera = World ? World->GetActiveCamera() : nullptr;
+	if (Camera)
+	{
+		FShowFlags ShowFlags;
+		EViewMode ViewMode = EViewMode::Lit;
+
+		{
+			FRAME_SPIKE_SCOPE("Camera update");
+			Bus.SetViewProjection(Camera->GetViewMatrix(), Camera->GetProjectionMatrix());
+			Bus.SetRenderSettings(ViewMode, ShowFlags);
+			Bus.SetFXAAEnabled(true);
+		}
+
+		Renderer.GetEditorLineBatcher().Clear();
+		Collector.SetLineBatcher(&Renderer.GetEditorLineBatcher());
+
+		{
+			FRAME_SPIKE_SCOPE("Scene gather");
+			const FFrustum& ViewFrustum = Camera->GetFrustum();
+			Collector.CollectWorld(World, ShowFlags, ViewMode, Bus, &ViewFrustum);
+		}
+	}
+
+	Renderer.PrepareBatchers(Bus);
+	Renderer.BeginFrame();
+	Renderer.Render(Bus);
+	Renderer.EndFrame();
+}

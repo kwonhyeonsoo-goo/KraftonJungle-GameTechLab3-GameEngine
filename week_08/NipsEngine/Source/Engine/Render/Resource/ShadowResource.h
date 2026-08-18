@@ -1,0 +1,27 @@
+#pragma once
+#include "Core/Containers/Array.h"
+#include "Core/CoreTypes.h"
+#include "Render/Renderer/RenderTarget/DepthStencilResource.h"
+struct ID3D11DepthStencilView;
+struct ID3D11ShaderResourceView;
+
+/*
+Atlas
+SRV 1개 (Texture2D)
+DSV 여러 개 (subregion)
+
+CSM
+SRV 1개 (Texture2DArray)
+DSV N개
+
+Cube
+SRV 1개 (TextureCube)
+DSV 6개 face view
+*/
+struct FShadowResource
+{
+	FDepthStencilResource BackingResource;
+	ID3D11ShaderResourceView* SRV = nullptr;
+	TArray<ID3D11DepthStencilView*> DSVs;
+	uint32 Resolution = 0;
+};

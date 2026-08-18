@@ -1,0 +1,26 @@
+﻿#pragma once
+
+#include "Serialization/Archive.h"
+
+struct FMemoryWriter : public FArchive
+{
+	TArray<uint8>& Bytes;
+	uint32 Offset;
+
+	FMemoryWriter(TArray<uint8>& InBytes)
+		: Bytes(InBytes), Offset(0)
+	{
+	}
+
+	virtual bool IsSaving() const override { return true; }
+
+	virtual void Serialize(void* Value, uint32 Size) override
+	{
+		if (Offset + Size > static_cast<uint32>(Bytes.size()))
+		{
+			Bytes.resize(Offset + Size);
+		}
+		std::memcpy(&Bytes[Offset], Value, Size);
+		Offset += Size;
+	}
+};

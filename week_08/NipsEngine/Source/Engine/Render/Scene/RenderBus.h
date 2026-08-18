@@ -1,0 +1,72 @@
+﻿#pragma once
+
+/*
+	RenderBus는 Renderer에게 Draw Call 요청을 vector의 형태로 전달하는 역할을 합니다.
+	Renderer가 RenderBus에 담긴 Draw Call 요청들을 처리할 수 있게 합니다.
+*/
+
+#include "Component/CameraComponent.h"
+#include "Math/Matrix.h"
+#include "Math/Vector.h"
+#include "Math/Vector2.h"
+#include "Render/Common/ViewTypes.h"
+#include "Render/Scene/RenderCommand.h"
+
+class FRenderBus
+{
+public:
+	void Clear();
+	void AddCommand(ERenderPass Pass, const FRenderCommand& InCommand);
+	void AddCommand(ERenderPass Pass, FRenderCommand&& InCommand);
+	void AddLight(const FRenderLight& InLight) { Lights.push_back(InLight); }
+	const TArray<FRenderCommand>& GetCommands(ERenderPass Pass) const;
+	const TArray<FRenderLight>& GetLights() const { return Lights; }
+
+	// Getter, Setter
+	void SetViewProjection(const FMatrix& InView, const FMatrix& InProj);
+	void SetRenderSettings(const EViewMode NewViewMode, const FShowFlags NewShowFlags);
+	void SetCameraState(const FCameraState& InCameraState) { CameraState = InCameraState; }
+    void SetIsCameraOverridenByLight(bool bOverride) { bIsCameraOverrideByLight = bOverride; }
+
+	bool GetIsCameraOverridenByLight() const { return bIsCameraOverrideByLight; }
+	const FMatrix& GetView() const { return View; }
+	const FMatrix& GetProj() const { return Proj; }
+	const FCameraState& GetCameraState() const { return CameraState; }
+	const FVector& GetCameraPosition() const { return CameraPosition;  }
+	const FVector& GetCameraForward() const { return CameraForward; }
+	const FVector& GetCameraUp() const { return CameraUp; }
+	const FVector& GetCameraRight() const { return CameraRight; }
+	EViewMode GetViewMode() const { return ViewMode; }
+	FShowFlags GetShowFlags() const { return ShowFlags; }
+	const FVector& GetWireframeColor() const { return WireframeColor; }
+	void SetWireframeColor(const FVector& InColor) { WireframeColor = InColor; }
+	bool GetFXAAEnabled() const { return bFXAAEnabled; }
+	void SetFXAAEnabled(bool bInEnabled) { bFXAAEnabled = bInEnabled; }
+	bool IsOrthographic() const { return Proj.M[3][3] == 1.0f; }
+	void SetViewportSize(const FVector2& InViewportSize) { ViewportSize = InViewportSize; }
+	const FVector2& GetViewportSize() const { return ViewportSize; }
+	void SetViewportOrigin(const FVector2& InViewportOrigin) { ViewportOrigin = InViewportOrigin; }
+	const FVector2& GetViewportOrigin() const { return ViewportOrigin; }
+
+private:
+	TArray<FRenderCommand> PassQueues[(uint32)ERenderPass::MAX];
+	TArray<FRenderLight> Lights;
+
+	FMatrix View;
+	FMatrix Proj;
+	FVector CameraPosition;
+	FVector CameraForward;
+	FVector CameraRight;
+	FVector CameraUp;
+	FVector2 ViewportSize;
+	FVector2 ViewportOrigin = FVector2(0.0f, 0.0f);
+
+	//Editor Settings
+	EViewMode ViewMode = EViewMode::Lit;
+	FShowFlags ShowFlags;
+	FVector WireframeColor = FVector(1.0f, 1.0f, 1.0f);
+	bool bFXAAEnabled = true;
+
+	FCameraState CameraState;
+    bool bIsCameraOverrideByLight = false;
+};

@@ -1,0 +1,31 @@
+﻿#pragma once
+#include "Core/CoreTypes.h"
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct ID3D11ShaderResourceView;
+
+struct FRenderTargetSet;
+struct FRenderResources;
+class FRenderBus;
+class FFontBatcher;
+class FSubUVBatcher;
+class FLineBatcher;
+class FShadowResourcePool;
+
+struct FRenderPassContext
+{
+	const FRenderBus* RenderBus = nullptr;
+	FRenderTargetSet* RenderTargets = nullptr;
+	ID3D11Device* Device = nullptr;
+	ID3D11DeviceContext* DeviceContext = nullptr;
+	FRenderResources* RenderResources = nullptr;
+	FFontBatcher* FontBatcher = nullptr;
+	FSubUVBatcher* SubUVBatcher = nullptr;
+	FLineBatcher* GridLineBatcher = nullptr;
+	FLineBatcher* EditorLineBatcher = nullptr;
+	ID3D11ShaderResourceView* SceneGlobalLightBufferSRV = nullptr;
+	uint32 SceneGlobalLightCount = 0;
+	FShadowResourcePool* ShadowResourcePool = nullptr;
+
+};
+

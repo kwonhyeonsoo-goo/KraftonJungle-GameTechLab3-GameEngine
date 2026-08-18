@@ -1,0 +1,75 @@
+﻿#pragma once
+#include "Core/Containers/Set.h"
+#include "RenderBus.h"
+#include "Render/Resource/MeshBufferManager.h"
+#include "Spatial/WorldSpatialIndex.h"
+#include "Geometry/OBB.h"
+
+enum class EWorldType : uint32;
+
+class UWorld;
+class AActor;
+class ASpotLightActor;
+class UPrimitiveComponent;
+class UGizmoComponent;
+class UDecalComponent;
+class UFireballComponent;
+class FLineBatcher;
+struct FFrustum;
+
+class FRenderCollector {
+public:
+	struct FCullingStats
+	{
+		int32 TotalVisiblePrimitiveCount{0};
+		int32 BVHPassedPrimitiveCount{0};
+		int32 FallbackPassedPrimitiveCount{0};
+	};
+
+	struct FDecalStats
+	{
+		int32 TotalDecalCount = 0;
+		int32 CollectTimeMS = 0;
+	};
+
+private:
+	FMeshBufferManager MeshBufferManager;
+	FWorldSpatialIndex::FPrimitiveFrustumQueryScratch FrustumQueryScratch;
+	FWorldSpatialIndex::FPrimitiveOBBQueryScratch OBBQueryScratch;
+	TArray<UPrimitiveComponent*> VisiblePrimitiveScratch;
+	FLineBatcher* LineBatcher = nullptr;
+	FCullingStats LastCullingStats;
+	FDecalStats LastDecalStats;
+
+public:
+	void Initialize(ID3D11Device* InDevice) { MeshBufferManager.Create(InDevice); }
+	void Release() { LineBatcher = nullptr; MeshBufferManager.Release(); }
+	void SetLineBatcher(FLineBatcher* InLineBatcher) { LineBatcher = InLineBatcher; }
+	void ClearLineBatcher() { LineBatcher = nullptr; }
+
+	void CollectWorld(UWorld* World, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus,
+	                  const FFrustum* ViewFrustum = nullptr);
+	void CollectSelection(const TArray<AActor*>& SelectedActors, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus);
+	void CollectGizmo(UGizmoComponent* Gizmo, const FShowFlags& ShowFlags, FRenderBus& RenderBus, bool bIsActiveOperation);
+	void CollectGrid(
+		float GridSpacing,
+		int32 GridHalfLineCount,
+		FRenderBus& RenderBus,
+		bool bOrthographic = false,
+		const FGridRenderSettings& GridRenderSettings = MakeDefaultGridRenderSettings());
+	const FCullingStats& GetLastCullingStats() const { return LastCullingStats; }
+	const FDecalStats& GetLastDecalStats() const { return LastDecalStats; }
+
+private:
+	void ResetCullingStats();
+	void ResetDecalStats();
+
+	void CollectLight(UWorld* World, const FShowFlags& ShowFlags, FRenderBus& RenderBus, const FFrustum* ViewFrustum = nullptr);
+	void CollectFromActor(AActor* Actor, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus, EWorldType WorldType);
+	bool CollectFromSelectedActor(AActor* Actor, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus);
+	void CollectFromComponent(UPrimitiveComponent* Primitive, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus, EWorldType WorldType);
+	void CollectShadowCasterFromComponent(UPrimitiveComponent* Primitive, FRenderBus& RenderBus, EWorldType WorldType);
+	void CollectBVHInternalNodeAABBs(UPrimitiveComponent* PrimitiveComponent, const FShowFlags& ShowFlags, FRenderBus& RenderBus,
+	                                 TSet<int32>& SeenNodeIndices);
+};
+
