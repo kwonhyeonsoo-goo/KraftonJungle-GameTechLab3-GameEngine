@@ -4,6 +4,7 @@
 - 환경: Visual Studio 2022 Community, MSBuild 17, Windows x64
 - 구성: 각 대표 솔루션의 `Debug|x64`
 - 범위: 컴파일 및 링크 검증. 실행 시나리오와 런타임 동작은 검증하지 않음.
+- 에셋 정리: 빌드 검증 후 음원과 일부 런타임 모델·텍스처를 이력에서 제거했다. 소스 코드와 빌드용 라이브러리는 유지했지만, 제거한 런타임 콘텐츠를 사용하는 장면의 실행은 보장하지 않는다. 정리 후 `week_11`과 `week_14`를 다시 빌드해 성공을 확인했다.
 
 ## 요약
 
@@ -52,6 +53,20 @@
 - `week_13`과 `week_14`에서는 PhysX PDB를 찾지 못한다는 `LNK4099` 경고가 있었지만 링크는 성공했다.
 - 빌드 산출물, 복원된 패키지, vcpkg 설치 파일 및 로컬 전용 외부 바이너리는 이 커밋에 포함하지 않았다.
 
+### week_11 RmlUi 라이브러리 재생성
+
+`week_11/JSEngine/JSEngine.vcxproj`의 pre-build 단계가 필요한 RmlUi 및 SoLoud 정적 라이브러리를 자동으로 생성합니다. 따라서 Visual Studio에서 `JSEngine.sln`을 `Debug|x64`로 빌드하는 것이 기본 방법입니다.
+
+RmlUi만 먼저 만들려면 `week_11/JSEngine`에서 다음 명령을 실행합니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\BuildTools\Scripts\BuildRmlUiLib.ps1 -ProjectDir "$PWD" -Configuration Debug -Platform x64
+```
+
+생성 파일은 `ThirdParty/RmlUi/Lib/x64/Debug/RmlUiCore.lib`에 놓이며 Git에는 포함되지 않습니다. Release 계열 구성은 `-Configuration Release`를 사용합니다. 자세한 재생성 조건은 `week_11/JSEngine/ThirdParty/README.md`에 정리돼 있습니다.
+
+Windows PowerShell에서 `Get-FileHash`를 사용할 수 없는 환경도 지원하도록 RmlUi와 SoLoud 재생성 스크립트는 .NET SHA-256 API로 입력 파일 해시를 계산합니다. 이 경로로 `Debug|x64` 전체 빌드와 링크가 성공하는 것을 재검증했습니다.
+
 ## 대용량 파일 정책
 
-통합 이력의 50 MiB 이상 일반 Git blob과 Git LFS 에셋 제거 정책은 그대로 유지했다. 빌드 확인 과정에서 복원하거나 생성한 외부 라이브러리와 산출물은 Git에 추가하지 않았다.
+통합 이력의 50 MiB 이상 일반 Git blob과 Git LFS 에셋 제거 정책은 그대로 유지했다. 빌드 확인 과정에서 복원하거나 생성한 외부 라이브러리와 산출물은 Git에 추가하지 않았다. 추가 에셋 정리 기준은 `ASSET_POLICY.md`를 따른다.
