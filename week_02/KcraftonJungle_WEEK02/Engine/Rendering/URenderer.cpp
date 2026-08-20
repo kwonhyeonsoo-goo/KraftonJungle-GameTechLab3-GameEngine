@@ -682,7 +682,7 @@ void URenderer::ReleaseConstantBuffer()
 }
 
 
-#pragma region D3D11 Renderer 함수들
+#pragma region D3D11_Renderer_Functions
 
 bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 {

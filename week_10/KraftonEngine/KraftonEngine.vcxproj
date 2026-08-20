@@ -164,6 +164,23 @@
     <LibraryPath>$(ProjectDir)ThirdParty\SFML\lib\Release;$(LibraryPath)</LibraryPath>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
+  <PropertyGroup>
+    <FbxSdkLibraryDir Condition="'$(Configuration)'=='Debug'">$(ProjectDir)ThirdParty\FBXSDK\lib\x64\debug</FbxSdkLibraryDir>
+    <FbxSdkLibraryDir Condition="'$(Configuration)'!='Debug'">$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release</FbxSdkLibraryDir>
+    <WithFbxSdk Condition="'$(WithFbxSdk)'=='' And Exists('$(FbxSdkLibraryDir)\libfbxsdk.lib')">true</WithFbxSdk>
+    <WithFbxSdk Condition="'$(WithFbxSdk)'==''">false</WithFbxSdk>
+    <WithFbxSdkDefine Condition="'$(WithFbxSdk)'=='true'">WITH_FBX_SDK=1</WithFbxSdkDefine>
+    <WithFbxSdkDefine Condition="'$(WithFbxSdk)'!='true'">WITH_FBX_SDK=0</WithFbxSdkDefine>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>$(WithFbxSdkDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(WithFbxSdk)'=='true'">$(FbxSdkLibraryDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(WithFbxSdk)'=='true'">libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -211,11 +228,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\FBXSDK\lib\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libfbxsdk.lib;sfml-audio-d.lib;sfml-window-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio-d.lib;sfml-window-d.lib;sfml-system-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Debug\*.dll" "$(OutDir)" &amp; xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\debug\libfbxsdk.dll" "$(OutDir)"</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\SFML\bin\Debug\*.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Debug\*.dll" "$(OutDir)" &amp; if exist "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\debug\libfbxsdk.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\debug\libfbxsdk.dll" "$(OutDir)"</Command>
       <Message>Copying SFML and FBX SDK Debug DLLs to $(OutDir)</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -236,11 +252,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libfbxsdk.lib;sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; if exist "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
       <Message>Copying SFML and FBX SDK Release DLLs to $(OutDir)</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -261,11 +276,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libfbxsdk.lib;sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; if exist "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
       <Message>Copying SFML and FBX SDK Release DLLs to $(OutDir)</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -286,11 +300,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libfbxsdk.lib;sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; if exist "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
       <Message>Copying SFML and FBX SDK Release DLLs to $(OutDir)</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -311,11 +324,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libfbxsdk.lib;sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio.lib;sfml-window.lib;sfml-system.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
+      <Command>if exist "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\SFML\bin\Release\*.dll" "$(OutDir)" &amp; if exist "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" xcopy /Y /D /I "$(ProjectDir)ThirdParty\FBXSDK\lib\x64\release\libfbxsdk.dll" "$(OutDir)"</Command>
       <Message>Copying SFML and FBX SDK Release DLLs to $(OutDir)</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -323,16 +335,16 @@
     <ClCompile Include="Source\Editor\Selection\BoneSelectionManager.cpp" />
     <ClCompile Include="Source\Editor\Viewport\SkeletalMeshViewerViewportClient.cpp" />
     <ClCompile Include="Source\Engine\Component\SkeletalGizmoComponent.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxAnimationParser.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxMaterialImportUtils.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxMeshGeometryBuilder.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxMetaParser.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxSkeletalMeshAssembler.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxSkeletalMeshPartParser.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FbxStaticMeshParser.cpp" />
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxAnimationParser.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxMaterialImportUtils.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxMeshGeometryBuilder.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxMetaParser.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxSkeletalMeshAssembler.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxSkeletalMeshPartParser.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FbxStaticMeshParser.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
     <ClCompile Include="Source\Engine\Mesh\FBX\FBXSceneAsset.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FBXUtil.cpp" />
-    <ClCompile Include="Source\Engine\Mesh\FBX\FBXImporter.cpp" />
+    <ClCompile Include="Source\Engine\Mesh\FBX\FBXUtil.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="Source\Engine\Mesh\FBX\FBXImporter.cpp"><ExcludedFromBuild Condition="'$(WithFbxSdk)'!='true'">true</ExcludedFromBuild></ClCompile>
     <ClCompile Include="Source\Engine\Mesh\FBX\FBXManager.cpp" />
     <ClCompile Include="Source\Engine\Mesh\MeshManager.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />

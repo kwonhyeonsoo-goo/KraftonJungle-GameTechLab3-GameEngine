@@ -18,6 +18,10 @@
 #include <cwctype>
 #include <filesystem>
 
+#ifndef WITH_FBX_SDK
+#define WITH_FBX_SDK 0
+#endif
+
 TMap<FString, UFBXSceneAsset*> FFBXManager::FbxSceneCache;
 TArray<FMeshAssetListItem> FFBXManager::AvailableFbxFiles;
 
@@ -377,6 +381,7 @@ UFBXSceneAsset* FFBXManager::LoadFbxScene(const FString& PathFileName)
 	EFBXSceneCacheStatus CacheStatus = EFBXSceneCacheStatus::CacheMiss;
 	if (!TryLoadSceneFromCache(PathFileName, Scene, CacheStatus))
 	{
+#if WITH_FBX_SDK
 		FFBXAsset ImportedAsset;
 		FBXImporter Importer;
 		if (!Importer.ImportFbxAsset(PathFileName, ImportedAsset))
@@ -389,6 +394,10 @@ UFBXSceneAsset* FFBXManager::LoadFbxScene(const FString& PathFileName)
 
 		Scene = ConvertImportedAssetToScene(PathFileName, std::move(ImportedAsset));
 		SaveSceneToCache(Scene);
+#else
+		UE_LOG("[FBXManager] FBX SDK is unavailable and no usable scene cache exists: %s", PathFileName.c_str());
+		return nullptr;
+#endif
 	}
 
 	UFBXSceneAsset* SceneAsset = CreateSceneAssetFromScene(std::move(Scene));

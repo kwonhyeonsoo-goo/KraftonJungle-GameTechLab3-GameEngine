@@ -81,7 +81,7 @@ public:
 
 
 
-#pragma region D3D11 Renderer 함수들
+#pragma region D3D11_Renderer_Functions
 	//D3D11 Renderer 함수들
     bool Initialize(HWND hwnd, UINT width, UINT height);
     void Shutdown();
